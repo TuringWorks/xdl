@@ -1,0 +1,100 @@
+; Mandelbrot Set Visualization Demo
+; Generates and visualizes the Mandelbrot fractal
+; Run with: ./target/release/xdl-gui examples/mandelbrot_demo.xdl
+
+print, ''
+print, '╔════════════════════════════════════════════════════════════════╗'
+print, '║            XDL MANDELBROT SET VISUALIZATION                    ║'
+print, '╚════════════════════════════════════════════════════════════════╝'
+print, ''
+
+; Parameters
+print, 'Mandelbrot Set Parameters:'
+width = 200
+height = 200
+xmin = -2.5
+xmax = 1.0
+ymin = -1.25
+ymax = 1.25
+max_iter = 100
+
+print, '  • Resolution:', width, 'x', height, 'pixels'
+print, '  • X range: [', xmin, ',', xmax, ']'
+print, '  • Y range: [', ymin, ',', ymax, ']'
+print, '  • Max iterations:', max_iter
+print, ''
+
+; Generate Mandelbrot set
+print, 'Computing Mandelbrot set...'
+total_pixels = width * height
+mandelbrot = fltarr(total_pixels)
+
+; Progress indicators
+progress_step = height / 10
+next_progress = progress_step
+
+for py = 0, height-1 do begin
+  ; Show progress
+  if py ge next_progress then begin
+    percent = (py * 100) / height
+    print, '  Progress:', percent, '%'
+    next_progress = next_progress + progress_step
+  end
+  endif
+  
+  for px = 0, width-1 do begin
+    ; Map pixel to complex plane
+    x0 = xmin + (xmax - xmin) * px / (width - 1.0)
+    y0 = ymin + (ymax - ymin) * py / (height - 1.0)
+    
+    ; Mandelbrot iteration
+    x = 0.0
+    y = 0.0
+    iteration = 0
+    
+    for iter = 0, max_iter-1 do begin
+      if (x*x + y*y lt 4.0) then begin
+        xtemp = x*x - y*y + x0
+        y = 2.0*x*y + y0
+        x = xtemp
+        iteration = iteration + 1
+      end
+      endif
+    end
+    endfor
+    
+    ; Store result
+    idx = py * width + px
+    mandelbrot[idx] = iteration
+  end
+  endfor
+end
+endfor
+
+print, '  Progress: 100 %'
+print, ''
+
+; Reshape to 2D
+print, 'Reshaping array to 2D...'
+mandelbrot_2d = reform(mandelbrot, width, height)
+
+; Statistics
+print, 'Mandelbrot Set Statistics:'
+print, '  • Min iterations:', min(mandelbrot_2d)
+print, '  • Max iterations:', max(mandelbrot_2d)
+print, '  • Mean iterations:', mean(mandelbrot_2d)
+print, ''
+
+; Visualize with SURFACE
+print, 'Rendering 3D surface visualization...'
+surface, mandelbrot_2d
+print, '  ✓ Surface plot generated!'
+print, ''
+
+print, '╔════════════════════════════════════════════════════════════════╗'
+print, '║  The Mandelbrot set visualization shows the famous fractal    ║'
+print, '║  - Dark regions: Points inside the set (slow divergence)      ║'
+print, '║  - Bright regions: Points outside the set (fast divergence)   ║'
+print, '║  - The iconic "bulb" shape is clearly visible                 ║'
+print, '╚════════════════════════════════════════════════════════════════╝'
+print, ''

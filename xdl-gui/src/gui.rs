@@ -6,13 +6,15 @@ use fltk::{
     browser::Browser,
     button::Button,
     dialog,
-    enums::{Color, FrameType},
+    enums::{Color, Damage, FrameType, Font},
     group::{Flex, FlexType, Pack},
     menu::{MenuBar, MenuFlag},
     prelude::*,
+    table::{Table, TableContext},
     text::{TextBuffer, TextDisplay, TextEditor},
     window::Window,
 };
+use fltk::draw;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -22,6 +24,182 @@ use crate::image_window::ImageWindow;
 use crate::plot_window::PlotWindow;
 use xdl_interpreter::Interpreter;
 use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
+
+// Variable data structure for table display
+#[derive(Clone)]
+struct VarData {
+    name: String,
+    value: String,
+    var_type: String,
+    size: String,
+}
+
+// Custom table widget for variables
+struct VariableTable {
+    table: Table,
+    data: Rc<RefCell<Vec<VarData>>>,
+}
+
+impl VariableTable {
+    fn new(x: i32, y: i32, w: i32, h: i32) -> Self {
+        let mut table = Table::default().with_pos(x, y).with_size(w, h);
+        table.set_rows(0);
+        table.set_row_height_all(22);
+        table.set_row_header(false);
+        table.set_cols(4);
+        table.set_col_header(true);
+        table.set_col_header_height(25);
+        
+        // Set individual column widths for better layout
+        table.set_col_width(0, w / 5);      // Name column
+        table.set_col_width(1, (w * 2) / 5); // Value column (wider)
+        table.set_col_width(2, w / 6);      // Type column
+        table.set_col_width(3, w / 6);      // Size column
+        
+        table.set_col_resize(true);
+        table.end();
+        
+        let data: Rc<RefCell<Vec<VarData>>> = Rc::new(RefCell::new(Vec::new()));
+        let data_clone = data.clone();
+        
+        table.draw_cell(move |_t, ctx, row, col, x, y, w, h| {
+            match ctx {
+                TableContext::StartPage => {
+                    draw::set_font(Font::Helvetica, 10);
+                }
+                TableContext::ColHeader => {
+                    draw::push_clip(x, y, w, h);
+                    draw::draw_box(FrameType::ThinUpBox, x, y, w, h, Color::from_rgb(230, 230, 230));
+                    draw::set_draw_color(Color::Black);
+                    draw::set_font(Font::HelveticaBold, 11);
+                    let label = match col {
+                        0 => "Name",
+                        1 => "Value",
+                        2 => "Type",
+                        3 => "Size",
+                        _ => "",
+                    };
+                    draw::draw_text2(label, x, y, w, h, fltk::enums::Align::Center);
+                    draw::pop_clip();
+                }
+                TableContext::Cell => {
+                    if let Ok(data) = data_clone.try_borrow() {
+                        if row >= 0 && (row as usize) < data.len() {
+                            draw::push_clip(x, y, w, h);
+                            
+                            // Alternating row colors
+                            let bg_color = if row % 2 == 0 {
+                                Color::White
+                            } else {
+                                Color::from_rgb(248, 248, 252)
+                            };
+                            draw::draw_box(FrameType::FlatBox, x, y, w, h, bg_color);
+                            
+                            // Draw text
+                            draw::set_draw_color(Color::Black);
+                            draw::set_font(Font::Courier, 10);
+                            
+                            let var = &data[row as usize];
+                            let text = match col {
+                                0 => &var.name,
+                                1 => &var.value,
+                                2 => &var.var_type,
+                                3 => &var.size,
+                                _ => "",
+                            };
+                            
+                            // Draw text with padding
+                            draw::draw_text2(
+                                text,
+                                x + 4,
+                                y,
+                                w - 8,
+                                h,
+                                fltk::enums::Align::Left | fltk::enums::Align::Inside,
+                            );
+                            
+                            // Draw cell border
+                            draw::set_draw_color(Color::from_rgb(220, 220, 220));
+                            draw::draw_rect(x, y, w, h);
+                            
+                            draw::pop_clip();
+                        }
+                    }
+                }
+                _ => {}
+            }
+        });
+        
+        Self { table, data }
+    }
+    
+    fn update_data(&mut self, vars: &HashMap<String, String>) {
+        let mut data = Vec::new();
+        
+        // Sort variable names for consistent display
+        let mut sorted_vars: Vec<(&String, &String)> = vars.iter().collect();
+        sorted_vars.sort_by_key(|(name, _)| name.as_str());
+        
+        for (name, value) in sorted_vars {
+            let var_type = if value.contains("array") {
+                "Double Array".to_string()
+            } else if value.parse::<f64>().is_ok() {
+                "Double".to_string()
+            } else {
+                "Computed".to_string()
+            };
+            
+            let display_value = if value.contains("array[1x") {
+                if let Some(start) = value.find("[1x") {
+                    if let Some(end) = value[start..].find(']') {
+                        format!("<{}>", &value[start + 1..start + end])
+                    } else {
+                        "<array>".to_string()
+                    }
+                } else {
+                    "<array>".to_string()
+                }
+            } else if value.len() > 20 {
+                format!("{:.17}...", value)
+            } else {
+                value.clone()
+            };
+            
+            let size = if value.contains("1x") {
+                if let Some(start) = value.find("1x") {
+                    if let Some(end) = value[start..].find(']') {
+                        value[start..start + end].to_string()
+                    } else {
+                        "1x?".to_string()
+                    }
+                } else {
+                    "1x1".to_string()
+                }
+            } else {
+                "1x1".to_string()
+            };
+            
+            data.push(VarData {
+                name: name.clone(),
+                value: display_value,
+                var_type,
+                size,
+            });
+        }
+        
+        if let Ok(mut d) = self.data.try_borrow_mut() {
+            *d = data;
+        }
+        
+        let new_rows = vars.len() as i32;
+        if new_rows != self.table.rows() {
+            self.table.set_rows(new_rows);
+        }
+        
+        // Force complete redraw
+        self.table.redraw();
+    }
+}
 
 pub struct XdlGui {
     window: Window,
@@ -34,7 +212,7 @@ pub struct XdlGui {
     #[allow(dead_code)]
     variables: Rc<RefCell<HashMap<String, String>>>, // variable name -> value representation
     #[allow(dead_code)]
-    variable_browser: Rc<RefCell<Browser>>,
+    variable_table: Rc<RefCell<VariableTable>>,
 }
 
 impl XdlGui {
@@ -548,26 +726,23 @@ impl XdlGui {
         // Set equal sizes for command and output windows
         center_flex.end();
 
-        // Right panel - Variable Browser (dynamic)
-        let mut var_browser = Browser::default();
-        var_browser.set_label("Variable Browser");
-        var_browser.set_frame(FrameType::DownBox);
-        var_browser.set_color(Color::White);
-        var_browser.add("Name             Value          Type           Size");
-        var_browser.add("(no variables yet)");
+        // Right panel - Variable Table (dynamic)
+        let mut var_table = VariableTable::new(0, 0, 300, 775);
+        var_table.table.set_label("Variable Browser");
+        var_table.table.set_frame(FrameType::DownBox);
 
         // Create variable storage
         let variables = Rc::new(RefCell::new(HashMap::new()));
 
         // Set panel sizes for two-panel layout
-        main_flex.fixed(&var_browser, 250); // Give more space to variable browser
+        main_flex.fixed(&var_table.table, 300); // Give space to variable table
 
         // Store references for callbacks after layout is done
-        let var_browser_ref = Rc::new(RefCell::new(var_browser));
+        let var_table_ref = Rc::new(RefCell::new(var_table));
 
         // Add Clear Variables menu item now that variables are available
         let vars_clone_menu = Rc::clone(&variables);
-        let var_browser_clone_menu = Rc::clone(&var_browser_ref);
+        let var_table_clone_menu = Rc::clone(&var_table_ref);
         menu.add(
             "&View/Clear &Variables",
             fltk::enums::Shortcut::None,
@@ -575,7 +750,7 @@ impl XdlGui {
             move |_| {
                 if let Ok(mut vars) = vars_clone_menu.try_borrow_mut() {
                     vars.clear();
-                    Self::update_variable_browser(&var_browser_clone_menu, &vars_clone_menu);
+                    Self::update_variable_table(&var_table_clone_menu, &vars_clone_menu);
                     info!("Variables cleared");
                 }
             },
@@ -589,7 +764,7 @@ impl XdlGui {
         let cmd_buffer_clone_exec = command_buffer.clone();
         let mut out_buffer_clone_exec = output_buffer.clone();
         let vars_clone = Rc::clone(&variables);
-        let var_browser_clone = Rc::clone(&var_browser_ref);
+        let var_table_clone = Rc::clone(&var_table_ref);
 
         execute_btn.set_callback(move |_| {
             let code = cmd_buffer_clone_exec.text();
@@ -606,7 +781,7 @@ impl XdlGui {
                     &mut out_buffer_clone_exec,
                     "Editor",
                     &vars_clone,
-                    &var_browser_clone,
+                    &var_table_clone,
                 );
             }
         });
@@ -642,7 +817,7 @@ impl XdlGui {
             command_buffer,
             output_buffer,
             variables,
-            variable_browser: var_browser_ref,
+            variable_table: var_table_ref,
         };
 
         Ok(gui)
@@ -742,7 +917,7 @@ impl XdlGui {
         output_buffer: &mut TextBuffer,
         filename: &str,
         variables: &Rc<RefCell<HashMap<String, String>>>,
-        var_browser: &Rc<RefCell<Browser>>,
+        var_table: &Rc<RefCell<VariableTable>>,
     ) {
         let mut results = Vec::new();
         results.push(format!("=== Executing {} ===", filename));
@@ -811,8 +986,8 @@ impl XdlGui {
             }
         }
 
-        // Update variable browser after execution
-        Self::update_variable_browser(var_browser, variables);
+        // Update variable table after execution
+        Self::update_variable_table(var_table, variables);
 
         results.push(format!("=== Execution completed ==="));
         let output_text = results.join("\n");
@@ -1068,73 +1243,12 @@ impl XdlGui {
         result
     }
 
-    fn update_variable_browser(
-        var_browser: &Rc<RefCell<Browser>>,
+    fn update_variable_table(
+        var_table: &Rc<RefCell<VariableTable>>,
         variables: &Rc<RefCell<HashMap<String, String>>>,
     ) {
-        if let (Ok(mut browser), Ok(vars)) = (var_browser.try_borrow_mut(), variables.try_borrow())
-        {
-            browser.clear();
-            browser.add("Name             Value          Type           Size");
-
-            if vars.is_empty() {
-                browser.add("(no variables yet)");
-            } else {
-                for (name, value) in vars.iter() {
-                    let var_type = if value.contains("array") {
-                        "Double Array"
-                    } else if value.parse::<f64>().is_ok() {
-                        "Double"
-                    } else {
-                        "Computed"
-                    };
-
-                    let display_value = if value.contains("array[1x") {
-                        // Extract just the size info for arrays
-                        if let Some(start) = value.find("[1x") {
-                            if let Some(end) = value[start..].find(']') {
-                                format!("<{}>", &value[start + 1..start + end])
-                            } else {
-                                "<array>".to_string()
-                            }
-                        } else {
-                            "<array>".to_string()
-                        }
-                    } else {
-                        // Truncate long values for display
-                        if value.len() > 12 {
-                            format!("{:.9}...", value)
-                        } else {
-                            value.clone()
-                        }
-                    };
-
-                    let size = if value.contains("1x") {
-                        if let Some(start) = value.find("1x") {
-                            if let Some(end) = value[start..].find(']') {
-                                value[start..start + end].to_string()
-                            } else {
-                                "1x?".to_string()
-                            }
-                        } else {
-                            "1x1".to_string()
-                        }
-                    } else {
-                        "1x1".to_string()
-                    };
-
-                    // Format with fixed-width columns for alignment
-                    let formatted_line = format!(
-                        "{:<15} {:<14} {:<14} {}",
-                        Self::truncate_string(name, 15),
-                        Self::truncate_string(&display_value, 14),
-                        Self::truncate_string(var_type, 14),
-                        size
-                    );
-
-                    browser.add(&formatted_line);
-                }
-            }
+        if let (Ok(mut table), Ok(vars)) = (var_table.try_borrow_mut(), variables.try_borrow()) {
+            table.update_data(&vars);
         }
     }
 

@@ -862,10 +862,18 @@ pub fn reform_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         )));
     }
 
-    // In current implementation, arrays are flat Vec<f64>
-    // So REFORM just returns a clone (dimensions are implicit)
-    // In a full implementation, this would update dimension metadata
-    Ok(XdlValue::Array(arr.clone()))
+    // Return MultiDimArray with proper shape metadata
+    // This allows 3D graphics procedures to properly handle the data
+    if new_dims.len() == 1 {
+        // 1D array - return as regular Array
+        Ok(XdlValue::Array(arr.clone()))
+    } else {
+        // Multi-dimensional - return with shape information
+        Ok(XdlValue::MultiDimArray {
+            data: arr.clone(),
+            shape: new_dims,
+        })
+    }
 }
 
 /// TRANSPOSE - Transpose a 2D array (matrix)

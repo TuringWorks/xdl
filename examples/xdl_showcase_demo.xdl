@@ -1,0 +1,376 @@
+; File: xdl_showcase_demo.xdl
+; ============================================================================
+; XDL SHOWCASE DEMO - A Journey Through Scientific Computing
+; ============================================================================
+; This demo showcases XDL's powerful features for scientific data analysis
+; Compatible with both xdl (CLI) and xdl-gui (graphical interface)
+; ============================================================================
+
+print, ''
+print, '╔════════════════════════════════════════════════════════════════╗'
+print, '║          XDL: Extended Data Language - Feature Showcase        ║'
+print, '║          Modern Scientific Computing Made Simple               ║'
+print, '╚════════════════════════════════════════════════════════════════╝'
+print, ''
+
+; ============================================================================
+; SECTION 1: Array Generation & Manipulation
+; ============================================================================
+print, '┌─ SECTION 1: Array Generation & Manipulation ─────────────────┐'
+print, ''
+
+; Generate arrays with ease
+print, '  Creating arrays with different data types...'
+x = dindgen(10)                    ; Double precision: 0, 1, 2, ..., 9
+y = findgen(10)                    ; Float: same values
+print, '  • DINDGEN(10) creates:', x
+print, ''
+
+; Multi-dimensional arrays
+print, '  Creating a 2D array (5x5 matrix)...'
+matrix = findgen(5, 5)             ; 5x5 matrix with values 0-24
+print, '  • Matrix shape: 5x5'
+print, '  • Total elements: 25'
+print, '  • Values: 0 to 24'
+print, '  ', matrix
+print, ''
+
+; ============================================================================
+; SECTION 2: Mathematical Operations
+; ============================================================================
+print, '┌─ SECTION 2: Mathematical Operations ──────────────────────────┐'
+print, ''
+
+; Generate sine wave data
+nx = 100
+xrange = dindgen(nx) / (nx - 1.d0) * 2.d0 * !pi
+sine_wave = sin(xrange)
+cosine_wave = cos(xrange)
+
+print, '  Generated 100-point sine and cosine waves'
+print, '  • Range: 0 to 2π'
+print, '  • Sine min/max:', min(sine_wave), max(sine_wave)
+print, '  • Cosine min/max:', min(cosine_wave), max(cosine_wave)
+print, ''
+
+; Array arithmetic
+combined = sine_wave + 0.5d0 * cosine_wave
+print, '  Combined wave = sin(x) + 0.5*cos(x)'
+print, '  • Result range:', min(combined), max(combined)
+print, ''
+
+; ============================================================================
+; SECTION 3: Statistical Analysis
+; ============================================================================
+print, '┌─ SECTION 3: Statistical Analysis ─────────────────────────────┐'
+print, ''
+
+; Generate random-like data
+data = dindgen(50) + randomu(12345, 50) * 10.d0
+
+print, '  Statistical analysis of 50 data points:'
+print, '  • Mean:', mean(data)
+print, '  • Median:', median(data)
+print, '  • Std Dev:', stddev(data)
+print, '  • Min:', min(data)
+print, '  • Max:', max(data)
+print, ''
+
+; ============================================================================
+; SECTION 4: Image Processing with CONVOL
+; ============================================================================
+print, '┌─ SECTION 4: Image Processing - Edge Detection ───────────────┐'
+print, ''
+
+; Create a synthetic "image" with features
+image = findgen(10, 10)
+print, '  Original 10x10 image:'
+print, '  • Values range: 0 to 99'
+print, ''
+
+; Apply smoothing kernel
+smooth_kernel = [[1, 1, 1], $
+                 [1, 1, 1], $
+                 [1, 1, 1]] / 9.0
+smoothed = convol(image, smooth_kernel)
+print, '  Applied 3x3 averaging kernel (smoothing)'
+print, '  • Kernel: All 1s, normalized by 9'
+print, '  • Result: Smoothed image'
+print, ''
+
+; Apply edge detection (Sobel X)
+sobel_x = [[-1, 0, 1], $
+           [-2, 0, 2], $
+           [-1, 0, 1]]
+edges_x = convol(image, sobel_x)
+print, '  Applied Sobel X edge detection'
+print, '  • Detects vertical edges'
+print, '  • Edge strength range:', min(edges_x), max(edges_x)
+print, ''
+
+; Apply edge detection (Sobel Y)
+sobel_y = [[-1, -2, -1], $
+           [ 0,  0,  0], $
+           [ 1,  2,  1]]
+edges_y = convol(image, sobel_y)
+print, '  Applied Sobel Y edge detection'
+print, '  • Detects horizontal edges'
+print, '  • Edge strength range:', min(edges_y), max(edges_y)
+print, ''
+
+; ============================================================================
+; SECTION 5: Advanced Array Operations
+; ============================================================================
+print, '┌─ SECTION 5: Advanced Array Operations ───────────────────────┐'
+print, ''
+
+; Array slicing and indexing
+arr = dindgen(20)
+subset = arr  ; Note: Full array indexing coming soon
+print, '  Array manipulation:'
+print, '  • Original array length:', n_elements(arr)
+print, '  • First 5 elements:', arr[0], arr[1], arr[2], arr[3], arr[4]
+print, ''
+
+; Array operations
+scaled = arr * 2.5d0
+offset = arr + 10.d0
+print, '  Array transformations:'
+print, '  • Scaled by 2.5: range', min(scaled), max(scaled)
+print, '  • Offset by 10: range', min(offset), max(offset)
+print, ''
+
+; ============================================================================
+; SECTION 6: Control Flow & Algorithms
+; ============================================================================
+print, '┌─ SECTION 6: Control Flow & Algorithms ───────────────────────┐'
+print, ''
+
+; Compute factorial using loop
+n = 10
+factorial = 1.d0
+for i = 1, n do factorial = factorial * i
+print, '  Computed ', n, '! =', factorial
+print, ''
+
+; Generate Fibonacci sequence
+fib_n = 15
+fib = dblarr(fib_n)
+fib[0] = 0.d0
+fib[1] = 1.d0
+for i = 2, fib_n-1 do fib[i] = fib[i-1] + fib[i-2]
+print, '  First', fib_n, 'Fibonacci numbers:'
+print, '  ', fib
+print, ''
+
+; Conditional logic
+threshold = 50.d0
+test_arr = dindgen(10) * 10.d0
+print, '  Conditional operations:'
+print, '  • Testing values against threshold:', threshold
+count = 0
+for i = 0, 9 do if test_arr[i] gt threshold then count = count + 1
+print, '  • Values above threshold:', count, 'out of 10'
+print, ''
+
+; ============================================================================
+; SECTION 7: String Operations
+; ============================================================================
+print, '┌─ SECTION 7: String Processing ───────────────────────────────┐'
+print, ''
+
+msg = 'XDL: Scientific Computing'
+print, '  String:', msg
+print, '  • Length:', strlen(msg)
+print, '  • Uppercase:', strupcase(msg)
+print, '  • Lowercase:', strlowcase(msg)
+print, ''
+
+; ============================================================================
+; SECTION 8: Mandelbrot Set Generator
+; ============================================================================
+print, '┌─ SECTION 8: Mandelbrot Set Generator ────────────────────────┐'
+print, ''
+
+; Generate Mandelbrot set
+print, '  Generating Mandelbrot set (100x100 grid)...'
+width = 100
+height = 100
+
+; Use 1D array with manual indexing
+total_pixels = width * height
+mandelbrot = fltarr(total_pixels)
+
+; Mandelbrot parameters
+xmin = -2.5
+xmax = 1.0
+ymin = -1.25
+ymax = 1.25
+max_iter = 50
+
+; Calculate Mandelbrot set
+for py = 0, height-1 do begin
+  for px = 0, width-1 do begin
+    ; Map pixel to complex plane
+    x0 = xmin + (xmax - xmin) * px / (width - 1.0)
+    y0 = ymin + (ymax - ymin) * py / (height - 1.0)
+    
+    ; Iterate
+    x = 0.0
+    y = 0.0
+    iteration = 0
+    
+    ; Fixed iteration count
+    for iter = 0, max_iter-1 do begin
+      if (x*x + y*y lt 4.0) then begin
+        xtemp = x*x - y*y + x0
+        y = 2.0*x*y + y0
+        x = xtemp
+        iteration = iteration + 1
+      end
+      endif
+    end
+    endfor
+    
+    ; Store in 1D array: index = py * width + px
+    idx = py * width + px
+    mandelbrot[idx] = iteration
+  end
+  endfor
+end
+endfor
+
+; Reshape back to 2D for display
+mandelbrot_2d = reform(mandelbrot, width, height)
+
+print, '  • Resolution: 100x100 pixels'
+print, '  • Complex plane: [-2.5, 1.0] x [-1.25, 1.25]'
+print, '  • Maximum iterations:', max_iter
+print, '  • Iteration values range:', min(mandelbrot_2d), 'to', max(mandelbrot_2d)
+print, '  • Mandelbrot set computed successfully!'
+print, ''
+print, '  ASCII Visualization (40x20):'
+print, ''
+
+; Create ASCII visualization
+ascii_width = 60
+ascii_height = 25
+
+for py = 0, ascii_height-1 do begin
+  line = '  '
+  for px = 0, ascii_width-1 do begin
+    ; Map to Mandelbrot data coordinates
+    mx = px * width / ascii_width
+    my = py * height / ascii_height
+    
+    ; Get iteration value from computed data
+    idx = my * width + mx
+    iteration = mandelbrot[idx]
+    
+    ; Map to ASCII character
+    if iteration eq max_iter then begin
+      line = line + '@'
+    end else begin
+      if iteration gt 40 then begin
+        line = line + '#'
+      end else begin
+        if iteration gt 30 then begin
+          line = line + '*'
+        end else begin
+          if iteration gt 20 then begin
+            line = line + '+'
+          end else begin
+            if iteration gt 10 then begin
+              line = line + ':'
+            end else begin
+              line = line + '.'
+            end
+            endif
+          end
+          endif
+        end
+        endif
+      end
+      endif
+    end
+    endif
+  end
+  endfor
+  print, line
+end
+endfor
+
+print, ''
+print, '  Legend: @ = Inside set, # * + : . = Outside (fast to slow escape)'
+print, ''
+
+; ============================================================================
+; SECTION 9: Live Plotting Demonstrations
+; ============================================================================
+print, '┌─ SECTION 9: Live Plotting Demonstrations ────────────────────┐'
+print, ''
+
+; Prepare data for plotting
+plot_x = dindgen(50) / 49.d0 * 4.d0 * !pi
+plot_y1 = sin(plot_x)
+plot_y2 = cos(plot_x)
+plot_y3 = sin(plot_x) * exp(-plot_x / 10.d0)
+
+print, '  Demonstrating XDL plotting capabilities...'
+print, ''
+
+; Plot 1: Sine wave
+print, '  [1/4] Plotting sine wave...'
+plot, plot_y1, plot_x
+print, '        ✓ Sine wave plotted'
+print, ''
+
+; Plot 2: Cosine wave
+print, '  [2/4] Plotting cosine wave...'
+plot, plot_y2, plot_x
+print, '        ✓ Cosine wave plotted'
+print, ''
+
+; Plot 3: Damped sine
+print, '  [3/4] Plotting damped sine wave...'
+plot, plot_y3, plot_x
+print, '        ✓ Damped sine plotted'
+print, ''
+
+; Plot 4: Mandelbrot set 3D surface visualization
+print, '  [4/4] Rendering Mandelbrot 3D surface...'
+surface, mandelbrot_2d
+print, '        ✓ Mandelbrot 3D surface generated!'
+print, '        ✓ Saved to xdl_surface.png'
+print, '        ✓ ASCII visualization rendered above'
+print, ''
+
+print, '  All plots generated successfully!'
+print, ''
+
+; ============================================================================
+; SUMMARY: Why Choose XDL?
+; ============================================================================
+print, ''
+print, '╔════════════════════════════════════════════════════════════════╗'
+print, '║                     WHY CHOOSE XDL?                            ║'
+print, '╠════════════════════════════════════════════════════════════════╣'
+print, '║  ✓ GDL/IDL Compatible    - Port existing code easily           ║'
+print, '║  ✓ Modern Performance    - Built with Rust for speed           ║'
+print, '║  ✓ Rich Math Library     - Scientific functions built-in       ║'
+print, '║  ✓ Image Processing      - CONVOL, edge detection, more        ║'
+print, '║  ✓ Easy Visualization    - Integrated plotting with xdl-gui    ║'
+print, '║  ✓ Array-First Design    - Optimized for numerical computing   ║'
+print, '║  ✓ Clean Syntax          - Readable, maintainable code         ║'
+print, '║  ✓ Open Source           - Community-driven development        ║'
+print, '╚════════════════════════════════════════════════════════════════╝'
+print, ''
+
+print, 'Demo completed successfully! ✓'
+print, ''
+print, 'Next steps:'
+print, '  • Try: help, /FUNCTIONS   - See all available functions'
+print, '  • Try: help, /PROCEDURES  - See all available procedures'
+print, '  • Try: xdl-gui            - Launch graphical interface'
+print, '  • Docs: docs/*.md         - Read detailed documentation'
+print, ''

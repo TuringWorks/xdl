@@ -1,0 +1,103 @@
+; Simple Mandelbrot Set Generator
+; Computes and displays Mandelbrot set as a 2D heatmap
+; Run with: ./target/release/xdl examples/mandelbrot_simple.xdl
+
+print, ''
+print, '╔════════════════════════════════════════════════════════════════╗'
+print, '║         XDL MANDELBROT SET - COMPUTATION DEMO                  ║'
+print, '╚════════════════════════════════════════════════════════════════╝'
+print, ''
+
+; Parameters
+width = 80
+height = 40
+xmin = -2.5
+xmax = 1.0
+ymin = -1.0
+ymax = 1.0
+max_iter = 50
+
+print, 'Mandelbrot Set Parameters:'
+print, '  • Resolution:', width, 'x', height, 'characters'
+print, '  • X range: [', xmin, ',', xmax, ']'
+print, '  • Y range: [', ymin, ',', ymax, ']'
+print, '  • Max iterations:', max_iter
+print, ''
+
+; ASCII characters for density (from low to high)
+chars = ' .:+*#@'
+
+; Generate and display Mandelbrot set
+print, 'Computing and rendering Mandelbrot set:'
+print, ''
+
+for py = 0, height-1 do begin
+  line = ''
+  
+  for px = 0, width-1 do begin
+    ; Map pixel to complex plane
+    x0 = xmin + (xmax - xmin) * px / (width - 1.0)
+    y0 = ymin + (ymax - ymin) * py / (height - 1.0)
+    
+    ; Mandelbrot iteration
+    x = 0.0
+    y = 0.0
+    iteration = 0
+    
+    for iter = 0, max_iter-1 do begin
+      if (x*x + y*y lt 4.0) then begin
+        xtemp = x*x - y*y + x0
+        y = 2.0*x*y + y0
+        x = xtemp
+        iteration = iteration + 1
+      end
+      endif
+    end
+    endfor
+    
+    ; Map iteration count to character
+    ; Use simple threshold mapping
+    if iteration eq max_iter then begin
+      line = line + '@'
+    end else begin
+      if iteration gt 40 then begin
+        line = line + '#'
+      end else begin
+        if iteration gt 30 then begin
+          line = line + '*'
+        end else begin
+          if iteration gt 20 then begin
+            line = line + '+'
+          end else begin
+            if iteration gt 10 then begin
+              line = line + ':'
+            end else begin
+              if iteration gt 5 then begin
+                line = line + '.'
+              end else begin
+                line = line + ' '
+              end
+              endif
+            end
+            endif
+          end
+          endif
+        end
+        endif
+      end
+      endif
+    end
+    endif
+  end
+  endfor
+  
+  print, line
+end
+endfor
+
+print, ''
+print, '╔════════════════════════════════════════════════════════════════╗'
+print, '║  Legend:  @ = Inside set  # * + : . = Outside (decreasing)    ║'
+print, '║  The iconic Mandelbrot "bulb" and "cardioid" are visible!     ║'
+print, '╚════════════════════════════════════════════════════════════════╝'
+print, ''

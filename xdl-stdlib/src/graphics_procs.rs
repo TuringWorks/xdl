@@ -195,9 +195,39 @@ fn extract_numeric_array(value: &XdlValue) -> XdlResult<Vec<f64>> {
     }
 }
 
-/// Helper function to extract 2D array from nested array
+/// Helper function to extract 2D array from nested array or MultiDimArray
 fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
     match value {
+        XdlValue::MultiDimArray { data, shape } => {
+            // Handle MultiDimArray from REFORM
+            if shape.len() != 2 {
+                return Err(XdlError::RuntimeError(format!(
+                    "Expected 2D array, got {}D array",
+                    shape.len()
+                )));
+            }
+            
+            let height = shape[0];
+            let width = shape[1];
+            
+            if data.len() != height * width {
+                return Err(XdlError::RuntimeError(format!(
+                    "Array size {} doesn't match dimensions {}x{}",
+                    data.len(),
+                    height,
+                    width
+                )));
+            }
+            
+            // Convert flat array to 2D Vec<Vec<f64>>
+            let mut result = Vec::with_capacity(height);
+            for i in 0..height {
+                let row_start = i * width;
+                let row_end = row_start + width;
+                result.push(data[row_start..row_end].to_vec());
+            }
+            Ok(result)
+        }
         XdlValue::NestedArray(rows) => {
             let mut result = Vec::new();
             for row in rows {
@@ -218,7 +248,7 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
             Ok(result)
         }
         _ => Err(XdlError::RuntimeError(
-            "Expected a 2D nested array".to_string(),
+            "Expected a 2D nested array or MultiDimArray".to_string(),
         )),
     }
 }
