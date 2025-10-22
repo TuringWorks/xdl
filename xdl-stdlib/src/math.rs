@@ -119,13 +119,16 @@ pub fn sqrt(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Handle arrays
     if let XdlValue::Array(arr) = input {
-        let result: Vec<f64> = arr.iter().map(|&x| {
-            if x < 0.0 {
-                f64::NAN // Return NaN for negative values in arrays
-            } else {
-                x.sqrt()
-            }
-        }).collect();
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| {
+                if x < 0.0 {
+                    f64::NAN // Return NaN for negative values in arrays
+                } else {
+                    x.sqrt()
+                }
+            })
+            .collect();
         return Ok(XdlValue::Array(result));
     }
 
@@ -183,7 +186,6 @@ pub fn log10(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     let result = float_val.log10();
     Ok(from_float(result, input.gdl_type()))
 }
-
 
 pub fn abs(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     if _args.len() != 1 {

@@ -21,7 +21,7 @@ use tracing::{error, info};
 use crate::image_window::ImageWindow;
 use crate::plot_window::PlotWindow;
 use xdl_interpreter::Interpreter;
-use xdl_stdlib::{register_gui_plot_callback, register_gui_image_callback};
+use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
 
 pub struct XdlGui {
     window: Window,
@@ -627,14 +627,14 @@ impl XdlGui {
                 Err(e) => eprintln!("Plot error: {}", e),
             },
         );
-        
+
         // Register image display callback for 3D plots
-        register_gui_image_callback(
-            move |image_path, title| match ImageWindow::new(&image_path, &title) {
+        register_gui_image_callback(move |image_path, title| {
+            match ImageWindow::new(&image_path, &title) {
                 Ok(mut img_win) => img_win.show(),
                 Err(e) => eprintln!("Image display error: {}", e),
-            },
-        );
+            }
+        });
 
         let gui = Self {
             window,

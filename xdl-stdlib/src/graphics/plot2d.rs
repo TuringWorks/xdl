@@ -1,8 +1,8 @@
 //! 2D plotting implementation
 
-use super::state::{Color, GraphicsState, LineStyle, PlotStyle, GRAPHICS_STATE};
+use super::state::{Color, LineStyle, PlotStyle, GRAPHICS_STATE};
 use plotters::prelude::*;
-use xdl_core::{XdlError, XdlResult, XdlValue};
+use xdl_core::XdlResult;
 
 /// 2D plot configuration
 #[derive(Clone)]
@@ -144,7 +144,7 @@ fn draw_symbols<DB: DrawingBackend>(
     let size = (symsize * 5.0) as i32;
 
     let style = ShapeStyle::from(color).filled();
-    
+
     for (x, y) in x_data.iter().zip(y_data.iter()) {
         match psym {
             1 => {
@@ -157,27 +157,15 @@ fn draw_symbols<DB: DrawingBackend>(
             }
             3 => {
                 // Dot
-                chart.draw_series(std::iter::once(Circle::new(
-                    (*x, *y),
-                    size / 2,
-                    style,
-                )))?;
+                chart.draw_series(std::iter::once(Circle::new((*x, *y), size / 2, style)))?;
             }
             4 => {
                 // Diamond
-                chart.draw_series(std::iter::once(TriangleMarker::new(
-                    (*x, *y),
-                    size,
-                    style,
-                )))?;
+                chart.draw_series(std::iter::once(TriangleMarker::new((*x, *y), size, style)))?;
             }
             5 => {
                 // Triangle
-                chart.draw_series(std::iter::once(TriangleMarker::new(
-                    (*x, *y),
-                    size,
-                    style,
-                )))?;
+                chart.draw_series(std::iter::once(TriangleMarker::new((*x, *y), size, style)))?;
             }
             6 => {
                 // Square
@@ -252,7 +240,10 @@ pub fn histogram_plot(
     chart.draw_series(bins.iter().enumerate().map(|(i, &count)| {
         let x0 = min_val + i as f64 * bin_width;
         let x1 = x0 + bin_width;
-        Rectangle::new([(x0, 0.0), (x1, count as f64)], ShapeStyle::from(&bar_color).filled())
+        Rectangle::new(
+            [(x0, 0.0), (x1, count as f64)],
+            ShapeStyle::from(&bar_color).filled(),
+        )
     }))?;
 
     root.present()?;
@@ -297,7 +288,10 @@ pub fn bar_plot(values: Vec<f64>, config: Plot2DConfig, filename: &str) -> XdlRe
         let x_center = i as f64 + 0.5;
         let x0 = x_center - bar_width / 2.0;
         let x1 = x_center + bar_width / 2.0;
-        Rectangle::new([(x0, 0.0), (x1, val)], ShapeStyle::from(&bar_color).filled())
+        Rectangle::new(
+            [(x0, 0.0), (x1, val)],
+            ShapeStyle::from(&bar_color).filled(),
+        )
     }))?;
 
     root.present()?;
