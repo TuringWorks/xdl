@@ -1,0 +1,28 @@
+[package]
+name = "xdl-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Extended Data Language (XDL) command-line interface"
+
+[[bin]]
+name = "xdl"
+path = "src/main.rs"
+
+[dependencies]
+xdl-core = { path = "../xdl-core" }
+xdl-parser = { path = "../xdl-parser" }
+xdl-interpreter = { path = "../xdl-interpreter" }
+xdl-stdlib = { path = "../xdl-stdlib" }
+
+clap = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+
+# For REPL
+rustyline = "13.0"
+dirs = "5.0"
+serde_json = "1.0"

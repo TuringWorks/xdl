@@ -1,0 +1,10 @@
+[package]
+name = "xdl-runtime"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "XDL runtime system"
+
+[dependencies]
+xdl-core = { path = "../xdl-core" }

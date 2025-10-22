@@ -1,0 +1,263 @@
+; ============================================================================
+; STRING TYPE CONVERSION FUNCTION TEST SUITE
+; ============================================================================
+; Tests the STRING() function for converting various data types to strings
+;
+; Expected behavior:
+; - STRING(value) converts any scalar or array to string representation
+; - Integers: direct string conversion
+; - Floats/Doubles: formatted with scientific notation for very large/small
+; - Arrays: show type and dimensions
+; - Strings: pass through unchanged
+; ============================================================================
+
+PRO test_string_conversion
+
+    PRINT, '========================================='
+    PRINT, 'STRING TYPE CONVERSION FUNCTION TESTS'
+    PRINT, '========================================='
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 1: String input (should pass through)
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 1: String input'
+    s = 'hello'
+    result = STRING(s)
+    PRINT, 'Input: ', s
+    PRINT, 'Result: ', result
+    PRINT, 'Type match: ', result EQ 'hello'
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 2: Integer conversion
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 2: Integer conversion'
+    i = 42
+    result = STRING(i)
+    PRINT, 'Input: ', i
+    PRINT, 'Result: ', result
+    PRINT, 'Expected: "42"'
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 3: Negative integer
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 3: Negative integer'
+    i = -123
+    result = STRING(i)
+    PRINT, 'Input: ', i
+    PRINT, 'Result: ', result
+    PRINT, 'Expected: "-123"'
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 4: Long integer
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 4: Long integer'
+    l = 1234567
+    result = STRING(l)
+    PRINT, 'Input: ', l
+    PRINT, 'Result: ', result
+    PRINT, 'Expected: "1234567"'
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 5: Float conversion (normal range)
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 5: Float conversion (normal range)'
+    f = 3.14159
+    result = STRING(f)
+    PRINT, 'Input: ', f
+    PRINT, 'Result: ', result
+    PRINT, 'Contains "3.14": ', STRPOS(result, '3.14') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 6: Double conversion (normal range)
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 6: Double conversion (normal range)'
+    d = 2.71828
+    result = STRING(d)
+    PRINT, 'Input: ', d
+    PRINT, 'Result: ', result
+    PRINT, 'Contains "2.71": ', STRPOS(result, '2.71') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 7: Very small float (should use scientific notation)
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 7: Very small float (scientific notation)'
+    f = 1.23e-5
+    result = STRING(f)
+    PRINT, 'Input: ', f
+    PRINT, 'Result: ', result
+    PRINT, 'Is scientific: ', STRPOS(result, 'e') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 8: Very large double (should use scientific notation)
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 8: Very large double (scientific notation)'
+    d = 987654321.0
+    result = STRING(d)
+    PRINT, 'Input: ', d
+    PRINT, 'Result: ', result
+    PRINT, 'Is scientific: ', STRPOS(result, 'e') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 9: Zero values
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 9: Zero values'
+    i = 0
+    f = 0.0
+    d = 0.0
+    PRINT, 'Integer zero: ', STRING(i)
+    PRINT, 'Float zero: ', STRING(f)
+    PRINT, 'Double zero: ', STRING(d)
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 10: Byte values
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 10: Byte values'
+    b = 255
+    result = STRING(b)
+    PRINT, 'Byte value 255: ', result
+    b = 0
+    result = STRING(b)
+    PRINT, 'Byte value 0: ', result
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 11: Array conversion - 1D byte array
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 11: 1D Byte array conversion'
+    arr = BYTARR(5)
+    result = STRING(arr)
+    PRINT, 'Input: BYTARR(5)'
+    PRINT, 'Result: ', result
+    PRINT, 'Contains BYTE: ', STRPOS(result, 'BYTE') GE 0
+    PRINT, 'Contains [5]: ', STRPOS(result, '5') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 12: Array conversion - 2D integer array
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 12: 2D Integer array conversion'
+    arr = INTARR(3, 4)
+    result = STRING(arr)
+    PRINT, 'Input: INTARR(3, 4)'
+    PRINT, 'Result: ', result
+    PRINT, 'Contains INT: ', STRPOS(result, 'INT') GE 0
+    PRINT, 'Contains dimensions: ', STRPOS(result, '3') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 13: Array conversion - 3D float array
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 13: 3D Float array conversion'
+    arr = FLTARR(2, 3, 4)
+    result = STRING(arr)
+    PRINT, 'Input: FLTARR(2, 3, 4)'
+    PRINT, 'Result: ', result
+    PRINT, 'Contains FLOAT: ', STRPOS(result, 'FLOAT') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 14: Array conversion - Double array
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 14: Double array conversion'
+    arr = DBLARR(10)
+    result = STRING(arr)
+    PRINT, 'Input: DBLARR(10)'
+    PRINT, 'Result: ', result
+    PRINT, 'Contains DOUBLE: ', STRPOS(result, 'DOUBLE') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 15: Array conversion - Long array
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 15: Long array conversion'
+    arr = LONARR(7, 8)
+    result = STRING(arr)
+    PRINT, 'Input: LONARR(7, 8)'
+    PRINT, 'Result: ', result
+    PRINT, 'Contains LONG: ', STRPOS(result, 'LONG') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 16: String array conversion
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 16: String array conversion'
+    arr = STRARR(5)
+    result = STRING(arr)
+    PRINT, 'Input: STRARR(5)'
+    PRINT, 'Result: ', result
+    PRINT, 'Contains STRING: ', STRPOS(result, 'STRING') GE 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 17: Mixed type conversions in sequence
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 17: Mixed type conversions'
+    PRINT, 'STRING(100): ', STRING(100)
+    PRINT, 'STRING(3.14): ', STRING(3.14)
+    PRINT, 'STRING("test"): ', STRING('test')
+    PRINT, 'STRING(42): ', STRING(42)
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 18: Negative floats
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 18: Negative floating point'
+    f = -99.99
+    result = STRING(f)
+    PRINT, 'Input: ', f
+    PRINT, 'Result: ', result
+    PRINT, 'Negative sign present: ', STRPOS(result, '-') EQ 0
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 19: Special float values behavior
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 19: Edge case float values'
+    ; Test values at boundary of scientific notation switch
+    f1 = 0.0001  ; Should NOT use scientific
+    f2 = 0.00001 ; Should use scientific (< 1e-4)
+    f3 = 9999999.0  ; Should NOT use scientific
+    f4 = 10000000.0 ; Should use scientific (>= 1e7)
+    
+    r1 = STRING(f1)
+    r2 = STRING(f2)
+    r3 = STRING(f3)
+    r4 = STRING(f4)
+    
+    PRINT, 'f1 (0.0001): ', r1
+    PRINT, 'f2 (0.00001): ', r2, ' (scientific)'
+    PRINT, 'f3 (9999999): ', r3
+    PRINT, 'f4 (1e7): ', r4, ' (scientific)'
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 20: Conversion consistency
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 20: Conversion consistency'
+    ; Converting twice should give same result
+    val = 12345
+    s1 = STRING(val)
+    s2 = STRING(val)
+    PRINT, 'First conversion: ', s1
+    PRINT, 'Second conversion: ', s2
+    PRINT, 'Results match: ', s1 EQ s2
+    PRINT, ''
+
+    PRINT, '========================================='
+    PRINT, 'STRING CONVERSION TESTS COMPLETE'
+    PRINT, '========================================='
+
+END
+
+; Run the test suite
+test_string_conversion

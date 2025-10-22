@@ -1,0 +1,22 @@
+[package]
+name = "xdl-stdlib"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "XDL standard library functions"
+
+[dependencies]
+xdl-core = { path = "../xdl-core" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+num-complex = { workspace = true }
+plotters = { workspace = true }
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_plot = { workspace = true }
+pyo3 = { workspace = true }
+lazy_static = "1.4"
+rustfft = "6.1"
+# GSL = { workspace = true }  # TODO: Install GSL system dependency

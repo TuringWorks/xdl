@@ -1,0 +1,37 @@
+; Test Python constants and various functions
+print, "=== Python Constants and Functions Test ==="
+
+; Import math module
+print, "1. Importing math module..."
+math_mod = python_import("math")
+
+; Test mathematical functions with different inputs
+print, ""
+print, "2. Testing various math functions..."
+sqrt_9 = python_call(math_mod, "sqrt", 9.0)
+print, "sqrt(9) =", sqrt_9
+
+log_e = python_call(math_mod, "log", 2.718281828)
+print, "log(e) =", log_e
+
+exp_1 = python_call(math_mod, "exp", 1.0)
+print, "exp(1) =", exp_1
+
+; Test trigonometric functions
+print, ""
+print, "3. Testing trigonometric functions..."
+sin_90 = python_call(math_mod, "sin", 1.5708)
+print, "sin(π/2) ≈", sin_90
+
+tan_45 = python_call(math_mod, "tan", 0.7854)
+print, "tan(π/4) ≈", tan_45
+
+; Test other modules
+print, ""
+print, "4. Testing random module..."
+random_mod = python_import("random")
+rand_int = python_call(random_mod, "randint", 1, 10)
+print, "Random integer (1-10):", rand_int
+
+print, ""
+print, "=== Python constants and functions test complete ==="

@@ -1,0 +1,40 @@
+; GUI Test Script
+; This script tests control flow with visible output
+
+print, "=== Testing Control Flow in GUI ==="
+print, ""
+
+; Test variables
+x = 10
+y = 20
+count = 3
+
+print, "Variables initialized:"
+print, "x =", x
+print, "y =", y
+print, "count =", count
+print, ""
+
+; Test IF statement
+print, "Testing IF statement..."
+if x lt y then
+  print, "  x is less than y"
+endif
+print, ""
+
+; Test FOR loop
+print, "Testing FOR loop..."
+for i = 1, 5
+  print, "  Loop iteration", i
+endfor
+print, ""
+
+; Test WHILE loop
+print, "Testing WHILE loop..."
+while count gt 0
+  print, "  Countdown:", count
+  count = count - 1
+endwhile
+print, ""
+
+print, "=== All Tests Complete ==="

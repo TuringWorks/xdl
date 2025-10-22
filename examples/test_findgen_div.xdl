@@ -1,0 +1,24 @@
+; Test FINDGEN division issue
+
+PRINT, 'Testing FINDGEN division'
+PRINT, ''
+
+; Test 1
+PRINT, 'Test 1: First FINDGEN division'
+x1 = FINDGEN(10) / 5.0
+PRINT, 'x1 = ', x1
+PRINT, ''
+
+; Test 2  
+PRINT, 'Test 2: Second FINDGEN division'
+x2 = FINDGEN(20) / 10.0
+PRINT, 'x2 = ', x2
+PRINT, ''
+
+; Test 3
+PRINT, 'Test 3: COS of divided array'
+y2 = COS(x2)
+PRINT, 'y2 = ', y2
+PRINT, ''
+
+PRINT, 'Tests complete'

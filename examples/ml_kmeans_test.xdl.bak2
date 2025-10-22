@@ -1,0 +1,123 @@
+; K-means Clustering Test
+; Demonstrates XDLML_KMeans clustering algorithm
+
+PRINT, 'K-means Clustering Test'
+PRINT, ''
+
+; Test 1: Simple 3-cluster example with clear separation
+PRINT, 'Test 1: Three well-separated clusters'
+; Create data: cluster 1 around 10, cluster 2 around 50, cluster 3 around 90
+data1 = FINDGEN(10) + 5.0   ; 5-14
+data2 = FINDGEN(10) + 45.0  ; 45-54
+data3 = FINDGEN(10) + 85.0  ; 85-94
+combined = FLTARR(30)
+combined[0] = data1[0]
+combined[1] = data1[1]
+combined[2] = data1[2]
+combined[3] = data1[3]
+combined[4] = data1[4]
+combined[5] = data1[5]
+combined[6] = data1[6]
+combined[7] = data1[7]
+combined[8] = data1[8]
+combined[9] = data1[9]
+combined[10] = data2[0]
+combined[11] = data2[1]
+combined[12] = data2[2]
+combined[13] = data2[3]
+combined[14] = data2[4]
+combined[15] = data2[5]
+combined[16] = data2[6]
+combined[17] = data2[7]
+combined[18] = data2[8]
+combined[19] = data2[9]
+combined[20] = data3[0]
+combined[21] = data3[1]
+combined[22] = data3[2]
+combined[23] = data3[3]
+combined[24] = data3[4]
+combined[25] = data3[5]
+combined[26] = data3[6]
+combined[27] = data3[7]
+combined[28] = data3[8]
+combined[29] = data3[9]
+
+PRINT, 'Data: 3 groups (5-14, 45-54, 85-94)'
+clusters = XDLML_KMeans(combined, 3, 50, 42)
+PRINT, 'First 10 labels:', clusters[0], clusters[1], clusters[2], clusters[9]
+PRINT, 'Middle 10 labels:', clusters[10], clusters[11], clusters[12], clusters[19]
+PRINT, 'Last 10 labels:', clusters[20], clusters[21], clusters[22], clusters[29]
+PRINT, ''
+
+; Test 2: Two clusters
+PRINT, 'Test 2: Two clusters'
+data_a = FINDGEN(20)
+data_b = FINDGEN(20) + 50.0
+combined2 = FLTARR(40)
+; Copy first 20
+FOR i=0, 19 DO BEGIN
+    combined2[i] = data_a[i]
+END
+endfor
+; Copy next 20  
+FOR i=0, 19 DO BEGIN
+    combined2[i+20] = data_b[i]
+END
+endfor
+
+clusters2 = XDLML_KMeans(combined2, 2, 50, 123)
+; Count cluster assignments
+n_cluster_0 = 0
+n_cluster_1 = 0
+FOR i=0, 39 DO BEGIN
+    IF clusters2[i] LT 0.5 THEN n_cluster_0 = n_cluster_0 + 1
+    IF clusters2[i] GT 0.5 THEN n_cluster_1 = n_cluster_1 + 1
+END
+endfor
+PRINT, 'Cluster 0 count:', n_cluster_0
+PRINT, 'Cluster 1 count:', n_cluster_1
+PRINT, 'Total assigned:', n_cluster_0 + n_cluster_1
+PRINT, ''
+
+; Test 3: Single cluster (everything assigned to 0)
+PRINT, 'Test 3: Single cluster'
+simple_data = FINDGEN(10)
+single_cluster = XDLML_KMeans(simple_data, 1, 20, 99)
+PRINT, 'All labels should be 0:', single_cluster[0], single_cluster[5], single_cluster[9]
+PRINT, ''
+
+; Test 4: Reproducibility with same seed
+PRINT, 'Test 4: Reproducibility (same seed)'
+test_data = FINDGEN(20) * 2.0
+result1 = XDLML_KMeans(test_data, 3, 50, 777)
+result2 = XDLML_KMeans(test_data, 3, 50, 777)
+PRINT, 'First run:', result1[0], result1[1], result1[2]
+PRINT, 'Second run:', result2[0], result2[1], result2[2]
+matches = (result1[0] EQ result2[0]) AND (result1[1] EQ result2[1])
+PRINT, 'Results match:', matches
+PRINT, ''
+
+; Test 5: Different seeds produce different (but valid) results
+PRINT, 'Test 5: Different seeds'
+seed_a_result = XDLML_KMeans(test_data, 3, 50, 111)
+seed_b_result = XDLML_KMeans(test_data, 3, 50, 222)
+PRINT, 'Seed 111:', seed_a_result[0], seed_a_result[1], seed_a_result[2]
+PRINT, 'Seed 222:', seed_b_result[0], seed_b_result[1], seed_b_result[2]
+PRINT, ''
+
+; Test 6: Real-world-like data
+PRINT, 'Test 6: Mixed data clustering'
+mixed = FINDGEN(50)
+mixed_clusters = XDLML_KMeans(mixed, 5, 100, 999)
+PRINT, 'Clustered 50 points into 5 groups'
+PRINT, 'Sample labels:', mixed_clusters[0], mixed_clusters[10], mixed_clusters[20], mixed_clusters[30], mixed_clusters[40]
+; Check all labels are valid (0-4)
+all_valid = 1
+FOR i=0, 49 DO BEGIN
+    IF mixed_clusters[i] LT 0.0 OR mixed_clusters[i] GT 4.5 THEN all_valid = 0
+END
+endfor
+PRINT, 'All labels valid (0-4):', all_valid
+PRINT, ''
+
+PRINT, 'K-means clustering tests complete!'

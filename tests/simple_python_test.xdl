@@ -1,0 +1,28 @@
+; Simple Python integration test
+print, "=== Simple Python Test ==="
+
+; Test 1: Import math module
+print, "1. Importing math module..."
+math_mod = python_import("math")
+print, "Math module handle:", math_mod
+
+; Test 2: Call sqrt function
+print, ""
+print, "2. Calling math.sqrt(25)..."
+result = python_call(math_mod, "sqrt", 25.0)
+print, "sqrt(25) =", result
+
+; Test 3: Call sin function
+print, ""
+print, "3. Calling math.sin(0)..."
+sin_result = python_call(math_mod, "sin", 0.0)
+print, "sin(0) =", sin_result
+
+; Test 4: Call cos function
+print, ""
+print, "4. Calling math.cos(0)..."
+cos_result = python_call(math_mod, "cos", 0.0)
+print, "cos(0) =", cos_result
+
+print, ""
+print, "=== Simple Python test complete ==="

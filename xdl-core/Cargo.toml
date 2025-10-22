@@ -1,0 +1,19 @@
+[package]
+name = "xdl-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core data structures and types for XDL"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+ndarray = { workspace = true }
+num-traits = { workspace = true }
+num-complex = { workspace = true }
+nalgebra = { workspace = true }
+plotters = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

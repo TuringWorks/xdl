@@ -1,0 +1,28 @@
+; Test Python array operations with object storage
+print, "=== Testing Python Array Operations ==="
+
+numpy_mod = python_import("numpy")
+
+; Create an array
+print, "Creating array..."
+arr = python_call(numpy_mod, "arange", 10)
+print, "Array:", arr
+
+; Now try to use the array in operations
+print, ""
+print, "Testing array operations..."
+
+; Sum the array
+sum_result = python_call(numpy_mod, "sum", arr)
+print, "Sum:", sum_result
+
+; Mean of array
+mean_result = python_call(numpy_mod, "mean", arr)
+print, "Mean:", mean_result
+
+; Std of array
+std_result = python_call(numpy_mod, "std", arr)
+print, "Std dev:", std_result
+
+print, ""
+print, "=== Test complete ==="

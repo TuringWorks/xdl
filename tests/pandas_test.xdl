@@ -1,0 +1,52 @@
+; Test Pandas integration with XDL
+print, "=== Pandas Integration Test ==="
+
+; Import pandas
+print, "1. Importing Pandas..."
+pandas_mod = python_import("pandas")
+print, "Pandas imported successfully"
+
+; Test basic Pandas functionality
+print, ""
+print, "2. Testing Pandas Series creation..."
+
+; We'll use simple approaches since we can't pass complex data structures yet
+
+; Import numpy for some array creation
+numpy_mod = python_import("numpy")
+
+; Create a simple array with numpy first
+data_array = python_call(numpy_mod, "arange", 5)
+print, "Data array:", data_array
+
+; Try to create a Series (this might not work due to data conversion limitations)
+; For now, let's test simpler Pandas functions
+
+; Test DataFrame creation with simple data
+print, ""
+print, "3. Testing basic Pandas functions..."
+
+; Test reading data functions (these should work)
+; Note: We'll test functions that don't require complex input
+
+; Test utility functions
+print, "4. Testing Pandas utility functions..."
+
+; Test date range generation
+date_range = python_call(pandas_mod, "date_range", "2025-01-01", 5)
+print, "Pandas date_range:", date_range
+
+; Test some basic Pandas functions that work with scalars
+print, ""
+print, "5. Testing Pandas with simple operations..."
+
+; Test period functionality
+period_test = python_call(pandas_mod, "Period", "2025-01")  
+print, "Pandas Period:", period_test
+
+; Test timestamp
+timestamp_test = python_call(pandas_mod, "Timestamp", "2025-01-01")
+print, "Pandas Timestamp:", timestamp_test
+
+print, ""
+print, "=== Pandas test complete ==="

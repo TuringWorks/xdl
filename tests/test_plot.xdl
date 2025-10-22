@@ -1,0 +1,18 @@
+; Test XDL plotting functionality
+print, "=== XDL Interactive Plotting Test ==="
+
+; Generate sample data using findgen and mathematical functions
+print, "Generating data: orig = sin((findgen(200)/35)^2.5)"
+orig = sin((findgen(200)/35)^2.5)
+
+; Create the plot
+print, "Opening interactive plot window..."
+plot, orig
+
+print, "Plot window should now be open!"
+print, "You can zoom, pan, and interact with the plot."
+print, "Close the plot window when you're done."
+
+; Test completed
+print, ""
+print, "=== Plotting test complete ==="

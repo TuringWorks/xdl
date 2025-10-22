@@ -1,0 +1,45 @@
+; Test Python with different data types
+print, "=== Python Data Types Test ==="
+
+; Test with string functions
+print, "1. Testing string functions..."
+; Note: We'll use builtins for string operations since they're more reliable
+builtins_mod = python_import("builtins")
+
+; Test len function with string
+str_len = python_call(builtins_mod, "len", "Hello World")
+print, "len('Hello World') =", str_len
+
+; Test abs function with negative number
+abs_val = python_call(builtins_mod, "abs", -42)
+print, "abs(-42) =", abs_val
+
+; Test max and min functions
+max_val = python_call(builtins_mod, "max", 10, 20)
+print, "max(10, 20) =", max_val
+
+; Test with floats
+print, ""
+print, "2. Testing float operations..."
+math_mod = python_import("math")
+
+; Test ceil and floor
+ceil_val = python_call(math_mod, "ceil", 3.14)
+print, "ceil(3.14) =", ceil_val
+
+floor_val = python_call(math_mod, "floor", 3.14)  
+print, "floor(3.14) =", floor_val
+
+; Test power function
+pow_val = python_call(math_mod, "pow", 2.0, 3.0)
+print, "pow(2, 3) =", pow_val
+
+print, ""
+print, "3. Testing os module..."
+os_mod = python_import("os")
+; Get current working directory (this should return a string)
+; cwd = python_call(os_mod, "getcwd")
+; print, "Current directory:", cwd
+
+print, ""
+print, "=== Data types test complete ==="

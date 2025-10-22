@@ -1,0 +1,54 @@
+; Test NumPy integration with XDL
+print, "=== NumPy Integration Test ==="
+
+; Import numpy
+print, "1. Importing NumPy..."
+numpy_mod = python_import("numpy")
+print, "NumPy imported successfully"
+
+; Test numpy array creation
+print, ""
+print, "2. Testing NumPy array creation..."
+; Create array from list
+array1 = python_call(numpy_mod, "array", [1, 2, 3, 4, 5])
+print, "numpy.array([1,2,3,4,5]):", array1
+
+; Test zeros array
+zeros_array = python_call(numpy_mod, "zeros", 5)
+print, "numpy.zeros(5):", zeros_array
+
+; Test ones array
+ones_array = python_call(numpy_mod, "ones", 3)
+print, "numpy.ones(3):", ones_array
+
+; Test arange function
+print, ""
+print, "3. Testing NumPy arange..."
+arange_result = python_call(numpy_mod, "arange", 0, 10, 2)
+print, "numpy.arange(0, 10, 2):", arange_result
+
+; Test linspace function
+linspace_result = python_call(numpy_mod, "linspace", 0, 1, 5)
+print, "numpy.linspace(0, 1, 5):", linspace_result
+
+; Test mathematical functions
+print, ""
+print, "4. Testing NumPy math functions..."
+; Create a simple array first
+simple_array = python_call(numpy_mod, "array", [1, 4, 9, 16])
+print, "Input array:", simple_array
+
+; Test sqrt function
+sqrt_result = python_call(numpy_mod, "sqrt", simple_array)  
+print, "numpy.sqrt(array):", sqrt_result
+
+; Test sum function
+sum_result = python_call(numpy_mod, "sum", simple_array)
+print, "numpy.sum(array):", sum_result
+
+; Test mean function
+mean_result = python_call(numpy_mod, "mean", simple_array)
+print, "numpy.mean(array):", mean_result
+
+print, ""
+print, "=== NumPy test complete ==="

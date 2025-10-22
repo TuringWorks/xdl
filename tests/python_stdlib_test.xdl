@@ -1,0 +1,40 @@
+; Test Python standard library modules
+print, "=== Python Standard Library Test ==="
+
+; Test datetime module
+print, "1. Testing datetime module..."
+datetime_mod = python_import("datetime")
+
+; Test platform module for system info
+print, ""
+print, "2. Testing platform module..."
+platform_mod = python_import("platform")
+system_name = python_call(platform_mod, "system")
+print, "System:", system_name
+
+; Test time module
+print, ""
+print, "3. Testing time module..."
+time_mod = python_import("time")
+; Get current time as timestamp
+current_time = python_call(time_mod, "time")
+print, "Current timestamp:", current_time
+
+; Test uuid module
+print, ""  
+print, "4. Testing uuid module..."
+uuid_mod = python_import("uuid")
+; Generate a random UUID
+random_uuid = python_call(uuid_mod, "uuid4")
+print, "Random UUID:", random_uuid
+
+; Test json module
+print, ""
+print, "5. Testing json module..."
+json_mod = python_import("json")
+; Test JSON dumps function
+json_str = python_call(json_mod, "dumps", "hello")
+print, "JSON string:", json_str
+
+print, ""
+print, "=== Standard library test complete ==="

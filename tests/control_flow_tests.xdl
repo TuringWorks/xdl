@@ -1,0 +1,35 @@
+; XDL Control Flow Tests
+
+print, "=== XDL CONTROL FLOW TESTS ==="
+
+; Simple if-then
+x = 10
+if x gt 5 then begin
+  print, "x > 5"
+end
+endif
+
+; If-else
+score = 85
+if score ge 90 then begin
+  print, "Grade A"
+end else begin
+  print, "Grade B"
+end
+endif
+
+; For loop
+for i = 1, 5 do begin
+  print, "i =", i
+end
+endfor
+
+; While loop
+count = 3
+while count gt 0 do begin
+  print, "count =", count
+  count = count - 1
+end
+endwhile
+
+print, "=== TESTS COMPLETED ==="

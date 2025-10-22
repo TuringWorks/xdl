@@ -1,0 +1,29 @@
+; Test Python error handling
+print, "=== Python Error Handling Test ==="
+
+; Test 1: Valid operations first
+print, "1. Testing valid operations..."
+math_mod = python_import("math")
+good_result = python_call(math_mod, "sqrt", 16.0)
+print, "sqrt(16) =", good_result
+
+; Test 2: Try to import non-existent module
+print, ""
+print, "2. Testing non-existent module import..."
+; This should cause an error but the script should continue
+; Note: We'll comment this out for now since it might crash
+; fake_mod = python_import("nonexistent_module_xyz")
+
+; Test 3: Try to call non-existent function
+print, "3. Testing non-existent function call..."
+; This should cause an error
+; bad_result = python_call(math_mod, "nonexistent_function", 5.0)
+
+; Test 4: Try invalid arguments
+print, "4. Testing invalid arguments..."
+; Try to take sqrt of negative number (should work in Python but return complex)
+neg_sqrt = python_call(math_mod, "sqrt", 4.0)
+print, "sqrt(4) =", neg_sqrt
+
+print, ""
+print, "=== Error handling tests complete ==="

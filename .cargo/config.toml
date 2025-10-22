@@ -1,0 +1,7 @@
+[env]
+# Set Python interpreter for PyO3 to use Python 3.13.0
+PYO3_PYTHON = "/Users/ravindraboddipalli/.pyenv/shims/python3"
+
+[build]
+# Optional: Add Python-related build flags if needed
+# rustflags = ["-C", "link-args=-undefined dynamic_lookup"]  # For macOS if needed

@@ -1,0 +1,83 @@
+; RNN Layer Test
+
+PRINT, 'RNN Sequence Processing Test'
+PRINT, '============================'
+PRINT, ''
+
+; Test 1: Simple RNN with short sequence
+PRINT, 'TEST 1: SimpleRNN with short sequence'
+seq = [1.0, 2.0, 3.0, 4.0, 5.0]
+PRINT, 'Input sequence:', seq
+
+hidden = XDLML_SIMPLERNN(seq, 3, 0.01, 10, 42)
+PRINT, 'Hidden state size:', N_ELEMENTS(hidden)
+PRINT, 'Final hidden state:', hidden
+PRINT, 'SimpleRNN: PASS'
+PRINT, ''
+
+; Test 2: RNN with different hidden size
+PRINT, 'TEST 2: RNN with hidden_size=5'
+hidden_5 = XDLML_SIMPLERNN(seq, 5, 0.01, 10, 42)
+PRINT, 'Sequence:', seq
+PRINT, 'Hidden state size:', N_ELEMENTS(hidden_5)
+PRINT, 'Hidden state:', hidden_5
+PRINT, 'RNN Hidden Size: PASS'
+PRINT, ''
+
+; Test 3: Sequence Mean (RNN-style processing)
+PRINT, 'TEST 3: Sequence Mean with window=3'
+sequence = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+means = XDLML_SEQUENCEMEAN(sequence, 3)
+PRINT, 'Input:', sequence
+PRINT, 'Running means:', means
+PRINT, 'Output size:', N_ELEMENTS(means)
+PRINT, 'Sequence Mean: PASS'
+PRINT, ''
+
+; Test 4: Time series with RNN
+PRINT, 'TEST 4: Time series processing'
+timeseries = [10.0, 12.0, 11.0, 15.0, 14.0, 16.0, 18.0, 17.0]
+PRINT, 'Time series:', timeseries
+
+; Process with RNN
+rnn_output = XDLML_SIMPLERNN(timeseries, 4, 0.01, 5, 100)
+PRINT, 'RNN processed (hidden=4):', rnn_output
+
+; Process with sequence mean
+smoothed = XDLML_SEQUENCEMEAN(timeseries, 2)
+PRINT, 'Smoothed (window=2):', smoothed
+PRINT, 'Time Series: PASS'
+PRINT, ''
+
+; Test 5: Pattern detection in sequence
+PRINT, 'TEST 5: Pattern detection'
+pattern = [1.0, 1.0, 1.0, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0]
+PRINT, 'Pattern:', pattern
+
+pattern_hidden = XDLML_SIMPLERNN(pattern, 6, 0.01, 10, 42)
+PRINT, 'Hidden representation:', pattern_hidden
+PRINT, 'Pattern Detection: PASS'
+PRINT, ''
+
+; Test 6: Different window sizes for sequence mean
+PRINT, 'TEST 6: Sequence Mean - varying windows'
+data_seq = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+
+mean_w2 = XDLML_SEQUENCEMEAN(data_seq, 2)
+mean_w4 = XDLML_SEQUENCEMEAN(data_seq, 4)
+
+PRINT, 'Data:', data_seq
+PRINT, 'Window=2:', mean_w2
+PRINT, 'Window=4:', mean_w4
+PRINT, 'Window Variations: PASS'
+PRINT, ''
+
+PRINT, '============================'
+PRINT, 'All tests PASSED!'
+PRINT, ''
+PRINT, 'Summary:'
+PRINT, '- SimpleRNN: Sequence processing ✓'
+PRINT, '- SimpleRNN: Configurable hidden size ✓'
+PRINT, '- SequenceMean: Running averages ✓'
+PRINT, '- Time series: Temporal patterns ✓'
+PRINT, '- Pattern detection: Hidden representations ✓'

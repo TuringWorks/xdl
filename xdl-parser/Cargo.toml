@@ -1,0 +1,16 @@
+[package]
+name = "xdl-parser"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "XDL/IDL language parser"
+
+[dependencies]
+xdl-core = { path = "../xdl-core" }
+nom = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

@@ -1,0 +1,23 @@
+[package]
+name = "xdl-gui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "GUI application for XDL with integrated CLI and plotting"
+
+[[bin]]
+name = "xdl-gui"
+path = "src/main.rs"
+
+[dependencies]
+xdl-core = { path = "../xdl-core" }
+xdl-parser = { path = "../xdl-parser" }
+xdl-runtime = { path = "../xdl-runtime" }
+xdl-interpreter = { path = "../xdl-interpreter" }
+xdl-stdlib = { path = "../xdl-stdlib" }
+fltk = { workspace = true }
+plotters = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

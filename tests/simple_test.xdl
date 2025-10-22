@@ -1,0 +1,21 @@
+; Simple control flow test
+print, "Testing IF statement"
+
+x = 10
+if x gt 5 then
+  print, "x is greater than 5"
+endif
+
+print, "Testing FOR loop"
+for i = 1, 3
+  print, "Loop iteration:", i
+endfor
+
+print, "Testing WHILE loop"
+count = 3
+while count gt 0
+  print, "Count:", count
+  count = count - 1
+endwhile
+
+print, "All tests completed"

@@ -1,0 +1,72 @@
+; Scientific Python integration test (scalar operations only)
+print, "=== Scientific Python Integration Test ==="
+
+; Test 1: NumPy scalar mathematics
+print, "1. NumPy Scalar Mathematics..."
+numpy_mod = python_import("numpy")
+
+; Create arrays for display (note: operations on arrays aren't fully supported yet)
+data_points = python_call(numpy_mod, "arange", 10)
+print, "Data points (0-9):", data_points
+
+; Test scalar math operations
+sqrt_val = python_call(numpy_mod, "sqrt", 25.0)
+print, "sqrt(25):", sqrt_val
+
+exp_val = python_call(numpy_mod, "exp", 1.0)
+print, "exp(1):", exp_val
+
+log_val = python_call(numpy_mod, "log", 2.718)
+print, "log(e):", log_val
+
+; Test 2: Trigonometric functions
+print, ""
+print, "2. NumPy Trigonometry..."
+
+sin_0 = python_call(numpy_mod, "sin", 0.0)
+print, "sin(0):", sin_0
+
+cos_0 = python_call(numpy_mod, "cos", 0.0)
+print, "cos(0):", cos_0
+
+tan_45 = python_call(numpy_mod, "tan", 0.785)
+print, "tan(π/4):", tan_45
+
+; Test 3: Array creation (display only)
+print, ""
+print, "3. NumPy Array Creation..."
+
+zeros_5 = python_call(numpy_mod, "zeros", 5)
+print, "zeros(5):", zeros_5
+
+ones_3 = python_call(numpy_mod, "ones", 3)
+print, "ones(3):", ones_3
+
+linspace_result = python_call(numpy_mod, "linspace", 0.0, 10.0, 5)
+print, "linspace(0,10,5):", linspace_result
+
+; Test 4: Pandas timestamps
+print, ""
+print, "4. Pandas Time Operations..."
+pandas_mod = python_import("pandas")
+
+ts1 = python_call(pandas_mod, "Timestamp", "2025-01-01")
+print, "Timestamp:", ts1
+
+ts2 = python_call(pandas_mod, "Timestamp", "2025-12-31")
+print, "Year-end:", ts2
+
+; Test 5: Data type conversions
+print, ""
+print, "5. Type Conversions..."
+
+int32_val = python_call(numpy_mod, "int32", 42.7)
+print, "int32(42.7):", int32_val
+
+float64_val = python_call(numpy_mod, "float64", 100)
+print, "float64(100):", float64_val
+
+print, ""
+print, "=== Test complete ==="
+print, "Note: Array operations work for creation and display."
+print, "Math operations on arrays require enhanced type conversion."

@@ -1,0 +1,16 @@
+[package]
+name = "xdl-interpreter"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "XDL interpreter engine"
+
+[dependencies]
+xdl-core = { path = "../xdl-core" }
+xdl-parser = { path = "../xdl-parser" }
+xdl-stdlib = { path = "../xdl-stdlib" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+num-complex = { workspace = true }

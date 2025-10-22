@@ -1,0 +1,77 @@
+[workspace]
+members = [
+    "xdl-core",
+    "xdl-parser", 
+    "xdl-interpreter",
+    "xdl-runtime",
+    "xdl-stdlib",
+    "xdl-cli",
+    "xdl-ffi",
+    "xdl-gui"
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["XDL Rust Team"]
+license = "GPL-2.0"
+description = "Extended Data Language (XDL) - Rust implementation"
+homepage = "https://github.com/gnudatalanguage/gdl"
+repository = "https://github.com/gnudatalanguage/gdl"
+
+[workspace.dependencies]
+# Core dependencies
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Parsing
+nom = "7.1"
+pest = "2.7"
+pest_derive = "2.7"
+
+# Numerical computing
+ndarray = "0.15"
+num-traits = "0.2"
+num-complex = "0.4"
+nalgebra = "0.32"
+
+# Scientific libraries (FFI wrappers)
+netcdf = "0.8"
+hdf5 = "0.8"
+fftw = "0.8"
+# GSL = "7.0"  # TODO: Install GSL system dependency
+
+# Async/concurrency
+tokio = { version = "1.0", features = ["full"] }
+rayon = "1.8"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Graphics and UI
+plotters = "0.3"
+wgpu = "0.18"
+eframe = "0.28"
+egui = "0.28"
+egui_plot = "0.28"
+fltk = "1.4"
+
+# Testing
+criterion = "0.5"
+proptest = "1.4"
+
+# Python integration
+pyo3 = { version = "0.22", features = ["auto-initialize"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+
+[profile.dev]
+debug = true
+opt-level = 0
