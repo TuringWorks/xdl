@@ -4,6 +4,77 @@ use std::env;
 use std::process::Command;
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
+/// Helper function to display information about a value (for HELP command)
+fn display_value_info(value: &XdlValue) {
+    match value {
+        XdlValue::Undefined => {
+            println!("Variable is UNDEFINED");
+        }
+        XdlValue::Byte(v) => {
+            println!("       BYTE      = {}", v);
+        }
+        XdlValue::Int(v) => {
+            println!("       INT       = {}", v);
+        }
+        XdlValue::Long(v) => {
+            println!("       LONG      = {}", v);
+        }
+        XdlValue::Float(v) => {
+            println!("       FLOAT     = {}", v);
+        }
+        XdlValue::Double(v) => {
+            println!("       DOUBLE    = {}", v);
+        }
+        XdlValue::String(v) => {
+            println!("       STRING    = '{}'", v);
+            println!("       Length    = {}", v.len());
+        }
+        XdlValue::Array(arr) => {
+            println!("       DOUBLE    = Array[{}]", arr.len());
+            if arr.len() <= 10 {
+                println!("       Values    = {:?}", arr);
+            } else {
+                println!("       First 5   = {:?}", &arr[0..5]);
+                println!("       Last 5    = {:?}", &arr[arr.len() - 5..]);
+            }
+        }
+        XdlValue::UInt(v) => {
+            println!("       UINT      = {}", v);
+        }
+        XdlValue::ULong(v) => {
+            println!("       ULONG     = {}", v);
+        }
+        XdlValue::Long64(v) => {
+            println!("       LONG64    = {}", v);
+        }
+        XdlValue::ULong64(v) => {
+            println!("       ULONG64   = {}", v);
+        }
+        XdlValue::Complex(v) => {
+            println!("       COMPLEX   = ({}, {})", v.re, v.im);
+        }
+        XdlValue::DComplex(v) => {
+            println!("       DCOMPLEX  = ({}, {})", v.re, v.im);
+        }
+        XdlValue::Pointer(v) => {
+            println!("       POINTER   = <PTR_{:X}>", v);
+        }
+        XdlValue::ObjRef(v) => {
+            println!("       OBJREF    = <OBJ_{:X}>", v);
+        }
+        XdlValue::NestedArray(rows) => {
+            println!("       ARRAY     = NestedArray[{}]", rows.len());
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            println!("       ARRAY     = MultiDimArray[{}]", data.len());
+            println!("       Shape     = {:?}", shape);
+        }
+        XdlValue::PythonObject(id) => {
+            println!("       PYTHON    = <{}>", id);
+        }
+    }
+}
+
 /// HELP procedure - displays information about variables and functions
 pub fn help(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
@@ -20,91 +91,103 @@ pub fn help(args: &[XdlValue]) -> XdlResult<XdlValue> {
     } else if args.len() == 1 {
         match &args[0] {
             XdlValue::String(keyword) => {
-                match keyword.to_uppercase().as_str() {
-                    "/PROCEDURES" | "PROCEDURES" => {
-                        println!("=== XDL PROCEDURES ===");
-                        println!();
-                        println!("Graphics Procedures:");
-                        println!("  PLOT        - Create 2D line plots");
-                        println!("  OPLOT       - Overplot on existing plot");
-                        println!("  CONTOUR     - Generate contour plots");
-                        println!("  SURFACE     - Create 3D surface plots");
-                        println!("  WINDOW      - Create graphics window");
-                        println!("  WSET        - Set current graphics window");
-                        println!("  ERASE       - Clear graphics window");
-                        println!("  DEVICE      - Set/query graphics device");
-                        println!("  LOADCT      - Load color tables");
-                        println!("  TVSCL       - Display scaled images");
-                        println!("  AXIS        - Draw axes and tick marks");
-                        println!();
-                        println!("System Procedures:");
-                        println!("  EXIT        - Terminate XDL session");
-                        println!("  HELP        - Display help information");
-                        println!("  PRINT       - Output to console");
-                        println!("  CD          - Change directory");
-                        println!("  SPAWN       - Execute system commands");
-                        println!("  CALL_PROCEDURE - Call procedure dynamically");
-                        println!("  DEFSYSV     - Define system variables");
-                        println!("  @           - Execute batch files");
-                        println!("  .COMPILE    - Compile .pro files");
-                        println!("  .CONTINUE   - Continue debugger execution");
-                        println!("  CATCH       - Set up error handling");
-                        println!();
-                        println!("File I/O Procedures:");
-                        println!("  OPEN        - Open files for I/O");
-                        println!("  CLOSE       - Close open files");
-                        println!("  FREE_LUN    - Free logical unit numbers");
+                // Check if this is a help keyword (starts with /) or is a known keyword
+                if keyword.starts_with('/')
+                    || keyword.to_uppercase() == "PROCEDURES"
+                    || keyword.to_uppercase() == "FUNCTIONS"
+                {
+                    match keyword.to_uppercase().as_str() {
+                        "/PROCEDURES" | "PROCEDURES" => {
+                            println!("=== XDL PROCEDURES ===");
+                            println!();
+                            println!("Graphics Procedures:");
+                            println!("  PLOT        - Create 2D line plots");
+                            println!("  OPLOT       - Overplot on existing plot");
+                            println!("  CONTOUR     - Generate contour plots");
+                            println!("  SURFACE     - Create 3D surface plots");
+                            println!("  WINDOW      - Create graphics window");
+                            println!("  WSET        - Set current graphics window");
+                            println!("  ERASE       - Clear graphics window");
+                            println!("  DEVICE      - Set/query graphics device");
+                            println!("  LOADCT      - Load color tables");
+                            println!("  TVSCL       - Display scaled images");
+                            println!("  AXIS        - Draw axes and tick marks");
+                            println!();
+                            println!("System Procedures:");
+                            println!("  EXIT        - Terminate XDL session");
+                            println!("  HELP        - Display help information");
+                            println!("  PRINT       - Output to console");
+                            println!("  CD          - Change directory");
+                            println!("  SPAWN       - Execute system commands");
+                            println!("  CALL_PROCEDURE - Call procedure dynamically");
+                            println!("  DEFSYSV     - Define system variables");
+                            println!("  @           - Execute batch files");
+                            println!("  .COMPILE    - Compile .pro files");
+                            println!("  .CONTINUE   - Continue debugger execution");
+                            println!("  CATCH       - Set up error handling");
+                            println!();
+                            println!("File I/O Procedures:");
+                            println!("  OPEN        - Open files for I/O");
+                            println!("  CLOSE       - Close open files");
+                            println!("  FREE_LUN    - Free logical unit numbers");
+                        }
+                        "/FUNCTIONS" | "FUNCTIONS" => {
+                            println!("=== XDL FUNCTIONS ===");
+                            println!();
+                            println!("Mathematical Functions:");
+                            println!("  SIN, COS, TAN       - Trigonometric functions");
+                            println!("  ASIN, ACOS, ATAN    - Inverse trigonometric functions");
+                            println!("  EXP                 - Exponential function");
+                            println!("  ALOG, LN            - Natural logarithm");
+                            println!("  ALOG10              - Base-10 logarithm");
+                            println!("  SQRT                - Square root");
+                            println!("  ABS                 - Absolute value");
+                            println!("  FLOOR, CEIL, ROUND  - Rounding functions");
+                            println!();
+                            println!("Array Functions:");
+                            println!("  FINDGEN     - Generate floating-point arrays");
+                            println!("  INDGEN      - Generate integer arrays");
+                            println!("  BYTARR      - Create byte arrays");
+                            println!("  FLTARR      - Create floating-point arrays");
+                            println!("  N_ELEMENTS  - Get array size");
+                            println!("  WHERE       - Find array elements by condition");
+                            println!();
+                            println!("String Functions:");
+                            println!("  STRLEN      - Get string length");
+                            println!("  STRPOS      - Find substring position");
+                            println!("  STRMID      - Extract substring");
+                            println!("  STRUPCASE   - Convert to uppercase");
+                            println!("  STRLOWCASE  - Convert to lowercase");
+                            println!();
+                            println!("File I/O Functions:");
+                            println!("  GET_LUN     - Obtain logical unit number");
+                            println!("  FILEPATH    - Locate files in search path");
+                            println!("  READ_JPEG   - Read JPEG image files");
+                            println!();
+                            println!("Data Structure Functions:");
+                            println!("  HASH        - Create hash tables");
+                            println!();
+                            println!("Python Integration Functions:");
+                            println!("  PYTHON_IMPORT    - Import Python modules");
+                            println!("  PYTHON_CALL      - Call Python functions");
+                            println!("  PYTHON_CALL_KW   - Call Python functions with keywords");
+                        }
+                        _ => {
+                            // Help for specific items
+                            println!("Help for '{}' not yet implemented", keyword);
+                            println!(
+                                "Use HELP, /PROCEDURES or HELP, /FUNCTIONS for complete listings"
+                            );
+                        }
                     }
-                    "/FUNCTIONS" | "FUNCTIONS" => {
-                        println!("=== XDL FUNCTIONS ===");
-                        println!();
-                        println!("Mathematical Functions:");
-                        println!("  SIN, COS, TAN       - Trigonometric functions");
-                        println!("  ASIN, ACOS, ATAN    - Inverse trigonometric functions");
-                        println!("  EXP                 - Exponential function");
-                        println!("  ALOG, LN            - Natural logarithm");
-                        println!("  ALOG10              - Base-10 logarithm");
-                        println!("  SQRT                - Square root");
-                        println!("  ABS                 - Absolute value");
-                        println!("  FLOOR, CEIL, ROUND  - Rounding functions");
-                        println!();
-                        println!("Array Functions:");
-                        println!("  FINDGEN     - Generate floating-point arrays");
-                        println!("  INDGEN      - Generate integer arrays");
-                        println!("  BYTARR      - Create byte arrays");
-                        println!("  FLTARR      - Create floating-point arrays");
-                        println!("  N_ELEMENTS  - Get array size");
-                        println!("  WHERE       - Find array elements by condition");
-                        println!();
-                        println!("String Functions:");
-                        println!("  STRLEN      - Get string length");
-                        println!("  STRPOS      - Find substring position");
-                        println!("  STRMID      - Extract substring");
-                        println!("  STRUPCASE   - Convert to uppercase");
-                        println!("  STRLOWCASE  - Convert to lowercase");
-                        println!();
-                        println!("File I/O Functions:");
-                        println!("  GET_LUN     - Obtain logical unit number");
-                        println!("  FILEPATH    - Locate files in search path");
-                        println!("  READ_JPEG   - Read JPEG image files");
-                        println!();
-                        println!("Data Structure Functions:");
-                        println!("  HASH        - Create hash tables");
-                        println!();
-                        println!("Python Integration Functions:");
-                        println!("  PYTHON_IMPORT    - Import Python modules");
-                        println!("  PYTHON_CALL      - Call Python functions");
-                        println!("  PYTHON_CALL_KW   - Call Python functions with keywords");
-                    }
-                    _ => {
-                        // Help for specific items
-                        println!("Help for '{}' not yet implemented", keyword);
-                        println!("Use HELP, /PROCEDURES or HELP, /FUNCTIONS for complete listings");
-                    }
+                } else {
+                    // String value (not a keyword) - show its properties
+                    display_value_info(&args[0]);
                 }
             }
-            _ => {
-                println!("HELP: Invalid argument type. Use string keywords like '/PROCEDURES' or '/FUNCTIONS'");
+            // Show information about the variable/value
+            value => {
+                display_value_info(value);
             }
         }
     } else {

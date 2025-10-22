@@ -1,0 +1,37 @@
+; XDL 2D Convolution Demonstration
+; This demonstrates image processing with the CONVOL function
+
+; Create a sample 2D image array
+array = FINDGEN(5, 5) ; Creates a 5x5 array with values from 0 to 24
+
+; Define a 2D convolution kernel (e.g., a simple averaging kernel)
+kernel = [[1, 1, 1], $
+          [1, 1, 1], $
+          [1, 1, 1]] / 9.0 ; Normalize for averaging
+
+; Perform the 2D convolution
+; The CENTER keyword (defaulting to 1) centers the kernel over each data point.
+result = CONVOL(array, kernel)
+
+; Print the original array and the convolved result
+PRINT, 'Original Array:'
+PRINT, array
+PRINT, 'Convolved Result:'
+PRINT, result
+
+; Example using a different kernel (e.g., for edge detection - Sobel operator approximation)
+edge_kernel_x = [[-1, 0, 1], $
+                 [-2, 0, 2], $
+                 [-1, 0, 1]]
+
+edge_kernel_y = [[-1, -2, -1], $
+                 [ 0,  0,  0], $
+                 [ 1,  2,  1]]
+
+result_edge_x = CONVOL(array, edge_kernel_x)
+result_edge_y = CONVOL(array, edge_kernel_y)
+
+PRINT, 'Edge Detection (X-direction):'
+PRINT, result_edge_x
+PRINT, 'Edge Detection (Y-direction):'
+PRINT, result_edge_y

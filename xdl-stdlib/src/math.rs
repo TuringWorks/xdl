@@ -319,29 +319,43 @@ pub fn round(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(from_float(result, input.gdl_type()))
 }
 
-/// Generate floating point array: FINDGEN(n)
+/// Generate floating point array: FINDGEN(n) or FINDGEN(d1, d2, ..., dn)
 pub fn findgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if _args.len() != 1 {
-        return Err(XdlError::InvalidArgument(format!(
-            "FINDGEN: Expected 1 argument, got {}",
-            _args.len()
-        )));
+    if _args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FINDGEN: Expected at least 1 argument".to_string(),
+        ));
     }
 
-    let n = match &_args[0] {
-        XdlValue::Long(v) => *v as usize,
-        XdlValue::Int(v) => *v as usize,
-        XdlValue::Byte(v) => *v as usize,
-        _ => {
-            return Err(XdlError::TypeMismatch {
-                expected: "integer".to_string(),
-                actual: format!("{:?}", _args[0].gdl_type()),
-            })
-        }
-    };
+    // Parse all dimensions
+    let mut dims: Vec<usize> = Vec::new();
+    for arg in _args {
+        let dim = match arg {
+            XdlValue::Long(v) => *v as usize,
+            XdlValue::Int(v) => *v as usize,
+            XdlValue::Byte(v) => *v as usize,
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "integer".to_string(),
+                    actual: format!("{:?}", arg.gdl_type()),
+                })
+            }
+        };
+        dims.push(dim);
+    }
 
-    let data: Vec<f64> = (0..n).map(|i| i as f64).collect();
-    Ok(XdlValue::Array(data))
+    // Calculate total size
+    let total_size: usize = dims.iter().product();
+
+    // Generate array with sequential values
+    let data: Vec<f64> = (0..total_size).map(|i| i as f64).collect();
+
+    // Return appropriate type based on dimensions
+    if dims.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray { data, shape: dims })
+    }
 }
 
 /// Generate integer array: INDGEN(n)
@@ -372,6 +386,156 @@ pub fn indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For now, return the first element to show it works
     // TODO: Properly integrate array types with XdlValue
     Ok(XdlValue::Long(0))
+}
+
+/// Generate double precision array: DINDGEN(n)
+pub fn dindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "DINDGEN: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let n = match &_args[0] {
+        XdlValue::Long(v) => *v as usize,
+        XdlValue::Int(v) => *v as usize,
+        XdlValue::Byte(v) => *v as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", _args[0].gdl_type()),
+            })
+        }
+    };
+
+    let data: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    Ok(XdlValue::Array(data))
+}
+
+/// Generate byte array: BINDGEN(n)
+pub fn bindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BINDGEN: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let n = match &_args[0] {
+        XdlValue::Long(v) => *v as usize,
+        XdlValue::Int(v) => *v as usize,
+        XdlValue::Byte(v) => *v as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", _args[0].gdl_type()),
+            })
+        }
+    };
+
+    let data: Vec<f64> = (0..n).map(|i| (i as u8) as f64).collect();
+    Ok(XdlValue::Array(data))
+}
+
+/// Generate long integer array: LINDGEN(n)
+pub fn lindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "LINDGEN: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let n = match &_args[0] {
+        XdlValue::Long(v) => *v as usize,
+        XdlValue::Int(v) => *v as usize,
+        XdlValue::Byte(v) => *v as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", _args[0].gdl_type()),
+            })
+        }
+    };
+
+    let data: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    Ok(XdlValue::Array(data))
+}
+
+/// Generate unsigned integer array: UINDGEN(n)
+pub fn uindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "UINDGEN: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let n = match &_args[0] {
+        XdlValue::Long(v) => *v as usize,
+        XdlValue::Int(v) => *v as usize,
+        XdlValue::Byte(v) => *v as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", _args[0].gdl_type()),
+            })
+        }
+    };
+
+    let data: Vec<f64> = (0..n).map(|i| (i as u16) as f64).collect();
+    Ok(XdlValue::Array(data))
+}
+
+/// Generate unsigned long integer array: ULINDGEN(n)
+pub fn ulindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ULINDGEN: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let n = match &_args[0] {
+        XdlValue::Long(v) => *v as usize,
+        XdlValue::Int(v) => *v as usize,
+        XdlValue::Byte(v) => *v as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", _args[0].gdl_type()),
+            })
+        }
+    };
+
+    let data: Vec<f64> = (0..n).map(|i| (i as u32) as f64).collect();
+    Ok(XdlValue::Array(data))
+}
+
+/// Generate 64-bit integer array: L64INDGEN(n)
+pub fn l64indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "L64INDGEN: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let n = match &_args[0] {
+        XdlValue::Long(v) => *v as usize,
+        XdlValue::Int(v) => *v as usize,
+        XdlValue::Byte(v) => *v as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", _args[0].gdl_type()),
+            })
+        }
+    };
+
+    let data: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    Ok(XdlValue::Array(data))
 }
 
 #[cfg(test)]

@@ -129,6 +129,29 @@ fn parse_integer(input: &str) -> ParseResult<'_, Token> {
     map_res(digit1, |s: &str| s.parse::<i64>().map(Token::Integer))(input)
 }
 
+// Parse double precision numbers with 'd' notation (e.g., 1.d0, 99d-1, 1d0)
+fn parse_double_precision(input: &str) -> ParseResult<'_, Token> {
+    use nom::character::complete::one_of;
+    use nom::combinator::{opt, recognize};
+    use nom::sequence::tuple;
+
+    map_res(
+        recognize(tuple((
+            digit1,
+            opt(pair(char('.'), opt(digit1))),
+            alt((char('d'), char('D'))),
+            opt(one_of("+-")),
+            opt(digit1),
+        ))),
+        |s: &str| {
+            // Convert IDL/GDL double precision notation to standard notation
+            // e.g., "1.d0" -> "1.0", "99d-1" -> "99e-1", "1d0" -> "1e0"
+            let converted = s.to_lowercase().replace('d', "e");
+            converted.parse::<f64>().map(Token::Float)
+        },
+    )(input)
+}
+
 // Parse floating point numbers
 fn parse_float(input: &str) -> ParseResult<'_, Token> {
     map_res(
@@ -139,7 +162,7 @@ fn parse_float(input: &str) -> ParseResult<'_, Token> {
 
 // Parse numbers (float or integer)
 fn parse_number(input: &str) -> ParseResult<'_, Token> {
-    alt((parse_float, parse_integer))(input)
+    alt((parse_double_precision, parse_float, parse_integer))(input)
 }
 
 // Parse string literals

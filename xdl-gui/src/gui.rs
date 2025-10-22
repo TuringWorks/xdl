@@ -1,12 +1,12 @@
 //! Main GUI implementation using FLTK
 
 use anyhow::Result;
+use fltk::draw;
 use fltk::{
     app,
-    browser::Browser,
     button::Button,
     dialog,
-    enums::{Color, Damage, FrameType, Font},
+    enums::{Color, Font, FrameType},
     group::{Flex, FlexType, Pack},
     menu::{MenuBar, MenuFlag},
     prelude::*,
@@ -14,7 +14,6 @@ use fltk::{
     text::{TextBuffer, TextDisplay, TextEditor},
     window::Window,
 };
-use fltk::draw;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -49,19 +48,19 @@ impl VariableTable {
         table.set_cols(4);
         table.set_col_header(true);
         table.set_col_header_height(25);
-        
+
         // Set individual column widths for better layout
-        table.set_col_width(0, w / 5);      // Name column
+        table.set_col_width(0, w / 5); // Name column
         table.set_col_width(1, (w * 2) / 5); // Value column (wider)
-        table.set_col_width(2, w / 6);      // Type column
-        table.set_col_width(3, w / 6);      // Size column
-        
+        table.set_col_width(2, w / 6); // Type column
+        table.set_col_width(3, w / 6); // Size column
+
         table.set_col_resize(true);
         table.end();
-        
+
         let data: Rc<RefCell<Vec<VarData>>> = Rc::new(RefCell::new(Vec::new()));
         let data_clone = data.clone();
-        
+
         table.draw_cell(move |_t, ctx, row, col, x, y, w, h| {
             match ctx {
                 TableContext::StartPage => {
@@ -69,7 +68,14 @@ impl VariableTable {
                 }
                 TableContext::ColHeader => {
                     draw::push_clip(x, y, w, h);
-                    draw::draw_box(FrameType::ThinUpBox, x, y, w, h, Color::from_rgb(230, 230, 230));
+                    draw::draw_box(
+                        FrameType::ThinUpBox,
+                        x,
+                        y,
+                        w,
+                        h,
+                        Color::from_rgb(230, 230, 230),
+                    );
                     draw::set_draw_color(Color::Black);
                     draw::set_font(Font::HelveticaBold, 11);
                     let label = match col {
@@ -86,7 +92,7 @@ impl VariableTable {
                     if let Ok(data) = data_clone.try_borrow() {
                         if row >= 0 && (row as usize) < data.len() {
                             draw::push_clip(x, y, w, h);
-                            
+
                             // Alternating row colors
                             let bg_color = if row % 2 == 0 {
                                 Color::White
@@ -94,11 +100,11 @@ impl VariableTable {
                                 Color::from_rgb(248, 248, 252)
                             };
                             draw::draw_box(FrameType::FlatBox, x, y, w, h, bg_color);
-                            
+
                             // Draw text
                             draw::set_draw_color(Color::Black);
                             draw::set_font(Font::Courier, 10);
-                            
+
                             let var = &data[row as usize];
                             let text = match col {
                                 0 => &var.name,
@@ -107,7 +113,7 @@ impl VariableTable {
                                 3 => &var.size,
                                 _ => "",
                             };
-                            
+
                             // Draw text with padding
                             draw::draw_text2(
                                 text,
@@ -117,11 +123,11 @@ impl VariableTable {
                                 h,
                                 fltk::enums::Align::Left | fltk::enums::Align::Inside,
                             );
-                            
+
                             // Draw cell border
                             draw::set_draw_color(Color::from_rgb(220, 220, 220));
                             draw::draw_rect(x, y, w, h);
-                            
+
                             draw::pop_clip();
                         }
                     }
@@ -129,17 +135,17 @@ impl VariableTable {
                 _ => {}
             }
         });
-        
+
         Self { table, data }
     }
-    
+
     fn update_data(&mut self, vars: &HashMap<String, String>) {
         let mut data = Vec::new();
-        
+
         // Sort variable names for consistent display
         let mut sorted_vars: Vec<(&String, &String)> = vars.iter().collect();
         sorted_vars.sort_by_key(|(name, _)| name.as_str());
-        
+
         for (name, value) in sorted_vars {
             let var_type = if value.contains("array") {
                 "Double Array".to_string()
@@ -148,7 +154,7 @@ impl VariableTable {
             } else {
                 "Computed".to_string()
             };
-            
+
             let display_value = if value.contains("array[1x") {
                 if let Some(start) = value.find("[1x") {
                     if let Some(end) = value[start..].find(']') {
@@ -164,7 +170,7 @@ impl VariableTable {
             } else {
                 value.clone()
             };
-            
+
             let size = if value.contains("1x") {
                 if let Some(start) = value.find("1x") {
                     if let Some(end) = value[start..].find(']') {
@@ -178,7 +184,7 @@ impl VariableTable {
             } else {
                 "1x1".to_string()
             };
-            
+
             data.push(VarData {
                 name: name.clone(),
                 value: display_value,
@@ -186,16 +192,16 @@ impl VariableTable {
                 size,
             });
         }
-        
+
         if let Ok(mut d) = self.data.try_borrow_mut() {
             *d = data;
         }
-        
+
         let new_rows = vars.len() as i32;
         if new_rows != self.table.rows() {
             self.table.set_rows(new_rows);
         }
-        
+
         // Force complete redraw
         self.table.redraw();
     }
@@ -1252,6 +1258,7 @@ impl XdlGui {
         }
     }
 
+    #[allow(dead_code)]
     fn truncate_string(s: &str, max_len: usize) -> String {
         if s.len() > max_len {
             format!("{:.width$}...", s, width = max_len.saturating_sub(3))

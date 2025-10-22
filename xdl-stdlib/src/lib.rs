@@ -5,6 +5,7 @@
 pub mod array;
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
+pub mod image; // Image processing
 pub mod io;
 pub mod math;
 pub mod ml;
@@ -146,10 +147,19 @@ impl StandardLibrary {
             // Array generation functions
             "FINDGEN" => math::findgen(args),
             "INDGEN" => math::indgen(args),
+            "DINDGEN" => math::dindgen(args),
+            "BINDGEN" => math::bindgen(args),
+            "LINDGEN" => math::lindgen(args),
+            "UINDGEN" => math::uindgen(args),
+            "ULINDGEN" => math::ulindgen(args),
+            "L64INDGEN" => math::l64indgen(args),
             "RANDOMU" => math::randomu(args),
 
             // Signal processing
             "FFT" => math::fft(args),
+
+            // Image processing
+            "CONVOL" => image::convol(args),
 
             // Array creation functions
             "BYTARR" => array::bytarr(args),

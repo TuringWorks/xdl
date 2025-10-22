@@ -206,10 +206,10 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
                     shape.len()
                 )));
             }
-            
+
             let height = shape[0];
             let width = shape[1];
-            
+
             if data.len() != height * width {
                 return Err(XdlError::RuntimeError(format!(
                     "Array size {} doesn't match dimensions {}x{}",
@@ -218,7 +218,7 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
                     width
                 )));
             }
-            
+
             // Convert flat array to 2D Vec<Vec<f64>>
             let mut result = Vec::with_capacity(height);
             for i in 0..height {

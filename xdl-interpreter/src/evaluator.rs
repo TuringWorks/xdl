@@ -80,8 +80,27 @@ impl Evaluator {
                 let all_arrays = values.iter().all(|v| matches!(v, XdlValue::Array(_)));
 
                 if all_arrays && !values.is_empty() {
-                    // This is a nested array (matrix)
-                    Ok(XdlValue::NestedArray(values))
+                    // This is a 2D array - convert to MultiDimArray
+                    let mut rows = Vec::new();
+                    let mut row_len = 0;
+
+                    for (i, val) in values.iter().enumerate() {
+                        if let XdlValue::Array(row) = val {
+                            if i == 0 {
+                                row_len = row.len();
+                            } else if row.len() != row_len {
+                                return Err(XdlError::RuntimeError(
+                                    "All rows must have same length in 2D array".to_string(),
+                                ));
+                            }
+                            rows.extend(row.iter());
+                        }
+                    }
+
+                    Ok(XdlValue::MultiDimArray {
+                        data: rows,
+                        shape: vec![values.len(), row_len],
+                    })
                 } else {
                     // Regular array - convert all to floats
                     let mut float_values = Vec::new();
@@ -341,6 +360,59 @@ impl Evaluator {
                     }
                 };
                 return Ok(Array(result));
+            }
+            // Handle MultiDimArray operations
+            (MultiDimArray { data, shape }, scalar) => {
+                let s = self.to_double(scalar)?;
+                let result: Vec<f64> = match op {
+                    Add => data.iter().map(|x| x + s).collect(),
+                    Subtract => data.iter().map(|x| x - s).collect(),
+                    Multiply => data.iter().map(|x| x * s).collect(),
+                    Divide => data
+                        .iter()
+                        .map(|x| if s == 0.0 { f64::NAN } else { x / s })
+                        .collect(),
+                    Power => data.iter().map(|x| x.powf(s)).collect(),
+                    Modulo => data
+                        .iter()
+                        .map(|x| if s == 0.0 { f64::NAN } else { x % s })
+                        .collect(),
+                    _ => {
+                        return Err(XdlError::NotImplemented(
+                            "MultiDimArray operation not implemented".to_string(),
+                        ))
+                    }
+                };
+                return Ok(MultiDimArray {
+                    data: result,
+                    shape: shape.clone(),
+                });
+            }
+            (scalar, MultiDimArray { data, shape }) => {
+                let s = self.to_double(scalar)?;
+                let result: Vec<f64> = match op {
+                    Add => data.iter().map(|x| s + x).collect(),
+                    Subtract => data.iter().map(|x| s - x).collect(),
+                    Multiply => data.iter().map(|x| s * x).collect(),
+                    Divide => data
+                        .iter()
+                        .map(|x| if *x == 0.0 { f64::NAN } else { s / x })
+                        .collect(),
+                    Power => data.iter().map(|x| s.powf(*x)).collect(),
+                    Modulo => data
+                        .iter()
+                        .map(|x| if *x == 0.0 { f64::NAN } else { s % x })
+                        .collect(),
+                    _ => {
+                        return Err(XdlError::NotImplemented(
+                            "Scalar-MultiDimArray operation not implemented".to_string(),
+                        ))
+                    }
+                };
+                return Ok(MultiDimArray {
+                    data: result,
+                    shape: shape.clone(),
+                });
             }
             _ => {} // Continue with scalar operations
         }

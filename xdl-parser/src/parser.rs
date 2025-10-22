@@ -166,19 +166,39 @@ impl<'a> Parser<'a> {
         let condition = self.parse_expression()?;
         self.consume(Token::Then, "Expected 'then' after if condition")?;
 
-        // Parse then block - supports begin...end blocks or statements until else/endif
-        let then_block = self.parse_block_or_statement(&[Token::Else, Token::Endif])?;
+        // Check if then block uses begin...end
+        let then_has_begin_end = self.check(&Token::Begin);
 
-        let else_block = if self.check(&Token::Else) {
-            self.advance(); // consume 'else'
-                            // Parse else block - supports begin...end blocks or statements until endif
-            Some(self.parse_block_or_statement(&[Token::Endif])?)
+        // GDL/IDL supports: if cond then statement OR if cond then begin...end
+        let then_block = if then_has_begin_end {
+            let stmts = self.parse_block_or_statement(&[Token::Else, Token::Endif])?;
+            stmts
         } else {
-            None
+            // Single statement
+            vec![self.parse_statement()?]
         };
 
-        // Consume endif - required for if statements
-        self.consume(Token::Endif, "Expected 'endif' to close if statement")?;
+        let (else_block, else_has_begin_end) = if self.check(&Token::Else) {
+            self.advance(); // consume 'else'
+            let else_has_begin = self.check(&Token::Begin);
+            // Parse else block
+            let else_stmts = if else_has_begin {
+                self.parse_block_or_statement(&[Token::Endif])?
+            } else {
+                vec![self.parse_statement()?]
+            };
+            (Some(else_stmts), else_has_begin)
+        } else {
+            (None, false)
+        };
+
+        // GDL/IDL syntax: ENDIF is optional when using BEGIN...END
+        if then_has_begin_end || else_has_begin_end {
+            if self.check(&Token::Endif) {
+                self.advance();
+            }
+        }
+        // Note: For single-statement forms (if x then y), ENDIF is not required at all
 
         Ok(Statement::If {
             condition,
@@ -220,10 +240,27 @@ impl<'a> Parser<'a> {
             self.advance(); // consume 'do'
         }
 
-        // Parse body - support both 'begin...end' and multiple statements until endfor
-        let body = self.parse_block_or_statement(&[Token::Endfor])?;
+        // Check if this is a begin...end block
+        let has_begin_end = self.check(&Token::Begin);
 
-        self.consume(Token::Endfor, "Expected 'endfor' to close for loop")?;
+        // GDL/IDL syntax supports three forms:
+        // 1. for i=0,9 do statement                  (single statement, no ENDFOR)
+        // 2. for i=0,9 do begin ... end              (BEGIN...END, optional ENDFOR)
+        // 3. for i=0,9 do begin ... end endfor      (explicit ENDFOR with BEGIN...END)
+        let body = if has_begin_end {
+            // BEGIN...END block
+            let stmts = self.parse_block_or_statement(&[Token::Endfor])?;
+            // ENDFOR is optional with BEGIN...END
+            if self.check(&Token::Endfor) {
+                self.advance();
+            }
+            stmts
+        } else {
+            // Single statement (GDL/IDL style: for i=0,9 do a[i]=i)
+            // Parse one statement - if it's followed by ENDFOR, this was multi-line
+            // If not followed by ENDFOR, it's a single-line statement
+            vec![self.parse_statement()?]
+        };
 
         Ok(Statement::For {
             variable,
@@ -341,10 +378,21 @@ impl<'a> Parser<'a> {
             self.advance(); // consume 'do'
         }
 
-        // Parse body - support both 'begin...end' and multiple statements
-        let body = self.parse_block_or_statement(&[Token::Endwhile])?;
+        // Check if this is a begin...end block
+        let has_begin_end = self.check(&Token::Begin);
 
-        self.consume(Token::Endwhile, "Expected 'endwhile' to close while loop")?;
+        // GDL/IDL supports: while cond do statement OR while cond do begin...end
+        let body = if has_begin_end {
+            let stmts = self.parse_block_or_statement(&[Token::Endwhile])?;
+            // ENDWHILE is optional with BEGIN...END
+            if self.check(&Token::Endwhile) {
+                self.advance();
+            }
+            stmts
+        } else {
+            // Single statement without ENDWHILE
+            vec![self.parse_statement()?]
+        };
 
         Ok(Statement::While {
             condition,
