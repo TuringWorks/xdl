@@ -239,6 +239,13 @@ impl PlotWindow {
         window.end();
         window.make_resizable(true);
 
+        // Set up close callback to prevent issues when window closes
+        window.set_callback(move |win| {
+            if fltk::app::event() == fltk::enums::Event::Close {
+                win.hide();
+            }
+        });
+
         Ok(Self { window })
     }
 
