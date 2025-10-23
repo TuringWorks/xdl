@@ -94,7 +94,12 @@ impl Interpreter {
                 Ok(())
             }
 
-            Statement::ProcedureCall { name, args, .. } => {
+            Statement::ProcedureCall {
+                name,
+                args,
+                keywords,
+                ..
+            } => {
                 // Handle built-in procedures like PRINT
                 match name.to_uppercase().as_str() {
                     "PRINT" => {
@@ -133,7 +138,20 @@ impl Interpreter {
                                 arg_values.push(self.evaluate_expression(arg)?);
                             }
 
-                            match self.evaluator.call_procedure(name, &arg_values) {
+                            // Evaluate keyword arguments
+                            let mut keyword_values = HashMap::new();
+                            for keyword in keywords {
+                                if let Some(ref value_expr) = keyword.value {
+                                    let value = self.evaluate_expression(value_expr)?;
+                                    keyword_values.insert(keyword.name.clone(), value);
+                                }
+                            }
+
+                            match self.evaluator.call_procedure_with_keywords(
+                                name,
+                                &arg_values,
+                                &keyword_values,
+                            ) {
                                 Ok(_) => Ok(()),
                                 Err(_) => Err(XdlError::RuntimeError(format!(
                                     "Unknown procedure: {}",

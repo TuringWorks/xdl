@@ -178,7 +178,7 @@ impl<'a> Parser<'a> {
             vec![self.parse_statement()?]
         };
 
-        let (else_block, else_has_begin_end) = if self.check(&Token::Else) {
+        let (else_block, _else_has_begin_end) = if self.check(&Token::Else) {
             self.advance(); // consume 'else'
             let else_has_begin = self.check(&Token::Begin);
             // Parse else block
@@ -192,13 +192,11 @@ impl<'a> Parser<'a> {
             (None, false)
         };
 
-        // GDL/IDL syntax: ENDIF is optional when using BEGIN...END
-        if then_has_begin_end || else_has_begin_end {
-            if self.check(&Token::Endif) {
-                self.advance();
-            }
+        // GDL/IDL syntax: ENDIF is always consumed if present
+        // It's optional in all forms, but if present, we consume it
+        if self.check(&Token::Endif) {
+            self.advance();
         }
-        // Note: For single-statement forms (if x then y), ENDIF is not required at all
 
         Ok(Statement::If {
             condition,
@@ -243,10 +241,13 @@ impl<'a> Parser<'a> {
         // Check if this is a begin...end block
         let has_begin_end = self.check(&Token::Begin);
 
-        // GDL/IDL syntax supports three forms:
+        // GDL/IDL syntax supports multiple forms:
         // 1. for i=0,9 do statement                  (single statement, no ENDFOR)
         // 2. for i=0,9 do begin ... end              (BEGIN...END, optional ENDFOR)
-        // 3. for i=0,9 do begin ... end endfor      (explicit ENDFOR with BEGIN...END)
+        // 3. for i=0,9                               (multi-line with ENDFOR)
+        //      statement1
+        //      statement2
+        //    endfor
         let body = if has_begin_end {
             // BEGIN...END block
             let stmts = self.parse_block_or_statement(&[Token::Endfor])?;
@@ -256,10 +257,16 @@ impl<'a> Parser<'a> {
             }
             stmts
         } else {
-            // Single statement (GDL/IDL style: for i=0,9 do a[i]=i)
-            // Parse one statement - if it's followed by ENDFOR, this was multi-line
-            // If not followed by ENDFOR, it's a single-line statement
-            vec![self.parse_statement()?]
+            // Parse statements until we hit ENDFOR or EOF
+            // This supports both single-line and multi-line FOR loops
+            let stmts = self.parse_block_or_statement(&[Token::Endfor])?;
+
+            // If we found ENDFOR, consume it
+            if self.check(&Token::Endfor) {
+                self.advance();
+            }
+            // If no ENDFOR found, that's okay for single-line loops
+            stmts
         };
 
         Ok(Statement::For {

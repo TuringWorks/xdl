@@ -1,11 +1,12 @@
 //! Graphics and plotting functions
 
-use plotters::prelude::*;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
-static GUI_PLOT_CALLBACK: Mutex<Option<Arc<dyn Fn(Vec<f64>, Vec<f64>) + Send + Sync>>> =
-    Mutex::new(None);
+static GUI_PLOT_CALLBACK: Mutex<
+    Option<Arc<dyn Fn(Vec<f64>, Vec<f64>, String, String, String) + Send + Sync>>,
+> = Mutex::new(None);
 
 static GUI_IMAGE_CALLBACK: Mutex<Option<Arc<dyn Fn(String, String) + Send + Sync>>> =
     Mutex::new(None);
@@ -29,6 +30,16 @@ impl Default for GraphicsFunctions {
 
 /// Plot procedure - creates an interactive line plot in a GUI window
 pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    plot_with_keywords(args, &HashMap::new())
+}
+
+/// Plot procedure with keyword arguments support
+pub fn plot_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    use crate::graphics::{plot_2d, Plot2DConfig};
+
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "PLOT requires at least one argument".to_string(),
@@ -50,8 +61,63 @@ pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
-    // Launch interactive plot window
-    launch_plot_window(x_data, y_data)?;
+    // Extract keyword arguments for plot configuration
+    let mut config = Plot2DConfig::default();
+
+    // Extract title
+    if let Some(title_val) = keywords.get("title").or_else(|| keywords.get("TITLE")) {
+        if let XdlValue::String(s) = title_val {
+            config.title = Some(s.clone());
+        }
+    }
+
+    // Extract x-axis title
+    if let Some(xtitle_val) = keywords.get("xtitle").or_else(|| keywords.get("XTITLE")) {
+        if let XdlValue::String(s) = xtitle_val {
+            config.xtitle = Some(s.clone());
+        }
+    }
+
+    // Extract y-axis title
+    if let Some(ytitle_val) = keywords.get("ytitle").or_else(|| keywords.get("YTITLE")) {
+        if let XdlValue::String(s) = ytitle_val {
+            config.ytitle = Some(s.clone());
+        }
+    }
+
+    // Generate output filename
+    let filename = "xdl_plot.png";
+
+    // Ensure graphics state is initialized - it's already done by default
+    // The GRAPHICS_STATE is initialized with window 0 by default
+
+    // Extract labels before moving config
+    let title = config
+        .title
+        .clone()
+        .unwrap_or_else(|| "XDL Plot".to_string());
+    let xtitle = config.xtitle.clone().unwrap_or_else(|| "X".to_string());
+    let ytitle = config.ytitle.clone().unwrap_or_else(|| "Y".to_string());
+
+    // Create the plot using the 2D plotting function
+    println!("PLOT: Rendering {} points to {}", x_data.len(), filename);
+    plot_2d(x_data.clone(), y_data.clone(), config, filename)?;
+    println!("  Plot saved to '{}'", filename);
+
+    // Try to launch interactive plot window if callback is available
+    if let Ok(callback_guard) = GUI_PLOT_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(x_data, y_data, title, xtitle, ytitle);
+            return Ok(XdlValue::Undefined);
+        }
+    }
+
+    // Try to display image in GUI if callback is available
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename.to_string(), "XDL Plot".to_string());
+        }
+    }
 
     Ok(XdlValue::Undefined)
 }
@@ -253,35 +319,11 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
     }
 }
 
-/// Launch plot window - uses GUI callback if available, otherwise saves to PNG
-fn launch_plot_window(x_data: Vec<f64>, y_data: Vec<f64>) -> XdlResult<()> {
-    // Try to use GUI callback first
-    if let Ok(callback_guard) = GUI_PLOT_CALLBACK.lock() {
-        if let Some(ref callback) = *callback_guard {
-            println!("Launching interactive plot window...");
-            callback(x_data, y_data);
-            return Ok(());
-        }
-    }
-
-    // Fallback to PNG file using basic plotter
-    let filename = "xdl_plot.png";
-    save_plot_to_file(&x_data, &y_data, filename)?;
-    println!("Plot data saved to '{}' (GUI not available)", filename);
-    println!(
-        "Data points: {} values from {:.2} to {:.2}",
-        y_data.len(),
-        y_data.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
-        y_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
-    );
-    Ok(())
-}
-
 /// Register GUI plot callback (called from GUI application)
 /// This is the main integration point between graphics procedures and the GUI
 pub fn register_gui_plot_callback<F>(callback: F)
 where
-    F: Fn(Vec<f64>, Vec<f64>) + Send + Sync + 'static,
+    F: Fn(Vec<f64>, Vec<f64>, String, String, String) + Send + Sync + 'static,
 {
     if let Ok(mut guard) = GUI_PLOT_CALLBACK.lock() {
         *guard = Some(Arc::new(callback));
@@ -296,38 +338,6 @@ where
     if let Ok(mut guard) = GUI_IMAGE_CALLBACK.lock() {
         *guard = Some(Arc::new(callback));
     }
-}
-
-/// Save plot to PNG file using plotters
-fn save_plot_to_file(x_data: &[f64], y_data: &[f64], filename: &str) -> XdlResult<()> {
-    let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
-    root.fill(&WHITE)?;
-
-    let x_min = x_data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-    let x_max = x_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    let y_min = y_data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-    let y_max = y_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-
-    let mut chart = ChartBuilder::on(&root)
-        .caption("XDL Plot", ("Arial", 30).into_font())
-        .margin(20)
-        .x_label_area_size(40)
-        .y_label_area_size(40)
-        .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
-
-    chart.configure_mesh().draw()?;
-
-    chart
-        .draw_series(LineSeries::new(
-            x_data.iter().zip(y_data.iter()).map(|(&x, &y)| (x, y)),
-            &BLUE,
-        ))?
-        .label("Data")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 10, y)], &BLUE));
-
-    chart.configure_series_labels().draw()?;
-    root.present()?;
-    Ok(())
 }
 
 /// DEVICE procedure - sets or queries graphics device

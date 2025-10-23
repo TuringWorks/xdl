@@ -1,6 +1,7 @@
 //! Expression and statement evaluator
 
 use crate::context::Context;
+use std::collections::HashMap;
 use xdl_core::{XdlError, XdlResult, XdlValue};
 use xdl_parser::{ArrayIndex, BinaryOp, Expression, UnaryOp};
 use xdl_stdlib::StandardLibrary;
@@ -59,13 +60,18 @@ impl Evaluator {
                     arg_values.push(self.evaluate(arg, context)?);
                 }
 
-                // TODO: Handle keywords
-                if !keywords.is_empty() {
-                    return Err(XdlError::NotImplemented("Function keywords".to_string()));
+                // Evaluate keyword arguments
+                let mut keyword_values = HashMap::new();
+                for keyword in keywords {
+                    if let Some(ref value_expr) = keyword.value {
+                        let value = self.evaluate(value_expr, context)?;
+                        keyword_values.insert(keyword.name.clone(), value);
+                    }
                 }
 
-                // Call standard library function
-                self.stdlib.call_function(name, &arg_values)
+                // Call standard library function with keywords
+                self.stdlib
+                    .call_function_with_keywords(name, &arg_values, &keyword_values)
             }
 
             Expression::ArrayDef { elements, .. } => {
@@ -153,6 +159,17 @@ impl Evaluator {
     /// Call a procedure from the standard library
     pub fn call_procedure(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
         self.stdlib.call_procedure(name, args)
+    }
+
+    /// Call a procedure from the standard library with keyword arguments
+    pub fn call_procedure_with_keywords(
+        &self,
+        name: &str,
+        args: &[XdlValue],
+        keywords: &HashMap<String, XdlValue>,
+    ) -> XdlResult<XdlValue> {
+        self.stdlib
+            .call_procedure_with_keywords(name, args, keywords)
     }
 
     /// Evaluate binary operations

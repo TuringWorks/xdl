@@ -17,7 +17,11 @@ struct PlotFrame {
     #[allow(dead_code)]
     y_data: Vec<f64>,
     #[allow(dead_code)]
-    formula: String,
+    title: String,
+    #[allow(dead_code)]
+    xtitle: String,
+    #[allow(dead_code)]
+    ytitle: String,
 }
 
 impl PlotFrame {
@@ -35,6 +39,20 @@ impl PlotFrame {
         y_data: Vec<f64>,
         formula: &str,
     ) -> Self {
+        Self::new_with_labels(x, y, w, h, x_data, y_data, formula, "X", "Y")
+    }
+
+    fn new_with_labels(
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        x_data: Vec<f64>,
+        y_data: Vec<f64>,
+        title: &str,
+        xtitle: &str,
+        ytitle: &str,
+    ) -> Self {
         let mut frame = Frame::new(x, y, w, h, "");
         frame.set_frame(FrameType::DownBox);
         frame.set_color(Color::White);
@@ -42,20 +60,24 @@ impl PlotFrame {
         let plot_data = Rc::new(RefCell::new((
             x_data.clone(),
             y_data.clone(),
-            formula.to_string(),
+            title.to_string(),
+            xtitle.to_string(),
+            ytitle.to_string(),
         )));
         let plot_data_draw = plot_data.clone();
 
         frame.draw(move |f| {
             let data = plot_data_draw.borrow();
-            Self::draw_plot_with_formula(f, &data.0, &data.1, &data.2);
+            Self::draw_plot_with_labels(f, &data.0, &data.1, &data.2, &data.3, &data.4);
         });
 
         Self {
             frame,
             x_data,
             y_data,
-            formula: formula.to_string(),
+            title: title.to_string(),
+            xtitle: xtitle.to_string(),
+            ytitle: ytitle.to_string(),
         }
     }
 
@@ -65,6 +87,17 @@ impl PlotFrame {
     }
 
     fn draw_plot_with_formula(frame: &Frame, x_data: &[f64], y_data: &[f64], formula: &str) {
+        Self::draw_plot_with_labels(frame, x_data, y_data, formula, "X", "Y")
+    }
+
+    fn draw_plot_with_labels(
+        frame: &Frame,
+        x_data: &[f64],
+        y_data: &[f64],
+        title: &str,
+        xtitle: &str,
+        ytitle: &str,
+    ) {
         if x_data.is_empty() || y_data.is_empty() {
             return;
         }
@@ -120,14 +153,10 @@ impl PlotFrame {
         draw::set_font(Font::Helvetica, 12);
 
         // Title
-        let title = if formula.is_empty() {
-            "XDL Plot"
-        } else {
-            formula
-        };
-        let (title_w, title_h) = draw::measure(title, false);
+        let display_title = if title.is_empty() { "XDL Plot" } else { title };
+        let (title_w, title_h) = draw::measure(display_title, false);
         draw::draw_text2(
-            title,
+            display_title,
             fx + (fw - title_w) / 2,
             fy + 20,
             title_w,
@@ -136,8 +165,16 @@ impl PlotFrame {
         );
 
         // Axis labels
-        let x_label = format!("X: {:.2} to {:.2}", x_min, x_max);
-        let y_label = format!("Y: {:.2} to {:.2}", y_min, y_max);
+        let x_label = if xtitle.is_empty() {
+            format!("X: {:.2} to {:.2}", x_min, x_max)
+        } else {
+            xtitle.to_string()
+        };
+        let y_label = if ytitle.is_empty() {
+            format!("Y: {:.2} to {:.2}", y_min, y_max)
+        } else {
+            ytitle.to_string()
+        };
 
         draw::draw_text2(
             &x_label,
@@ -154,22 +191,30 @@ impl PlotFrame {
 }
 
 impl PlotWindow {
-    pub fn new(x_data: Vec<f64>, y_data: Vec<f64>) -> Result<Self> {
-        Self::with_title(x_data, y_data, "XDL Plot", "")
-    }
-
-    pub fn with_title(
+    pub fn with_labels(
         x_data: Vec<f64>,
         y_data: Vec<f64>,
         title: &str,
+        xtitle: &str,
+        ytitle: &str,
         formula: &str,
     ) -> Result<Self> {
         let mut window = Window::new(200, 200, 700, 500, title);
         window.set_color(Color::from_rgb(240, 240, 240));
 
         // Create the plot frame that will handle drawing
-        let _plot_frame =
-            PlotFrame::new_with_formula(10, 10, 680, 420, x_data.clone(), y_data.clone(), formula);
+        let plot_title = if !formula.is_empty() { formula } else { title };
+        let _plot_frame = PlotFrame::new_with_labels(
+            10,
+            10,
+            680,
+            420,
+            x_data.clone(),
+            y_data.clone(),
+            plot_title,
+            xtitle,
+            ytitle,
+        );
 
         // Info button at bottom
         let mut info_btn = Button::new(300, 450, 100, 30, "Plot Info");

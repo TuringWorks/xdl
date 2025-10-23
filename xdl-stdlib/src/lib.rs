@@ -17,6 +17,7 @@ pub mod system;
 // Re-export graphics callback registration for GUI
 pub use graphics_procs::{register_gui_image_callback, register_gui_plot_callback};
 
+use std::collections::HashMap;
 use xdl_core::{XdlResult, XdlValue};
 
 /// Standard library function registry
@@ -33,9 +34,19 @@ impl StandardLibrary {
 
     /// Call a XDL procedure
     pub fn call_procedure(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
+        self.call_procedure_with_keywords(name, args, &HashMap::new())
+    }
+
+    /// Call a XDL procedure with keyword arguments
+    pub fn call_procedure_with_keywords(
+        &self,
+        name: &str,
+        args: &[XdlValue],
+        keywords: &HashMap<String, XdlValue>,
+    ) -> XdlResult<XdlValue> {
         match name.to_uppercase().as_str() {
             // Graphics procedures - Basic plotting
-            "PLOT" => graphics_procs::plot(args),
+            "PLOT" => graphics_procs::plot_with_keywords(args, keywords),
             "OPLOT" => graphics_procs::oplot(args),
             "PLOTS" => graphics_procs::plots(args),
             "XYOUTS" => graphics_procs::xyouts(args),
@@ -123,6 +134,19 @@ impl StandardLibrary {
 
     /// Call a XDL function
     pub fn call_function(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
+        self.call_function_with_keywords(name, args, &HashMap::new())
+    }
+
+    /// Call a XDL function with keyword arguments
+    pub fn call_function_with_keywords(
+        &self,
+        name: &str,
+        args: &[XdlValue],
+        keywords: &HashMap<String, XdlValue>,
+    ) -> XdlResult<XdlValue> {
+        // For now, most functions don't use keywords, so we just call the standard version
+        // Specific functions can be updated to use keywords as needed
+        let _ = keywords; // Suppress unused warning
         match name.to_uppercase().as_str() {
             // Trigonometric functions
             "SIN" => math::sin(args),
