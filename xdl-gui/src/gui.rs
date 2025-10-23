@@ -269,7 +269,9 @@ impl XdlGui {
             fltk::enums::Shortcut::Ctrl | 'o',
             MenuFlag::Normal,
             move |_| {
-                if let Some(path) = dialog::file_chooser("Open XDL File", "*.xdl", ".", false) {
+                if let Some(path) =
+                    dialog::file_chooser("Open XDL or MATLAB File", "*.{xdl,m}", ".", false)
+                {
                     info!("Menu: Opening file: {}", path);
 
                     match std::fs::read_to_string(&path) {
@@ -279,9 +281,30 @@ impl XdlGui {
                                 .unwrap_or_default()
                                 .to_string_lossy();
 
+                            // Check if this is a MATLAB .m file
+                            let file_path = std::path::Path::new(&path);
+                            let display_content =
+                                if file_path.extension().and_then(|s| s.to_str()) == Some("m") {
+                                    info!("Detected MATLAB .m file, transpiling to XDL");
+                                    match xdl_matlab::transpile_matlab_to_xdl(&content) {
+                                        Ok(xdl_code) => xdl_code,
+                                        Err(e) => {
+                                            let error_msg = format!(
+                                                "Error transpiling MATLAB file {}: {}",
+                                                path, e
+                                            );
+                                            out_buffer_for_menu.set_text(&error_msg);
+                                            error!("Failed to transpile MATLAB file: {}", e);
+                                            return;
+                                        }
+                                    }
+                                } else {
+                                    content
+                                };
+
                             cmd_buffer_for_menu.set_text(&format!(
                                 "// File: {}\n{}\n\n// Click Execute to run this code",
-                                filename, content
+                                filename, display_content
                             ));
                             out_buffer_for_menu.set_text(&format!(
                                 "Loaded file: {}\nClick Execute button to run the code.\n",
@@ -608,13 +631,14 @@ impl XdlGui {
             |_| {
                 let help_text = "XDL GUI Help Topics:\n\n\
                     Getting Started:\n\
-                    • Use File > Open to load .xdl script files\n\
+                    • Use File > Open to load .xdl or .m (MATLAB) files\n\
                     • Type commands directly in the command window\n\
                     • Click Execute to run your scripts\n\n\
                     Features:\n\
                     • Variable tracking in the right panel\n\
                     • Automatic plot window generation\n\
-                    • Script editing with syntax awareness\n\n\
+                    • Script editing with syntax awareness\n\
+                    • MATLAB .m file support (auto-transpiles to XDL)\n\n\
                     Keyboard Shortcuts:\n\
                     • Ctrl+N: New script\n\
                     • Ctrl+O: Open file\n\
@@ -781,8 +805,28 @@ impl XdlGui {
                 .join("\n");
 
             if !filtered_code.trim().is_empty() {
+                // Simple strategy: try to execute as XDL first
+                // If it has MATLAB patterns, try transpiling
+                let code_to_execute = if Self::looks_like_matlab(&filtered_code) {
+                    // Try MATLAB transpilation
+                    match xdl_matlab::transpile_matlab_to_xdl(&filtered_code) {
+                        Ok(xdl_code) => {
+                            info!("Transpiled MATLAB code to XDL");
+                            xdl_code
+                        }
+                        Err(_) => {
+                            // Transpilation failed, might already be XDL
+                            info!("MATLAB transpilation failed, trying as XDL");
+                            filtered_code.clone()
+                        }
+                    }
+                } else {
+                    // Doesn't look like MATLAB, use as-is
+                    filtered_code.clone()
+                };
+
                 Self::execute_xdl_code(
-                    &filtered_code,
+                    &code_to_execute,
                     &interp_clone,
                     &mut out_buffer_clone_exec,
                     "Editor",
@@ -802,12 +846,12 @@ impl XdlGui {
         });
 
         // Register plot callback
-        register_gui_plot_callback(
-            move |x_data, y_data| match PlotWindow::new(x_data, y_data) {
+        register_gui_plot_callback(move |x_data, y_data, title, xtitle, ytitle| {
+            match PlotWindow::with_labels(x_data, y_data, &title, &xtitle, &ytitle, "") {
                 Ok(mut plot_win) => plot_win.show(),
                 Err(e) => eprintln!("Plot error: {}", e),
-            },
-        );
+            }
+        });
 
         // Register image display callback for 3D plots
         register_gui_image_callback(move |image_path, title| {
@@ -915,6 +959,60 @@ impl XdlGui {
             Some("pdf") => "PDF Document",
             _ => "Unknown",
         }
+    }
+
+    fn looks_like_matlab(code: &str) -> bool {
+        // Check for explicit MATLAB hint in comments
+        // Supports: % MATLAB, // MATLAB, % matlab, // matlab
+        if code.lines().any(|line| {
+            let trimmed = line.trim();
+            trimmed.starts_with("% MATLAB")
+                || trimmed.starts_with("// MATLAB")
+                || trimmed.starts_with("%MATLAB")
+                || trimmed.starts_with("//MATLAB")
+                || trimmed.to_uppercase().starts_with("% MATLAB")
+                || trimmed.to_uppercase().starts_with("// MATLAB")
+        }) {
+            return true;
+        }
+
+        // If code has XDL-style comments (starting with ;), it's already XDL
+        if code.lines().any(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with(';') && !trimmed.starts_with(";;") // ; is XDL comment
+        }) {
+            return false;
+        }
+
+        // If code contains XDL keywords like FINDGEN, PLOT3D, it's XDL
+        if code.contains("FINDGEN")
+            || code.contains("PLOT3D")
+            || code.contains("RANDOMU")
+            || code.contains("N_ELEMENTS")
+        {
+            return false;
+        }
+
+        // Heuristic to detect MATLAB code
+        // Look for common MATLAB patterns:
+        // - MATLAB-specific functions
+        // - Element-wise operators
+        // - MATLAB-style comments starting with %
+        code.contains("linspace")
+            || code.contains("complex")
+            || code.contains("axis")
+            || code.contains("tiledlayout")
+            || code.contains("nexttile")
+            || code.contains("comet3")
+            || code.contains("meshgrid")
+            || code.contains("surf")
+            || code.contains(" .*")
+            || code.contains(".* ")
+            || code.contains(" ./")
+            || code.contains("./ ")
+            || code.contains(" .^")
+            || code.contains(".^ ")
+            || code.lines().any(|line| line.trim_start().starts_with('%'))
     }
 
     fn execute_xdl_code(

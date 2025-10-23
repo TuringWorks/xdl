@@ -8,7 +8,7 @@ members = [
     "xdl-cli",
     "xdl-ffi",
     "xdl-gui"
-]
+, "xdl-matlab"]
 resolver = "2"
 
 [workspace.package]
