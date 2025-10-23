@@ -321,7 +321,14 @@ fn parse_token(input: &str) -> ParseResult<'_, Token> {
 
 // Main tokenizer function
 pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
-    let mut remaining = input;
+    // Normalize curly quotes to ASCII to avoid lexing issues
+    let normalized = input
+        .replace('’', "'")
+        .replace('‘', "'")
+        .replace('“', "\"")
+        .replace('”', "\"");
+
+    let mut remaining: &str = &normalized;
     let mut tokens = Vec::new();
 
     while !remaining.is_empty() {
@@ -335,8 +342,12 @@ pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
                 remaining = rest;
             }
             Err(_) => {
-                // Skip unknown characters
-                remaining = &remaining[1..];
+                // Skip unknown characters (respect UTF-8 character boundaries)
+                if let Some(c) = remaining.chars().next() {
+                    remaining = &remaining[c.len_utf8()..];
+                } else {
+                    break; // End of string
+                }
             }
         }
     }
