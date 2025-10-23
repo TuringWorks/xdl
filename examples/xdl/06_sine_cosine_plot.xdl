@@ -1,0 +1,27 @@
+; ============================================
+; XDL Example 6: Sine and Cosine Plotting
+; ============================================
+; This is the XDL equivalent of the MATLAB plotting example
+; It demonstrates how to plot multiple functions
+
+PRINT, 'Creating sine and cosine plots...'
+PRINT, ''
+
+; Create x values from 0 to 2*PI
+n_points = 100
+x = FINDGEN(n_points) * 2.0 * !PI / (n_points - 1)
+
+; Calculate sine and cosine
+y_sin = SIN(x)
+y_cos = COS(x)
+
+; Plot sine wave
+PRINT, 'Plotting sine function...'
+PLOT, x, y_sin, title='Sine and Cosine Functions', xtitle='X (radians)', ytitle='Y values'
+
+PRINT, ''
+PRINT, 'Plot complete! Check xdl_plot.png'
+PRINT, ''
+PRINT, 'Note: To plot multiple functions on the same graph,'
+PRINT, 'XDL currently generates separate plot files.'
+PRINT, 'Future versions may support overlays.'

@@ -17,3 +17,13 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Test files (not examples)
+/test_*.m
+/test_*.xdl
+/test_*.rs
+/debug_*.m
+/debug_*.rs
+*.rcgu.o
+Cargo_debug.toml
+*_debug.xdl

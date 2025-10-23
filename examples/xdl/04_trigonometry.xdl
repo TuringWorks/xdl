@@ -1,0 +1,38 @@
+; ============================================
+; XDL Example 4: Trigonometric Functions
+; ============================================
+; Demonstrates sine, cosine, and tangent
+
+; Print some sample values
+PRINT, 'Sample trigonometric values:'
+PRINT, ''
+
+; At x = 0
+PRINT, 'At x = 0:'
+PRINT, '  SIN(0) =', SIN(0.0)
+PRINT, '  COS(0) =', COS(0.0)
+PRINT, '  TAN(0) =', TAN(0.0)
+
+PRINT, ''
+
+; At x = PI/4 (0.785)
+PRINT, 'At x = PI/4 (0.785 radians):'
+angle = 0.785398
+PRINT, '  SIN(π/4) =', SIN(angle)
+PRINT, '  COS(π/4) =', COS(angle)
+PRINT, '  TAN(π/4) =', TAN(angle)
+
+PRINT, ''
+
+; At x = PI/2 (1.571)
+PRINT, 'At x = PI/2 (1.571 radians):'
+angle2 = 1.5708
+PRINT, '  SIN(π/2) =', SIN(angle2)
+PRINT, '  COS(π/2) =', COS(angle2)
+
+; Create arrays for plotting
+x = FINDGEN(100) * 0.0635
+y_sin = SIN(x)
+
+; Plot sine wave
+PLOT, x, y_sin, title='Sine Wave', xtitle='Angle (radians)', ytitle='sin(x)'
