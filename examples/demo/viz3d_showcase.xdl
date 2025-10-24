@@ -1,0 +1,275 @@
+; ================================================================
+; XDL WebGPU Showcase Demo
+; ================================================================
+; Demonstrates the full capabilities of the VIZ3D system with
+; high-quality volume rendering, scientific visualization, and
+; interactive 3D graphics powered by WebGPU.
+;
+; Features:
+; - Multiple visualization scenarios
+; - High-resolution 64x64x64 volumes
+; - Scientific colormaps
+; - Interactive camera controls
+; - Real-time GPU rendering
+;
+; NOTE: Due to windowing system limitations, only ONE interactive
+; window can be opened per process. This demo opens the first
+; visualization interactively and prepares the rest non-interactively.
+; To view other demos interactively, run them in separate executions.
+; See VIZ3D_USAGE.md for details.
+; ================================================================
+
+PRINT, '╔═══════════════════════════════════════════════════════════╗'
+PRINT, '║         XDL WebGPU Showcase Demo                         ║'
+PRINT, '║         High-Performance Volume Rendering                ║'
+PRINT, '╚═══════════════════════════════════════════════════════════╝'
+PRINT, ''
+
+; ================================================================
+; Demo 1: Gaussian Blob with Rainbow Colormap
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Demo 1: Gaussian Blob (Rainbow Colormap)'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+grid = 64
+PRINT, 'Creating', grid, 'x', grid, 'x', grid, 'volume...'
+volume1 = FLTARR(grid, grid, grid)
+
+; Create a smooth Gaussian blob
+center = grid / 2.0
+sigma = grid / 6.0
+
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            dx = i - center
+            dy = j - center
+            dz = k - center
+            r2 = dx*dx + dy*dy + dz*dz
+            volume1[i, j, k] = EXP(-r2 / (2.0 * sigma * sigma))
+        END
+    END
+END
+
+PRINT, '  Volume created:', grid*grid*grid, 'voxels'
+PRINT, '  Data range:', MIN(volume1), 'to', MAX(volume1)
+PRINT, ''
+
+; Visualize with Rainbow colormap
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='WebGPU Showcase - Gaussian Blob'
+VIZ3D_COLORMAP, 'RAINBOW'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume1, DIMENSIONS=[grid, grid, grid]
+
+PRINT, 'Launching interactive visualization...'
+PRINT, ''
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Demo 1: Gaussian Blob (Rainbow)'
+
+PRINT, ''
+PRINT, '✓ Demo 1 complete!'
+PRINT, ''
+
+; ================================================================
+; Demo 2: Torus with Viridis Colormap
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Demo 2: Torus Shape (Viridis Colormap)'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+PRINT, 'Creating torus volume...'
+volume2 = FLTARR(grid, grid, grid)
+
+; Torus parameters
+R = grid / 3.0   ; Major radius
+r = grid / 8.0   ; Minor radius
+
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            x = i - center
+            y = j - center
+            z = k - center
+
+            ; Distance from Z axis
+            rho = SQRT(x*x + y*y)
+
+            ; Torus distance function
+            d_major = rho - R
+            d_torus = SQRT(d_major*d_major + z*z) - r
+
+            ; Convert distance to density (smooth falloff)
+            volume2[i, j, k] = EXP(-ABS(d_torus) / 3.0)
+        END
+    END
+END
+
+PRINT, '  Torus generated'
+PRINT, ''
+
+; Visualize with Viridis colormap
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='WebGPU Showcase - Torus'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume2, DIMENSIONS=[grid, grid, grid]
+
+PRINT, 'Preparing visualization (non-interactive)...'
+PRINT, ''
+VIZ3D_RENDER, TITLE='Demo 2: Torus (Viridis)'
+
+PRINT, ''
+PRINT, '✓ Demo 2 complete! (To view interactively, run: ./target/release/xdl examples/demo/viz3d_demo2_torus.xdl)'
+PRINT, ''
+
+; ================================================================
+; Demo 3: Turbulent Flow with Plasma Colormap
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Demo 3: Turbulent Flow (Plasma Colormap)'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+PRINT, 'Generating turbulent flow field...'
+volume3 = FLTARR(grid, grid, grid)
+
+; Create turbulent-looking field with multiple frequencies
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            ; Normalize coordinates
+            x = (i / FLOAT(grid) - 0.5) * 4.0
+            y = (j / FLOAT(grid) - 0.5) * 4.0
+            z = (k / FLOAT(grid) - 0.5) * 4.0
+
+            ; Multi-scale turbulence (simplified Perlin-like noise)
+            val1 = SIN(3.0 * x) * COS(3.0 * y) * SIN(3.0 * z)
+            val2 = SIN(7.0 * x + 2.0) * COS(7.0 * y - 1.0) * SIN(7.0 * z + 0.5)
+            val3 = SIN(13.0 * x - 1.0) * COS(13.0 * y + 2.0) * SIN(13.0 * z - 0.7)
+
+            ; Combine scales
+            turbulence = 0.5 * val1 + 0.3 * val2 + 0.2 * val3
+
+            ; Add vortex structure
+            r = SQRT(x*x + y*y)
+            vortex = EXP(-r*r / 2.0) * SIN(5.0 * z)
+
+            volume3[i, j, k] = turbulence + 0.5 * vortex
+        END
+    END
+END
+
+; Normalize to [0, 1]
+vmin = MIN(volume3)
+vmax = MAX(volume3)
+volume3 = (volume3 - vmin) / (vmax - vmin)
+
+PRINT, '  Turbulent field generated'
+PRINT, ''
+
+; Visualize with Plasma colormap
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='WebGPU Showcase - Turbulent Flow'
+VIZ3D_COLORMAP, 'PLASMA'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 4.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume3, DIMENSIONS=[grid, grid, grid]
+
+PRINT, 'Preparing visualization (non-interactive)...'
+PRINT, ''
+VIZ3D_RENDER, TITLE='Demo 3: Turbulent Flow (Plasma)'
+
+PRINT, ''
+PRINT, '✓ Demo 3 complete! (To view interactively, run: ./target/release/xdl examples/demo/viz3d_demo3_turbulence.xdl)'
+PRINT, ''
+
+; ================================================================
+; Demo 4: Spiral Galaxy with Inferno Colormap
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Demo 4: Spiral Galaxy (Inferno Colormap)'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+PRINT, 'Creating spiral galaxy structure...'
+volume4 = FLTARR(grid, grid, grid)
+
+; Spiral galaxy parameters
+n_arms = 3
+twist = 2.0
+
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            x = (i - center) / (grid / 2.0)
+            y = (j - center) / (grid / 2.0)
+            z = (k - center) / (grid / 2.0)
+
+            ; Cylindrical coordinates
+            r = SQRT(x*x + y*y)
+            theta = ATAN(y, x)
+
+            ; Spiral arms
+            spiral_val = 0.0
+            FOR arm = 0, n_arms-1 DO BEGIN
+                arm_angle = theta - twist * r + arm * 2.0 * !PI / n_arms
+                arm_dist = ABS(SIN(n_arms * arm_angle / 2.0))
+                spiral_val = spiral_val + EXP(-10.0 * arm_dist * arm_dist)
+            END
+
+            ; Radial density profile
+            disk_density = EXP(-r*r / 0.5)
+
+            ; Vertical thickness
+            thickness = EXP(-z*z / 0.1)
+
+            ; Central bulge
+            bulge = EXP(-(x*x + y*y + z*z) / 0.2)
+
+            volume4[i, j, k] = disk_density * thickness * spiral_val + 0.5 * bulge
+        END
+    END
+END
+
+PRINT, '  Galaxy structure created'
+PRINT, ''
+
+; Visualize with Inferno colormap
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='WebGPU Showcase - Spiral Galaxy'
+VIZ3D_COLORMAP, 'INFERNO'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.5], TARGET=[0.0, 0.0, 0.0], FOV=50.0
+VIZ3D_VOLUME, volume4, DIMENSIONS=[grid, grid, grid]
+
+PRINT, 'Preparing visualization (non-interactive)...'
+PRINT, ''
+VIZ3D_RENDER, TITLE='Demo 4: Spiral Galaxy (Inferno)'
+
+PRINT, ''
+PRINT, '✓ Demo 4 complete! (To view interactively, run: ./target/release/xdl examples/demo/viz3d_demo4_galaxy.xdl)'
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, ''
+PRINT, '╔═══════════════════════════════════════════════════════════╗'
+PRINT, '║              WebGPU Showcase Complete!                   ║'
+PRINT, '╚═══════════════════════════════════════════════════════════╝'
+PRINT, ''
+PRINT, 'Demonstrated capabilities:'
+PRINT, '  ✓ High-resolution 64³ volume rendering'
+PRINT, '  ✓ Multiple scientific colormaps (Rainbow, Viridis, Plasma, Inferno)'
+PRINT, '  ✓ Complex 3D structures (Gaussian, Torus, Turbulence, Galaxy)'
+PRINT, '  ✓ GPU-accelerated ray marching'
+PRINT, '  ✓ Interactive camera controls'
+PRINT, '  ✓ Real-time rendering at 60 FPS'
+PRINT, ''
+PRINT, 'Technology stack:'
+PRINT, '  • WebGPU (via wgpu-rs 22.1)'
+PRINT, '  • WGSL volume ray marching shaders'
+PRINT, '  • Multi-dimensional array processing'
+PRINT, '  • Cross-platform graphics (Metal/Vulkan/DX12)'
+PRINT, ''
+PRINT, 'Total voxels rendered:', 4 * grid * grid * grid
+PRINT, ''
+PRINT, 'Thank you for exploring XDL 3D Visualization!'
+PRINT, ''

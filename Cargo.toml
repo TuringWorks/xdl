@@ -7,8 +7,10 @@ members = [
     "xdl-stdlib",
     "xdl-cli",
     "xdl-ffi",
-    "xdl-gui"
-, "xdl-matlab"]
+    "xdl-gui",
+    "xdl-matlab",
+    "xdl-viz3d"
+, "xdl-viz3d-web"]
 resolver = "2"
 
 [workspace.package]
@@ -54,7 +56,8 @@ clap = { version = "4.4", features = ["derive"] }
 
 # Graphics and UI
 plotters = "0.3"
-wgpu = "0.18"
+wgpu = "22.1"
+winit = "0.30"
 eframe = "0.28"
 egui = "0.28"
 egui_plot = "0.28"

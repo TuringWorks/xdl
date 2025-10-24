@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebGPU Test</title>
+    <style>
+        body { margin: 0; background: #1a1a1a; color: white; font-family: monospace; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #info { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 20px; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="info">
+        <div id="status">Initializing...</div>
+        <div id="error" style="color: red; display: none;"></div>
+    </div>
+
+    <script>
+        (async () => {
+            const status = document.getElementById('status');
+            const errorDiv = document.getElementById('error');
+            const canvas = document.getElementById('canvas');
+
+            try {
+                status.textContent = 'Step 1: Checking WebGPU support...';
+
+                if (!navigator.gpu) {
+                    throw new Error('WebGPU not supported. Use Chrome 113+, Edge 113+, or Safari 17+');
+                }
+
+                status.textContent = 'Step 2: Requesting adapter...';
+                const adapter = await navigator.gpu.requestAdapter();
+                if (!adapter) {
+                    throw new Error('No GPU adapter found');
+                }
+                console.log('Adapter:', adapter);
+
+                status.textContent = 'Step 3: Requesting device...';
+                const device = await adapter.requestDevice();
+                console.log('Device:', device);
+
+                status.textContent = 'Step 4: Configuring canvas...';
+                canvas.width = 800;
+                canvas.height = 600;
+                const context = canvas.getContext('webgpu');
+                const format = navigator.gpu.getPreferredCanvasFormat();
+
+                context.configure({
+                    device: device,
+                    format: format,
+                });
+
+                status.textContent = 'Step 5: Creating shader...';
+                const shader = device.createShaderModule({
+                    code: `
+                        @vertex
+                        fn vs_main(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+                            let x = f32(i & 1u) * 4.0 - 1.0;
+                            let y = f32(i >> 1u) * 4.0 - 1.0;
+                            return vec4f(x, y, 0.0, 1.0);
+                        }
+
+                        @fragment
+                        fn fs_main() -> @location(0) vec4f {
+                            return vec4f(1.0, 0.0, 0.0, 1.0); // Red
+                        }
+                    `
+                });
+
+                status.textContent = 'Step 6: Creating pipeline...';
+                const pipeline = device.createRenderPipeline({
+                    layout: 'auto',
+                    vertex: {
+                        module: shader,
+                        entryPoint: 'vs_main',
+                    },
+                    fragment: {
+                        module: shader,
+                        entryPoint: 'fs_main',
+                        targets: [{ format: format }],
+                    },
+                });
+
+                status.textContent = 'Step 7: Rendering...';
+
+                function render() {
+                    const encoder = device.createCommandEncoder();
+                    const view = context.getCurrentTexture().createView();
+
+                    const renderPass = encoder.beginRenderPass({
+                        colorAttachments: [{
+                            view: view,
+                            clearValue: { r: 0.0, g: 0.0, b: 0.5, a: 1.0 },
+                            loadOp: 'clear',
+                            storeOp: 'store',
+                        }],
+                    });
+
+                    renderPass.setPipeline(pipeline);
+                    renderPass.draw(3);
+                    renderPass.end();
+
+                    device.queue.submit([encoder.finish()]);
+
+                    requestAnimationFrame(render);
+                }
+
+                render();
+                status.textContent = '✓ WebGPU working! You should see a red triangle.';
+
+            } catch (err) {
+                console.error('Error:', err);
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'ERROR: ' + err.message;
+                status.textContent = 'Failed at: ' + status.textContent;
+            }
+        })();
+    </script>
+</body>
+</html>

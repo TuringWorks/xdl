@@ -125,9 +125,21 @@ pub fn fltarr(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args {
+        shape.push(extract_dimension(arg)?);
+    }
+
     let total_size = calculate_total_size(args)?;
     let data = vec![0.0; total_size];
-    Ok(XdlValue::Array(data))
+
+    // Return MultiDimArray if more than 1 dimension, Array for 1D
+    if shape.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    }
 }
 
 /// Create double precision array: DBLARR(dimensions...)

@@ -230,6 +230,9 @@ pub struct XdlGui {
 
 impl XdlGui {
     pub fn new() -> Result<Self> {
+        // Set environment variable to indicate GUI mode (prevents blocking 3D windows)
+        std::env::set_var("XDL_GUI_MODE", "1");
+
         // Create main window with proportions suitable for a scientific computing environment
         let mut window = Window::new(
             100,

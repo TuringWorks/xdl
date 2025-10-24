@@ -171,18 +171,22 @@ impl<'a> Parser<'a> {
 
         // GDL/IDL supports: if cond then statement OR if cond then begin...end
         let then_block = if then_has_begin_end {
-            self.parse_block_or_statement(&[Token::Else, Token::Endif])?
+            // When using BEGIN...END, only ELSE can terminate the block
+            // (ENDIF should not terminate it - the END will close the BEGIN)
+            self.parse_block_or_statement(&[Token::Else])?
         } else {
             // Single statement
             vec![self.parse_statement()?]
         };
 
-        let (else_block, _else_has_begin_end) = if self.check(&Token::Else) {
+        let (else_block, else_has_begin_end) = if self.check(&Token::Else) {
             self.advance(); // consume 'else'
             let else_has_begin = self.check(&Token::Begin);
             // Parse else block
             let else_stmts = if else_has_begin {
-                self.parse_block_or_statement(&[Token::Endif])?
+                // When using BEGIN...END in else, no terminator needed
+                // (the END will close the BEGIN)
+                self.parse_block_or_statement(&[])?
             } else {
                 vec![self.parse_statement()?]
             };
@@ -191,9 +195,15 @@ impl<'a> Parser<'a> {
             (None, false)
         };
 
-        // GDL/IDL syntax: ENDIF is always consumed if present
-        // It's optional in all forms, but if present, we consume it
-        if self.check(&Token::Endif) {
+        // GDL/IDL syntax rules for ENDIF:
+        // - If using BEGIN...END blocks, ENDIF is optional but can be present
+        // - If NOT using BEGIN...END (single statement or implicit blocks), ENDIF is required
+        let requires_endif = !then_has_begin_end && !else_has_begin_end;
+
+        if requires_endif {
+            self.consume(Token::Endif, "Expected 'ENDIF' after if statement")?;
+        } else if self.check(&Token::Endif) {
+            // ENDIF is optional with BEGIN...END but consume if present
             self.advance();
         }
 
@@ -248,9 +258,10 @@ impl<'a> Parser<'a> {
         //      statement2
         //    endfor
         let body = if has_begin_end {
-            // BEGIN...END block
-            let stmts = self.parse_block_or_statement(&[Token::Endfor])?;
-            // ENDFOR is optional with BEGIN...END
+            // BEGIN...END block - don't pass ENDFOR as terminator
+            // The END will close the BEGIN, and ENDFOR is optional but can follow
+            let stmts = self.parse_block_or_statement(&[])?;
+            // ENDFOR is optional with BEGIN...END but consume if present
             if self.check(&Token::Endfor) {
                 self.advance();
             }
@@ -286,6 +297,26 @@ impl<'a> Parser<'a> {
         // Parse comma-separated arguments
         while self.check(&Token::Comma) {
             self.advance(); // consume comma
+
+            // Check for /KEYWORD syntax (slash followed by identifier)
+            if self.check(&Token::Divide) {
+                self.advance(); // consume '/'
+                if let Token::Identifier(kw_name) = self.advance() {
+                    // This is a boolean keyword flag (/INTERACTIVE, /VERBOSE, etc.)
+                    keywords.push(Keyword {
+                        name: kw_name.clone(),
+                        value: None, // Boolean flag, no value
+                        location: Location::unknown(),
+                    });
+                    continue;
+                } else {
+                    return Err(XdlError::ParseError {
+                        message: "Expected identifier after '/' in keyword".to_string(),
+                        line: 1,
+                        column: self.current,
+                    });
+                }
+            }
 
             // Check for keyword argument (identifier = expression)
             if let Token::Identifier(kw_name) = self.peek() {

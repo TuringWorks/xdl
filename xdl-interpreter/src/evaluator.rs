@@ -741,53 +741,44 @@ impl Evaluator {
             }
         };
 
-        // For now, handle 2D indexing: arr[i, j]
-        if indices.len() == 2 && shape.len() == 2 {
-            // Extract both indices
-            let i_index = match &indices[0] {
-                ArrayIndex::Single(expr) => {
-                    let val = self.evaluate(expr, context)?;
-                    val.to_long()? as usize
+        // Handle N-dimensional indexing: arr[i, j, k, ...]
+        if indices.len() == shape.len() {
+            // Extract all indices
+            let mut index_values = Vec::new();
+            for index in indices {
+                match index {
+                    ArrayIndex::Single(expr) => {
+                        let val = self.evaluate(expr, context)?;
+                        index_values.push(val.to_long()? as usize);
+                    }
+                    _ => {
+                        return Err(XdlError::NotImplemented(
+                            "Range indexing not yet supported for multi-dimensional arrays"
+                                .to_string(),
+                        ));
+                    }
                 }
-                _ => {
-                    return Err(XdlError::NotImplemented(
-                        "Range indexing not yet supported for multi-dimensional arrays".to_string(),
-                    ));
-                }
-            };
-
-            let j_index = match &indices[1] {
-                ArrayIndex::Single(expr) => {
-                    let val = self.evaluate(expr, context)?;
-                    val.to_long()? as usize
-                }
-                _ => {
-                    return Err(XdlError::NotImplemented(
-                        "Range indexing not yet supported for multi-dimensional arrays".to_string(),
-                    ));
-                }
-            };
-
-            // Check bounds
-            let nrows = shape[0];
-            let ncols = shape[1];
-
-            if i_index >= nrows {
-                return Err(XdlError::RuntimeError(format!(
-                    "Row index {} out of bounds for array with {} rows",
-                    i_index, nrows
-                )));
             }
 
-            if j_index >= ncols {
-                return Err(XdlError::RuntimeError(format!(
-                    "Column index {} out of bounds for array with {} columns",
-                    j_index, ncols
-                )));
-            }
+            // Check bounds and calculate flat index (row-major order)
+            let mut flat_index = 0;
+            let mut multiplier = 1;
 
-            // Calculate flat index (row-major order)
-            let flat_index = i_index * ncols + j_index;
+            // Calculate in reverse order (rightmost dimension varies fastest)
+            for i in (0..shape.len()).rev() {
+                let idx = index_values[i];
+                let dim_size = shape[i];
+
+                if idx >= dim_size {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Index {} out of bounds for dimension {} (size {})",
+                        idx, i, dim_size
+                    )));
+                }
+
+                flat_index += idx * multiplier;
+                multiplier *= dim_size;
+            }
 
             if flat_index >= data.len() {
                 return Err(XdlError::RuntimeError(format!(

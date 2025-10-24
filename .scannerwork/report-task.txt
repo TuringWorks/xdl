@@ -1,0 +1,6 @@
+projectKey=xdl
+serverUrl=http://localhost:9000
+serverVersion=25.10.0.114319
+dashboardUrl=http://localhost:9000/dashboard?id=xdl
+ceTaskId=6c81ac03-6746-41d0-ac97-bd8378cd3ef2
+ceTaskUrl=http://localhost:9000/api/ce/task?id=6c81ac03-6746-41d0-ac97-bd8378cd3ef2

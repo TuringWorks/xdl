@@ -160,22 +160,19 @@ impl Interpreter {
                             let mut keyword_values = HashMap::new();
                             for keyword in keywords {
                                 if let Some(ref value_expr) = keyword.value {
+                                    // Keyword with value: TITLE='foo'
                                     let value = self.evaluate_expression(value_expr)?;
                                     keyword_values.insert(keyword.name.clone(), value);
+                                } else {
+                                    // Boolean flag keyword: /INTERACTIVE
+                                    // Insert with value Long(1) to indicate it's set
+                                    keyword_values.insert(keyword.name.clone(), XdlValue::Long(1));
                                 }
                             }
 
-                            match self.evaluator.call_procedure_with_keywords(
-                                name,
-                                &arg_values,
-                                &keyword_values,
-                            ) {
-                                Ok(_) => Ok(()),
-                                Err(_) => Err(XdlError::RuntimeError(format!(
-                                    "Unknown procedure: {}",
-                                    name
-                                ))),
-                            }
+                            self.evaluator
+                                .call_procedure_with_keywords(name, &arg_values, &keyword_values)
+                                .map(|_| ())
                         }
                     }
                 }
@@ -480,45 +477,52 @@ impl Interpreter {
         if indices.len() > 1 {
             // Check if this is a MultiDimArray with proper shape
             if let XdlValue::MultiDimArray { data, shape } = array_val {
-                if indices.len() == 2 && shape.len() == 2 {
-                    // 2D assignment: arr[i, j] = value
-                    let i_index = match &indices[0] {
-                        ArrayIndex::Single(expr) => {
-                            let val = self.evaluate_expression(expr)?;
-                            val.to_long()? as usize
+                if indices.len() == shape.len() {
+                    // N-dimensional assignment: arr[i, j, k, ...] = value
+                    let mut index_values = Vec::new();
+                    for index in indices {
+                        match index {
+                            ArrayIndex::Single(expr) => {
+                                let val = self.evaluate_expression(expr)?;
+                                index_values.push(val.to_long()? as usize);
+                            }
+                            _ => {
+                                return Err(XdlError::NotImplemented(
+                                    "Range assignment not supported for multi-dimensional arrays"
+                                        .to_string(),
+                                ));
+                            }
                         }
-                        _ => {
-                            return Err(XdlError::NotImplemented(
-                                "Range assignment not supported for multi-dimensional arrays"
-                                    .to_string(),
-                            ));
-                        }
-                    };
+                    }
 
-                    let j_index = match &indices[1] {
-                        ArrayIndex::Single(expr) => {
-                            let val = self.evaluate_expression(expr)?;
-                            val.to_long()? as usize
-                        }
-                        _ => {
-                            return Err(XdlError::NotImplemented(
-                                "Range assignment not supported for multi-dimensional arrays"
-                                    .to_string(),
-                            ));
-                        }
-                    };
+                    // Check bounds and calculate flat index (row-major order)
+                    let mut flat_index = 0;
+                    let mut multiplier = 1;
 
-                    let nrows = shape[0];
-                    let ncols = shape[1];
+                    // Calculate in reverse order (rightmost dimension varies fastest)
+                    for i in (0..shape.len()).rev() {
+                        let idx = index_values[i];
+                        let dim_size = shape[i];
 
-                    if i_index >= nrows || j_index >= ncols {
+                        if idx >= dim_size {
+                            return Err(XdlError::RuntimeError(format!(
+                                "Index {} out of bounds for dimension {} (size {})",
+                                idx, i, dim_size
+                            )));
+                        }
+
+                        flat_index += idx * multiplier;
+                        multiplier *= dim_size;
+                    }
+
+                    if flat_index >= data.len() {
                         return Err(XdlError::RuntimeError(format!(
-                            "Index [{}, {}] out of bounds for {}x{} array",
-                            i_index, j_index, nrows, ncols
+                            "Computed index {} out of bounds for array with {} elements",
+                            flat_index,
+                            data.len()
                         )));
                     }
 
-                    let flat_index = i_index * ncols + j_index;
                     data[flat_index] = value.to_double()?;
                     return Ok(());
                 }

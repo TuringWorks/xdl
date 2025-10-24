@@ -1,0 +1,82 @@
+; ================================================================
+; Demo 4: Spiral Galaxy with Inferno Colormap
+; ================================================================
+; Demonstrates spiral galaxy structure with arms and central bulge
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Demo 4: Spiral Galaxy (Inferno Colormap)'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+grid = 64
+PRINT, 'Creating spiral galaxy structure...'
+volume4 = FLTARR(grid, grid, grid)
+
+; Spiral galaxy parameters
+center = grid / 2.0
+n_arms = 3
+twist = 2.0
+
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            x = (i - center) / (grid / 2.0)
+            y = (j - center) / (grid / 2.0)
+            z = (k - center) / (grid / 2.0)
+
+            ; Cylindrical coordinates
+            r = SQRT(x*x + y*y)
+            theta = ATAN(y, x)
+
+            ; Spiral arms - sharp boundaries
+            spiral_val = 0.0
+            FOR arm = 0, n_arms-1 DO BEGIN
+                arm_angle = theta - twist * r + arm * 2.0 * !PI / n_arms
+                arm_dist = ABS(SIN(n_arms * arm_angle / 2.0))
+                IF arm_dist LT 0.3 THEN BEGIN
+                    spiral_val = 1.0
+                END
+            END
+
+            ; Radial density profile - sharp cutoff
+            disk_density = 0.0
+            IF r LT 1.0 THEN BEGIN
+                disk_density = 1.0
+            END
+
+            ; Vertical thickness - sharp cutoff
+            thickness = 0.0
+            abs_z = ABS(z)
+            IF abs_z LT 0.2 THEN BEGIN
+                thickness = 1.0
+            END
+
+            ; Central bulge - sharp cutoff
+            bulge = 0.0
+            bulge_r = SQRT(x*x + y*y + z*z)
+            IF bulge_r LT 0.3 THEN BEGIN
+                bulge = 1.0
+            END
+
+            volume4[i, j, k] = disk_density * thickness * spiral_val + bulge
+        END
+    END
+END
+
+PRINT, '  Galaxy structure created'
+PRINT, ''
+
+; Visualize with Inferno colormap
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Demo 4 - Spiral Galaxy'
+VIZ3D_COLORMAP, 'INFERNO'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.5], TARGET=[0.0, 0.0, 0.0], FOV=50.0
+VIZ3D_VOLUME, volume4, DIMENSIONS=[grid, grid, grid]
+
+PRINT, 'Launching interactive visualization...'
+PRINT, ''
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Demo 4: Spiral Galaxy (Inferno)'
+
+PRINT, ''
+PRINT, '✓ Demo 4 complete!'
+PRINT, ''

@@ -1,0 +1,227 @@
+; XDL Rayleigh-Taylor Instability Demo
+; Demonstrates 3D volume rendering of fluid instability simulation
+; Run this in XDL GUI or CLI to see interactive 3D visualization
+
+PRINT, '=== Rayleigh-Taylor Instability Simulation ==='
+PRINT, ''
+PRINT, 'This demo simulates the famous fluid instability that occurs when'
+PRINT, 'a denser fluid sits above a lighter fluid in a gravitational field.'
+PRINT, ''
+
+; ========================================
+; Simulation Parameters
+; ========================================
+PRINT, '--- Setting up simulation parameters ---'
+
+grid_size = 32               ; 32x32x32 grid (reduced for performance)
+time_steps = 10              ; Number of frames to compute
+atwood = 0.5                 ; Atwood number (density contrast)
+gravity = -1.0               ; Gravitational acceleration
+perturbation_amplitude = 0.1 ; Initial perturbation
+
+PRINT, 'Grid size: ', grid_size, 'x', grid_size, 'x', grid_size
+PRINT, 'Time steps: ', time_steps
+PRINT, 'Atwood number: ', atwood
+PRINT, ''
+
+; ========================================
+; Initialize 3D Density Field
+; ========================================
+PRINT, '--- Initializing density field ---'
+
+; Create coordinate arrays
+x = FINDGEN(grid_size) / grid_size - 0.5
+y = FINDGEN(grid_size) / grid_size - 0.5
+z = FINDGEN(grid_size) / grid_size - 0.5
+
+; Initialize density field with interface at z=0
+; Upper half (z > 0): heavy fluid (density = 1 + atwood)
+; Lower half (z < 0): light fluid (density = 1 - atwood)
+density = FLTARR(grid_size, grid_size, grid_size)
+
+FOR i = 0, grid_size - 1 DO BEGIN
+    FOR j = 0, grid_size - 1 DO BEGIN
+        FOR k = 0, grid_size - 1 DO BEGIN
+            ; Add sinusoidal perturbation at interface
+            perturbation = perturbation_amplitude * $
+                SIN(4.0 * !PI * x[i]) * $
+                SIN(4.0 * !PI * y[j])
+
+            interface_height = perturbation
+
+            IF z[k] GT interface_height THEN BEGIN
+                ; Heavy fluid
+                density[i, j, k] = 1.0 + atwood
+            END ELSE BEGIN
+                ; Light fluid
+                density[i, j, k] = 1.0 - atwood
+            END
+        END
+    END
+END
+
+PRINT, 'Density field initialized'
+PRINT, 'Min density: ', MIN(density)
+PRINT, 'Max density: ', MAX(density)
+PRINT, ''
+
+; ========================================
+; Compute Velocity Field (Simplified)
+; ========================================
+PRINT, '--- Computing initial velocity field ---'
+
+; In a full simulation, this would solve Navier-Stokes equations
+; For demo purposes, we'll create a simplified velocity field
+velocity_x = FLTARR(grid_size, grid_size, grid_size)
+velocity_y = FLTARR(grid_size, grid_size, grid_size)
+velocity_z = FLTARR(grid_size, grid_size, grid_size)
+
+; Add some initial vorticity based on density gradients
+FOR i = 1, grid_size - 2 DO BEGIN
+    FOR j = 1, grid_size - 2 DO BEGIN
+        FOR k = 1, grid_size - 2 DO BEGIN
+            ; Simple buoyancy-driven velocity
+            density_gradient = density[i, j, k+1] - density[i, j, k-1]
+            velocity_z[i, j, k] = gravity * density_gradient
+        END
+    END
+END
+
+PRINT, 'Velocity field computed'
+PRINT, ''
+
+; ========================================
+; 3D Volume Rendering Setup
+; ========================================
+PRINT, '--- Configuring 3D visualization ---'
+
+; Set up rendering parameters
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Rayleigh-Taylor Instability'
+
+; Configure colormap (rainbow for density visualization)
+VIZ3D_COLORMAP, 'RAINBOW', MIN=MIN(density), MAX=MAX(density)
+
+; Set transfer function for volume rendering
+; Alpha (transparency) increases with density gradient
+; VIZ3D_TRANSFER, DENSITY=density, MODE='GRADIENT'  ; Not yet implemented
+
+; Configure lighting and camera
+; VIZ3D_LIGHT, POSITION=[1.0, 1.0, 2.0], INTENSITY=0.8  ; Not yet implemented
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+
+PRINT, 'Visualization configured'
+PRINT, ''
+
+; ========================================
+; Render Initial State
+; ========================================
+PRINT, '--- Rendering t=0 (initial state) ---'
+
+; Upload volume data to GPU
+VIZ3D_VOLUME, density, DIMENSIONS=[grid_size, grid_size, grid_size]
+
+; Render the volume
+VIZ3D_RENDER, /INTERACTIVE
+
+PRINT, 'Initial state rendered'
+PRINT, ''
+PRINT, 'Controls:'
+PRINT, '  - Left mouse: Rotate camera'
+PRINT, '  - Mouse wheel: Zoom in/out'
+PRINT, '  - ESC: Close window'
+PRINT, ''
+PRINT, 'Close the window to continue to time evolution...'
+PRINT, ''
+
+; ========================================
+; Time Evolution (Simplified)
+; ========================================
+PRINT, '--- Simulating time evolution ---'
+
+; For a full simulation, we would:
+; 1. Solve Navier-Stokes equations at each timestep
+; 2. Advect density field with velocity
+; 3. Update visualization
+
+; Simplified evolution: add growing perturbations
+FOR t = 1, time_steps DO BEGIN
+    PRINT, 'Computing timestep ', t, ' / ', time_steps
+
+    ; Update density field with growing instability
+    FOR i = 0, grid_size - 1 DO BEGIN
+        FOR j = 0, grid_size - 1 DO BEGIN
+            FOR k = 0, grid_size - 1 DO BEGIN
+                ; Grow the perturbation over time
+                growth_factor = 1.0 + 0.05 * t
+                perturbation = perturbation_amplitude * growth_factor * $
+                    SIN(4.0 * !PI * x[i]) * $
+                    SIN(4.0 * !PI * y[j]) * $
+                    EXP(-0.1 * ABS(z[k]))
+
+                ; Add mushroom-like structures
+                interface = perturbation * (1.0 + 0.3 * SIN(2.0 * !PI * z[k]))
+
+                IF z[k] GT interface THEN BEGIN
+                    density[i, j, k] = 1.0 + atwood
+                END ELSE BEGIN
+                    density[i, j, k] = 1.0 - atwood
+                END
+
+                ; Add turbulent mixing at interface
+                IF ABS(z[k] - interface) LT 0.1 THEN BEGIN
+                    mixing = 0.5 + 0.5 * SIN(10.0 * !PI * (x[i] + y[j] + t/10.0))
+                    density[i, j, k] = 1.0 + atwood * (2.0 * mixing - 1.0)
+                END
+            END
+        END
+    END
+
+    ; Render every 5 timesteps
+    IF (t MOD 5) EQ 0 THEN BEGIN
+        PRINT, 'Rendering frame at t=', t
+        VIZ3D_VOLUME, density, DIMENSIONS=[grid_size, grid_size, grid_size]
+        VIZ3D_RENDER, TITLE='Rayleigh-Taylor t=' + STRING(t)
+        ; WAIT, 0.1  ; Brief pause for visualization (not yet implemented)
+    END
+END
+
+PRINT, ''
+PRINT, 'Simulation complete!'
+PRINT, ''
+
+; ========================================
+; Final Visualization
+; ========================================
+PRINT, '--- Final state visualization ---'
+
+; Render final state with full interactivity
+VIZ3D_VOLUME, density, DIMENSIONS=[grid_size, grid_size, grid_size]
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Rayleigh-Taylor Final State'
+
+PRINT, ''
+PRINT, 'Visualization features:'
+PRINT, '  - Volume ray marching for transparent rendering'
+PRINT, '  - Scientific colormap (rainbow)'
+PRINT, '  - Interactive 3D navigation'
+PRINT, '  - Real-time GPU rendering via WebGPU'
+PRINT, ''
+
+; ========================================
+; Alternative Rendering Modes
+; ========================================
+PRINT, '--- Isosurface rendering ---'
+PRINT, 'Extracting isosurface at density = 1.0'
+
+; Extract and render isosurface at interface
+; VIZ3D_ISOSURFACE, density, ISOVALUE=1.0, COLOR=[255, 100, 50]  ; Not yet implemented
+; VIZ3D_RENDER, /INTERACTIVE, TITLE='RT Isosurface'
+
+PRINT, ''
+PRINT, '=== Demo Complete ==='
+PRINT, ''
+PRINT, 'Next steps:'
+PRINT, '  - Implement full Navier-Stokes solver for accurate simulation'
+PRINT, '  - Add time animation controls'
+PRINT, '  - Export to WebGPU for browser viewing'
+PRINT, '  - Support for larger grid sizes (256^3, 512^3)'
+PRINT, ''

@@ -268,18 +268,26 @@ pub fn acos(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 }
 
 pub fn atan(_args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if _args.len() != 1 {
+    if _args.is_empty() || _args.len() > 2 {
         return Err(XdlError::InvalidArgument(format!(
-            "ATAN: Expected 1 argument, got {}",
+            "ATAN: Expected 1 or 2 arguments, got {}",
             _args.len()
         )));
     }
 
-    let input = &_args[0];
-    let float_val = to_float(input)?;
-    let result = float_val.atan();
-
-    Ok(from_float(result, input.gdl_type()))
+    if _args.len() == 1 {
+        // Single argument: atan(x)
+        let input = &_args[0];
+        let float_val = to_float(input)?;
+        let result = float_val.atan();
+        Ok(from_float(result, input.gdl_type()))
+    } else {
+        // Two arguments: atan(y, x) = atan2(y, x)
+        let y = to_float(&_args[0])?;
+        let x = to_float(&_args[1])?;
+        let result = y.atan2(x);
+        Ok(XdlValue::Double(result))
+    }
 }
 
 pub fn floor(_args: &[XdlValue]) -> XdlResult<XdlValue> {
@@ -799,6 +807,76 @@ pub fn fft(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let result: Vec<f64> = buffer.iter().flat_map(|c| vec![c.re, c.im]).collect();
 
     Ok(XdlValue::Array(result))
+}
+
+/// FLOAT - Convert to floating point
+pub fn float(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "FLOAT: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    let float_val = to_float(input)? as f32;
+    Ok(XdlValue::Float(float_val))
+}
+
+/// FIX - Convert to integer (truncate toward zero)
+pub fn fix(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "FIX: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    let float_val = to_float(input)?;
+    Ok(XdlValue::Int(float_val as i16))
+}
+
+/// LONG - Convert to long integer
+pub fn long(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "LONG: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    let float_val = to_float(input)?;
+    Ok(XdlValue::Long(float_val as i32))
+}
+
+/// BYTE - Convert to byte
+pub fn byte(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BYTE: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    let float_val = to_float(input)?;
+    Ok(XdlValue::Byte(float_val as u8))
+}
+
+/// DOUBLE - Convert to double precision
+pub fn double(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "DOUBLE: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    let float_val = to_float(input)?;
+    Ok(XdlValue::Double(float_val))
 }
 
 /// RANDOMU - Generate uniform random numbers

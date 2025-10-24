@@ -1,0 +1,62 @@
+; ================================================================
+; Demo 3: Turbulent Flow with Plasma Colormap
+; ================================================================
+; Demonstrates multi-scale turbulent flow field visualization
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Demo 3: Turbulent Flow (Plasma Colormap)'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+grid = 64
+PRINT, 'Generating turbulent flow field...'
+volume3 = FLTARR(grid, grid, grid)
+
+; Create turbulent-looking field with multiple frequencies
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            ; Normalize coordinates
+            x = (i / FLOAT(grid) - 0.5) * 4.0
+            y = (j / FLOAT(grid) - 0.5) * 4.0
+            z = (k / FLOAT(grid) - 0.5) * 4.0
+
+            ; Multi-scale turbulence (simplified Perlin-like noise)
+            val1 = SIN(3.0 * x) * COS(3.0 * y) * SIN(3.0 * z)
+            val2 = SIN(7.0 * x + 2.0) * COS(7.0 * y - 1.0) * SIN(7.0 * z + 0.5)
+            val3 = SIN(13.0 * x - 1.0) * COS(13.0 * y + 2.0) * SIN(13.0 * z - 0.7)
+
+            ; Combine scales
+            turbulence = 0.5 * val1 + 0.3 * val2 + 0.2 * val3
+
+            ; Add vortex structure
+            r = SQRT(x*x + y*y)
+            vortex = EXP(-r*r / 2.0) * SIN(5.0 * z)
+
+            volume3[i, j, k] = turbulence + 0.5 * vortex
+        END
+    END
+END
+
+; Normalize to [0, 1]
+vmin = MIN(volume3)
+vmax = MAX(volume3)
+volume3 = (volume3 - vmin) / (vmax - vmin)
+
+PRINT, '  Turbulent field generated'
+PRINT, ''
+
+; Visualize with Plasma colormap
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Demo 3 - Turbulent Flow'
+VIZ3D_COLORMAP, 'PLASMA'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 4.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume3, DIMENSIONS=[grid, grid, grid]
+
+PRINT, 'Launching interactive visualization...'
+PRINT, ''
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Demo 3: Turbulent Flow (Plasma)'
+
+PRINT, ''
+PRINT, '✓ Demo 3 complete!'
+PRINT, ''

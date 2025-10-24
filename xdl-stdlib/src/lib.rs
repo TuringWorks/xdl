@@ -14,6 +14,7 @@ pub mod python;
 pub mod statistics;
 pub mod string;
 pub mod system;
+pub mod viz3d; // 3D volume visualization
 
 // Re-export graphics callback registration for GUI
 pub use graphics_procs::{register_gui_image_callback, register_gui_plot_callback};
@@ -111,6 +112,16 @@ impl StandardLibrary {
             "HILLSHADE" => graphics_procs::hillshade_proc(args),
             "QUIVER" => graphics_procs::quiver_proc(args),
 
+            // VIZ3D procedures - 3D volume visualization
+            "VIZ3D_INIT" => viz3d::viz3d_init(args, keywords),
+            "VIZ3D_VOLUME" => viz3d::viz3d_volume(args, keywords),
+            "VIZ3D_COLORMAP" => viz3d::viz3d_colormap(args, keywords),
+            "VIZ3D_CAMERA" => viz3d::viz3d_camera(args, keywords),
+            "VIZ3D_RENDER" => viz3d::viz3d_render(args, keywords),
+            "VIZ3D_TRANSFER" => viz3d::viz3d_transfer(args, keywords),
+            "VIZ3D_LIGHT" => viz3d::viz3d_light(args, keywords),
+            "VIZ3D_ISOSURFACE" => viz3d::viz3d_isosurface(args, keywords),
+
             // System procedures
             "HELP" => system::help(args),
             "CD" => system::cd(args),
@@ -192,6 +203,13 @@ impl StandardLibrary {
 
             // Image processing
             "CONVOL" => image::convol(args),
+
+            // Type conversion functions
+            "FLOAT" | "FLT" => math::float(args),
+            "FIX" | "INT" => math::fix(args),
+            "LONG" => math::long(args),
+            "BYTE" => math::byte(args),
+            "DOUBLE" | "DBL" => math::double(args),
 
             // Array creation functions
             "BYTARR" => array::bytarr(args),

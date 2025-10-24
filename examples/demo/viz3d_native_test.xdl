@@ -1,0 +1,44 @@
+; ================================================================
+; VIZ3D Native Rendering Test
+; ================================================================
+; Tests native window-based volume visualization
+; ================================================================
+
+PRINT, '🖥️  VIZ3D Native Rendering Test'
+PRINT, ''
+
+; Create a simple 32x32x32 test volume
+grid = 32
+volume = FLTARR(grid, grid, grid)
+
+PRINT, 'Creating test volume (', grid, 'x', grid, 'x', grid, ')...'
+
+; Create a sphere
+center = grid / 2.0
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            dx = i - center
+            dy = j - center
+            dz = k - center
+            r = SQRT(dx*dx + dy*dy + dz*dz)
+            volume[i, j, k] = EXP(-r / 5.0)
+        END
+    END
+END
+
+PRINT, '  Volume created!'
+PRINT, ''
+
+; Visualize with native window
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Native Test - Sphere'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume, DIMENSIONS=[grid, grid, grid]
+
+PRINT, '🖥️  Launching native visualization window...'
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Sphere Visualization'
+
+PRINT, ''
+PRINT, '✓ Test complete!'
+PRINT, ''
