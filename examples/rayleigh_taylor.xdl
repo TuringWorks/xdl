@@ -68,11 +68,7 @@ for idx=0, total-1 do begin
                             0.3 * cos(16.0 * 3.14159 * x - 0.5))
   
   ; Heavy fluid (density = 1) on top, light fluid (density = 0) below
-  if y gt interface then begin
-    density[idx] = 1.0
-  end else begin
-    density[idx] = 0.0
-  endelse
+  if y gt interface then density[idx] = 1.0 else density[idx] = 0.0
 end
 endfor
 
@@ -131,7 +127,7 @@ for step=1, n_steps do begin
       idx_right = (i+1) * ny + j
       grad_x = (density[idx_right] - density[idx_left]) / 2.0
       u[idx] = u[idx] + grad_x * g * dt * 0.1
-    endif
+    end
   end
   endfor
   
