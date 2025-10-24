@@ -1,0 +1,173 @@
+; ============================================================================
+; SECTION 8: Mandelbrot Set Generator
+; ============================================================================
+print, '┌─ SECTION 8: Mandelbrot Set Generator ────────────────────────┐'
+print, ''
+
+; Generate Mandelbrot set
+print, '  Generating Mandelbrot set (100x100 grid)...'
+width = 100
+height = 100
+
+; Use 1D array with manual indexing
+total_pixels = width * height
+mandelbrot = fltarr(total_pixels)
+
+; Mandelbrot parameters
+xmin = -2.5
+xmax = 1.0
+ymin = -1.25
+ymax = 1.25
+max_iter = 50
+
+; Calculate Mandelbrot set
+for py = 0, height-1 do begin
+  for px = 0, width-1 do begin
+    ; Map pixel to complex plane
+    x0 = xmin + (xmax - xmin) * px / (width - 1.0)
+    y0 = ymin + (ymax - ymin) * py / (height - 1.0)
+    
+    ; Iterate
+    x = 0.0
+    y = 0.0
+    iteration = 0
+    
+    ; Fixed iteration count
+    for iter = 0, max_iter-1 do begin
+      if (x*x + y*y lt 4.0) then begin
+        xtemp = x*x - y*y + x0
+        y = 2.0*x*y + y0
+        x = xtemp
+        iteration = iteration + 1
+      end
+      endif
+    end
+    endfor
+    
+    ; Store in 1D array: index = py * width + px
+    idx = py * width + px
+    mandelbrot[idx] = iteration
+  end
+  endfor
+end
+endfor
+
+; Reshape back to 2D for display
+mandelbrot_2d = reform(mandelbrot, width, height)
+
+print, '  • Resolution: 100x100 pixels'
+print, '  • Complex plane: [-2.5, 1.0] x [-1.25, 1.25]'
+print, '  • Maximum iterations:', max_iter
+print, '  • Iteration values range:', min(mandelbrot_2d), 'to', max(mandelbrot_2d)
+print, '  • Mandelbrot set computed successfully!'
+print, ''
+print, '  ASCII Visualization (40x20):'
+print, ''
+
+; Create ASCII visualization
+ascii_width = 60
+ascii_height = 25
+
+for py = 0, ascii_height-1 do begin
+  line = '  '
+  for px = 0, ascii_width-1 do begin
+    ; Map to Mandelbrot data coordinates
+    mx = px * width / ascii_width
+    my = py * height / ascii_height
+    
+    ; Get iteration value from computed data
+    idx = my * width + mx
+    iteration = mandelbrot[idx]
+    
+    ; Map to ASCII character
+    if iteration eq max_iter then begin
+      line = line + '@'
+    end else begin
+      if iteration gt 40 then begin
+        line = line + '#'
+      end else begin
+        if iteration gt 30 then begin
+          line = line + '*'
+        end else begin
+          if iteration gt 20 then begin
+            line = line + '+'
+          end else begin
+            if iteration gt 10 then begin
+              line = line + ':'
+            end else begin
+              line = line + '.'
+            end
+            endif
+          end
+          endif
+        end
+        endif
+      end
+      endif
+    end
+    endif
+  end
+  endfor
+  print, line
+end
+endfor
+
+print, ''
+print, '  Legend: @ = Inside set, # * + : . = Outside (fast to slow escape)'
+print, ''
+
+; ============================================================================
+; SECTION 9: Live Plotting Demonstrations
+; ============================================================================
+print, '┌─ SECTION 9: Live Plotting Demonstrations ────────────────────┐'
+print, ''
+
+; Prepare data for plotting
+plot_x = dindgen(50) / 49.d0 * 4.d0 * !pi
+plot_y1 = sin(plot_x)
+plot_y2 = cos(plot_x)
+plot_y3 = sin(plot_x) * exp(-plot_x / 10.d0)
+
+print, '  Demonstrating XDL plotting capabilities...'
+print, ''
+
+; Plot 4: Mandelbrot set 3D surface visualization
+print, '  [4/4] Rendering Mandelbrot 3D surface...'
+surface, mandelbrot_2d
+print, '        ✓ Mandelbrot 3D surface generated!'
+print, '        ✓ Saved to xdl_surface.png'
+print, '        ✓ ASCII visualization rendered above'
+print, ''
+
+print, '  All plots generated successfully!'
+print, ''
+
+; ============================================================================
+; SUMMARY: Why Choose XDL?
+; ============================================================================
+print, ''
+print, '╔════════════════════════════════════════════════════════════════╗'
+print, '║                     WHY CHOOSE XDL?                            ║'
+print, '╠════════════════════════════════════════════════════════════════╣'
+print, '║  ✓ GDL/IDL Compatible    - Port existing code easily           ║'
+print, '║  ✓ Modern Performance    - Built with Rust for speed           ║'
+print, '║  ✓ Rich Math Library     - Scientific functions built-in       ║'
+print, '║  ✓ Image Processing      - CONVOL, edge detection, more        ║'
+print, '║  ✓ Easy Visualization    - Integrated plotting with xdl-gui    ║'
+print, '║  ✓ Array-First Design    - Optimized for numerical computing   ║'
+print, '║  ✓ Clean Syntax          - Readable, maintainable code         ║'
+print, '║  ✓ Open Source           - Community-driven development        ║'
+print, '╚════════════════════════════════════════════════════════════════╝'
+print, ''
+
+print, 'Demo completed successfully! ✓'
+print, ''
+print, 'Next steps:'
+print, '  • Try: help, /FUNCTIONS   - See all available functions'
+print, '  • Try: help, /PROCEDURES  - See all available procedures'
+print, '  • Try: xdl-gui            - Launch graphical interface'
+print, '  • Docs: docs/*.md         - Read detailed documentation'
+print, ''
+
+
+// Click Execute to run this code

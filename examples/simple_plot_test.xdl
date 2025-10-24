@@ -1,0 +1,20 @@
+; Simple plot test - just 3 plots, no complex loops
+print, 'Simple Plot Test'
+print, ''
+
+; Create simple data
+x = dindgen(50) / 49.d0 * 4.d0 * !pi
+y1 = sin(x)
+y2 = cos(x)  
+y3 = sin(x) * 0.5
+
+print, 'Plotting sine wave...'
+plot, y1, x
+
+print, 'Plotting cosine wave...'
+plot, y2, x
+
+print, 'Plotting half sine wave...'
+plot, y3, x
+
+print, 'Done!'

@@ -1,0 +1,121 @@
+; ============================================================================
+; Advanced Visualization Simple Demo for XDL
+; ============================================================================
+; This script demonstrates the new advanced visualization procedures
+; without complex nested loops to avoid parser issues
+; ============================================================================
+
+print, ''
+print, '============================================'
+print, 'Advanced Scientific Visualization Demo'
+print, '============================================'
+print, ''
+
+; ============================================================================
+; Demo 1: RENDER_COLORMAP - Simple 2D data
+; ============================================================================
+print, 'Demo 1: Testing RENDER_COLORMAP...'
+
+; Create simple 2D array
+data = fltarr(20, 20)
+
+; Populate using 1D indexing to avoid nested loops
+for i=0, 399 do begin
+  row = i / 20
+  col = i - (row * 20)
+  x = (col - 10.0) / 3.0
+  y = (row - 10.0) / 3.0
+  r = sqrt(x*x + y*y) + 0.1
+  data[col + row*20] = sin(r) * 3.0 + 5.0
+end
+endfor
+
+; Reshape to 2D
+data_2d = reform(data, 20, 20)
+
+; Render with colormap
+RENDER_COLORMAP, data_2d, 'colormap_simple.png'
+print, '  -> Saved to colormap_simple.png'
+print, ''
+
+; ============================================================================
+; Demo 2: DEM_RENDER - Simple elevation
+; ============================================================================
+print, 'Demo 2: Testing DEM_RENDER...'
+
+; Create simple elevation data
+elevation = fltarr(30, 30)
+
+; Populate using 1D indexing
+for i=0, 899 do begin
+  row = i / 30
+  col = i - (row * 30)
+  x = (col - 15.0) / 5.0
+  y = (row - 15.0) / 5.0
+  elevation[col + row*30] = 100.0 * exp(-(x*x + y*y) / 4.0) + 50.0
+end
+endfor
+
+; Reshape to 2D
+elevation_2d = reform(elevation, 30, 30)
+
+; Render elevation map
+DEM_RENDER, elevation_2d, 'elevation_simple.png'
+print, '  -> Saved to elevation_simple.png'
+print, ''
+
+; ============================================================================
+; Demo 3: HILLSHADE - Use same elevation data
+; ============================================================================
+print, 'Demo 3: Testing HILLSHADE...'
+
+; Generate hillshade from elevation data
+HILLSHADE, elevation_2d, 'hillshade_simple.png'
+print, '  -> Saved to hillshade_simple.png'
+print, ''
+
+; ============================================================================
+; Demo 4: QUIVER - Simple vector field
+; ============================================================================
+print, 'Demo 4: Testing QUIVER...'
+
+; Create simple vector field (uniform flow)
+size = 15
+total = size * size
+u_field = fltarr(total)
+v_field = fltarr(total)
+
+; Populate vector field
+for i=0, total-1 do begin
+  row = i / size
+  col = i - (row * size)
+  x = (col - size/2.0)
+  y = (row - size/2.0)
+  r = sqrt(x*x + y*y) + 0.5
+  
+  ; Vortex field
+  u_field[i] = -y / r
+  v_field[i] = x / r
+end
+endfor
+
+; Reshape to 2D
+u_2d = reform(u_field, size, size)
+v_2d = reform(v_field, size, size)
+
+; Create quiver plot
+QUIVER, u_2d, v_2d, 'vector_simple.png'
+print, '  -> Saved to vector_simple.png'
+print, ''
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, '============================================'
+print, 'Demo complete! Generated files:'
+print, '  1. colormap_simple.png'
+print, '  2. elevation_simple.png'
+print, '  3. hillshade_simple.png'
+print, '  4. vector_simple.png'
+print, '============================================'
+print, ''

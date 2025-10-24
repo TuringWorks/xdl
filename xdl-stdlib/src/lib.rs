@@ -3,6 +3,7 @@
 //! Built-in functions and procedures for XDL
 
 pub mod array;
+pub mod complex;
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
 pub mod image; // Image processing
@@ -104,6 +105,12 @@ impl StandardLibrary {
             "MAP_CONTINENTS" => graphics_procs::map_continents(args),
             "MAP_GRID" => graphics_procs::map_grid(args),
 
+            // Graphics procedures - Advanced visualization
+            "RENDER_COLORMAP" => graphics_procs::render_colormap(args),
+            "DEM_RENDER" => graphics_procs::dem_render(args),
+            "HILLSHADE" => graphics_procs::hillshade_proc(args),
+            "QUIVER" => graphics_procs::quiver_proc(args),
+
             // System procedures
             "HELP" => system::help(args),
             "CD" => system::cd(args),
@@ -167,6 +174,7 @@ impl StandardLibrary {
             "FLOOR" => math::floor(args),
             "CEIL" => math::ceil(args),
             "ROUND" => math::round(args),
+            "NCHOOSEK" => math::nchoosek(args),
 
             // Array generation functions
             "FINDGEN" => math::findgen(args),
@@ -199,6 +207,7 @@ impl StandardLibrary {
             // Array manipulation functions
             "REFORM" => array::reform_func(args),
             "TRANSPOSE" => array::transpose_func(args),
+            "MESHGRID" => array::meshgrid(args),
 
             // Array statistics functions
             "MIN" => array::min_func(args),
@@ -246,6 +255,12 @@ impl StandardLibrary {
             "STRUPCASE" => string::strupcase(args),
             "STRLOWCASE" => string::strlowcase(args),
             "STRING" => string::string_fn(args),
+
+            // Complex number functions
+            "COMPLEX" => complex::complex(args),
+            "REAL" => complex::real_part(args),
+            "IMAGINARY" | "IMAG" => complex::imaginary_part(args),
+            "CONJ" => complex::conj(args),
 
             // Python integration functions
             "PYTHON_IMPORT" => python::python_import(args),

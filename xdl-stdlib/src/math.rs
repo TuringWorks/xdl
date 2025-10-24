@@ -196,6 +196,14 @@ pub fn abs(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let input = &_args[0];
+
+    // Handle complex numbers specially
+    match input {
+        XdlValue::Complex(c) => return Ok(XdlValue::Float(c.norm())),
+        XdlValue::DComplex(c) => return Ok(XdlValue::Double(c.norm())),
+        _ => {}
+    }
+
     let float_val = to_float(input)?;
     let result = float_val.abs();
 
@@ -317,6 +325,43 @@ pub fn round(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     let result = float_val.round();
 
     Ok(from_float(result, input.gdl_type()))
+}
+
+/// Compute binomial coefficient: NCHOOSEK(n, k) = n! / (k! * (n-k)!)
+/// Returns the number of ways to choose k items from n items
+pub fn nchoosek(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "NCHOOSEK: Expected 2 arguments, got {}",
+            _args.len()
+        )));
+    }
+
+    let n = to_float(&_args[0])? as i64;
+    let k = to_float(&_args[1])? as i64;
+
+    // Validate inputs
+    if n < 0 || k < 0 {
+        return Err(XdlError::InvalidArgument(
+            "NCHOOSEK: Arguments must be non-negative".to_string(),
+        ));
+    }
+
+    if k > n {
+        return Ok(XdlValue::Double(0.0));
+    }
+
+    // Use symmetry: C(n, k) = C(n, n-k)
+    let k = k.min(n - k);
+
+    // Compute binomial coefficient iteratively to avoid overflow
+    let mut result = 1.0f64;
+    for i in 0..k {
+        result *= (n - i) as f64;
+        result /= (i + 1) as f64;
+    }
+
+    Ok(XdlValue::Double(result))
 }
 
 /// Generate floating point array: FINDGEN(n) or FINDGEN(d1, d2, ..., dn)

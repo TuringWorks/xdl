@@ -764,3 +764,193 @@ pub fn velovect(args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("VELOVECT: Vector field plotting not yet implemented");
     Ok(XdlValue::Undefined)
 }
+
+// ============================================================================
+// ADVANCED VISUALIZATION PROCEDURES
+// ============================================================================
+
+/// RENDER_COLORMAP procedure - renders data with specified colormap
+/// Usage: RENDER_COLORMAP, data, filename, COLORMAP='viridis'
+pub fn render_colormap(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::colormap::{ColorMap, ColorMapType};
+    use plotters::prelude::*;
+    
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "RENDER_COLORMAP: Expected at least 2 arguments (data, filename)".to_string(),
+        ));
+    }
+    
+    let data_2d = extract_2d_array(&args[0])?;
+    let filename = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => return Err(XdlError::InvalidArgument("Filename must be a string".to_string())),
+    };
+    
+    // Default colormap
+    let colormap = ColorMap::new(ColorMapType::Viridis);
+    
+    // Find min/max of data
+    let mut min_val = f64::INFINITY;
+    let mut max_val = f64::NEG_INFINITY;
+    for row in &data_2d {
+        for &val in row {
+            min_val = min_val.min(val);
+            max_val = max_val.max(val);
+        }
+    }
+    
+    let height = data_2d.len();
+    let width = if height > 0 { data_2d[0].len() } else { 0 };
+    
+    // Create drawing
+    let root = BitMapBackend::new(&filename, (800, 600)).into_drawing_area();
+    root.fill(&WHITE)?;
+    
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Colormap Visualization", ("sans-serif", 30))
+        .margin(20)
+        .build_cartesian_2d(0.0..width as f64, 0.0..height as f64)?;
+    
+    chart.configure_mesh().draw()?;
+    
+    // Draw colored rectangles
+    for (y, row) in data_2d.iter().enumerate() {
+        for (x, &val) in row.iter().enumerate() {
+            let normalized = if max_val > min_val {
+                (val - min_val) / (max_val - min_val)
+            } else {
+                0.5
+            };
+            
+            let color = colormap.map(normalized);
+            let rgb = RGBColor(color.r, color.g, color.b);
+            
+            chart.draw_series(std::iter::once(Rectangle::new(
+                [(x as f64, y as f64), (x as f64 + 1.0, y as f64 + 1.0)],
+                ShapeStyle::from(&rgb).filled(),
+            )))?;
+        }
+    }
+    
+    root.present()?;
+    
+    println!("RENDER_COLORMAP: Saved to {}", filename);
+    
+    // Try to display in GUI
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename.clone(), "Colormap Visualization".to_string());
+        }
+    }
+    
+    Ok(XdlValue::Undefined)
+}
+
+/// DEM_RENDER procedure - renders digital elevation model
+/// Usage: DEM_RENDER, elevation_data, filename
+pub fn dem_render(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::terrain::{DigitalElevationModel, render_elevation_map};
+    use crate::graphics::colormap::terrain;
+    
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "DEM_RENDER: Expected at least 2 arguments (elevation_data, filename)".to_string(),
+        ));
+    }
+    
+    let elevations = extract_2d_array(&args[0])?;
+    let filename = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => return Err(XdlError::InvalidArgument("Filename must be a string".to_string())),
+    };
+    
+    let dem = DigitalElevationModel::new(elevations, 30.0)?;
+    let colormap = terrain();
+    
+    render_elevation_map(&dem, &colormap, &filename)?;
+    
+    println!("DEM_RENDER: Elevation map saved to {}", filename);
+    
+    // Try to display in GUI
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename, "Digital Elevation Model".to_string());
+        }
+    }
+    
+    Ok(XdlValue::Undefined)
+}
+
+/// HILLSHADE procedure - generates hillshade from elevation data
+/// Usage: HILLSHADE, elevation_data, filename, AZIMUTH=315, ALTITUDE=45
+pub fn hillshade_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::terrain::{DigitalElevationModel, render_hillshade};
+    
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "HILLSHADE: Expected at least 2 arguments (elevation_data, filename)".to_string(),
+        ));
+    }
+    
+    let elevations = extract_2d_array(&args[0])?;
+    let filename = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => return Err(XdlError::InvalidArgument("Filename must be a string".to_string())),
+    };
+    
+    let dem = DigitalElevationModel::new(elevations, 30.0)?;
+    
+    // Default sun position
+    let azimuth = 315.0;  // NW
+    let altitude = 45.0;  // 45 degrees above horizon
+    
+    render_hillshade(&dem, azimuth, altitude, &filename)?;
+    
+    println!("HILLSHADE: Hillshade saved to {}", filename);
+    
+    // Try to display in GUI
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename, "Hillshade".to_string());
+        }
+    }
+    
+    Ok(XdlValue::Undefined)
+}
+
+/// QUIVER procedure - creates quiver (arrow) plot from vector field
+/// Usage: QUIVER, u, v, filename
+pub fn quiver_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::sciviz::{VectorField2D, render_quiver};
+    use crate::graphics::colormap::plasma;
+    
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "QUIVER: Expected at least 3 arguments (u, v, filename)".to_string(),
+        ));
+    }
+    
+    let u = extract_2d_array(&args[0])?;
+    let v = extract_2d_array(&args[1])?;
+    let filename = match &args[2] {
+        XdlValue::String(s) => s.clone(),
+        _ => return Err(XdlError::InvalidArgument("Filename must be a string".to_string())),
+    };
+    
+    let field = VectorField2D::new(u, v)?;
+    let colormap = plasma();
+    
+    render_quiver(&field, 5, 2.0, Some(&colormap), &filename)?;
+    
+    println!("QUIVER: Vector field plot saved to {}", filename);
+    
+    // Try to display in GUI
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename, "Vector Field".to_string());
+        }
+    }
+    
+    Ok(XdlValue::Undefined)
+}

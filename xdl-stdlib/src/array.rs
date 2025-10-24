@@ -921,6 +921,80 @@ pub fn transpose_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     ))
 }
 
+/// MESHGRID - Create coordinate matrices from coordinate vectors
+/// meshgrid(x, y) returns a MultiDimArray containing X grid values
+/// In MATLAB: [X, Y] = meshgrid(x, y)
+/// For XDL: We return X as a MultiDimArray. Y can be computed similarly or we return both in NestedArray
+///
+/// X(i,j) = x(j) for all i
+/// Y(i,j) = y(i) for all j
+pub fn meshgrid(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "MESHGRID: Expected 2 arguments (x, y), got {}",
+            args.len()
+        )));
+    }
+
+    // Extract x and y vectors
+    let x_vec = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let y_vec = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let nx = x_vec.len();
+    let ny = y_vec.len();
+
+    // Create X matrix: X(i,j) = x(j)
+    // Stored in row-major order: X[i*nx + j] = x[j]
+    let mut x_matrix = Vec::with_capacity(ny * nx);
+    for _i in 0..ny {
+        for &x_val in &x_vec {
+            x_matrix.push(x_val);
+        }
+    }
+
+    // Create Y matrix: Y(i,j) = y(i)
+    // Stored in row-major order: Y[i*nx + j] = y[i]
+    let mut y_matrix = Vec::with_capacity(ny * nx);
+    for &y_val in &y_vec {
+        for _j in 0..nx {
+            y_matrix.push(y_val);
+        }
+    }
+
+    // Return as NestedArray with both X and Y matrices
+    // User can access as: result = meshgrid(x, y)
+    // Then X = result[0] and Y = result[1] (or we document X comes first)
+    let x_grid = XdlValue::MultiDimArray {
+        data: x_matrix,
+        shape: vec![ny, nx],
+    };
+
+    let y_grid = XdlValue::MultiDimArray {
+        data: y_matrix,
+        shape: vec![ny, nx],
+    };
+
+    // Return both as nested array
+    Ok(XdlValue::NestedArray(vec![x_grid, y_grid]))
+}
+
 /// TRANSPOSE_2D - Helper function to transpose a 2D array with known dimensions
 /// This is a working implementation when dimensions are known
 /// transpose_2d(array, nrows, ncols) -> transposed array

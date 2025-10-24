@@ -1,0 +1,20 @@
+// New XDL Script
+// Enter your XDL commands here
+; test_visualization.xdl
+; Use Python for advanced visualization via XDL's Python bridge
+
+; Import matplotlib for visualization
+plt = PYTHON_IMPORT('matplotlib.pyplot')
+np = PYTHON_IMPORT('numpy')
+
+; Create data
+x = FINDGEN(100) / 10.0
+y = SIN(x)
+
+; Plot with viridis colormap
+result = PYTHON_CALL(plt, 'scatter', x, y, c=y, cmap='viridis')
+result = PYTHON_CALL(plt, 'colorbar')
+result = PYTHON_CALL(plt, 'title', 'Viridis Colormap Demo')
+result = PYTHON_CALL(plt, 'savefig', 'output.png')
+
+PRINT, 'Plot saved to output.png'

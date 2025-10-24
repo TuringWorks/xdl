@@ -700,13 +700,111 @@ impl Evaluator {
         indices: &[ArrayIndex],
         context: &mut Context,
     ) -> XdlResult<XdlValue> {
-        // Handle multi-dimensional indexing by applying indices one at a time
+        // Special case: Multi-dimensional array with comma-separated indices (arr[i, j])
+        if indices.len() > 1 {
+            return self.evaluate_multidim_index(array_val, indices, context);
+        }
+
+        // Single index or sequential indexing (arr[i][j])
         let mut current_val = array_val.clone();
 
         for index in indices {
             current_val = self.evaluate_single_index(&current_val, index, context)?;
         }
 
+        Ok(current_val)
+    }
+
+    /// Evaluate multi-dimensional array indexing with comma-separated indices
+    fn evaluate_multidim_index(
+        &self,
+        array_val: &XdlValue,
+        indices: &[ArrayIndex],
+        context: &mut Context,
+    ) -> XdlResult<XdlValue> {
+        // Get the shape and data from MultiDimArray
+        let (data, shape) = match array_val {
+            XdlValue::MultiDimArray { data, shape } => (data, shape),
+            XdlValue::Array(data) => {
+                // Treat 1D array as single row if accessed with 2D indices
+                if indices.len() == 2 {
+                    return Err(XdlError::RuntimeError(
+                        "Multi-dimensional indexing requires nested array".to_string(),
+                    ));
+                }
+                (data, &vec![data.len()])
+            }
+            _ => {
+                return Err(XdlError::RuntimeError(
+                    "Cannot use multi-dimensional indexing on non-array value".to_string(),
+                ))
+            }
+        };
+
+        // For now, handle 2D indexing: arr[i, j]
+        if indices.len() == 2 && shape.len() == 2 {
+            // Extract both indices
+            let i_index = match &indices[0] {
+                ArrayIndex::Single(expr) => {
+                    let val = self.evaluate(expr, context)?;
+                    val.to_long()? as usize
+                }
+                _ => {
+                    return Err(XdlError::NotImplemented(
+                        "Range indexing not yet supported for multi-dimensional arrays".to_string(),
+                    ));
+                }
+            };
+
+            let j_index = match &indices[1] {
+                ArrayIndex::Single(expr) => {
+                    let val = self.evaluate(expr, context)?;
+                    val.to_long()? as usize
+                }
+                _ => {
+                    return Err(XdlError::NotImplemented(
+                        "Range indexing not yet supported for multi-dimensional arrays".to_string(),
+                    ));
+                }
+            };
+
+            // Check bounds
+            let nrows = shape[0];
+            let ncols = shape[1];
+
+            if i_index >= nrows {
+                return Err(XdlError::RuntimeError(format!(
+                    "Row index {} out of bounds for array with {} rows",
+                    i_index, nrows
+                )));
+            }
+
+            if j_index >= ncols {
+                return Err(XdlError::RuntimeError(format!(
+                    "Column index {} out of bounds for array with {} columns",
+                    j_index, ncols
+                )));
+            }
+
+            // Calculate flat index (row-major order)
+            let flat_index = i_index * ncols + j_index;
+
+            if flat_index >= data.len() {
+                return Err(XdlError::RuntimeError(format!(
+                    "Computed index {} out of bounds for array with {} elements",
+                    flat_index,
+                    data.len()
+                )));
+            }
+
+            return Ok(XdlValue::Double(data[flat_index]));
+        }
+
+        // For other cases, fall back to sequential indexing
+        let mut current_val = array_val.clone();
+        for index in indices {
+            current_val = self.evaluate_single_index(&current_val, index, context)?;
+        }
         Ok(current_val)
     }
 

@@ -1,0 +1,119 @@
+; XDL Bezier Surface Demo
+; Demonstrates parametric surface generation and plotting
+
+print, 'Bezier Surface Generator'
+print, '========================'
+print, ''
+
+; Parameters for the Bezier surface
+n = 3
+m = 3
+steps = 25
+
+print, 'Surface parameters:'
+print, '  Degree in u:', n
+print, '  Degree in v:', m
+print, '  Grid resolution:', steps, 'x', steps
+print, ''
+
+; Define control points for the surface
+; Creating a 4x4 grid of control points as separate row arrays
+print, 'Setting up 4x4 control point grid...'
+
+cp_z_row1 = [0.0, 0.5, 0.5, 0.0]
+cp_z_row2 = [0.5, 1.5, 1.5, 0.5]
+cp_z_row3 = [0.5, 1.5, 1.5, 0.5]
+cp_z_row4 = [0.0, 0.5, 0.5, 0.0]
+
+print, '  Control point grid defined'
+print, ''
+
+; Generate parameter grid
+print, 'Generating parameter grid...'
+u_vals = dindgen(steps) / (steps - 1.0d0)
+v_vals = dindgen(steps) / (steps - 1.0d0)
+
+; Create surface array as 1D (flattened)
+total_points = steps * steps
+surface_z = fltarr(total_points)
+
+print, 'Computing surface points...'
+print, '  Using', total_points, 'total points'
+
+; Simple Bezier surface generation
+for ui = 0, steps-1 do begin
+  for vi = 0, steps-1 do begin
+    u = u_vals[ui]
+    v = v_vals[vi]
+    
+    ; Cubic Bernstein blending weights
+    u_w0 = (1-u)^3
+    u_w1 = 3.0 * (1-u)^2 * u
+    u_w2 = 3.0 * (1-u) * u^2
+    u_w3 = u^3
+    
+    v_w0 = (1-v)^3
+    v_w1 = 3.0 * (1-v)^2 * v
+    v_w2 = 3.0 * (1-v) * v^2
+    v_w3 = v^3
+    
+    ; Compute weighted sum of control points
+    z_val = 0.0
+    
+    ; Row 0
+    z_val = z_val + u_w0 * v_w0 * cp_z_row1[0]
+    z_val = z_val + u_w0 * v_w1 * cp_z_row1[1]
+    z_val = z_val + u_w0 * v_w2 * cp_z_row1[2]
+    z_val = z_val + u_w0 * v_w3 * cp_z_row1[3]
+    
+    ; Row 1
+    z_val = z_val + u_w1 * v_w0 * cp_z_row2[0]
+    z_val = z_val + u_w1 * v_w1 * cp_z_row2[1]
+    z_val = z_val + u_w1 * v_w2 * cp_z_row2[2]
+    z_val = z_val + u_w1 * v_w3 * cp_z_row2[3]
+    
+    ; Row 2
+    z_val = z_val + u_w2 * v_w0 * cp_z_row3[0]
+    z_val = z_val + u_w2 * v_w1 * cp_z_row3[1]
+    z_val = z_val + u_w2 * v_w2 * cp_z_row3[2]
+    z_val = z_val + u_w2 * v_w3 * cp_z_row3[3]
+    
+    ; Row 3
+    z_val = z_val + u_w3 * v_w0 * cp_z_row4[0]
+    z_val = z_val + u_w3 * v_w1 * cp_z_row4[1]
+    z_val = z_val + u_w3 * v_w2 * cp_z_row4[2]
+    z_val = z_val + u_w3 * v_w3 * cp_z_row4[3]
+    
+    ; Store in 1D array using manual index calculation
+    idx = ui * steps + vi
+    surface_z[idx] = z_val
+  end
+  endfor
+end
+endfor
+
+print, '  Surface computed successfully!'
+print, '  Z-range: [', min(surface_z), ',', max(surface_z), ']'
+print, ''
+
+; Reshape 1D array to 2D for plotting
+print, 'Reshaping surface data...'
+surface_2d = reform(surface_z, steps, steps)
+
+; Generate 3D surface plot
+print, 'Generating surface plot...'
+surface, surface_2d
+
+print, '  ✓ Bezier surface plot generated!'
+print, '  ✓ Output saved to xdl_surface.png'
+print, ''
+
+; Additional analysis
+print, 'Surface Statistics:'
+print, '  Mean height:', mean(surface_z)
+print, '  Std deviation:', stddev(surface_z)
+print, '  Max height:', max(surface_z)
+print, '  Min height:', min(surface_z)
+print, ''
+
+print, 'Demo complete!'

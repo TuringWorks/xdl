@@ -319,10 +319,39 @@ fn parse_token(input: &str) -> ParseResult<'_, Token> {
     )(input)
 }
 
+/// Preprocess input to handle line continuations ($)
+/// Lines ending with $ are joined with the next line
+fn handle_line_continuation(input: &str) -> String {
+    let mut result = String::new();
+    let mut lines = input.lines().peekable();
+
+    while let Some(line) = lines.next() {
+        let trimmed = line.trim_end();
+
+        // Check if line ends with $ (line continuation marker)
+        if trimmed.ends_with('$') {
+            // Remove the $ and append without newline
+            result.push_str(trimmed.trim_end_matches('$').trim_end());
+            result.push(' '); // Add space to separate tokens
+        } else {
+            // Normal line - add with newline
+            result.push_str(line);
+            if lines.peek().is_some() {
+                result.push('\n');
+            }
+        }
+    }
+
+    result
+}
+
 // Main tokenizer function
 pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
+    // First, handle line continuations
+    let continued = handle_line_continuation(input);
+
     // Normalize curly quotes to ASCII to avoid lexing issues
-    let normalized = input
+    let normalized = continued
         .replace('’', "'")
         .replace('‘', "'")
         .replace('“', "\"")

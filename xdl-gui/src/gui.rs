@@ -14,13 +14,18 @@ use fltk::{
     text::{TextBuffer, TextDisplay, TextEditor},
     window::Window,
 };
+use once_cell::sync::Lazy;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::Mutex;
 use tracing::{error, info};
 
 use crate::image_window::ImageWindow;
 use crate::plot_window::PlotWindow;
+
+// Global queue for pending plot windows to show after execution
+static PENDING_PLOT_WINDOWS: Lazy<Mutex<Vec<PlotWindow>>> = Lazy::new(|| Mutex::new(Vec::new()));
 use xdl_interpreter::Interpreter;
 use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
 
@@ -219,6 +224,8 @@ pub struct XdlGui {
     variables: Rc<RefCell<HashMap<String, String>>>, // variable name -> value representation
     #[allow(dead_code)]
     variable_table: Rc<RefCell<VariableTable>>,
+    #[allow(dead_code)]
+    executing: Rc<RefCell<bool>>, // Guard to prevent concurrent executions
 }
 
 impl XdlGui {
@@ -764,6 +771,9 @@ impl XdlGui {
         // Create variable storage
         let variables = Rc::new(RefCell::new(HashMap::new()));
 
+        // Create execution guard to prevent concurrent/repeated executions
+        let executing = Rc::new(RefCell::new(false));
+
         // Set panel sizes for two-panel layout
         main_flex.fixed(&var_table.table, 300); // Give space to variable table
 
@@ -787,7 +797,6 @@ impl XdlGui {
         );
 
         window.end();
-        window.end();
 
         // Set up execute button callback
         let interp_clone = Rc::clone(&interpreter);
@@ -795,8 +804,35 @@ impl XdlGui {
         let mut out_buffer_clone_exec = output_buffer.clone();
         let vars_clone = Rc::clone(&variables);
         let var_table_clone = Rc::clone(&var_table_ref);
+        let executing_clone = Rc::clone(&executing);
 
         execute_btn.set_callback(move |_| {
+            info!("=== EXECUTE BUTTON CLICKED ===");
+
+            // Clear any pending plot windows from previous executions
+            if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
+                let old_count = plots.len();
+                plots.clear();
+                if old_count > 0 {
+                    info!(
+                        "Cleared {} old plot windows from previous execution",
+                        old_count
+                    );
+                }
+            }
+
+            // Check if already executing - prevent concurrent executions
+            if let Ok(mut exec_guard) = executing_clone.try_borrow_mut() {
+                if *exec_guard {
+                    info!("Already executing - ignoring duplicate execution request");
+                    return;
+                }
+                *exec_guard = true;
+            } else {
+                info!("Cannot acquire execution lock - skipping execution");
+                return;
+            }
+
             let code = cmd_buffer_clone_exec.text();
             let filtered_code = code
                 .lines()
@@ -834,6 +870,21 @@ impl XdlGui {
                     &var_table_clone,
                 );
             }
+
+            // Release execution lock
+            if let Ok(mut exec_guard) = executing_clone.try_borrow_mut() {
+                *exec_guard = false;
+                info!("=== EXECUTION COMPLETED ===");
+            }
+
+            // Now show all queued plot windows from global queue
+            if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
+                info!("Showing {} queued plot windows...", plots.len());
+                for mut plot_win in plots.drain(..) {
+                    plot_win.show();
+                }
+                info!("All plot windows shown");
+            }
         });
 
         // Set up clear button callback
@@ -845,10 +896,19 @@ impl XdlGui {
             out_buffer_clone_clear.set_text("Output cleared.\n");
         });
 
-        // Register plot callback
+        // Register plot callback (done once per GUI instance)
+        // IMPORTANT: Don't show windows immediately - queue them to show after execution
         register_gui_plot_callback(move |x_data, y_data, title, xtitle, ytitle| {
+            info!("Plot callback: Creating plot window for '{}'", title);
+
             match PlotWindow::with_labels(x_data, y_data, &title, &xtitle, &ytitle, "") {
-                Ok(mut plot_win) => plot_win.show(),
+                Ok(plot_win) => {
+                    // Queue the window to be shown later using global queue
+                    if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
+                        plots.push(plot_win);
+                        info!("Plot window queued (total queued: {})", plots.len());
+                    }
+                }
                 Err(e) => eprintln!("Plot error: {}", e),
             }
         });
@@ -868,6 +928,7 @@ impl XdlGui {
             output_buffer,
             variables,
             variable_table: var_table_ref,
+            executing,
         };
 
         Ok(gui)
@@ -1023,6 +1084,12 @@ impl XdlGui {
         variables: &Rc<RefCell<HashMap<String, String>>>,
         var_table: &Rc<RefCell<VariableTable>>,
     ) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static EXEC_COUNT: AtomicUsize = AtomicUsize::new(0);
+        let exec_num = EXEC_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
+
+        info!(">>> execute_xdl_code called (execution #{})", exec_num);
+
         let mut results = Vec::new();
         results.push(format!("=== Executing {} ===", filename));
 
@@ -1043,12 +1110,19 @@ impl XdlGui {
         let mut custom_interp = xdl_interpreter::Interpreter::with_output(buffer_clone);
 
         // Parse and execute
+        info!("Tokenizing XDL code...");
         match tokenize(xdl_code) {
             Ok(tokens) => {
+                info!("Parsing {} tokens...", tokens.len());
                 match parse_program(&tokens) {
                     Ok(program) => {
+                        info!(
+                            "Executing program with {} statements...",
+                            program.statements.len()
+                        );
                         match custom_interp.execute_program(&program) {
                             Ok(_) => {
+                                info!("Program execution completed successfully");
                                 // Get captured output
                                 if let Ok(buf) = capture_buffer.try_borrow() {
                                     let output_str = String::from_utf8_lossy(&buf);
@@ -1097,6 +1171,7 @@ impl XdlGui {
         let output_text = results.join("\n");
         output_buffer.set_text(&output_text);
 
+        info!("<<< execute_xdl_code completed (execution #{})", exec_num);
         info!("Executed XDL file: {}", filename);
     }
 

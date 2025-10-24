@@ -58,7 +58,7 @@ impl From<i32> for LineStyle {
 }
 
 /// RGB Color
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
     pub r: u8,
     pub g: u8,

@@ -42,7 +42,25 @@ impl Interpreter {
     }
 
     pub fn execute_program(&mut self, program: &Program) -> XdlResult<()> {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static STMT_EXEC_COUNT: AtomicUsize = AtomicUsize::new(0);
+
         for statement in &program.statements {
+            let count = STMT_EXEC_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
+
+            // Log every 100th statement to track progress
+            if count % 100 == 0 {
+                eprintln!("[INTERPRETER] Executed {} statements so far...", count);
+            }
+
+            // Emergency stop if we exceed reasonable limit
+            if count > 100000 {
+                return Err(XdlError::RuntimeError(format!(
+                    "Program exceeded maximum statement executions ({}). Possible infinite loop.",
+                    count
+                )));
+            }
+
             self.execute_statement(statement)?;
         }
         Ok(())
@@ -295,8 +313,17 @@ impl Interpreter {
         }
 
         let mut current = start_i;
+        let mut iteration_count = 0;
+        const MAX_ITERATIONS: usize = 1000000; // Safety limit
 
         while (step_i > 0 && current <= end_i) || (step_i < 0 && current >= end_i) {
+            iteration_count += 1;
+            if iteration_count > MAX_ITERATIONS {
+                return Err(XdlError::RuntimeError(format!(
+                    "For loop exceeded maximum iterations ({}). Loop variable '{}': {} to {} step {}",
+                    MAX_ITERATIONS, variable, start_i, end_i, step_i
+                )));
+            }
             // Set loop variable
             self.context
                 .set_variable(variable.to_string(), XdlValue::Long(current as i32));
@@ -449,9 +476,55 @@ impl Interpreter {
             ));
         }
 
-        // Handle nested arrays (multi-dimensional)
+        // Handle multi-dimensional arrays with comma-separated indices
         if indices.len() > 1 {
-            // For multi-dimensional access, we need to navigate through nested arrays
+            // Check if this is a MultiDimArray with proper shape
+            if let XdlValue::MultiDimArray { data, shape } = array_val {
+                if indices.len() == 2 && shape.len() == 2 {
+                    // 2D assignment: arr[i, j] = value
+                    let i_index = match &indices[0] {
+                        ArrayIndex::Single(expr) => {
+                            let val = self.evaluate_expression(expr)?;
+                            val.to_long()? as usize
+                        }
+                        _ => {
+                            return Err(XdlError::NotImplemented(
+                                "Range assignment not supported for multi-dimensional arrays"
+                                    .to_string(),
+                            ));
+                        }
+                    };
+
+                    let j_index = match &indices[1] {
+                        ArrayIndex::Single(expr) => {
+                            let val = self.evaluate_expression(expr)?;
+                            val.to_long()? as usize
+                        }
+                        _ => {
+                            return Err(XdlError::NotImplemented(
+                                "Range assignment not supported for multi-dimensional arrays"
+                                    .to_string(),
+                            ));
+                        }
+                    };
+
+                    let nrows = shape[0];
+                    let ncols = shape[1];
+
+                    if i_index >= nrows || j_index >= ncols {
+                        return Err(XdlError::RuntimeError(format!(
+                            "Index [{}, {}] out of bounds for {}x{} array",
+                            i_index, j_index, nrows, ncols
+                        )));
+                    }
+
+                    let flat_index = i_index * ncols + j_index;
+                    data[flat_index] = value.to_double()?;
+                    return Ok(());
+                }
+            }
+
+            // For nested arrays, navigate through them
             match array_val {
                 XdlValue::NestedArray(rows) => {
                     // Get the first index
