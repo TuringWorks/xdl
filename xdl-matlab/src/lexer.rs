@@ -159,12 +159,12 @@ impl Lexer {
 
         // Numbers
         if ch.is_ascii_digit() || (ch == '.' && self.peek_char().is_ascii_digit()) {
-            return Ok(self.read_number(start_line, start_column)?);
+            return self.read_number(start_line, start_column);
         }
 
         // Strings
         if ch == '\'' && !self.is_after_identifier() {
-            return Ok(self.read_string(start_line, start_column)?);
+            return self.read_string(start_line, start_column);
         }
 
         // Identifiers and keywords

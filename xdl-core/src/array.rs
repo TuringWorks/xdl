@@ -297,10 +297,10 @@ mod tests {
 
     #[test]
     fn test_scalar_array() {
-        let arr = FloatArray::scalar(3.14, GdlType::Float);
+        let arr = FloatArray::scalar(std::f32::consts::PI, GdlType::Float);
         assert!(arr.dimensions().is_scalar());
         assert_eq!(arr.n_elements(), 1);
-        assert_eq!(*arr.get(&[]).unwrap(), 3.14);
+        assert!((arr.get(&[]).unwrap() - std::f32::consts::PI).abs() < 1e-6);
     }
 
     #[test]

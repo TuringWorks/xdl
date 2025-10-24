@@ -685,7 +685,7 @@ impl Transpiler {
                         }
 
                         // Generate: RANDOMN(seed, n) or RANDOMU(seed, n)
-                        if args.len() >= 1 {
+                        if !args.is_empty() {
                             expr.push_str(&format!("{}(1, {})", xdl_func, args.join(", ")));
                         } else {
                             expr.push_str(&format!("{}(1, 1)", xdl_func)); // Default to single random value
@@ -758,10 +758,10 @@ impl Transpiler {
                             if real_part.trim() == "0" {
                                 // For exp(i*t) pattern, just use i*t directly as the argument
                                 // But since XDL has no complex type, we use the imaginary part directly
-                                expr.push_str(&imag_part);
+                                expr.push_str(imag_part);
                             } else {
                                 // Use real part for now
-                                expr.push_str(&real_part);
+                                expr.push_str(real_part);
                             }
                         } else if args.len() == 1 {
                             // Just real part
@@ -1160,7 +1160,7 @@ impl Transpiler {
             }
             _ => {
                 // Shouldn't happen, but fall back to comment
-                format!("/* unhandled range expression */")
+                "/* unhandled range expression */".to_string()
             }
         }
     }
