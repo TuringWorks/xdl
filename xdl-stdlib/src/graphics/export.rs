@@ -41,18 +41,18 @@ impl ExportConfig {
             ..Default::default()
         }
     }
-    
+
     pub fn with_size(mut self, width: u32, height: u32) -> Self {
         self.width = width;
         self.height = height;
         self
     }
-    
+
     pub fn with_dpi(mut self, dpi: u32) -> Self {
         self.dpi = dpi;
         self
     }
-    
+
     pub fn with_background(mut self, r: u8, g: u8, b: u8) -> Self {
         self.background_color = (r, g, b);
         self
@@ -73,12 +73,7 @@ pub fn create_backend(
 */
 
 /// Generate HTML wrapper for interactive visualization
-pub fn generate_html_wrapper(
-    svg_content: &str,
-    title: &str,
-    width: u32,
-    height: u32,
-) -> String {
+pub fn generate_html_wrapper(svg_content: &str, title: &str, width: u32, height: u32) -> String {
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -199,46 +194,41 @@ pub fn export_to_html(
     height: u32,
 ) -> XdlResult<()> {
     use std::fs;
-    
+
     // Read SVG content
     let svg_content = fs::read_to_string(svg_filename)
         .map_err(|e| XdlError::IoError(format!("Failed to read SVG: {}", e)))?;
-    
+
     // Generate HTML wrapper
     let html = generate_html_wrapper(&svg_content, title, width, height);
-    
+
     // Write HTML file
     fs::write(html_filename, html)
         .map_err(|e| XdlError::IoError(format!("Failed to write HTML: {}", e)))?;
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_export_config() {
         let config = ExportConfig::new(ExportFormat::SVG)
             .with_size(1024, 768)
             .with_dpi(300);
-        
+
         assert_eq!(config.format, ExportFormat::SVG);
         assert_eq!(config.width, 1024);
         assert_eq!(config.height, 768);
         assert_eq!(config.dpi, 300);
     }
-    
+
     #[test]
     fn test_html_generation() {
-        let html = generate_html_wrapper(
-            "<svg></svg>",
-            "Test Plot",
-            800,
-            600,
-        );
-        
+        let html = generate_html_wrapper("<svg></svg>", "Test Plot", 800, 600);
+
         assert!(html.contains("Test Plot"));
         assert!(html.contains("<svg></svg>"));
         assert!(html.contains("downloadSVG"));

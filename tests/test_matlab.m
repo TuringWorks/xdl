@@ -1,27 +1,12 @@
-% Simple MATLAB test script
-% This demonstrates MATLAB compatibility
+% Simple MATLAB test file
+x = [1, 2, 3, 4, 5];
+y = x .^ 2;
 
-% Create array using zeros
-x = zeros(10, 1);
+fprintf('x values: ');
+disp(x);
 
-% Fill array with values
-for i = 1:10
-    x(i) = sin(i * 0.1);
-end
+fprintf('y = x^2 values: ');
+disp(y);
 
-% Calculate statistics
-mean_x = mean(x);
-max_x = max(x);
-
-% Display results
-disp('Mean value:');
-disp(mean_x);
-disp('Max value:');
-disp(max_x);
-
-% Simple plot
-y = 1:10;
-plot(y, x);
-title('MATLAB Test Plot');
-xlabel('Index');
-ylabel('Sin(x)');
+% Plot if available
+plot(x, y, 'title', 'Quadratic Function', 'xtitle', 'X Values', 'ytitle', 'Y = X^2');

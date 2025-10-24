@@ -1,0 +1,30 @@
+; Test multi-line FOR loop without BEGIN...END
+
+print, 'Testing FOR loop syntax'
+
+; Create an array
+arr = fltarr(10)
+
+; Test 1: Multi-line FOR loop (the problematic syntax)
+print, 'Test 1: Multi-line FOR loop without BEGIN...END'
+for i = 0, 9
+    arr[i] = i * 2.0
+endfor
+
+print, 'Array values:', arr
+
+; Test 2: Single-line FOR loop
+print, 'Test 2: Single-line FOR loop'
+for i = 0, 9 do arr[i] = arr[i] + 1.0
+
+print, 'Array after increment:', arr
+
+; Test 3: FOR loop with BEGIN...END
+print, 'Test 3: FOR loop with BEGIN...END'
+for i = 0, 9 do begin
+    arr[i] = arr[i] * 2.0
+end
+
+print, 'Array after doubling:', arr
+
+print, 'All tests completed!'

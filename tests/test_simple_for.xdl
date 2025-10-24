@@ -1,0 +1,8 @@
+; Simple FOR loop test
+print, 'Starting test'
+
+for i = 0, 2
+    print, 'i =', i
+endfor
+
+print, 'Test complete'

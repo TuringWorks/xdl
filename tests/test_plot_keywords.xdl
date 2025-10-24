@@ -1,0 +1,12 @@
+; Test script for plotting with keyword arguments
+; This tests the new title, xtitle, and ytitle keywords
+
+; Generate some sample data
+x = findgen(100) / 10.0
+y = sin(x)
+
+; Plot with titles
+plot, y, x, title='Sine Wave', xtitle='X Axis (radians)', ytitle='Y Axis (amplitude)'
+
+print, 'Plot created with title and axis labels!'
+print, 'Check xdl_plot.png to see the result'

@@ -1,0 +1,19 @@
+; Test line continuation with $
+
+print, 'Testing line continuation...'
+
+; Simple array with line continuation
+arr = [1, 2, 3, $
+       4, 5, 6, $
+       7, 8, 9]
+
+print, 'Array:', arr
+
+; Expression with line continuation
+result = 10 + $
+         20 + $
+         30
+
+print, 'Result:', result
+
+print, 'Line continuation test complete!'

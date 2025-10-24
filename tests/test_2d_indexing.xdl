@@ -1,0 +1,25 @@
+; Test 2D array indexing
+
+print, 'Testing 2D array indexing...'
+
+; Create a 2D array using REFORM
+arr = dindgen(12)
+matrix = reform(arr, 3, 4)  ; 3 rows, 4 columns
+
+print, 'Original matrix (3x4):', matrix
+
+; Test reading with 2D indices
+val1 = matrix[0, 0]
+val2 = matrix[1, 2]
+val3 = matrix[2, 3]
+
+print, 'matrix[0, 0] =', val1
+print, 'matrix[1, 2] =', val2
+print, 'matrix[2, 3] =', val3
+
+; Test writing with 2D indices
+matrix[1, 1] = 99.0
+print, 'After setting matrix[1, 1] = 99:'
+print, 'matrix[1, 1] =', matrix[1, 1]
+
+print, '2D indexing test complete!'
