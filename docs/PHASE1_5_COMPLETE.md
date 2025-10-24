@@ -13,7 +13,7 @@ Successfully implemented comprehensive file I/O functionality including file ope
 ### Functions Implemented
 
 1. **GET_LUN()** - Get a logical unit number
-2. **FREE_LUN(lun)** - Free a logical unit number  
+2. **FREE_LUN(lun)** - Free a logical unit number
 3. **OPENR, lun, filename** - Open file for reading
 4. **OPENW, lun, filename** - Open file for writing (create/truncate)
 5. **OPENU, lun, filename** - Open file for read/write (update)
@@ -56,7 +56,7 @@ enum FileMode {
 - Starts from LUN 10 and increments
 - Thread-safe counter
 
-#### OPENR, lun, filename  
+#### OPENR, lun, filename
 - Opens file for reading only
 - Creates BufReader for efficient line-by-line reading
 - Maintains file position across multiple READF calls

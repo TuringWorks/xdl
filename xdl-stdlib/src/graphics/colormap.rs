@@ -8,9 +8,10 @@ use colorous;
 use palette::{FromColor, Hsv, Srgb};
 
 /// Color map types for scientific visualization
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum ColorMapType {
     // Sequential - single hue
+    #[default]
     Viridis,
     Plasma,
     Inferno,
@@ -45,12 +46,6 @@ pub enum ColorMapType {
 
     // Custom
     Custom(Vec<Color>),
-}
-
-impl Default for ColorMapType {
-    fn default() -> Self {
-        ColorMapType::Viridis
-    }
 }
 
 /// Color map for mapping scalar values to colors
@@ -320,7 +315,7 @@ mod tests {
     fn test_terrain_map() {
         let cmap = terrain();
         let ocean = cmap.map(0.1);
-        let land = cmap.map(0.5);
+        let _land = cmap.map(0.5);
         let mountain = cmap.map(0.9);
 
         // Ocean should be blue

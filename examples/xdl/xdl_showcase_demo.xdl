@@ -214,12 +214,12 @@ for py = 0, height-1 do begin
     ; Map pixel to complex plane
     x0 = xmin + (xmax - xmin) * px / (width - 1.0)
     y0 = ymin + (ymax - ymin) * py / (height - 1.0)
-    
+
     ; Iterate
     x = 0.0
     y = 0.0
     iteration = 0
-    
+
     ; Fixed iteration count
     for iter = 0, max_iter-1 do begin
       if (x*x + y*y lt 4.0) then begin
@@ -231,7 +231,7 @@ for py = 0, height-1 do begin
       endif
     end
     endfor
-    
+
     ; Store in 1D array: index = py * width + px
     idx = py * width + px
     mandelbrot[idx] = iteration
@@ -262,11 +262,11 @@ for py = 0, ascii_height-1 do begin
     ; Map to Mandelbrot data coordinates
     mx = px * width / ascii_width
     my = py * height / ascii_height
-    
+
     ; Get iteration value from computed data
     idx = my * width + mx
     iteration = mandelbrot[idx]
-    
+
     ; Map to ASCII character
     if iteration eq max_iter then begin
       line = line + '@'

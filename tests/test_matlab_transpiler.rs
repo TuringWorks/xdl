@@ -17,7 +17,7 @@ disp(mean_x);
 
     println!("=== MATLAB Code ===");
     println!("{}", matlab_code);
-    
+
     println!("\n=== Transpiled XDL Code ===");
     match transpile_matlab_to_xdl(matlab_code) {
         Ok(xdl_code) => println!("{}", xdl_code),

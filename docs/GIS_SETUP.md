@@ -94,9 +94,9 @@ fn create_map() -> Result<(), Box<dyn Error>> {
         ProjectionType::Mercator,
         (0.0, 0.0)
     )?;
-    
+
     projection.set_limits((-180.0, -90.0, 180.0, 90.0));
-    
+
     // Use projection...
     Ok(())
 }

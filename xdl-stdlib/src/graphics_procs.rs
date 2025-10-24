@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
-static GUI_PLOT_CALLBACK: Mutex<
-    Option<Arc<dyn Fn(Vec<f64>, Vec<f64>, String, String, String) + Send + Sync>>,
-> = Mutex::new(None);
+type PlotCallbackFn = Arc<dyn Fn(Vec<f64>, Vec<f64>, String, String, String) + Send + Sync>;
+type ImageCallbackFn = Arc<dyn Fn(String, String) + Send + Sync>;
 
-static GUI_IMAGE_CALLBACK: Mutex<Option<Arc<dyn Fn(String, String) + Send + Sync>>> =
-    Mutex::new(None);
+static GUI_PLOT_CALLBACK: Mutex<Option<PlotCallbackFn>> = Mutex::new(None);
+
+static GUI_IMAGE_CALLBACK: Mutex<Option<ImageCallbackFn>> = Mutex::new(None);
 
 // Unused legacy struct - can be removed in future cleanup
 #[allow(dead_code)]
@@ -65,24 +65,18 @@ pub fn plot_with_keywords(
     let mut config = Plot2DConfig::default();
 
     // Extract title
-    if let Some(title_val) = keywords.get("title").or_else(|| keywords.get("TITLE")) {
-        if let XdlValue::String(s) = title_val {
-            config.title = Some(s.clone());
-        }
+    if let Some(XdlValue::String(s)) = keywords.get("title").or_else(|| keywords.get("TITLE")) {
+        config.title = Some(s.clone());
     }
 
     // Extract x-axis title
-    if let Some(xtitle_val) = keywords.get("xtitle").or_else(|| keywords.get("XTITLE")) {
-        if let XdlValue::String(s) = xtitle_val {
-            config.xtitle = Some(s.clone());
-        }
+    if let Some(XdlValue::String(s)) = keywords.get("xtitle").or_else(|| keywords.get("XTITLE")) {
+        config.xtitle = Some(s.clone());
     }
 
     // Extract y-axis title
-    if let Some(ytitle_val) = keywords.get("ytitle").or_else(|| keywords.get("YTITLE")) {
-        if let XdlValue::String(s) = ytitle_val {
-            config.ytitle = Some(s.clone());
-        }
+    if let Some(XdlValue::String(s)) = keywords.get("ytitle").or_else(|| keywords.get("YTITLE")) {
+        config.ytitle = Some(s.clone());
     }
 
     // Generate output filename
@@ -478,8 +472,10 @@ pub fn shade_surf(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let y_coords: Vec<f64> = (0..height).map(|i| i as f64).collect();
 
     // Create configuration with shading enabled
-    let mut config = SurfaceConfig::default();
-    config.shading = true;
+    let config = SurfaceConfig {
+        shading: true,
+        ..Default::default()
+    };
 
     // Generate filename
     let filename = "xdl_shade_surf.png";

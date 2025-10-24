@@ -392,7 +392,7 @@ pub fn sort_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// SMOOTH(array, window_size)
 /// Returns array of same length with edges handled by reflection
 pub fn smooth_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if args.len() < 1 || args.len() > 2 {
+    if args.is_empty() || args.len() > 2 {
         return Err(XdlError::InvalidArgument(format!(
             "SMOOTH: Expected 1-2 arguments (array, window_size), got {}",
             args.len()
@@ -531,7 +531,7 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Edge mode: 0=truncate, 1=wrap, 2=reflect (default), 3=pad_with_mean
     let edge_mode = if args.len() == 3 {
         match &args[2] {
-            XdlValue::Long(n) => *n as i32,
+            XdlValue::Long(n) => *n,
             XdlValue::Int(n) => *n as i32,
             _ => 2, // Default to reflect
         }
@@ -565,14 +565,14 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let mut result = vec![0.0; n];
             let half_window = window_size / 2;
 
-            for i in 0..n {
+            for (i, item) in result.iter_mut().enumerate().take(n) {
                 let mut sum = 0.0;
                 for j in 0..window_size {
                     let offset = j as i32 - half_window as i32;
                     let idx = ((i as i32 + offset).rem_euclid(n as i32)) as usize;
                     sum += arr[idx];
                 }
-                result[i] = sum / window_size as f64;
+                *item = sum / window_size as f64;
             }
 
             Ok(XdlValue::Array(result))
@@ -625,7 +625,7 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let mut result = vec![0.0; n];
             let half_window = window_size / 2;
 
-            for i in 0..n {
+            for (i, item) in result.iter_mut().enumerate().take(n) {
                 let mut sum = 0.0;
                 for j in 0..window_size {
                     let offset = j as i32 - half_window as i32;
@@ -637,7 +637,7 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
                         sum += arr[idx as usize];
                     }
                 }
-                result[i] = sum / window_size as f64;
+                *item = sum / window_size as f64;
             }
 
             Ok(XdlValue::Array(result))
@@ -845,8 +845,8 @@ pub fn reform_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Extract new dimensions
     let mut new_dims = Vec::new();
-    for i in 1..args.len() {
-        let dim = extract_dimension(&args[i])?;
+    for arg in args.iter().skip(1) {
+        let dim = extract_dimension(arg)?;
         new_dims.push(dim);
     }
 

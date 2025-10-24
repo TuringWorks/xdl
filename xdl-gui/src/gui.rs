@@ -1000,7 +1000,6 @@ impl XdlGui {
     fn extract_filename_from_browser_text(browser_text: &str) -> String {
         // Remove emoji and extract filename
         browser_text
-            .trim()
             .split_whitespace()
             .skip(1) // Skip the emoji
             .collect::<Vec<&str>>()
@@ -1167,7 +1166,7 @@ impl XdlGui {
         // Update variable table after execution
         Self::update_variable_table(var_table, variables);
 
-        results.push(format!("=== Execution completed ==="));
+        results.push("=== Execution completed ===".to_string());
         let output_text = results.join("\n");
         output_buffer.set_text(&output_text);
 
@@ -1219,13 +1218,11 @@ impl XdlGui {
             }
 
             // Show concise trace
-            if trimmed.starts_with("if ") {
-                results.push(format!("  [{}] {}", i + 1, trimmed));
-            } else if trimmed.starts_with("for ") {
-                results.push(format!("  [{}] {}", i + 1, trimmed));
-            } else if trimmed.starts_with("while ") {
-                results.push(format!("  [{}] {}", i + 1, trimmed));
-            } else if trimmed.starts_with("print") {
+            if trimmed.starts_with("if ")
+                || trimmed.starts_with("for ")
+                || trimmed.starts_with("while ")
+                || trimmed.starts_with("print")
+            {
                 results.push(format!("  [{}] {}", i + 1, trimmed));
             } else if trimmed.contains("=") {
                 let parts: Vec<&str> = trimmed.split('=').collect();

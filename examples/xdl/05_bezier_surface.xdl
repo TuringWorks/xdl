@@ -45,45 +45,45 @@ for ui = 0, steps-1 do begin
   for vi = 0, steps-1 do begin
     u = u_vals[ui]
     v = v_vals[vi]
-    
+
     ; Cubic Bernstein blending weights
     u_w0 = (1-u)^3
     u_w1 = 3.0 * (1-u)^2 * u
     u_w2 = 3.0 * (1-u) * u^2
     u_w3 = u^3
-    
+
     v_w0 = (1-v)^3
     v_w1 = 3.0 * (1-v)^2 * v
     v_w2 = 3.0 * (1-v) * v^2
     v_w3 = v^3
-    
+
     ; Compute weighted sum of control points
     z_val = 0.0
-    
+
     ; Row 0
     z_val = z_val + u_w0 * v_w0 * cp_z_row1[0]
     z_val = z_val + u_w0 * v_w1 * cp_z_row1[1]
     z_val = z_val + u_w0 * v_w2 * cp_z_row1[2]
     z_val = z_val + u_w0 * v_w3 * cp_z_row1[3]
-    
+
     ; Row 1
     z_val = z_val + u_w1 * v_w0 * cp_z_row2[0]
     z_val = z_val + u_w1 * v_w1 * cp_z_row2[1]
     z_val = z_val + u_w1 * v_w2 * cp_z_row2[2]
     z_val = z_val + u_w1 * v_w3 * cp_z_row2[3]
-    
+
     ; Row 2
     z_val = z_val + u_w2 * v_w0 * cp_z_row3[0]
     z_val = z_val + u_w2 * v_w1 * cp_z_row3[1]
     z_val = z_val + u_w2 * v_w2 * cp_z_row3[2]
     z_val = z_val + u_w2 * v_w3 * cp_z_row3[3]
-    
+
     ; Row 3
     z_val = z_val + u_w3 * v_w0 * cp_z_row4[0]
     z_val = z_val + u_w3 * v_w1 * cp_z_row4[1]
     z_val = z_val + u_w3 * v_w2 * cp_z_row4[2]
     z_val = z_val + u_w3 * v_w3 * cp_z_row4[3]
-    
+
     ; Store in 1D array using manual index calculation
     idx = ui * steps + vi
     surface_z[idx] = z_val

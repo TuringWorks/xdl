@@ -229,7 +229,7 @@ TokenKind::NewSyntax => self.transpile_new_syntax()?
 We've successfully built a foundational **MATLAB compatibility layer** for XDL that:
 
 ✅ Lexes MATLAB syntax
-✅ Transpiles to XDL code  
+✅ Transpiles to XDL code
 ✅ Maps 80+ common functions
 ✅ Handles basic control flow
 ✅ Adjusts array indexing

@@ -42,6 +42,7 @@ impl PlotFrame {
         Self::new_with_labels(x, y, w, h, x_data, y_data, formula, "X", "Y")
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn new_with_labels(
         x: i32,
         y: i32,

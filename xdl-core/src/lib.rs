@@ -81,7 +81,7 @@ impl GdlType {
         )
     }
 
-    /// Returns true if this is an integer type  
+    /// Returns true if this is an integer type
     pub fn is_integer(self) -> bool {
         matches!(
             self,

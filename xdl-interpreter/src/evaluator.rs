@@ -917,7 +917,7 @@ impl Evaluator {
 
                 let step_val = if let Some(s) = step {
                     let val = self.evaluate(s, context)?;
-                    val.to_long()? as i32
+                    val.to_long()?
                 } else {
                     1
                 };
@@ -1036,7 +1036,7 @@ mod tests {
         let evaluator = Evaluator::new();
         let mut context = Context::new();
 
-        context.set_variable("x".to_string(), XdlValue::Double(3.14));
+        context.set_variable("x".to_string(), XdlValue::Double(std::f64::consts::PI));
 
         let expr = Expression::Variable {
             name: "x".to_string(),
@@ -1044,7 +1044,7 @@ mod tests {
         };
 
         let result = evaluator.evaluate(&expr, &mut context).unwrap();
-        assert_eq!(result, XdlValue::Double(3.14));
+        assert_eq!(result, XdlValue::Double(std::f64::consts::PI));
     }
 
     #[test]

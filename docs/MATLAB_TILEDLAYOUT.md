@@ -87,7 +87,7 @@ comet3(ax2, yvec, xvec, zvec);
 
 The transpiler maintains internal state:
 - `subplot_rows`: Number of rows in the layout
-- `subplot_cols`: Number of columns in the layout  
+- `subplot_cols`: Number of columns in the layout
 - `current_tile`: Which tile is currently active (1-indexed)
 
 ### Plot File Naming
@@ -109,12 +109,12 @@ When no tiledlayout is active, the default `xdl_plot.png` is used.
 
 ## Features Implemented
 
-✅ **tiledlayout(rows, cols)** - Grid setup  
-✅ **nexttile** - Tile navigation  
-✅ **ax = nexttile** - Assignment form  
-✅ **comet3(ax, x, y, z)** - 3D plotting with axis handle  
-✅ **comet3(x, y, z)** - 3D plotting without axis handle  
-✅ **plot3(ax, x, y, z)** - Regular 3D plotting  
+✅ **tiledlayout(rows, cols)** - Grid setup
+✅ **nexttile** - Tile navigation
+✅ **ax = nexttile** - Assignment form
+✅ **comet3(ax, x, y, z)** - 3D plotting with axis handle
+✅ **comet3(x, y, z)** - 3D plotting without axis handle
+✅ **plot3(ax, x, y, z)** - Regular 3D plotting
 ✅ **Tile-specific filenames** - Separate output files
 
 ## Limitations

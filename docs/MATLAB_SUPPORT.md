@@ -40,9 +40,9 @@ The MATLAB transpiler is a work in progress and has some limitations:
 
 1. **Array Literals**: Array literal syntax `[1, 2, 3]` is not fully supported yet
    - Workaround: Use alternative syntax or XDL's array functions
-   
+
 2. **Complex Expressions**: Some complex MATLAB expressions may not transpile correctly
-   
+
 3. **Advanced Features**: Advanced MATLAB features like classes, packages, and some built-in functions may not be supported
 
 ## Example

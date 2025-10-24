@@ -252,7 +252,7 @@ The linear growth rate of R-T instability is:
 ```
 where:
 - A = Atwood number
-- g = gravitational acceleration  
+- g = gravitational acceleration
 - k = wavenumber of perturbation
 
 ### Atwood Number
@@ -312,7 +312,7 @@ cargo build --release
 ## Further Reading
 
 - **Wikipedia**: "Rayleigh-Taylor instability"
-- **Books**: 
+- **Books**:
   - "Turbulence" by P.A. Davidson
   - "Introduction to Hydrodynamic Instabilities" by G. Ricard
 - **Papers**:
@@ -325,7 +325,7 @@ Part of the XDL project. See main repository for license information.
 
 ---
 
-**Created**: January 2025  
-**XDL Version**: 0.1.0  
-**Visualization**: Viridis colormap (perceptually uniform)  
+**Created**: January 2025
+**XDL Version**: 0.1.0
+**Visualization**: Viridis colormap (perceptually uniform)
 **Status**: ✅ Tested and working

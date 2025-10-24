@@ -171,8 +171,7 @@ impl<'a> Parser<'a> {
 
         // GDL/IDL supports: if cond then statement OR if cond then begin...end
         let then_block = if then_has_begin_end {
-            let stmts = self.parse_block_or_statement(&[Token::Else, Token::Endif])?;
-            stmts
+            self.parse_block_or_statement(&[Token::Else, Token::Endif])?
         } else {
             // Single statement
             vec![self.parse_statement()?]

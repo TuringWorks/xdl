@@ -14,7 +14,7 @@ Tests all 2D plotting features with 5 different plots.
 cargo run --release --bin xdl-gui examples/plot_working_demo.xdl
 ```
 
-### 3. `plot3d_demo.xdl` - 3D Plotting Tests  
+### 3. `plot3d_demo.xdl` - 3D Plotting Tests
 Tests 3D data structures with SURFACE, CONTOUR, SHADE_SURF, and PLOT3D.
 ```bash
 cargo run --release --bin xdl examples/plot3d_demo.xdl
@@ -49,7 +49,7 @@ w = x + SIN(x)          ; Array addition
 - `PLOT` - 2D line plots with GUI/PNG output
 - `SURFACE` - Parses 2D arrays for 3D surfaces
 - `CONTOUR` - Parses 2D arrays for contours
-- `SHADE_SURF` - Parses 2D arrays for shaded surfaces  
+- `SHADE_SURF` - Parses 2D arrays for shaded surfaces
 - `PLOT3D` - Parses 3 1D arrays for 3D lines
 
 ### ⚠️ Registered (Stubs)

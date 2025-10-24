@@ -47,7 +47,7 @@ END
    - Implement function scope stack
    - Support lexical scoping for nested functions
    - Handle variable capture from parent scopes (closures)
-   
+
 3. **Interpreter** (`xdl-interpreter/src/lib.rs`)
    - Modify `execute_statement` to handle function definitions in nested contexts
    - Create new scope when entering function
@@ -76,18 +76,18 @@ impl Context {
         } else {
             Some(self.scopes.len() - 1)
         };
-        
+
         self.scopes.push(Scope {
             variables: HashMap::new(),
             functions: HashMap::new(),
             parent_scope,
         });
     }
-    
+
     pub fn pop_scope(&mut self) {
         self.scopes.pop();
     }
-    
+
     pub fn get_variable_with_scope(&self, name: &str) -> Option<&XdlValue> {
         // Search current scope first, then parent scopes
         for scope in self.scopes.iter().rev() {
@@ -112,11 +112,11 @@ impl Context {
      - MATLAB: `function result = name(args)` (assignment-style)
 
 2. **Parser** (`xdl-parser/src/parser.rs`)
-   - Add `parse_matlab_function()` 
+   - Add `parse_matlab_function()`
    - Detect MATLAB syntax: `function` followed by `identifier =`
    - Parse return variable name
    - Parse parameter list in parentheses (MATLAB uses parens, GDL uses commas)
-   
+
 3. **AST** (`xdl-parser/src/ast.rs`)
    - Extend `FunctionDef` to include:
      - `return_var: Option<String>` for MATLAB-style named return
@@ -161,7 +161,7 @@ FUNCTION main_calc, n
     FUNCTION double_it, x
         RETURN, x * 2
     END
-    
+
     result = double_it(n)
     RETURN, result
 END
@@ -176,7 +176,7 @@ FUNCTION outer, multiplier
         ; Should access 'multiplier' from parent scope
         RETURN, x * multiplier
     END
-    
+
     RETURN, inner(10)
 END
 

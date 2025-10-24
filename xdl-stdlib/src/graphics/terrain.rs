@@ -119,8 +119,8 @@ impl DigitalElevationModel {
 
         let mut hillshade = vec![vec![0.0; self.width]; self.height];
 
-        for y in 0..self.height {
-            for x in 0..self.width {
+        for (y, row) in hillshade.iter_mut().enumerate().take(self.height) {
+            for (x, item) in row.iter_mut().enumerate().take(self.width) {
                 let slope = self.calculate_slope(x, y);
                 let aspect = self.calculate_aspect(x, y);
 
@@ -129,7 +129,7 @@ impl DigitalElevationModel {
                     + (alt_rad.sin() * slope.sin() * (az_rad - aspect).cos()))
                 .max(0.0);
 
-                hillshade[y][x] = shade;
+                *item = shade;
             }
         }
 
@@ -204,9 +204,8 @@ pub fn render_hillshade(
         .build_cartesian_2d(0.0..dem.width as f64, 0.0..dem.height as f64)?;
 
     // Draw hillshade as grayscale
-    for y in 0..dem.height {
-        for x in 0..dem.width {
-            let shade = hillshade[y][x];
+    for (y, row) in hillshade.iter().enumerate().take(dem.height) {
+        for (x, &shade) in row.iter().enumerate().take(dem.width) {
             let intensity = (shade * 255.0) as u8;
             let color = RGBColor(intensity, intensity, intensity);
 
@@ -247,11 +246,10 @@ pub fn render_shaded_relief(
         .build_cartesian_2d(0.0..dem.width as f64, 0.0..dem.height as f64)?;
 
     // Blend elevation color with hillshade
-    for y in 0..dem.height {
-        for x in 0..dem.width {
+    for (y, row) in hillshade.iter().enumerate().take(dem.height) {
+        for (x, &shade) in row.iter().enumerate().take(dem.width) {
             if let Some(norm_elev) = dem.get_normalized(x, y) {
                 let base_color = colormap.map(norm_elev);
-                let shade = hillshade[y][x];
 
                 // Blend color with hillshade
                 let r = (base_color.r as f64 * ((1.0 - blend_factor) + blend_factor * shade)) as u8;

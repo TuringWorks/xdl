@@ -19,7 +19,7 @@ The project is structured as a Cargo workspace with the following crates:
 
 - **`xdl-core`**: Core data structures, types, and array operations
 - **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom
-- **`xdl-interpreter`**: AST interpreter and execution engine  
+- **`xdl-interpreter`**: AST interpreter and execution engine
 - **`xdl-runtime`**: Runtime system with memory management
 - **`xdl-stdlib`**: Standard library functions (math, I/O, graphics)
 - **`xdl-ffi`**: Foreign function interfaces to external libraries
@@ -33,7 +33,7 @@ The project is structured as a Cargo workspace with the following crates:
 - Structures and pointers
 - String handling
 
-### Language Features  
+### Language Features
 - Variables and expressions
 - Control flow (IF/THEN/ELSE, FOR, WHILE, FOREACH)
 - Functions and procedures
@@ -42,7 +42,7 @@ The project is structured as a Cargo workspace with the following crates:
 
 ### Built-in Functions
 - Mathematical functions (SIN, COS, EXP, etc.)
-- Array functions (TRANSPOSE, REFORM, etc.) 
+- Array functions (TRANSPOSE, REFORM, etc.)
 - I/O operations (PRINT, READ, etc.)
 - **Python 3.13 integration** (PYTHON_IMPORT, PYTHON_CALL)
 - Graphics and plotting (planned)
@@ -118,7 +118,7 @@ print, "sqrt(16) =", result
 xdl-rust/
 ├── xdl-core/          # Core data types and operations
 ├── xdl-parser/        # Language parser and AST
-├── xdl-interpreter/   # Execution engine  
+├── xdl-interpreter/   # Execution engine
 ├── xdl-runtime/       # Memory and runtime management
 ├── xdl-stdlib/        # Standard library functions
 ├── xdl-ffi/          # External library interfaces
@@ -152,7 +152,7 @@ This project uses pre-commit hooks to ensure code quality:
 # Install pre-commit
 pip install pre-commit
 
-# Install hooks  
+# Install hooks
 pre-commit install
 
 # Run manually
@@ -205,7 +205,7 @@ Contributions are welcome! Please:
 - [ ] String functions
 - [ ] File handling
 
-### Phase 4: Advanced Features  
+### Phase 4: Advanced Features
 - [ ] Graphics and plotting
 - [ ] External library integration
 - [ ] Object-oriented features

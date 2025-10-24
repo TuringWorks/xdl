@@ -353,18 +353,18 @@ pub fn plot_with_errors(
         // Vertical error bar
         chart.draw_series(std::iter::once(PathElement::new(
             vec![(*x, y - err), (*x, y + err)],
-            &color,
+            color,
         )))?;
 
         // Caps on error bars
         let cap_width = (x_max - x_min) * 0.01;
         chart.draw_series(std::iter::once(PathElement::new(
             vec![(*x - cap_width, y - err), (*x + cap_width, y - err)],
-            &color,
+            color,
         )))?;
         chart.draw_series(std::iter::once(PathElement::new(
             vec![(*x - cap_width, y + err), (*x + cap_width, y + err)],
-            &color,
+            color,
         )))?;
 
         // Data point

@@ -6,7 +6,7 @@ The original `05_complex_bezier.m` file had several features that are not yet su
 
 ### Original Issues:
 1. **Complex numbers** (`-1-1i`, etc.) - Not supported
-2. **Nested function definitions** - Not supported  
+2. **Nested function definitions** - Not supported
 3. **MATLAB-specific functions** - `meshgrid`, `subplot`, `figure`, `surf`, `nchoosek` not fully implemented
 4. **2D array literal syntax** with `$` continuation - Not supported
 5. **Multi-dimensional array indexing** - Limited support

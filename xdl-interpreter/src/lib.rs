@@ -49,7 +49,7 @@ impl Interpreter {
             let count = STMT_EXEC_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
 
             // Log every 100th statement to track progress
-            if count % 100 == 0 {
+            if count.is_multiple_of(100) {
                 eprintln!("[INTERPRETER] Executed {} statements so far...", count);
             }
 

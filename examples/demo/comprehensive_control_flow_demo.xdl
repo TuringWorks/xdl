@@ -107,7 +107,7 @@ for i = 1, 10
   print, "  i =", i
 endfor
 
-; Continue example  
+; Continue example
 print, "Loop with CONTINUE (skip even numbers):"
 for i = 1, 8
   if i eq 2 then

@@ -128,7 +128,7 @@ cargo run --bin xdl test_python_integration.xdl
 
 Planned improvements include:
 - NumPy array support
-- Pandas DataFrame integration  
+- Pandas DataFrame integration
 - Matplotlib plotting integration
 - Better error propagation
 - Asynchronous Python calls

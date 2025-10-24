@@ -29,7 +29,7 @@ print, "2. Advanced NumPy Mathematics..."
 pi_val = python_call(numpy_mod, "pi")
 print, "NumPy pi:", pi_val
 
-e_val = python_call(numpy_mod, "e")  
+e_val = python_call(numpy_mod, "e")
 print, "NumPy e:", e_val
 
 ; Test array operations with linspace
@@ -72,7 +72,7 @@ print, "Sequence 1-10:", sequence
 cumsum_result = python_call(numpy_mod, "cumsum", sequence)
 print, "Cumulative sum:", cumsum_result
 
-; Test difference calculation  
+; Test difference calculation
 diff_result = python_call(numpy_mod, "diff", sequence)
 print, "Differences:", diff_result
 

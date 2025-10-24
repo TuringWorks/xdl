@@ -18,22 +18,22 @@ fn render_density_field(
 ) -> Result<(), Box<dyn Error>> {
     let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
-    
+
     let mut chart = ChartBuilder::on(&root)
         .caption(title, ("sans-serif", 40))
         .margin(10)
         .x_label_area_size(40)
         .y_label_area_size(40)
         .build_cartesian_2d(0.0..sim.width as f64, 0.0..sim.height as f64)?;
-    
+
     chart.configure_mesh()
         .x_desc("X")
         .y_desc("Y")
         .draw()?;
-    
+
     // Get density range
     let (min_d, max_d, _) = sim.density_stats();
-    
+
     // Draw density as colored pixels
     for y in 0..sim.height {
         for x in 0..sim.width {
@@ -43,17 +43,17 @@ fn render_density_field(
             } else {
                 0.5
             };
-            
+
             let (r, g, b) = colormap_fn(normalized);
             let color = RGBColor(r, g, b);
-            
+
             chart.draw_series(std::iter::once(Rectangle::new(
                 [(x as f64, y as f64), (x as f64 + 1.0, y as f64 + 1.0)],
                 ShapeStyle::from(&color).filled(),
             )))?;
         }
     }
-    
+
     root.present()?;
     Ok(())
 }
@@ -66,19 +66,19 @@ fn render_velocity_field(
 ) -> Result<(), Box<dyn Error>> {
     let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
-    
+
     let mut chart = ChartBuilder::on(&root)
         .caption("Velocity Field (Quiver Plot)", ("sans-serif", 40))
         .margin(10)
         .x_label_area_size(40)
         .y_label_area_size(40)
         .build_cartesian_2d(0.0..sim.width as f64, 0.0..sim.height as f64)?;
-    
+
     chart.configure_mesh()
         .x_desc("X")
         .y_desc("Y")
         .draw()?;
-    
+
     // Find max velocity for scaling
     let mut max_vel = 0.0;
     for y in 0..sim.height {
@@ -87,33 +87,33 @@ fn render_velocity_field(
             max_vel = max_vel.max(vel);
         }
     }
-    
+
     let scale = 5.0;
-    
+
     // Draw arrows
     for y in (0..sim.height).step_by(subsample) {
         for x in (0..sim.width).step_by(subsample) {
             let u = sim.velocity_u[y][x];
             let v = sim.velocity_v[y][x];
             let mag = (u * u + v * v).sqrt();
-            
+
             if mag > 1e-6 {
                 let x0 = x as f64 + 0.5;
                 let y0 = y as f64 + 0.5;
                 let x1 = x0 + u * scale;
                 let y1 = y0 + v * scale;
-                
+
                 // Color by magnitude
                 let t = if max_vel > 0.0 { mag / max_vel } else { 0.5 };
                 let color_val = (t * 200.0) as u8 + 55;
                 let color = RGBColor(color_val, 100, 255 - color_val);
-                
+
                 // Draw arrow line
                 chart.draw_series(std::iter::once(PathElement::new(
                     vec![(x0, y0), (x1, y1)],
                     &color,
                 )))?;
-                
+
                 // Simple arrowhead
                 let arrow_len = 0.5;
                 let angle = v.atan2(u);
@@ -121,7 +121,7 @@ fn render_velocity_field(
                 let ah1_y = y1 - arrow_len * (angle + 0.5).sin();
                 let ah2_x = x1 - arrow_len * (angle - 0.5).cos();
                 let ah2_y = y1 - arrow_len * (angle - 0.5).sin();
-                
+
                 chart.draw_series(std::iter::once(PathElement::new(
                     vec![(x1, y1), (ah1_x, ah1_y)],
                     &color,
@@ -133,7 +133,7 @@ fn render_velocity_field(
             }
         }
     }
-    
+
     root.present()?;
     Ok(())
 }
@@ -182,24 +182,24 @@ fn render_comparison(
 ) -> Result<(), Box<dyn Error>> {
     let root = BitMapBackend::new(filename, (1600, 1200)).into_drawing_area();
     root.fill(&WHITE)?;
-    
+
     let areas = root.split_evenly((2, 2));
-    
+
     let colormaps = [
         (viridis as fn(f64) -> (u8, u8, u8), "Viridis"),
         (plasma, "Plasma"),
         (turbo, "Turbo"),
         (inferno, "Inferno"),
     ];
-    
+
     let (min_d, max_d, _) = sim.density_stats();
-    
+
     for (idx, (colormap, name)) in colormaps.iter().enumerate() {
         let mut chart = ChartBuilder::on(&areas[idx])
             .caption(*name, ("sans-serif", 30))
             .margin(5)
             .build_cartesian_2d(0.0..sim.width as f64, 0.0..sim.height as f64)?;
-        
+
         for y in 0..sim.height {
             for x in 0..sim.width {
                 let density = sim.density[y][x];
@@ -208,10 +208,10 @@ fn render_comparison(
                 } else {
                     0.5
                 };
-                
+
                 let (r, g, b) = colormap(normalized);
                 let color = RGBColor(r, g, b);
-                
+
                 chart.draw_series(std::iter::once(Rectangle::new(
                     [(x as f64, y as f64), (x as f64 + 1.0, y as f64 + 1.0)],
                     ShapeStyle::from(&color).filled(),
@@ -219,7 +219,7 @@ fn render_comparison(
             }
         }
     }
-    
+
     root.present()?;
     Ok(())
 }
@@ -228,21 +228,21 @@ fn render_comparison(
 pub fn main() -> Result<(), Box<dyn Error>> {
     println!("Rayleigh-Taylor Instability Visualization Demo");
     println!("================================================\n");
-    
+
     // Create simulation
     println!("Initializing simulation (200x200 grid)...");
     let mut sim = RTSimulation::new(200, 200);
-    
+
     println!("Initial density stats: {:?}\n", sim.density_stats());
-    
+
     // Render initial state
     println!("Rendering initial state with multiple colormaps...");
     render_comparison(&sim, "rt_initial_comparison.png")?;
     println!("  ✓ Saved: rt_initial_comparison.png");
-    
+
     // Simulate and visualize multiple frames
     let timesteps = [0, 50, 100, 200, 400, 800];
-    
+
     for (idx, &steps) in timesteps.iter().enumerate() {
         if steps > 0 {
             let step_size = if idx > 0 {
@@ -250,17 +250,17 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 steps
             };
-            
+
             println!("\nSimulating {} steps...", step_size);
             sim.simulate(step_size);
             println!("Density stats: {:?}", sim.density_stats());
         }
-        
+
         // Render with different colormaps
         let frame_num = format!("{:04}", steps);
-        
+
         println!("Rendering frame {} visualizations:", steps);
-        
+
         render_density_field(
             &sim,
             viridis,
@@ -268,7 +268,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             &format!("Rayleigh-Taylor (Viridis) - Step {}", steps),
         )?;
         println!("  ✓ Saved: rt_viridis_{}.png", frame_num);
-        
+
         render_density_field(
             &sim,
             plasma,
@@ -276,7 +276,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             &format!("Rayleigh-Taylor (Plasma) - Step {}", steps),
         )?;
         println!("  ✓ Saved: rt_plasma_{}.png", frame_num);
-        
+
         render_density_field(
             &sim,
             turbo,
@@ -284,16 +284,16 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             &format!("Rayleigh-Taylor (Turbo) - Step {}", steps),
         )?;
         println!("  ✓ Saved: rt_turbo_{}.png", frame_num);
-        
+
         // Render velocity field
         render_velocity_field(&sim, &format!("rt_velocity_{}.png", frame_num), 8)?;
         println!("  ✓ Saved: rt_velocity_{}.png", frame_num);
-        
+
         // Render comparison
         render_comparison(&sim, &format!("rt_comparison_{}.png", frame_num))?;
         println!("  ✓ Saved: rt_comparison_{}.png", frame_num);
     }
-    
+
     println!("\n✅ Visualization complete!");
     println!("\nGenerated {} images showcasing:", timesteps.len() * 5);
     println!("  • Density field evolution with Viridis, Plasma, Turbo, and Inferno colormaps");
@@ -304,6 +304,6 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     println!("  • Mushroom-shaped plumes forming");
     println!("  • Complex fluid mixing dynamics");
     println!("  • Perceptually uniform colormap advantages");
-    
+
     Ok(())
 }

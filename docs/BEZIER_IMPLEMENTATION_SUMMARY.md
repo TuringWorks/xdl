@@ -87,7 +87,7 @@ grids = meshgrid(x, y)
 ### 5. 2D Array Indexing (arr[i, j])
 **Status:** ✅ **COMPLETED**
 
-**Implementation:** 
+**Implementation:**
 - Parser already supported comma-separated indices
 - Added `evaluate_multidim_index()` in interpreter for `MultiDimArray`
 - Added 2D assignment support

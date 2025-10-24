@@ -229,7 +229,7 @@ pub fn meanabsdev(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Double(mad))
 }
 
-/// SKEWNESS - Calculate skewness (third moment)  
+/// SKEWNESS - Calculate skewness (third moment)
 pub fn skewness(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let moments = moment(args)?;
     match moments {

@@ -310,5 +310,5 @@ The above code runs **without modification** in XDL!
 
 ---
 
-**Last Updated:** 2025-10-22  
+**Last Updated:** 2025-10-22
 **XDL Version:** 0.1.0

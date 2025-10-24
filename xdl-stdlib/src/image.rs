@@ -63,15 +63,15 @@ fn convol_1d(array: &[f64], kernel: &[f64]) -> XdlResult<XdlValue> {
 
     let mut result = vec![0.0; array_len];
 
-    for i in 0..array_len {
+    for (i, item) in result.iter_mut().enumerate().take(array_len) {
         let mut sum = 0.0;
-        for k in 0..kernel_len {
+        for (k, &kernel_val) in kernel.iter().enumerate().take(kernel_len) {
             let idx = i as i32 + k as i32 - kernel_half as i32;
             if idx >= 0 && idx < array_len as i32 {
-                sum += array[idx as usize] * kernel[k];
+                sum += array[idx as usize] * kernel_val;
             }
         }
-        result[i] = sum;
+        *item = sum;
     }
 
     Ok(XdlValue::Array(result))

@@ -18,13 +18,13 @@ print, ''
 ; Demo 1: RENDER_COLORMAP - Visualize 2D mathematical function
 ; ============================================================================
 print, 'Demo 1: Rendering 2D mathematical function with colormap...'
-  
+
 ; Create 2D array with interesting pattern
 nx = 50
 ny = 50
 total = nx * ny
 data = fltarr(total)
-  
+
 for idx=0, total-1 do begin
   i = idx / ny
   j = idx - (i * ny)
@@ -42,7 +42,7 @@ data = reform(data, nx, ny)
 RENDER_COLORMAP, data, 'colormap_demo.png'
 print, '  -> Saved to colormap_demo.png'
 print, ''
-  
+
 ; ============================================================================
 ; Demo 2: DEM_RENDER - Digital Elevation Model
 ; ============================================================================
@@ -53,22 +53,22 @@ nx = 60
 ny = 60
 total = nx * ny
 elevation = fltarr(total)
-  
+
 for idx=0, total-1 do begin
   i = idx / ny
   j = idx - (i * ny)
   x = (i - 30.0) / 8.0
   y = (j - 30.0) / 8.0
-  
+
   ; Multiple peaks
   peak1 = 100.0 * exp(-(x*x + y*y) / 4.0)
   peak2 = 80.0 * exp(-((x-2)^2 + (y+1)^2) / 3.0)
   peak3 = 60.0 * exp(-((x+1.5)^2 + (y-2)^2) / 2.5)
-  
+
   ; Add some noise
   seed = i * 100 + j
   noise = 5.0 * (randomu(seed) - 0.5)
-  
+
   elevation[idx] = peak1 + peak2 + peak3 + noise + 50.0
 end
 endfor
@@ -80,7 +80,7 @@ elevation = reform(elevation, nx, ny)
 DEM_RENDER, elevation, 'elevation_map.png'
 print, '  -> Saved to elevation_map.png'
 print, ''
-  
+
 ; ============================================================================
 ; Demo 3: HILLSHADE - Terrain relief shading
 ; ============================================================================
@@ -91,7 +91,7 @@ print, 'Demo 3: Generating hillshade from elevation data...'
 HILLSHADE, elevation, 'hillshade_demo.png'
 print, '  -> Saved to hillshade_demo.png'
 print, ''
-  
+
 ; ============================================================================
 ; Demo 4: QUIVER - Vector field visualization
 ; ============================================================================
@@ -102,20 +102,20 @@ grid_size = 20
 total = grid_size * grid_size
 u_field = fltarr(total)
 v_field = fltarr(total)
-  
+
 for idx=0, total-1 do begin
   i = idx / grid_size
   j = idx - (i * grid_size)
-  
+
   ; Center the coordinates
   x = (i - grid_size/2.0) / (grid_size/4.0)
   y = (j - grid_size/2.0) / (grid_size/4.0)
-  
+
   ; Create vortex: velocity perpendicular to radius
   r = sqrt(x*x + y*y) + 0.1
   u_field[idx] = -y / r
   v_field[idx] = x / r
-  
+
   ; Add some radial decay
   decay = exp(-r*r / 4.0)
   u_field[idx] = u_field[idx] * decay
@@ -131,7 +131,7 @@ v_field = reform(v_field, grid_size, grid_size)
 QUIVER, u_field, v_field, 'vector_field.png'
 print, '  -> Saved to vector_field.png'
 print, ''
-  
+
 ; ============================================================================
 ; Demo 5: Combined visualization - Rayleigh-Taylor instability style
 ; ============================================================================
@@ -141,21 +141,21 @@ print, 'Demo 5: Simulating fluid dynamics pattern...'
 size = 64
 total = size * size
 fluid_data = fltarr(total)
-  
+
 for idx=0, total-1 do begin
   i = idx / size
   j = idx - (i * size)
   x = (i - size/2.0) / 10.0
   y = (j - size/2.0) / 10.0
-  
+
   ; Sinusoidal perturbations (simulating instability modes)
   mode1 = sin(3*x) * exp(-y*y/8.0)
   mode2 = 0.7 * sin(5*x + 1.5) * exp(-y*y/8.0)
   mode3 = 0.5 * cos(7*x - 0.5) * exp(-y*y/8.0)
-  
+
   ; Vertical gradient (heavy fluid on top)
   gradient = y / 6.0
-  
+
   fluid_data[idx] = gradient + mode1 + mode2 + mode3
 end
 endfor
@@ -167,7 +167,7 @@ fluid_data = reform(fluid_data, size, size)
 RENDER_COLORMAP, fluid_data, 'fluid_instability.png'
 print, '  -> Saved to fluid_instability.png'
 print, ''
-  
+
 ; ============================================================================
 ; Summary
 ; ============================================================================

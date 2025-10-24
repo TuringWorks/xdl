@@ -59,7 +59,7 @@ for i=0, 19 do begin
     combined2[i] = data_a[i]
 end
 endfor
-; Copy next 20  
+; Copy next 20
 for i=0, 19 do begin
     combined2[i+20] = data_b[i]
 end

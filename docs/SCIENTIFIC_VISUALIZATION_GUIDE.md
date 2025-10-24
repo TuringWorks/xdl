@@ -100,7 +100,7 @@ use xdl_stdlib::graphics::gis::{MapProjection, ProjectionType, CoastlineData};
 
 // Create a Mercator projection centered on Greenwich
 let mut projection = MapProjection::new(
-    ProjectionType::Mercator, 
+    ProjectionType::Mercator,
     (0.0, 0.0)  // (lon, lat)
 )?;
 
@@ -529,22 +529,22 @@ gpd = python_import("geopandas")
    - Natural Earth dataset integration
    - Shapefile direct loading
    - PostGIS connection
-   
+
 2. **Advanced Terrain**
    - Full Marching Squares contour generation
    - Viewshed analysis
    - Watershed delineation
-   
+
 3. **Volume Rendering**
    - Ray casting algorithm
    - Transfer functions
    - Multi-channel volumes
-   
+
 4. **Particle Systems**
    - Particle tracing
    - Animation support
    - GPU acceleration
-   
+
 5. **Interactive Plots**
    - WebGL 3D rendering
    - Zoom/pan controls

@@ -237,6 +237,7 @@ pub fn openu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(filename)
         .map_err(|e| {
             XdlError::RuntimeError(format!("OPENU: Failed to open {}: {}", filename, e))
@@ -292,7 +293,7 @@ pub fn close_file(args: &[XdlValue]) -> XdlResult<XdlValue> {
 pub fn readf(args: &[XdlValue]) -> XdlResult<XdlValue> {
     use std::io::BufRead;
 
-    if args.len() < 1 {
+    if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "READF: Expected at least LUN argument".to_string(),
         ));
@@ -440,7 +441,6 @@ pub fn read_jpeg(args: &[XdlValue]) -> XdlResult<XdlValue> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{self, Write};
 
     #[test]
     fn test_print_single_value() {
@@ -454,7 +454,7 @@ mod tests {
     fn test_print_multiple_values() {
         let args = vec![
             XdlValue::Long(42),
-            XdlValue::Double(3.14),
+            XdlValue::Double(std::f64::consts::PI),
             XdlValue::String("hello".to_string()),
         ];
         let result = print(&args);

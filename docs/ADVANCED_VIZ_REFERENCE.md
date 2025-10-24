@@ -152,32 +152,32 @@ PRO demo_workflow
   nx = 100
   ny = 100
   terrain = FLTARR(nx, ny)
-  
+
   FOR i=0, nx-1 DO FOR j=0, ny-1 DO BEGIN
     x = (i - nx/2.0) / 20.0
     y = (j - ny/2.0) / 20.0
     terrain[i,j] = 500.0 * EXP(-(x*x + y*y) / 4.0) + 100.0
   ENDFOR
-  
+
   ; 2. Visualize elevation
   DEM_RENDER, terrain, 'step1_elevation.png'
-  
+
   ; 3. Generate hillshade for relief
   HILLSHADE, terrain, 'step2_hillshade.png'
-  
+
   ; 4. Create wind field over terrain (simplified)
   u_wind = FLTARR(20, 20)
   v_wind = FLTARR(20, 20)
-  
+
   FOR i=0, 19 DO FOR j=0, 19 DO BEGIN
     ; Simplified: wind flows around high terrain
     u_wind[i,j] = 5.0 + RANDOMU(seed) * 2.0
     v_wind[i,j] = 2.0 + RANDOMU(seed) * 1.0
   ENDFOR
-  
+
   ; 5. Visualize wind field
   QUIVER, u_wind, v_wind, 'step3_wind.png'
-  
+
   PRINT, 'Workflow complete!'
 
 END

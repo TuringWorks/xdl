@@ -135,7 +135,7 @@ pub fn generate_html_wrapper(svg_content: &str, title: &str, width: u32, height:
             <button onclick="downloadPNG()">Download PNG</button>
         </div>
     </div>
-    
+
     <script>
         function downloadSVG() {{
             const svg = document.querySelector('svg');
@@ -149,7 +149,7 @@ pub fn generate_html_wrapper(svg_content: &str, title: &str, width: u32, height:
             link.click();
             URL.revokeObjectURL(url);
         }}
-        
+
         function downloadPNG() {{
             const svg = document.querySelector('svg');
             const canvas = document.createElement('canvas');
@@ -160,7 +160,7 @@ pub fn generate_html_wrapper(svg_content: &str, title: &str, width: u32, height:
             const img = new Image();
             const svgBlob = new Blob([data], {{type: 'image/svg+xml;charset=utf-8'}});
             const url = URL.createObjectURL(svgBlob);
-            
+
             img.onload = function() {{
                 ctx.drawImage(img, 0, 0);
                 URL.revokeObjectURL(url);

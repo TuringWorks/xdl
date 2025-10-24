@@ -151,7 +151,7 @@ pub fn render_quiver(
                     // Draw arrow line
                     chart.draw_series(std::iter::once(PathElement::new(
                         vec![(x0, y0), (x1, y1)],
-                        &color,
+                        color,
                     )))?;
 
                     // Draw arrowhead (simplified)
@@ -165,11 +165,11 @@ pub fn render_quiver(
 
                     chart.draw_series(std::iter::once(PathElement::new(
                         vec![(x1, y1), (ah1_x, ah1_y)],
-                        &color,
+                        color,
                     )))?;
                     chart.draw_series(std::iter::once(PathElement::new(
                         vec![(x1, y1), (ah2_x, ah2_y)],
-                        &color,
+                        color,
                     )))?;
                 }
             }
@@ -304,10 +304,7 @@ pub fn render_streamlines(
                 BLUE
             };
 
-            chart.draw_series(LineSeries::new(
-                streamline.into_iter().map(|(x, y)| (x, y)),
-                &color,
-            ))?;
+            chart.draw_series(LineSeries::new(streamline.into_iter(), &color))?;
         }
     }
 
@@ -474,7 +471,7 @@ pub fn render_isosurface_slice(
 
     let mut chart = ChartBuilder::on(&root)
         .caption(
-            &format!("Isosurface Slice (value={})", isovalue),
+            format!("Isosurface Slice (value={})", isovalue),
             ("sans-serif", 30),
         )
         .margin(20)

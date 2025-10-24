@@ -351,11 +351,7 @@ pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
     let continued = handle_line_continuation(input);
 
     // Normalize curly quotes to ASCII to avoid lexing issues
-    let normalized = continued
-        .replace('’', "'")
-        .replace('‘', "'")
-        .replace('“', "\"")
-        .replace('”', "\"");
+    let normalized = continued.replace(['’', '‘'], "'").replace(['“', '”'], "\"");
 
     let mut remaining: &str = &normalized;
     let mut tokens = Vec::new();

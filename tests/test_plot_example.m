@@ -9,7 +9,7 @@ y2 = cos(x);
 figure;
 
 % Plot the first function (sine) with a blue solid line
-plot(x, y1, 'b-'); 
+plot(x, y1, 'b-');
 
 % Use 'hold on' to add subsequent plots to the same figure
 hold on;

@@ -33,17 +33,17 @@ print, ''
 
 for py = 0, height-1 do begin
   line = ''
-  
+
   for px = 0, width-1 do begin
     ; Map pixel to complex plane
     x0 = xmin + (xmax - xmin) * px / (width - 1.0)
     y0 = ymin + (ymax - ymin) * py / (height - 1.0)
-    
+
     ; Mandelbrot iteration
     x = 0.0
     y = 0.0
     iteration = 0
-    
+
     for iter = 0, max_iter-1 do begin
       if (x*x + y*y lt 4.0) then begin
         xtemp = x*x - y*y + x0
@@ -54,7 +54,7 @@ for py = 0, height-1 do begin
       endif
     end
     endfor
-    
+
     ; Map iteration count to character
     ; Use simple threshold mapping
     if iteration eq max_iter then begin
@@ -90,7 +90,7 @@ for py = 0, height-1 do begin
     endif
   end
   endfor
-  
+
   print, line
 end
 endfor
