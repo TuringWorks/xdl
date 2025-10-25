@@ -13,6 +13,7 @@ pub mod linalg; // Linear algebra
 pub mod math;
 pub mod ml;
 pub mod python;
+pub mod signal; // Signal processing
 pub mod statistics;
 pub mod string;
 pub mod system;
@@ -239,12 +240,21 @@ impl StandardLibrary {
 
             // Signal processing
             "FFT" => math::fft(args),
+            "A_CORRELATE" => signal::a_correlate(args),
+            "C_CORRELATE" => signal::c_correlate(args),
+            "DIGITAL_FILTER" => signal::digital_filter(args),
+            "HILBERT" => signal::hilbert(args),
+            "MEDIAN_FILTER" => signal::median_filter(args),
 
             // Image processing
             "CONVOL" => image::convol(args),
             "DILATE" => image::dilate(args),
             "ERODE" => image::erode(args),
             "SOBEL" => image::sobel(args),
+            "ROBERTS" => image::roberts(args),
+            "PREWITT" => image::prewitt(args),
+            "GAUSSIAN_FILTER" => image::gaussian_filter(args),
+            "THRESHOLD" => image::threshold(args),
 
             // Type conversion functions
             "FLOAT" | "FLT" => math::float(args),

@@ -262,6 +262,172 @@ pub fn sobel(args: &[XdlValue]) -> XdlResult<XdlValue> {
     })
 }
 
+/// ROBERTS - Roberts cross edge detection
+pub fn roberts(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ROBERTS: Expected image".to_string(),
+        ));
+    }
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "image".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "ROBERTS: Expected 2D image".to_string(),
+        ));
+    }
+    let (rows, cols) = (shape[0], shape[1]);
+    let mut result = vec![0.0; rows * cols];
+
+    // Roberts cross kernels
+    for r in 0..rows - 1 {
+        for c in 0..cols - 1 {
+            let gx = data[r * cols + c] - data[(r + 1) * cols + (c + 1)];
+            let gy = data[r * cols + (c + 1)] - data[(r + 1) * cols + c];
+            result[r * cols + c] = (gx * gx + gy * gy).sqrt();
+        }
+    }
+    Ok(XdlValue::MultiDimArray {
+        data: result,
+        shape,
+    })
+}
+
+/// PREWITT - Prewitt edge detection
+pub fn prewitt(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "PREWITT: Expected image".to_string(),
+        ));
+    }
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "image".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "PREWITT: Expected 2D image".to_string(),
+        ));
+    }
+    let (rows, cols) = (shape[0], shape[1]);
+    let mut result = vec![0.0; rows * cols];
+
+    // Prewitt kernels
+    let gx = [[-1.0, 0.0, 1.0], [-1.0, 0.0, 1.0], [-1.0, 0.0, 1.0]];
+    let gy = [[-1.0, -1.0, -1.0], [0.0, 0.0, 0.0], [1.0, 1.0, 1.0]];
+
+    for r in 1..rows - 1 {
+        for c in 1..cols - 1 {
+            let mut sum_x = 0.0;
+            let mut sum_y = 0.0;
+            for i in 0..3 {
+                for j in 0..3 {
+                    let val = data[(r + i - 1) * cols + (c + j - 1)];
+                    sum_x += val * gx[i][j];
+                    sum_y += val * gy[i][j];
+                }
+            }
+            result[r * cols + c] = (sum_x * sum_x + sum_y * sum_y).sqrt();
+        }
+    }
+    Ok(XdlValue::MultiDimArray {
+        data: result,
+        shape,
+    })
+}
+
+/// GAUSSIAN_FILTER - Apply Gaussian blur
+pub fn gaussian_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "GAUSSIAN_FILTER: Expected image".to_string(),
+        ));
+    }
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "image".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "GAUSSIAN_FILTER: Expected 2D image".to_string(),
+        ));
+    }
+
+    // Simple 3x3 Gaussian kernel
+    let kernel = vec![
+        1.0 / 16.0,
+        2.0 / 16.0,
+        1.0 / 16.0,
+        2.0 / 16.0,
+        4.0 / 16.0,
+        2.0 / 16.0,
+        1.0 / 16.0,
+        2.0 / 16.0,
+        1.0 / 16.0,
+    ];
+    let kernel_shape = vec![3, 3];
+
+    convol_2d(&data, &shape, &kernel, &kernel_shape)
+}
+
+/// THRESHOLD - Binary threshold
+pub fn threshold(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "THRESHOLD: Expected image and threshold value".to_string(),
+        ));
+    }
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "image".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let threshold_val = match &args[1] {
+        XdlValue::Double(v) => *v,
+        XdlValue::Float(v) => *v as f64,
+        XdlValue::Long(v) => *v as f64,
+        XdlValue::Int(v) => *v as f64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let result: Vec<f64> = data
+        .iter()
+        .map(|&x| if x >= threshold_val { 1.0 } else { 0.0 })
+        .collect();
+
+    Ok(XdlValue::MultiDimArray {
+        data: result,
+        shape,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
