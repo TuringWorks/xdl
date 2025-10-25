@@ -648,7 +648,11 @@ pub fn timestamp(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let bin = bin_date(&[XdlValue::Double(secs as f64)])?;
     let components = match bin {
         XdlValue::NestedArray(ref v) => v,
-        _ => return Err(XdlError::RuntimeError("Invalid date conversion".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Invalid date conversion".to_string(),
+            ))
+        }
     };
 
     let year = match components[0] {
