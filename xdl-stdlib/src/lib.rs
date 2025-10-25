@@ -383,6 +383,10 @@ impl StandardLibrary {
             "NORM" => linalg::norm(args),
             "DIAGONAL" => linalg::diagonal(args),
             "TRACE" => linalg::trace(args),
+            "SVDC" => linalg::svdc(args),
+            "LA_EIGENVAL" => linalg::la_eigenval(args),
+            "LUDC" => linalg::ludc(args),
+            "LUSOL" => linalg::lusol(args),
 
             // Python integration functions
             "PYTHON_IMPORT" => python::python_import(args),
