@@ -12,7 +12,7 @@ PRINT, data
 squared = FLTARR(10)
 FOR i = 0, 9 DO BEGIN
     squared[i] = data[i] * data[i]
-END
+ENDFOR
 
 PRINT, ''
 PRINT, 'Squared values:'
@@ -22,7 +22,7 @@ PRINT, squared
 total = 0.0
 FOR i = 0, 9 DO BEGIN
     total = total + data[i]
-END
+ENDFOR
 
 PRINT, ''
 PRINT, 'Sum of array elements:', total

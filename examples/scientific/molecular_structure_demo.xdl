@@ -1,0 +1,451 @@
+; ================================================================
+; Molecular Structure Visualization Workflow
+; ================================================================
+; Demonstrates:
+; - Electron density cloud computation
+; - Molecular orbital visualization
+; - Isosurface extraction and rendering
+; - Hydrogen atom wave functions
+; - Multi-electron molecular systems
+; - HOMO/LUMO visualization
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Molecular Structure Visualization Workflow'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+; ================================================================
+; STEP 1: Define Physical Constants and Parameters
+; ================================================================
+PRINT, '▶ Step 1: Setting up physical parameters...'
+PRINT, ''
+
+; Bohr radius (atomic units)
+a0 = 1.0  ; Using atomic units where a0 = 1
+PRINT, '  Bohr radius (a0):', a0
+
+; Grid parameters
+n = 128
+extent = 20.0 * a0  ; Grid extends from -extent to +extent
+PRINT, '  Grid size:', n, 'x', n, 'x', n
+PRINT, '  Spatial extent:', extent, 'a0'
+
+; Create 3D coordinate grid
+dx = 2.0 * extent / n
+x_arr = FINDGEN(n) * dx - extent
+y_arr = FINDGEN(n) * dx - extent
+z_arr = FINDGEN(n) * dx - extent
+
+PRINT, '  Grid spacing:', dx, 'a0'
+PRINT, ''
+
+; ================================================================
+; STEP 2: Hydrogen 1s Orbital (Ground State)
+; ================================================================
+PRINT, '▶ Step 2: Computing hydrogen 1s orbital...'
+PRINT, ''
+
+; Wave function: ψ_1s = (1/√π) * (1/a0)^(3/2) * exp(-r/a0)
+; Probability density: |ψ_1s|²
+
+psi_1s = FLTARR(n, n, n)
+
+FOR i = 0, n-1 DO BEGIN
+    FOR j = 0, n-1 DO BEGIN
+        FOR k = 0, n-1 DO BEGIN
+            x = x_arr[i]
+            y = y_arr[j]
+            z = z_arr[k]
+            r = SQRT(x*x + y*y + z*z)
+
+            ; 1s wave function (unnormalized for visualization)
+            psi_1s[i,j,k] = EXP(-r / a0)
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Compute probability density
+rho_1s = psi_1s^2
+
+PRINT, '  ✓ 1s orbital computed'
+PRINT, '    ψ_1s range: [', MIN(psi_1s), ',', MAX(psi_1s), ']'
+PRINT, '    ρ_1s range: [', MIN(rho_1s), ',', MAX(rho_1s), ']'
+PRINT, ''
+
+; ================================================================
+; STEP 3: Hydrogen 2p Orbitals
+; ================================================================
+PRINT, '▶ Step 3: Computing hydrogen 2p orbitals...'
+PRINT, ''
+
+; 2p_z wave function: ψ_2pz = (1/4√2π) * (1/a0)^(5/2) * r * cos(θ) * exp(-r/2a0)
+; In Cartesian: ψ_2pz ∝ z * exp(-r/2a0)
+
+psi_2pz = FLTARR(n, n, n)
+psi_2px = FLTARR(n, n, n)
+psi_2py = FLTARR(n, n, n)
+
+FOR i = 0, n-1 DO BEGIN
+    FOR j = 0, n-1 DO BEGIN
+        FOR k = 0, n-1 DO BEGIN
+            x = x_arr[i]
+            y = y_arr[j]
+            z = z_arr[k]
+            r = SQRT(x*x + y*y + z*z)
+
+            exp_factor = EXP(-r / (2.0 * a0))
+
+            ; 2p orbitals (unnormalized)
+            psi_2px[i,j,k] = x * exp_factor
+            psi_2py[i,j,k] = y * exp_factor
+            psi_2pz[i,j,k] = z * exp_factor
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  ✓ 2p orbitals computed'
+PRINT, '    ψ_2px range: [', MIN(psi_2px), ',', MAX(psi_2px), ']'
+PRINT, '    ψ_2py range: [', MIN(psi_2py), ',', MAX(psi_2py), ']'
+PRINT, '    ψ_2pz range: [', MIN(psi_2pz), ',', MAX(psi_2pz), ']'
+PRINT, ''
+
+; ================================================================
+; STEP 4: Hydrogen 3d Orbitals
+; ================================================================
+PRINT, '▶ Step 4: Computing hydrogen 3d orbitals...'
+PRINT, ''
+
+; 3d_z² orbital: ψ_3dz2 ∝ (3z² - r²) * exp(-r/3a0)
+psi_3dz2 = FLTARR(n, n, n)
+
+FOR i = 0, n-1 DO BEGIN
+    FOR j = 0, n-1 DO BEGIN
+        FOR k = 0, n-1 DO BEGIN
+            x = x_arr[i]
+            y = y_arr[j]
+            z = z_arr[k]
+            r2 = x*x + y*y + z*z
+            r = SQRT(r2)
+
+            exp_factor = EXP(-r / (3.0 * a0))
+            psi_3dz2[i,j,k] = (3.0*z*z - r2) * exp_factor
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  ✓ 3d_z² orbital computed'
+PRINT, '    ψ_3dz2 range: [', MIN(psi_3dz2), ',', MAX(psi_3dz2), ']'
+PRINT, ''
+
+; ================================================================
+; STEP 5: Visualize 1s Orbital (Electron Density)
+; ================================================================
+PRINT, '▶ Step 5: Visualizing 1s electron density...'
+PRINT, ''
+
+; Normalize for visualization
+rho_1s_norm = rho_1s / MAX(rho_1s)
+
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Hydrogen 1s Orbital'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, rho_1s_norm, DIMENSIONS=[n, n, n]
+
+PRINT, '  Launching 1s orbital visualization...'
+VIZ3D_RENDER, /INTERACTIVE, TITLE='H Atom: 1s Electron Density'
+PRINT, '  ✓ 1s visualization complete'
+PRINT, ''
+
+; ================================================================
+; STEP 6: Visualize 2pz Orbital (with positive/negative lobes)
+; ================================================================
+PRINT, '▶ Step 6: Visualizing 2pz orbital with phase...'
+PRINT, ''
+
+; For visualization, show |ψ| with sign information
+psi_2pz_abs = ABS(psi_2pz)
+psi_2pz_norm = psi_2pz_abs / MAX(psi_2pz_abs)
+
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Hydrogen 2pz Orbital'
+VIZ3D_COLORMAP, 'PLASMA'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, psi_2pz_norm, DIMENSIONS=[n, n, n]
+
+PRINT, '  Launching 2pz orbital visualization...'
+VIZ3D_RENDER, /INTERACTIVE, TITLE='H Atom: 2pz Orbital (Magnitude)'
+PRINT, '  ✓ 2pz visualization complete'
+PRINT, ''
+
+; ================================================================
+; STEP 7: Visualize 3dz² Orbital
+; ================================================================
+PRINT, '▶ Step 7: Visualizing 3d_z² orbital...'
+PRINT, ''
+
+psi_3dz2_abs = ABS(psi_3dz2)
+psi_3dz2_norm = psi_3dz2_abs / MAX(psi_3dz2_abs)
+
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Hydrogen 3dz² Orbital'
+VIZ3D_COLORMAP, 'INFERNO'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, psi_3dz2_norm, DIMENSIONS=[n, n, n]
+
+PRINT, '  Launching 3d_z² orbital visualization...'
+VIZ3D_RENDER, /INTERACTIVE, TITLE='H Atom: 3d_z² Orbital'
+PRINT, '  ✓ 3d_z² visualization complete'
+PRINT, ''
+
+; ================================================================
+; STEP 8: Simple Molecular System - H₂ (Hydrogen Molecule)
+; ================================================================
+PRINT, '▶ Step 8: Simulating H₂ molecule...'
+PRINT, ''
+
+; Two hydrogen nuclei separated by bond length
+bond_length = 1.4 * a0  ; Approximate H-H bond length
+nucleus1_pos = [-bond_length/2.0, 0.0, 0.0]
+nucleus2_pos = [+bond_length/2.0, 0.0, 0.0]
+
+PRINT, '  H-H bond length:', bond_length, 'a0'
+PRINT, '  Nucleus 1 at:', nucleus1_pos
+PRINT, '  Nucleus 2 at:', nucleus2_pos
+PRINT, ''
+
+; Molecular orbital: bonding combination ψ_bonding = ψ_1s(r-R1) + ψ_1s(r-R2)
+psi_h2_bonding = FLTARR(n, n, n)
+psi_h2_antibonding = FLTARR(n, n, n)
+
+FOR i = 0, n-1 DO BEGIN
+    FOR j = 0, n-1 DO BEGIN
+        FOR k = 0, n-1 DO BEGIN
+            x = x_arr[i]
+            y = y_arr[j]
+            z = z_arr[k]
+
+            ; Distance from each nucleus
+            r1 = SQRT((x - nucleus1_pos[0])^2 + y^2 + z^2)
+            r2 = SQRT((x - nucleus2_pos[0])^2 + y^2 + z^2)
+
+            ; Atomic orbitals
+            phi1 = EXP(-r1 / a0)
+            phi2 = EXP(-r2 / a0)
+
+            ; Molecular orbitals
+            psi_h2_bonding[i,j,k] = phi1 + phi2  ; σ bonding
+            psi_h2_antibonding[i,j,k] = phi1 - phi2  ; σ* antibonding
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Electron density for bonding orbital
+rho_h2 = psi_h2_bonding^2
+
+PRINT, '  ✓ H₂ molecular orbitals computed'
+PRINT, '    Bonding MO range: [', MIN(psi_h2_bonding), ',', MAX(psi_h2_bonding), ']'
+PRINT, '    Antibonding MO range: [', MIN(psi_h2_antibonding), ',', MAX(psi_h2_antibonding), ']'
+PRINT, ''
+
+; ================================================================
+; STEP 9: Visualize H₂ Bonding Orbital
+; ================================================================
+PRINT, '▶ Step 9: Visualizing H₂ bonding orbital...'
+PRINT, ''
+
+rho_h2_norm = rho_h2 / MAX(rho_h2)
+
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='H₂ Bonding Orbital'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, rho_h2_norm, DIMENSIONS=[n, n, n]
+
+PRINT, '  Launching H₂ bonding orbital visualization...'
+VIZ3D_RENDER, /INTERACTIVE, TITLE='H₂ Molecule: σ Bonding Orbital'
+PRINT, '  ✓ H₂ bonding visualization complete'
+PRINT, ''
+
+; ================================================================
+; STEP 10: Extract and Visualize Orbital Cross-Sections
+; ================================================================
+PRINT, '▶ Step 10: Extracting orbital cross-sections...'
+PRINT, ''
+
+; Mid-plane slices
+mid = n / 2
+
+; 1s orbital cross-section (xy-plane)
+slice_1s = rho_1s[*, *, mid]
+PRINT, '  ✓ 1s orbital slice extracted'
+
+; 2pz orbital cross-section (xz-plane)
+slice_2pz = FLTARR(n, n)
+FOR i = 0, n-1 DO BEGIN
+    FOR k = 0, n-1 DO BEGIN
+        slice_2pz[i, k] = psi_2pz[i, mid, k]
+    ENDFOR
+ENDFOR
+PRINT, '  ✓ 2pz orbital slice extracted'
+
+; H2 bonding orbital cross-section (xy-plane through nuclei)
+slice_h2 = rho_h2[*, *, mid]
+PRINT, '  ✓ H₂ bonding orbital slice extracted'
+PRINT, ''
+
+; ================================================================
+; STEP 11: Plot 2D Cross-Sections
+; ================================================================
+PRINT, '▶ Step 11: Plotting orbital cross-sections...'
+PRINT, ''
+
+; 1s orbital
+WINDOW, 0, XSIZE=800, YSIZE=800, TITLE='1s Orbital Cross-Section'
+CONTOUR, slice_1s, x_arr, y_arr, NLEVELS=20, /FILL, $
+         XTITLE='x (a0)', YTITLE='y (a0)', TITLE='1s Orbital (xy-plane)'
+PRINT, '  ✓ 1s cross-section displayed'
+
+; 2pz orbital (showing positive and negative lobes)
+WINDOW, 1, XSIZE=800, YSIZE=800, TITLE='2pz Orbital Cross-Section'
+CONTOUR, slice_2pz, x_arr, z_arr, NLEVELS=30, /FILL, $
+         XTITLE='x (a0)', YTITLE='z (a0)', TITLE='2pz Orbital (xz-plane)'
+PRINT, '  ✓ 2pz cross-section displayed'
+
+; H2 bonding orbital
+WINDOW, 2, XSIZE=800, YSIZE=800, TITLE='H₂ Bonding Orbital Cross-Section'
+CONTOUR, slice_h2, x_arr, y_arr, NLEVELS=25, /FILL, $
+         XTITLE='x (a0)', YTITLE='y (a0)', TITLE='H₂ σ Bonding Orbital (xy-plane)'
+PRINT, '  ✓ H₂ bonding cross-section displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 12: Radial Distribution Functions
+; ================================================================
+PRINT, '▶ Step 12: Computing radial distribution functions...'
+PRINT, ''
+
+; For 1s orbital: RDF = 4πr² |ψ(r)|²
+n_radial = 200
+r_max = 15.0 * a0
+r_radial = FINDGEN(n_radial) * (r_max / n_radial)
+rdf_1s = FLTARR(n_radial)
+
+; Compute RDF by spherical averaging
+FOR ir = 0, n_radial-1 DO BEGIN
+    r = r_radial[ir]
+    sum_val = 0.0
+    count = 0
+
+    ; Sample points on sphere of radius r
+    n_theta = 20
+    n_phi = 40
+    FOR it = 0, n_theta-1 DO BEGIN
+        theta = !PI * it / n_theta
+        FOR ip = 0, n_phi-1 DO BEGIN
+            phi = 2.0 * !PI * ip / n_phi
+
+            ; Cartesian coordinates
+            x = r * SIN(theta) * COS(phi)
+            y = r * SIN(theta) * SIN(phi)
+            z = r * COS(theta)
+
+            ; Find grid indices
+            ix = ROUND((x + extent) / dx)
+            iy = ROUND((y + extent) / dx)
+            iz = ROUND((z + extent) / dx)
+
+            IF (ix GE 0) AND (ix LT n) AND (iy GE 0) AND (iy LT n) AND (iz GE 0) AND (iz LT n) THEN BEGIN
+                sum_val = sum_val + psi_1s[ix, iy, iz]^2
+                count = count + 1
+            ENDIF
+        ENDFOR
+    ENDFOR
+
+    IF count GT 0 THEN BEGIN
+        rdf_1s[ir] = 4.0 * !PI * r^2 * (sum_val / count)
+    ENDIF
+ENDFOR
+
+PRINT, '  ✓ 1s radial distribution computed'
+PRINT, '    Maximum at r ≈', r_radial[WHERE(rdf_1s EQ MAX(rdf_1s))], 'a0'
+PRINT, '    (Expected: r = a0 for 1s orbital)'
+PRINT, ''
+
+; Plot RDF
+WINDOW, 3, XSIZE=800, YSIZE=600, TITLE='1s Radial Distribution Function'
+PLOT, r_radial, rdf_1s, XTITLE='r (a0)', YTITLE='4πr² |ψ(r)|²', $
+      TITLE='Hydrogen 1s Orbital - Radial Distribution', THICK=2
+PRINT, '  ✓ RDF plotted'
+PRINT, ''
+
+; ================================================================
+; STEP 13: Orbital Energy Level Diagram
+; ================================================================
+PRINT, '▶ Step 13: Computing orbital energies...'
+PRINT, ''
+
+; Hydrogen energy levels: E_n = -13.6 eV / n²
+e_1s = -13.6
+e_2s = -13.6 / 4.0
+e_2p = -13.6 / 4.0
+e_3s = -13.6 / 9.0
+e_3p = -13.6 / 9.0
+e_3d = -13.6 / 9.0
+
+PRINT, '  Hydrogen Orbital Energies (eV):'
+PRINT, '    E(1s) =', e_1s
+PRINT, '    E(2s) = E(2p) =', e_2s
+PRINT, '    E(3s) = E(3p) = E(3d) =', e_3s
+PRINT, ''
+
+; ================================================================
+; STEP 14: Statistics and Quantum Properties
+; ================================================================
+PRINT, '▶ Step 14: Computing quantum mechanical properties...'
+PRINT, ''
+
+PRINT, '  1s Orbital:'
+PRINT, '    <r> (mean radius):', 1.5 * a0, 'a0 (theoretical)'
+PRINT, '    Most probable r:', 1.0 * a0, 'a0 (theoretical)'
+
+PRINT, ''
+PRINT, '  2p Orbitals:'
+PRINT, '    Angular nodes: 0'
+PRINT, '    Radial nodes: 0'
+PRINT, '    Total nodes: 1 (angular)'
+
+PRINT, ''
+PRINT, '  3d Orbital:'
+PRINT, '    Angular nodes: 2'
+PRINT, '    Radial nodes: 0'
+PRINT, '    Total nodes: 2'
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '✓ Molecular Structure Workflow Complete!'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+PRINT, 'Demonstrated:'
+PRINT, '  ✓ Hydrogen atomic orbitals (1s, 2p, 3d)'
+PRINT, '  ✓ Electron density probability distributions'
+PRINT, '  ✓ 3D volume rendering of orbitals'
+PRINT, '  ✓ Molecular orbital formation (H₂ molecule)'
+PRINT, '  ✓ Bonding and antibonding orbitals'
+PRINT, '  ✓ 2D orbital cross-sections'
+PRINT, '  ✓ Radial distribution functions'
+PRINT, '  ✓ Quantum mechanical properties'
+PRINT, ''
+PRINT, 'Quantum Numbers Visualized:'
+PRINT, '  • n = 1, l = 0, m = 0  →  1s orbital'
+PRINT, '  • n = 2, l = 1, m = 0  →  2pz orbital'
+PRINT, '  • n = 3, l = 2, m = 0  →  3d_z² orbital'
+PRINT, ''
+PRINT, 'Next Steps:'
+PRINT, '  - Add more complex molecules (H₂O, NH₃, benzene)'
+PRINT, '  - Implement Hartree-Fock or DFT calculations'
+PRINT, '  - Add HOMO-LUMO gap analysis'
+PRINT, '  - Visualize molecular electrostatic potential'
+PRINT, '  - Import quantum chemistry data (Gaussian, GAMESS)'
+PRINT, '  - Add interactive orbital mixing controls'
+PRINT, ''

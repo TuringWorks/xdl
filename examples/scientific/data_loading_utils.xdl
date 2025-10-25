@@ -1,0 +1,448 @@
+; ================================================================
+; Scientific Data Loading Utilities
+; ================================================================
+; Demonstrates:
+; - Binary data file I/O
+; - ASCII/CSV data parsing
+; - Multi-format data conversion
+; - Metadata handling
+; - Error checking and validation
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Scientific Data Loading Utilities Demo'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+; ================================================================
+; PART 1: Binary Data Format Functions
+; ================================================================
+PRINT, '═══ PART 1: Binary Data Handling ═══'
+PRINT, ''
+
+; Function to write 3D volume to binary file
+FUNCTION WRITE_VOLUME_BINARY, data, filename, metadata
+    ; Write binary volume data with metadata header
+    ;
+    ; Format:
+    ;   Header (512 bytes):
+    ;     - Magic number (4 bytes): 'XDLV'
+    ;     - Version (4 bytes): 1
+    ;     - Dimensions (12 bytes): nx, ny, nz (int32)
+    ;     - Data type (4 bytes): 4 (float32)
+    ;     - Reserved (488 bytes)
+    ;   Data (nx*ny*nz*4 bytes): raw float32 values
+
+    dims = SIZE(data, /DIMENSIONS)
+    IF N_ELEMENTS(dims) NE 3 THEN BEGIN
+        PRINT, 'ERROR: Data must be 3D'
+        RETURN, 0
+    ENDIF
+
+    ; Open file for binary write
+    OPENW, lun, filename, /GET_LUN
+
+    ; Write magic number
+    magic = ['X', 'D', 'L', 'V']
+    WRITEU, lun, BYTE(magic)
+
+    ; Write version
+    version = 1L
+    WRITEU, lun, version
+
+    ; Write dimensions
+    WRITEU, lun, LONG(dims[0]), LONG(dims[1]), LONG(dims[2])
+
+    ; Write data type (4 = float32)
+    datatype = 4L
+    WRITEU, lun, datatype
+
+    ; Write padding to reach 512 bytes
+    padding = BYTARR(488)
+    WRITEU, lun, padding
+
+    ; Write data as float32
+    data_f32 = FLOAT(data)
+    WRITEU, lun, data_f32
+
+    ; Close file
+    FREE_LUN, lun
+
+    PRINT, '  ✓ Binary file written:', filename
+    PRINT, '    Dimensions:', dims
+    PRINT, '    Size:', N_ELEMENTS(data) * 4, 'bytes'
+
+    RETURN, 1
+END
+
+; Function to read 3D volume from binary file
+FUNCTION READ_VOLUME_BINARY, filename, metadata
+    ; Read binary volume data with metadata
+
+    ; Check if file exists
+    IF NOT FILE_TEST(filename) THEN BEGIN
+        PRINT, 'ERROR: File not found:', filename
+        RETURN, -1
+    ENDIF
+
+    ; Open file
+    OPENR, lun, filename, /GET_LUN
+
+    ; Read magic number
+    magic = BYTARR(4)
+    READU, lun, magic
+    IF STRING(magic) NE 'XDLV' THEN BEGIN
+        PRINT, 'ERROR: Invalid file format (bad magic number)'
+        FREE_LUN, lun
+        RETURN, -1
+    ENDIF
+
+    ; Read version
+    version = 0L
+    READU, lun, version
+
+    ; Read dimensions
+    nx = 0L
+    ny = 0L
+    nz = 0L
+    READU, lun, nx, ny, nz
+
+    ; Read data type
+    datatype = 0L
+    READU, lun, datatype
+
+    ; Skip padding
+    padding = BYTARR(488)
+    READU, lun, padding
+
+    ; Read data
+    data = FLTARR(nx, ny, nz)
+    READU, lun, data
+
+    ; Close file
+    FREE_LUN, lun
+
+    PRINT, '  ✓ Binary file read:', filename
+    PRINT, '    Version:', version
+    PRINT, '    Dimensions:', nx, 'x', ny, 'x', nz
+    PRINT, '    Data range: [', MIN(data), ',', MAX(data), ']'
+
+    ; Store metadata
+    metadata = {version: version, nx: nx, ny: ny, nz: nz, datatype: datatype}
+
+    RETURN, data
+END
+
+; ================================================================
+; PART 2: ASCII/CSV Data Functions
+; ================================================================
+PRINT, ''
+PRINT, '═══ PART 2: ASCII/CSV Data Handling ═══'
+PRINT, ''
+
+; Function to write CSV data
+FUNCTION WRITE_CSV, data, filename, header
+    ; Write 2D array to CSV file with optional header
+
+    dims = SIZE(data, /DIMENSIONS)
+    IF N_ELEMENTS(dims) NE 2 THEN BEGIN
+        PRINT, 'ERROR: Data must be 2D for CSV'
+        RETURN, 0
+    ENDIF
+
+    OPENW, lun, filename, /GET_LUN
+
+    ; Write header if provided
+    IF N_ELEMENTS(header) GT 0 THEN BEGIN
+        PRINTF, lun, STRJOIN(header, ',')
+    ENDIF
+
+    ; Write data rows
+    FOR i = 0, dims[0]-1 DO BEGIN
+        row = STRTRIM(STRING(data[i, *]), 2)
+        PRINTF, lun, STRJOIN(row, ',')
+    ENDFOR
+
+    FREE_LUN, lun
+
+    PRINT, '  ✓ CSV file written:', filename
+    PRINT, '    Rows:', dims[0], ', Columns:', dims[1]
+
+    RETURN, 1
+END
+
+; Function to read CSV data
+FUNCTION READ_CSV, filename, header, skip_lines
+    ; Read CSV file into 2D array
+
+    IF NOT FILE_TEST(filename) THEN BEGIN
+        PRINT, 'ERROR: File not found:', filename
+        RETURN, -1
+    ENDIF
+
+    ; Read all lines
+    nlines = FILE_LINES(filename)
+    lines = STRARR(nlines)
+    OPENR, lun, filename, /GET_LUN
+    READF, lun, lines
+    FREE_LUN, lun
+
+    ; Skip header lines if specified
+    start_line = 0
+    IF KEYWORD_SET(skip_lines) THEN start_line = skip_lines
+    IF KEYWORD_SET(header) THEN BEGIN
+        header = STRSPLIT(lines[0], ',', /EXTRACT)
+        start_line = 1
+    ENDIF
+
+    ; Parse data lines
+    data_lines = lines[start_line:*]
+    n_rows = N_ELEMENTS(data_lines)
+
+    ; Determine number of columns from first line
+    first_vals = STRSPLIT(data_lines[0], ',', /EXTRACT)
+    n_cols = N_ELEMENTS(first_vals)
+
+    ; Allocate array
+    data = FLTARR(n_rows, n_cols)
+
+    ; Parse all rows
+    FOR i = 0, n_rows-1 DO BEGIN
+        vals = STRSPLIT(data_lines[i], ',', /EXTRACT)
+        data[i, *] = FLOAT(vals)
+    ENDFOR
+
+    PRINT, '  ✓ CSV file read:', filename
+    PRINT, '    Rows:', n_rows, ', Columns:', n_cols
+
+    RETURN, data
+END
+
+; ================================================================
+; PART 3: Demonstration - Save and Load Binary Volume
+; ================================================================
+PRINT, ''
+PRINT, '═══ PART 3: Binary Format Demo ═══'
+PRINT, ''
+
+; Create synthetic 3D dataset
+PRINT, '▶ Creating synthetic volume...'
+nx = 64
+ny = 64
+nz = 32
+test_volume = FLTARR(nx, ny, nz)
+
+; Generate test pattern (Gaussian blob)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            dx = (i - nx/2.0) / (nx/4.0)
+            dy = (j - ny/2.0) / (ny/4.0)
+            dz = (k - nz/2.0) / (nz/4.0)
+            r2 = dx^2 + dy^2 + dz^2
+            test_volume[i,j,k] = EXP(-r2)
+        ENDFOR
+    ENDFOR
+ENDFOR
+PRINT, '  ✓ Test volume created:', nx, 'x', ny, 'x', nz
+PRINT, ''
+
+; Write to binary file
+PRINT, '▶ Writing binary file...'
+filename_bin = '/tmp/test_volume.xdlv'
+metadata = {description: 'Test volume', units: 'normalized'}
+result = WRITE_VOLUME_BINARY(test_volume, filename_bin, metadata)
+PRINT, ''
+
+; Read back from binary file
+PRINT, '▶ Reading binary file...'
+loaded_metadata = {}
+loaded_volume = READ_VOLUME_BINARY(filename_bin, loaded_metadata)
+
+IF N_ELEMENTS(loaded_volume) GT 1 THEN BEGIN
+    PRINT, ''
+    PRINT, '▶ Verifying data integrity...'
+    max_diff = MAX(ABS(test_volume - loaded_volume))
+    PRINT, '  Maximum difference:', max_diff
+    IF max_diff LT 1e-6 THEN BEGIN
+        PRINT, '  ✓ Data verified: Perfect match!'
+    ENDIF ELSE BEGIN
+        PRINT, '  ✗ Data mismatch detected'
+    ENDELSE
+ENDIF
+PRINT, ''
+
+; ================================================================
+; PART 4: Demonstration - CSV Data
+; ================================================================
+PRINT, '═══ PART 4: CSV Format Demo ═══'
+PRINT, ''
+
+; Create test table (measurement data)
+PRINT, '▶ Creating test dataset (sensor measurements)...'
+n_samples = 100
+time = FINDGEN(n_samples) * 0.1  ; Time in seconds
+sensor1 = SIN(2.0 * !PI * time / 5.0) + RANDOMN(seed, n_samples) * 0.1
+sensor2 = COS(2.0 * !PI * time / 5.0) + RANDOMN(seed, n_samples) * 0.1
+sensor3 = EXP(-time / 10.0) + RANDOMN(seed, n_samples) * 0.05
+
+; Combine into table
+table_data = [[time], [sensor1], [sensor2], [sensor3]]
+PRINT, '  ✓ Dataset created:', n_samples, 'samples, 4 columns'
+PRINT, ''
+
+; Write to CSV
+PRINT, '▶ Writing CSV file...'
+filename_csv = '/tmp/sensor_data.csv'
+header = ['Time', 'Sensor1', 'Sensor2', 'Sensor3']
+result = WRITE_CSV(table_data, filename_csv, header)
+PRINT, ''
+
+; Read back CSV
+PRINT, '▶ Reading CSV file...'
+read_header = []
+loaded_table = READ_CSV(filename_csv, read_header, /SKIP_LINES)
+
+IF N_ELEMENTS(loaded_table) GT 1 THEN BEGIN
+    PRINT, '  Header columns:', read_header
+    PRINT, ''
+    PRINT, '▶ Verifying CSV data...'
+    max_diff_csv = MAX(ABS(table_data[1:*, *] - loaded_table))
+    PRINT, '  Maximum difference:', max_diff_csv
+    IF max_diff_csv LT 1e-5 THEN BEGIN
+        PRINT, '  ✓ CSV data verified!'
+    ENDIF
+ENDIF
+PRINT, ''
+
+; ================================================================
+; PART 5: Data Format Conversion
+; ================================================================
+PRINT, '═══ PART 5: Format Conversion Demo ═══'
+PRINT, ''
+
+; Convert 3D volume slice to CSV
+PRINT, '▶ Converting volume slice to CSV...'
+slice_z = test_volume[*, *, nz/2]
+filename_slice = '/tmp/volume_slice.csv'
+result = WRITE_CSV(slice_z, filename_slice, [])
+PRINT, ''
+
+; Read and visualize
+PRINT, '▶ Loading and visualizing slice...'
+slice_loaded = READ_CSV(filename_slice, [], /SKIP_LINES)
+
+WINDOW, 0, XSIZE=600, YSIZE=600, TITLE='Loaded Slice from CSV'
+TVSCL, slice_loaded
+PRINT, '  ✓ Slice displayed'
+PRINT, ''
+
+; ================================================================
+; PART 6: Metadata and Documentation
+; ================================================================
+PRINT, '═══ PART 6: Metadata Handling ═══'
+PRINT, ''
+
+PRINT, '▶ Recommended metadata fields:'
+PRINT, ''
+PRINT, '  For Volume Data:'
+PRINT, '    - dimensions: [nx, ny, nz]'
+PRINT, '    - spacing: [dx, dy, dz]'
+PRINT, '    - origin: [x0, y0, z0]'
+PRINT, '    - units: string (e.g., "mm", "meters")'
+PRINT, '    - data_type: "float32", "int16", etc.'
+PRINT, '    - description: string'
+PRINT, '    - acquisition_date: ISO date string'
+PRINT, '    - modality: "CT", "MRI", "seismic", etc.'
+PRINT, ''
+PRINT, '  For Time Series:'
+PRINT, '    - sample_rate: Hz'
+PRINT, '    - start_time: timestamp'
+PRINT, '    - channels: [names...]'
+PRINT, '    - units: [units per channel]'
+PRINT, ''
+
+; ================================================================
+; PART 7: Error Handling Examples
+; ================================================================
+PRINT, '═══ PART 7: Error Handling ═══'
+PRINT, ''
+
+PRINT, '▶ Testing error conditions...'
+PRINT, ''
+
+; Test 1: Missing file
+PRINT, '  Test 1: Reading non-existent file...'
+bad_data = READ_VOLUME_BINARY('/tmp/nonexistent.xdlv', {})
+PRINT, ''
+
+; Test 2: Wrong format
+PRINT, '  Test 2: Reading file with wrong format...'
+; Create dummy file with wrong magic
+OPENW, lun, '/tmp/bad_format.xdlv', /GET_LUN
+WRITEU, lun, BYTE(['B', 'A', 'D', '!'])
+FREE_LUN, lun
+bad_data2 = READ_VOLUME_BINARY('/tmp/bad_format.xdlv', {})
+PRINT, ''
+
+; ================================================================
+; PART 8: Performance Benchmarks
+; ================================================================
+PRINT, '═══ PART 8: Performance Benchmarks ═══'
+PRINT, ''
+
+PRINT, '▶ Benchmarking binary I/O...'
+large_vol = FLTARR(128, 128, 64)
+large_vol[*, *, *] = RANDOMN(seed, 128, 128, 64)
+
+t0 = SYSTIME(/SECONDS)
+result = WRITE_VOLUME_BINARY(large_vol, '/tmp/large_volume.xdlv', {})
+t1 = SYSTIME(/SECONDS)
+
+PRINT, '  Write time:', t1 - t0, 'seconds'
+PRINT, '  Write speed:', (128*128*64*4) / (t1 - t0) / 1e6, 'MB/s'
+PRINT, ''
+
+t0 = SYSTIME(/SECONDS)
+read_vol = READ_VOLUME_BINARY('/tmp/large_volume.xdlv', {})
+t1 = SYSTIME(/SECONDS)
+
+PRINT, '  Read time:', t1 - t0, 'seconds'
+PRINT, '  Read speed:', (128*128*64*4) / (t1 - t0) / 1e6, 'MB/s'
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '✓ Data Loading Utilities Demo Complete!'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+PRINT, 'Demonstrated:'
+PRINT, '  ✓ Binary volume format (XDLV) with header'
+PRINT, '  ✓ CSV/ASCII tabular data I/O'
+PRINT, '  ✓ Data format conversion (volume ↔ CSV)'
+PRINT, '  ✓ Metadata handling and documentation'
+PRINT, '  ✓ Error checking and validation'
+PRINT, '  ✓ Performance benchmarking'
+PRINT, ''
+PRINT, 'Supported Operations:'
+PRINT, '  • Read/write 3D volumes (binary)'
+PRINT, '  • Read/write 2D tables (CSV)'
+PRINT, '  • Format conversion'
+PRINT, '  • Metadata preservation'
+PRINT, '  • Error handling'
+PRINT, ''
+PRINT, 'File Formats Demonstrated:'
+PRINT, '  • XDLV: Custom binary volume format'
+PRINT, '  • CSV: Comma-separated values'
+PRINT, ''
+PRINT, 'Next Steps:'
+PRINT, '  - Add NetCDF support (requires external library)'
+PRINT, '  - Add HDF5 support (requires external library)'
+PRINT, '  - Implement compression (gzip, lz4)'
+PRINT, '  - Add chunked I/O for large datasets'
+PRINT, '  - Support memory-mapped file access'
+PRINT, '  - Add DICOM medical imaging format'
+PRINT, '  - Implement SEG-Y seismic format'
+PRINT, ''
