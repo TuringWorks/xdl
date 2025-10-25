@@ -1,5 +1,4 @@
 //! Image processing functions
-
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
 /// CONVOL - Perform convolution on an array
@@ -120,6 +119,146 @@ fn convol_2d(
     Ok(XdlValue::MultiDimArray {
         data: result,
         shape: array_shape.to_vec(),
+    })
+}
+
+/// DILATE - Morphological dilation
+pub fn dilate(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "DILATE: Expected image".to_string(),
+        ));
+    }
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "image".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "DILATE: Expected 2D image".to_string(),
+        ));
+    }
+    let (rows, cols) = (shape[0], shape[1]);
+    let mut result = vec![0.0; rows * cols];
+    for r in 0..rows {
+        for c in 0..cols {
+            let mut max_val = data[r * cols + c];
+            for dr in -1..=1 {
+                for dc in -1..=1 {
+                    let nr = r as i32 + dr;
+                    let nc = c as i32 + dc;
+                    if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
+                        let val = data[nr as usize * cols + nc as usize];
+                        if val > max_val {
+                            max_val = val;
+                        }
+                    }
+                }
+            }
+            result[r * cols + c] = max_val;
+        }
+    }
+    Ok(XdlValue::MultiDimArray {
+        data: result,
+        shape,
+    })
+}
+
+/// ERODE - Morphological erosion
+pub fn erode(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ERODE: Expected image".to_string(),
+        ));
+    }
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "image".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "ERODE: Expected 2D image".to_string(),
+        ));
+    }
+    let (rows, cols) = (shape[0], shape[1]);
+    let mut result = vec![0.0; rows * cols];
+    for r in 0..rows {
+        for c in 0..cols {
+            let mut min_val = data[r * cols + c];
+            for dr in -1..=1 {
+                for dc in -1..=1 {
+                    let nr = r as i32 + dr;
+                    let nc = c as i32 + dc;
+                    if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
+                        let val = data[nr as usize * cols + nc as usize];
+                        if val < min_val {
+                            min_val = val;
+                        }
+                    }
+                }
+            }
+            result[r * cols + c] = min_val;
+        }
+    }
+    Ok(XdlValue::MultiDimArray {
+        data: result,
+        shape,
+    })
+}
+
+/// SOBEL - Sobel edge detection
+pub fn sobel(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "SOBEL: Expected image".to_string(),
+        ));
+    }
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "image".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "SOBEL: Expected 2D image".to_string(),
+        ));
+    }
+    let (rows, cols) = (shape[0], shape[1]);
+    let mut result = vec![0.0; rows * cols];
+    // Sobel kernels
+    let gx = [[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]];
+    let gy = [[-1.0, -2.0, -1.0], [0.0, 0.0, 0.0], [1.0, 2.0, 1.0]];
+    for r in 1..rows - 1 {
+        for c in 1..cols - 1 {
+            let mut sum_x = 0.0;
+            let mut sum_y = 0.0;
+            for i in 0..3 {
+                for j in 0..3 {
+                    let val = data[(r + i - 1) * cols + (c + j - 1)];
+                    sum_x += val * gx[i][j];
+                    sum_y += val * gy[i][j];
+                }
+            }
+            result[r * cols + c] = (sum_x * sum_x + sum_y * sum_y).sqrt();
+        }
+    }
+    Ok(XdlValue::MultiDimArray {
+        data: result,
+        shape,
     })
 }
 

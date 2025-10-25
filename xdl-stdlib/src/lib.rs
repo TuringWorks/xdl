@@ -240,6 +240,9 @@ impl StandardLibrary {
 
             // Image processing
             "CONVOL" => image::convol(args),
+            "DILATE" => image::dilate(args),
+            "ERODE" => image::erode(args),
+            "SOBEL" => image::sobel(args),
 
             // Type conversion functions
             "FLOAT" | "FLT" => math::float(args),
@@ -322,6 +325,11 @@ impl StandardLibrary {
             "FILE_TEST" => io::file_test(args),
             "FILE_LINES" => io::file_lines(args),
             "FILE_INFO" => io::file_info(args),
+            "FILE_BASENAME" => io::file_basename(args),
+            "FILE_DIRNAME" => io::file_dirname(args),
+            "FILE_MKDIR" => io::file_mkdir(args),
+            "FILE_DELETE" => io::file_delete(args),
+            "FILE_COPY" => io::file_copy(args),
             "EOF" => io::eof_func(args),
             "ASSOC" => io::assoc(args),
 
