@@ -1,0 +1,62 @@
+[package]
+name = "xdl-amp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Multi-backend GPU/ML acceleration for XDL"
+
+[dependencies]
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+ndarray = { workspace = true }
+num-traits = { workspace = true }
+bytemuck = "1.14"
+
+# Platform-specific GPU backends
+[target.'cfg(target_os = "macos")'.dependencies]
+metal = "0.29"
+objc = "0.2"
+core-foundation = "0.9"
+core-graphics = "0.23"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Graphics_Direct3D12",
+    "Win32_Graphics_Dxgi",
+    "Win32_AI_MachineLearning"
+], optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ocl = { version = "0.19", optional = true }
+
+[features]
+default = ["mps"]
+# Platform-specific features
+mps = []  # Metal Performance Shaders (macOS)
+coreml = []  # CoreML/ANE (macOS/iOS)
+directml = ["windows"]  # DirectML (Windows)
+cuda = ["cudarc"]  # NVIDIA CUDA
+cudnn = ["cuda"]  # NVIDIA cuDNN
+rocm = []  # AMD ROCm
+opencl = ["ocl"]  # OpenCL
+onnx = ["ort"]  # ONNX Runtime
+# Combined features
+all-nvidia = ["cuda", "cudnn"]
+all-amd = ["rocm", "opencl"]
+all-apple = ["mps", "coreml"]
+all-backends = ["mps", "coreml", "directml", "cuda", "cudnn", "rocm", "opencl", "onnx"]
+
+[dependencies.cudarc]
+version = "0.11"
+optional = true
+features = ["std", "f16"]
+
+[dependencies.ort]
+version = "2.0.0-rc.10"
+optional = true
+default-features = false
+features = ["ndarray"]
+
+[dev-dependencies]
+criterion = { workspace = true }

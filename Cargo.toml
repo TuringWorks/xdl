@@ -14,7 +14,8 @@ members = [
     "xdl-viz3d-threejs",
     "xdl-desktop-viewer",
     "xdl-charts",
-    "xdl-chart-viewer"
+    "xdl-chart-viewer",
+    "xdl-amp"
 ]
 resolver = "2"
 

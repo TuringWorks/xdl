@@ -1,0 +1,22 @@
+; Test script for GUI responsiveness
+; This script performs intensive computations that should run in background
+
+; Create large arrays and perform computations
+n = 1000
+x = findgen(n)
+y = x * 2.0
+
+; Simulate complex computation
+z = sin(x / 10.0) * cos(y / 20.0)
+
+; More intensive operations
+sum_val = 0
+for i = 0, n-1 do begin
+  sum_val = sum_val + z[i]
+endfor
+
+; Print result
+print, "Sum of z:", sum_val
+
+; Create plot
+plot, x, z

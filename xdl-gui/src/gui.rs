@@ -18,7 +18,11 @@ use once_cell::sync::Lazy;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
+use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
 use tracing::{error, info};
 
 use crate::image_window::ImageWindow;
@@ -26,6 +30,12 @@ use crate::plot_window::PlotWindow;
 
 // Global queue for pending plot windows to show after execution
 static PENDING_PLOT_WINDOWS: Lazy<Mutex<Vec<PlotWindow>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
+// Structure to hold execution results from worker thread
+struct ExecutionResult {
+    output_text: String,
+    variables: HashMap<String, String>,
+}
 use xdl_interpreter::Interpreter;
 use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
 
@@ -745,6 +755,11 @@ impl XdlGui {
         execute_btn.set_color(Color::from_rgb(70, 130, 180));
         execute_btn.set_label_color(Color::White);
 
+        let mut cancel_btn = Button::default().with_size(70, 25).with_label("Cancel");
+        cancel_btn.set_color(Color::from_rgb(220, 80, 80));
+        cancel_btn.set_label_color(Color::White);
+        cancel_btn.deactivate(); // Initially disabled
+
         let mut clear_btn = Button::default().with_size(60, 25).with_label("Clear");
         clear_btn.set_color(Color::from_rgb(160, 160, 160));
 
@@ -777,6 +792,9 @@ impl XdlGui {
         // Create execution guard to prevent concurrent/repeated executions
         let executing = Rc::new(RefCell::new(false));
 
+        // Create cancellation flag shared between main thread and worker thread
+        let cancel_flag = Arc::new(AtomicBool::new(false));
+
         // Set panel sizes for two-panel layout
         main_flex.fixed(&var_table.table, 300); // Give space to variable table
 
@@ -801,15 +819,17 @@ impl XdlGui {
 
         window.end();
 
-        // Set up execute button callback
-        let interp_clone = Rc::clone(&interpreter);
+        // Set up execute button callback with async execution
         let cmd_buffer_clone_exec = command_buffer.clone();
         let mut out_buffer_clone_exec = output_buffer.clone();
         let vars_clone = Rc::clone(&variables);
         let var_table_clone = Rc::clone(&var_table_ref);
         let executing_clone = Rc::clone(&executing);
+        let execute_btn_clone = execute_btn.clone();
+        let mut cancel_btn_for_exec = cancel_btn.clone();
+        let cancel_flag_for_exec = Arc::clone(&cancel_flag);
 
-        execute_btn.set_callback(move |_| {
+        execute_btn.set_callback(move |btn| {
             info!("=== EXECUTE BUTTON CLICKED ===");
 
             // Clear any pending plot windows from previous executions
@@ -835,6 +855,16 @@ impl XdlGui {
                 info!("Cannot acquire execution lock - skipping execution");
                 return;
             }
+
+            // Reset cancel flag
+            cancel_flag_for_exec.store(false, Ordering::Relaxed);
+
+            // Update UI to show execution in progress
+            btn.set_label("Executing...");
+            btn.deactivate();
+            cancel_btn_for_exec.activate(); // Enable cancel button
+            out_buffer_clone_exec.set_text("Executing script...\n");
+            app::awake();
 
             let code = cmd_buffer_clone_exec.text();
             let filtered_code = code
@@ -864,30 +894,114 @@ impl XdlGui {
                     filtered_code.clone()
                 };
 
-                Self::execute_xdl_code(
-                    &code_to_execute,
-                    &interp_clone,
-                    &mut out_buffer_clone_exec,
-                    "Editor",
-                    &vars_clone,
-                    &var_table_clone,
-                );
-            }
+                // Create channel for receiving results from worker thread
+                let (tx, rx) = mpsc::channel();
+                let mut out_buffer_for_thread = out_buffer_clone_exec.clone();
+                let vars_for_thread = Rc::clone(&vars_clone);
+                let var_table_for_thread = Rc::clone(&var_table_clone);
+                let executing_for_thread = Rc::clone(&executing_clone);
+                let mut btn_for_thread = execute_btn_clone.clone();
+                let mut cancel_btn_for_result = cancel_btn_for_exec.clone();
+                let cancel_flag_for_thread = Arc::clone(&cancel_flag_for_exec);
+                let cancel_flag_for_timeout = Arc::clone(&cancel_flag_for_exec);
 
-            // Release execution lock
-            if let Ok(mut exec_guard) = executing_clone.try_borrow_mut() {
-                *exec_guard = false;
-                info!("=== EXECUTION COMPLETED ===");
-            }
+                // Spawn worker thread to execute XDL code
+                thread::spawn(move || {
+                    let result = Self::execute_xdl_code_async(
+                        &code_to_execute,
+                        "Editor",
+                        cancel_flag_for_thread,
+                    );
+                    tx.send(result).ok();
+                    // Wake up the main thread to check for results
+                    app::awake();
+                });
 
-            // Now show all queued plot windows from global queue
-            if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
-                info!("Showing {} queued plot windows...", plots.len());
-                for mut plot_win in plots.drain(..) {
-                    plot_win.show();
+                // Set up periodic check for results using timeout
+                app::add_timeout3(0.1, move |handle| {
+                    if let Ok(result) = rx.try_recv() {
+                        // Check if cancellation happened - if so, don't update UI
+                        if cancel_flag_for_timeout.load(Ordering::Relaxed) {
+                            info!("Thread completed after cancellation - ignoring results");
+                            return; // Don't update UI, user already saw cancellation message
+                        }
+
+                        // Update output buffer
+                        out_buffer_for_thread.set_text(&result.output_text);
+
+                        // Update variables
+                        if let Ok(mut vars) = vars_for_thread.try_borrow_mut() {
+                            *vars = result.variables;
+                        }
+
+                        // Update variable table
+                        Self::update_variable_table(&var_table_for_thread, &vars_for_thread);
+
+                        // Release execution lock (may already be released by cancel)
+                        if let Ok(mut exec_guard) = executing_for_thread.try_borrow_mut() {
+                            if *exec_guard {
+                                *exec_guard = false;
+                                info!("=== EXECUTION COMPLETED ===");
+                            }
+                        }
+
+                        // Restore button state
+                        btn_for_thread.set_label("Execute");
+                        btn_for_thread.activate();
+                        cancel_btn_for_result.deactivate();
+
+                        // Show all queued plot windows
+                        if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
+                            info!("Showing {} queued plot windows...", plots.len());
+                            for mut plot_win in plots.drain(..) {
+                                plot_win.show();
+                            }
+                            info!("All plot windows shown");
+                        }
+                        // Callback completes - no need to repeat
+                    } else {
+                        // Keep polling - schedule next check
+                        app::repeat_timeout3(0.1, handle);
+                    }
+                });
+            } else {
+                // No code to execute, release lock and restore button
+                if let Ok(mut exec_guard) = executing_clone.try_borrow_mut() {
+                    *exec_guard = false;
                 }
-                info!("All plot windows shown");
+                btn.set_label("Execute");
+                btn.activate();
+                cancel_btn_for_exec.deactivate();
             }
+        });
+
+        // Set up cancel button callback
+        let mut out_buffer_for_cancel = output_buffer.clone();
+        let cancel_flag_for_cancel = Arc::clone(&cancel_flag);
+        let executing_for_cancel = Rc::clone(&executing);
+        let mut execute_btn_for_cancel = execute_btn.clone();
+
+        cancel_btn.set_callback(move |btn| {
+            info!("=== CANCEL BUTTON CLICKED ===");
+
+            // Set the cancellation flag (thread will check this and stop early)
+            cancel_flag_for_cancel.store(true, Ordering::Relaxed);
+
+            // Immediately reset UI state - don't wait for thread to finish
+            out_buffer_for_cancel.set_text("✗ Execution cancelled by user\n");
+
+            // Restore button states immediately
+            execute_btn_for_cancel.set_label("Execute");
+            execute_btn_for_cancel.activate();
+            btn.deactivate();
+
+            // Release execution lock immediately
+            if let Ok(mut exec_guard) = executing_for_cancel.try_borrow_mut() {
+                *exec_guard = false;
+                info!("Execution lock released after cancellation");
+            }
+
+            info!("=== CANCELLATION COMPLETE (UI restored) ===");
         });
 
         // Set up clear button callback
@@ -1078,19 +1192,19 @@ impl XdlGui {
             || code.lines().any(|line| line.trim_start().starts_with('%'))
     }
 
-    fn execute_xdl_code(
+    fn execute_xdl_code_async(
         xdl_code: &str,
-        _interpreter: &Rc<RefCell<Interpreter>>,
-        output_buffer: &mut TextBuffer,
         filename: &str,
-        variables: &Rc<RefCell<HashMap<String, String>>>,
-        var_table: &Rc<RefCell<VariableTable>>,
-    ) {
+        cancel_flag: Arc<AtomicBool>,
+    ) -> ExecutionResult {
         use std::sync::atomic::{AtomicUsize, Ordering};
         static EXEC_COUNT: AtomicUsize = AtomicUsize::new(0);
         let exec_num = EXEC_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
 
-        info!(">>> execute_xdl_code called (execution #{})", exec_num);
+        info!(
+            ">>> execute_xdl_code_async called (execution #{})",
+            exec_num
+        );
 
         let mut results = Vec::new();
         results.push(format!("=== Executing {} ===", filename));
@@ -1111,8 +1225,21 @@ impl XdlGui {
         // Create interpreter with custom output
         let mut custom_interp = xdl_interpreter::Interpreter::with_output(buffer_clone);
 
+        let mut variables = HashMap::new();
+
         // Parse and execute
         info!("Tokenizing XDL code...");
+
+        // Check for cancellation before starting
+        if cancel_flag.load(Ordering::Relaxed) {
+            results.push("✗ Execution cancelled by user".to_string());
+            results.push("=== Execution cancelled ===".to_string());
+            return ExecutionResult {
+                output_text: results.join("\n"),
+                variables: HashMap::new(),
+            };
+        }
+
         match tokenize(xdl_code) {
             Ok(tokens) => {
                 info!("Parsing {} tokens...", tokens.len());
@@ -1122,6 +1249,17 @@ impl XdlGui {
                             "Executing program with {} statements...",
                             program.statements.len()
                         );
+
+                        // Check cancellation before execution
+                        if cancel_flag.load(Ordering::Relaxed) {
+                            results.push("✗ Execution cancelled by user".to_string());
+                            results.push("=== Execution cancelled ===".to_string());
+                            return ExecutionResult {
+                                output_text: results.join("\n"),
+                                variables: HashMap::new(),
+                            };
+                        }
+
                         match custom_interp.execute_program(&program) {
                             Ok(_) => {
                                 info!("Program execution completed successfully");
@@ -1137,13 +1275,10 @@ impl XdlGui {
                                     }
                                 }
 
-                                // Extract variables from interpreter and update GUI variables
-                                if let Ok(mut vars) = variables.try_borrow_mut() {
-                                    vars.clear();
-                                    let interp_vars = custom_interp.get_variables();
-                                    for (name, value) in interp_vars {
-                                        vars.insert(name, value.to_string_repr());
-                                    }
+                                // Extract variables from interpreter
+                                let interp_vars = custom_interp.get_variables();
+                                for (name, value) in interp_vars {
+                                    variables.insert(name, value.to_string_repr());
                                 }
 
                                 results.push("✓ Execution completed successfully".to_string());
@@ -1166,15 +1301,19 @@ impl XdlGui {
             }
         }
 
-        // Update variable table after execution
-        Self::update_variable_table(var_table, variables);
-
         results.push("=== Execution completed ===".to_string());
         let output_text = results.join("\n");
-        output_buffer.set_text(&output_text);
 
-        info!("<<< execute_xdl_code completed (execution #{})", exec_num);
+        info!(
+            "<<< execute_xdl_code_async completed (execution #{})",
+            exec_num
+        );
         info!("Executed XDL file: {}", filename);
+
+        ExecutionResult {
+            output_text,
+            variables,
+        }
     }
 
     #[allow(dead_code)]

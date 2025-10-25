@@ -1,0 +1,17 @@
+; ================================================================
+; Fluid Dynamics Visualization Workflow
+; ================================================================
+; Demonstrates:
+; - Vorticity field computation
+; - Velocity vector field visualization
+; - Streamline generation and tracing
+; - Time-series animation of flow evolution
+; - Taylor-Green vortex simulation
+; - Turbulent flow structures
+; ================================================================
+
+print, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+print, "Fluid Dynamics Visualization Workflow"
+print, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+nx = 128
+print, "  Grid size:", nx
