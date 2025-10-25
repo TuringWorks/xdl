@@ -38,8 +38,6 @@ pub fn plot_with_keywords(
     args: &[XdlValue],
     keywords: &HashMap<String, XdlValue>,
 ) -> XdlResult<XdlValue> {
-    use crate::graphics::{plot_2d, Plot2DConfig};
-
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "PLOT requires at least one argument".to_string(),
@@ -61,39 +59,59 @@ pub fn plot_with_keywords(
         ));
     }
 
-    // Extract keyword arguments for plot configuration
-    let mut config = Plot2DConfig::default();
-
-    // Extract title
-    if let Some(XdlValue::String(s)) = keywords.get("title").or_else(|| keywords.get("TITLE")) {
-        config.title = Some(s.clone());
-    }
-
-    // Extract x-axis title
-    if let Some(XdlValue::String(s)) = keywords.get("xtitle").or_else(|| keywords.get("XTITLE")) {
-        config.xtitle = Some(s.clone());
-    }
-
-    // Extract y-axis title
-    if let Some(XdlValue::String(s)) = keywords.get("ytitle").or_else(|| keywords.get("YTITLE")) {
-        config.ytitle = Some(s.clone());
-    }
-
-    // Generate output filename
-    let filename = "xdl_plot.png";
-
-    // Ensure graphics state is initialized - it's already done by default
-    // The GRAPHICS_STATE is initialized with window 0 by default
-
-    // Extract labels before moving config
-    let title = config
-        .title
-        .clone()
+    // Extract title from keywords
+    let title = keywords
+        .get("title")
+        .or_else(|| keywords.get("TITLE"))
+        .and_then(|v| match v {
+            XdlValue::String(s) => Some(s.clone()),
+            _ => None,
+        })
         .unwrap_or_else(|| "XDL Plot".to_string());
-    let xtitle = config.xtitle.clone().unwrap_or_else(|| "X".to_string());
-    let ytitle = config.ytitle.clone().unwrap_or_else(|| "Y".to_string());
 
-    // Create the plot using the 2D plotting function
+    // Try to use xdl-charts (Tauri-based) first for better interactivity
+    match try_chart_plot(&x_data, &y_data, &title) {
+        Ok(_) => return Ok(XdlValue::Undefined),
+        Err(e) => {
+            // Log the error but continue with fallback
+            eprintln!(
+                "PLOT: xdl-charts unavailable ({}), using fallback renderer",
+                e
+            );
+        }
+    }
+
+    // Fallback to traditional graphics rendering
+    use crate::graphics::{plot_2d, Plot2DConfig};
+
+    // Extract axis titles from keywords
+    let xtitle = keywords
+        .get("xtitle")
+        .or_else(|| keywords.get("XTITLE"))
+        .and_then(|v| match v {
+            XdlValue::String(s) => Some(s.clone()),
+            _ => None,
+        });
+
+    let ytitle = keywords
+        .get("ytitle")
+        .or_else(|| keywords.get("YTITLE"))
+        .and_then(|v| match v {
+            XdlValue::String(s) => Some(s.clone()),
+            _ => None,
+        });
+
+    let config = Plot2DConfig {
+        title: Some(title.clone()),
+        xtitle: xtitle.clone(),
+        ytitle: ytitle.clone(),
+        ..Default::default()
+    };
+
+    let filename = "xdl_plot.png";
+    let xtitle_str = xtitle.unwrap_or_else(|| "X".to_string());
+    let ytitle_str = ytitle.unwrap_or_else(|| "Y".to_string());
+
     println!("PLOT: Rendering {} points to {}", x_data.len(), filename);
     plot_2d(x_data.clone(), y_data.clone(), config, filename)?;
     println!("  Plot saved to '{}'", filename);
@@ -101,7 +119,7 @@ pub fn plot_with_keywords(
     // Try to launch interactive plot window if callback is available
     if let Ok(callback_guard) = GUI_PLOT_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
-            callback(x_data, y_data, title, xtitle, ytitle);
+            callback(x_data, y_data, title, xtitle_str, ytitle_str);
             return Ok(XdlValue::Undefined);
         }
     }
@@ -116,6 +134,18 @@ pub fn plot_with_keywords(
     Ok(XdlValue::Undefined)
 }
 
+/// Try to use xdl-charts for plotting (returns error if unavailable)
+fn try_chart_plot(x_data: &[f64], y_data: &[f64], title: &str) -> XdlResult<()> {
+    // Convert to XdlValue arrays for charting_procs
+    let x_val = XdlValue::Array(x_data.to_vec());
+    let y_val = XdlValue::Array(y_data.to_vec());
+    let title_val = XdlValue::String(title.to_string());
+
+    // Call the charting procedure
+    crate::charting_procs::plot(&[x_val, y_val, title_val])?;
+    Ok(())
+}
+
 /// OPLOT procedure - overplot on existing plot
 pub fn oplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For now, just call plot - in a full implementation this would overlay
@@ -124,13 +154,25 @@ pub fn oplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// CONTOUR procedure - creates a contour plot
 pub fn contour(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::{contour_plot, ContourConfig};
-
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "CONTOUR requires at least one argument".to_string(),
         ));
     }
+
+    // Try to use xdl-charts (Tauri-based) first for better interactivity
+    match crate::charting_procs::contour(args) {
+        Ok(v) => return Ok(v),
+        Err(e) => {
+            eprintln!(
+                "CONTOUR: xdl-charts unavailable ({}), using fallback renderer",
+                e
+            );
+        }
+    }
+
+    // Fallback to traditional graphics rendering
+    use crate::graphics::{contour_plot, ContourConfig};
 
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
@@ -171,13 +213,26 @@ pub fn contour(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// SURFACE procedure - creates a 3D surface plot
 pub fn surface(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::{surface_plot, SurfaceConfig};
-
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "SURFACE requires at least one argument".to_string(),
         ));
     }
+
+    // Try to use xdl-charts (Tauri-based) first for better 3D interactivity
+    match try_surface3d(&args[0], "XDL Surface Plot") {
+        Ok(_) => return Ok(XdlValue::Undefined),
+        Err(e) => {
+            // Log the error but continue with fallback
+            eprintln!(
+                "SURFACE: xdl-charts unavailable ({}), using fallback renderer",
+                e
+            );
+        }
+    }
+
+    // Fallback to traditional graphics rendering
+    use crate::graphics::{surface_plot, SurfaceConfig};
 
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
@@ -214,6 +269,15 @@ pub fn surface(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     Ok(XdlValue::Undefined)
+}
+
+/// Try to use xdl-charts for 3D surface plotting (returns error if unavailable)
+fn try_surface3d(z_data: &XdlValue, title: &str) -> XdlResult<()> {
+    let title_val = XdlValue::String(title.to_string());
+
+    // Call the 3D surface charting procedure
+    crate::charting_procs::surface3d(&[z_data.clone(), title_val])?;
+    Ok(())
 }
 
 /// WINDOW procedure - creates or selects a graphics window
@@ -450,13 +514,25 @@ pub fn arrow(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// SHADE_SURF procedure - creates a shaded surface plot
 pub fn shade_surf(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::{surface_plot, SurfaceConfig};
-
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "SHADE_SURF requires at least one argument".to_string(),
         ));
     }
+
+    // Try to use xdl-charts (Tauri-based) first for better 3D interactivity
+    match crate::charting_procs::shade_surf(args) {
+        Ok(v) => return Ok(v),
+        Err(e) => {
+            eprintln!(
+                "SHADE_SURF: xdl-charts unavailable ({}), using fallback renderer",
+                e
+            );
+        }
+    }
+
+    // Fallback to traditional graphics rendering
+    use crate::graphics::{surface_plot, SurfaceConfig};
 
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
@@ -679,13 +755,25 @@ pub fn errplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// PLOT3D procedure - creates a 3D line plot
 pub fn plot3d(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::{plot_3d, SurfaceConfig};
-
     if args.len() < 3 {
         return Err(XdlError::InvalidArgument(
             "PLOT3D: Expected at least 3 arguments (x, y, z)".to_string(),
         ));
     }
+
+    // Try to use xdl-charts (Tauri-based) first for better 3D interactivity
+    match crate::charting_procs::plot3d(args) {
+        Ok(v) => return Ok(v),
+        Err(e) => {
+            eprintln!(
+                "PLOT3D: xdl-charts unavailable ({}), using fallback renderer",
+                e
+            );
+        }
+    }
+
+    // Fallback to traditional graphics rendering
+    use crate::graphics::{plot_3d, SurfaceConfig};
 
     let x_data = extract_numeric_array(&args[0])?;
     let y_data = extract_numeric_array(&args[1])?;

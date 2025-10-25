@@ -55,11 +55,22 @@ impl<'a> Parser<'a> {
         matches!(self.peek(), Token::EOF)
     }
 
+    /// Skip over any Newline tokens
+    fn skip_newlines(&mut self) {
+        while matches!(self.peek(), Token::Newline) {
+            self.advance();
+        }
+    }
+
     /// Parse the entire program
     fn parse_program(&mut self) -> XdlResult<Program> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
+            self.skip_newlines();
+            if self.is_at_end() {
+                break;
+            }
             statements.push(self.parse_statement()?);
         }
 
@@ -76,6 +87,10 @@ impl<'a> Parser<'a> {
             self.advance(); // consume 'begin'
             let mut statements = Vec::new();
             while !self.check(&Token::End) && !self.is_at_end() {
+                self.skip_newlines();
+                if self.check(&Token::End) || self.is_at_end() {
+                    break;
+                }
                 statements.push(self.parse_statement()?);
             }
             self.consume(Token::End, "Expected 'end' to close begin block")?;
@@ -85,10 +100,11 @@ impl<'a> Parser<'a> {
             // The key insight: parse_statement() handles nested constructs recursively
             let mut statements = Vec::new();
             while !self.is_at_end() {
+                self.skip_newlines();
                 let is_terminator = terminators.iter().any(|term| {
                     std::mem::discriminant(self.peek()) == std::mem::discriminant(term)
                 });
-                if is_terminator {
+                if is_terminator || self.is_at_end() {
                     break;
                 }
                 statements.push(self.parse_statement()?);
@@ -120,6 +136,18 @@ impl<'a> Parser<'a> {
             }
             Token::Pro | Token::Procedure => self.parse_procedure_definition(),
             Token::Function => self.parse_function_definition(),
+            Token::End => {
+                // END can be a program terminator - just consume it
+                self.advance();
+                // Return a no-op statement
+                Ok(Statement::Expression {
+                    expr: Expression::Literal {
+                        value: xdl_core::XdlValue::Undefined,
+                        location: Location::unknown(),
+                    },
+                    location: Location::unknown(),
+                })
+            }
             _ => {
                 // Try to parse as procedure call, expression statement, or assignment
                 if let Token::Identifier(name) = self.peek() {
@@ -251,21 +279,30 @@ impl<'a> Parser<'a> {
         let has_begin_end = self.check(&Token::Begin);
 
         // GDL/IDL syntax supports multiple forms:
-        // 1. for i=0,9 do statement                  (single statement, no ENDFOR)
-        // 2. for i=0,9 do begin ... end              (BEGIN...END, optional ENDFOR)
-        // 3. for i=0,9                               (multi-line with ENDFOR)
+        // 1. for i=0,9 do statement                  (single statement, no ENDFOR needed)
+        // 2. for i=0,9 do begin ... end              (BEGIN...END block, no ENDFOR needed)
+        // 3. for i=0,9 do begin ... end endfor      (BEGIN...END with explicit ENDFOR)
+        // 4. for i=0,9                               (multi-line with required ENDFOR)
         //      statement1
         //      statement2
         //    endfor
         let body = if has_begin_end {
-            // BEGIN...END block - don't pass ENDFOR as terminator
-            // The END will close the BEGIN, and ENDFOR is optional but can follow
-            let stmts = self.parse_block_or_statement(&[])?;
-            // ENDFOR is optional with BEGIN...END but consume if present
-            if self.check(&Token::Endfor) {
-                self.advance();
+            // BEGIN...ENDFOR block (IDL/GDL allows ENDFOR to close BEGIN in FOR loops)
+            self.advance(); // consume 'BEGIN'
+            let mut statements = Vec::new();
+            while !self.check(&Token::Endfor) && !self.is_at_end() {
+                self.skip_newlines();
+                if self.check(&Token::Endfor) || self.is_at_end() {
+                    break;
+                }
+                statements.push(self.parse_statement()?);
             }
-            stmts
+            // Consume the ENDFOR that closes both BEGIN and FOR
+            self.consume(
+                Token::Endfor,
+                "Expected 'ENDFOR' to close FOR loop with BEGIN",
+            )?;
+            statements
         } else {
             // Parse statements until we hit ENDFOR or EOF
             // This supports both single-line and multi-line FOR loops
