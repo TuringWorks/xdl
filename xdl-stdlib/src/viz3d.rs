@@ -41,14 +41,13 @@ impl Viz3DBackend {
     fn resolve(self) -> Self {
         match self {
             Self::Auto => {
-                // Prefer Three.js for better compatibility
-                // Check if we're in GUI mode or browser explicitly requested
-                if std::env::var("XDL_GUI_MODE").is_ok()
-                    || std::env::var("VIZ3D_BROWSER").unwrap_or_default() == "1"
-                {
+                // Always prefer Three.js (Tauri-based) for best compatibility and consistency
+                // Three.js viewer works in both CLI and GUI modes without opening browser
+                // Only use Browser mode if explicitly requested via VIZ3D_BACKEND=browser
+                if std::env::var("VIZ3D_BROWSER").unwrap_or_default() == "1" {
                     Self::Browser
                 } else {
-                    Self::ThreeJS // Default to Three.js
+                    Self::ThreeJS // Default to Three.js for all modes
                 }
             }
             other => other,

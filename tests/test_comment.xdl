@@ -1,0 +1,4 @@
+x = 5  ; this is a comment
+; Full line comment
+y = 10
+PRINT, x, y
