@@ -225,6 +225,8 @@ impl StandardLibrary {
             "LCM" => math::lcm(args),
             "POLY" => math::poly(args),
             "BINOMIAL" => math::binomial(args),
+            "DERIV" => math::deriv(args),
+            "INT_TABULATED" => math::int_tabulated(args),
 
             // Array generation functions
             "FINDGEN" => math::findgen(args),
@@ -360,6 +362,8 @@ impl StandardLibrary {
             "BIN_DATE" => system::bin_date(args),
             "TIMESTAMP" => system::timestamp(args),
             "TIMEGEN" => system::timegen(args),
+            "DAYOFYEAR" => system::dayofyear(args),
+            "JS2JD" => system::js2jd(args),
             "MESSAGE" => system::message(args),
             "ON_ERROR" => system::on_error(args),
             "MEMORY" => system::memory(args),

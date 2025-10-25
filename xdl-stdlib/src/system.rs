@@ -552,6 +552,98 @@ pub fn caldat(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::NestedArray(result))
 }
 
+/// DAYOFYEAR - Get day of year from date
+/// DAYOFYEAR(month, day, year)
+pub fn dayofyear(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "DAYOFYEAR: Expected month, day, year".to_string(),
+        ));
+    }
+
+    let month = match &args[0] {
+        XdlValue::Int(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let day = match &args[1] {
+        XdlValue::Int(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let year = match &args[2] {
+        XdlValue::Int(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    // Days in each month
+    let days_in_months = if is_leap_year(year) {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    };
+
+    if month < 1 || month > 12 {
+        return Err(XdlError::InvalidArgument(
+            "DAYOFYEAR: Month must be between 1 and 12".to_string(),
+        ));
+    }
+
+    let mut doy = day;
+    for i in 0..(month - 1) as usize {
+        doy += days_in_months[i];
+    }
+
+    Ok(XdlValue::Long(doy))
+}
+
+/// JS2JD - Convert Julian seconds to Julian date
+/// JS2JD(julian_seconds)
+pub fn js2jd(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "JS2JD: Expected Julian seconds".to_string(),
+        ));
+    }
+
+    let js = match &args[0] {
+        XdlValue::Double(v) => *v,
+        XdlValue::Float(v) => *v as f64,
+        XdlValue::Long(v) => *v as f64,
+        XdlValue::Int(v) => *v as f64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Julian seconds are seconds since 12h Jan 1, 4713 BC
+    // Convert to Julian days
+    let jd = js / 86400.0;
+
+    Ok(XdlValue::Double(jd))
+}
+
 /// MESSAGE - Print message or error
 /// MESSAGE(text [, /INFORMATIONAL, /CONTINUE])
 pub fn message(args: &[XdlValue]) -> XdlResult<XdlValue> {
