@@ -376,3 +376,31 @@ pub fn catch_error(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("CATCH: Error handling not yet implemented");
     Ok(XdlValue::Undefined)
 }
+
+/// WAIT procedure - pause execution for specified seconds
+pub fn wait(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WAIT: Expected number of seconds to wait".to_string(),
+        ));
+    }
+
+    let seconds = match &args[0] {
+        XdlValue::Int(v) => *v as f64,
+        XdlValue::Long(v) => *v as f64,
+        XdlValue::Float(v) => *v as f64,
+        XdlValue::Double(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if seconds > 0.0 {
+        std::thread::sleep(std::time::Duration::from_secs_f64(seconds));
+    }
+
+    Ok(XdlValue::Undefined)
+}

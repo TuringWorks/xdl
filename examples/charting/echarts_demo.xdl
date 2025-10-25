@@ -1,0 +1,118 @@
+; XDL ECharts Demonstration
+; This script demonstrates all available chart types
+; using the new ECharts integration with Tauri
+
+PRINT, '========================================='
+PRINT, 'XDL ECharts Demonstration'
+PRINT, 'Testing all chart types with Tauri viewer'
+PRINT, '========================================='
+PRINT, ''
+
+; =====================================================
+; Demo 1: Line Plot - Trigonometric Functions
+; =====================================================
+PRINT, '1. Creating Line Plot (Sine Wave)...'
+x = FINDGEN(100) / 10.0
+y = SIN(x)
+CHART_PLOT, x, y, 'Sine Wave'
+WAIT, 1
+
+; =====================================================
+; Demo 2: Scatter Plot - Random Data
+; =====================================================
+PRINT, '2. Creating Scatter Plot (Random Points)...'
+n = 50
+x_scatter = RANDOMU(1, n) * 10
+y_scatter = RANDOMU(2, n) * 10  + x_scatter * 0.5
+CHART_SCATTER, x_scatter, y_scatter, 'Scatter Plot Demo'
+WAIT, 1
+
+; =====================================================
+; Demo 3: Bar Chart - Sample Data
+; =====================================================
+PRINT, '3. Creating Bar Chart...'
+values = [23.5, 45.2, 67.8, 34.1, 89.3, 56.7, 12.4, 78.9]
+CHART_BAR, values, 'Bar Chart Demo'
+WAIT, 1
+
+; =====================================================
+; Demo 4: 3D Surface Plot - Mathematical Function
+; =====================================================
+PRINT, '4. Creating 3D Surface Plot...'
+nx = 50
+ny = 50
+z_surface = FLTARR(nx, ny)
+
+FOR i=0, nx-1 DO BEGIN
+  FOR j=0, ny-1 DO BEGIN
+    x_val = (i - nx/2) / 5.0
+    y_val = (j - ny/2) / 5.0
+    z_surface[i,j] = SIN(SQRT(x_val^2 + y_val^2))
+  ENDFOR
+ENDFOR
+
+SURFACE3D, z_surface, '3D Surface - Ripple Pattern'
+WAIT, 1
+
+; =====================================================
+; Demo 5: 3D Scatter Plot - Helix
+; =====================================================
+PRINT, '5. Creating 3D Scatter Plot (Helix)...'
+t = FINDGEN(100) / 10.0
+x_helix = COS(t) * 5
+y_helix = SIN(t) * 5
+z_helix = t
+SCATTER3D, x_helix, y_helix, z_helix, '3D Scatter - Helix'
+WAIT, 1
+
+; =====================================================
+; Demo 6: Multiple Series Line Plot
+; =====================================================
+PRINT, '6. Creating Multi-Series Plot...'
+x_multi = FINDGEN(100) / 10.0
+y1 = SIN(x_multi)
+y2 = COS(x_multi)
+; Note: Multi-series would need procedure extension
+CHART_PLOT, x_multi, y1, 'Sin and Cos Functions'
+WAIT, 0.5
+CHART_PLOT, x_multi, y2, 'Sin and Cos Functions (series 2)'
+WAIT, 1
+
+; =====================================================
+; Demo 7: Large Dataset Scatter (WebGL Test)
+; =====================================================
+PRINT, '7. Creating Large Scatter Plot (WebGL acceleration)...'
+n_large = 15000
+x_large = RANDOMU(3, n_large) * 100
+y_large = RANDOMU(4, n_large) * 100
+CHART_SCATTER, x_large, y_large, 'Large Dataset (15K points)'
+WAIT, 1
+
+; =====================================================
+; Demo 8: Complex Surface - Saddle
+; =====================================================
+PRINT, '8. Creating Complex 3D Surface (Saddle)...'
+nx2 = 40
+ny2 = 40
+z_saddle = FLTARR(nx2, ny2)
+
+FOR i=0, nx2-1 DO BEGIN
+  FOR j=0, ny2-1 DO BEGIN
+    x_val = (i - nx2/2) / 5.0
+    y_val = (j - ny2/2) / 5.0
+    z_saddle[i,j] = x_val^2 - y_val^2
+  ENDFOR
+ENDFOR
+
+SURFACE3D, z_saddle, '3D Surface - Saddle Function'
+WAIT, 1
+
+PRINT, ''
+PRINT, '========================================='
+PRINT, 'Demo Complete!'
+PRINT, 'All 8 chart types have been displayed.'
+PRINT, 'Charts open in native Tauri windows.'
+PRINT, 'Close windows when done.'
+PRINT, '========================================='
+
+END

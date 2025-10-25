@@ -3,6 +3,7 @@
 //! Built-in functions and procedures for XDL
 
 pub mod array;
+mod charting_procs; // ECharts charting procedures
 pub mod complex;
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
@@ -112,6 +113,13 @@ impl StandardLibrary {
             "HILLSHADE" => graphics_procs::hillshade_proc(args),
             "QUIVER" => graphics_procs::quiver_proc(args),
 
+            // Charting procedures - ECharts integration
+            "CHART_PLOT" => charting_procs::plot(args),
+            "CHART_SCATTER" => charting_procs::scatter(args),
+            "CHART_BAR" => charting_procs::bar(args),
+            "SURFACE3D" => charting_procs::surface3d(args),
+            "SCATTER3D" => charting_procs::scatter3d(args),
+
             // VIZ3D procedures - 3D volume visualization
             "VIZ3D_INIT" => viz3d::viz3d_init(args, keywords),
             "VIZ3D_VOLUME" => viz3d::viz3d_volume(args, keywords),
@@ -132,6 +140,7 @@ impl StandardLibrary {
             ".COMPILE" => system::compile_pro(args),
             ".CONTINUE" => system::continue_execution(args),
             "CATCH" => system::catch_error(args),
+            "WAIT" => system::wait(args),
 
             // I/O procedures
             "FREE_LUN" => io::free_lun(args),

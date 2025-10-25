@@ -10,6 +10,7 @@ description = "XDL standard library functions"
 xdl-core = { path = "../xdl-core" }
 xdl-viz3d = { path = "../xdl-viz3d" }
 xdl-viz3d-web = { path = "../xdl-viz3d-web" }
+xdl-charts = { path = "../xdl-charts" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
