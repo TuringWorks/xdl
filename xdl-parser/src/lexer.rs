@@ -296,7 +296,8 @@ fn parse_delimiter(input: &str) -> ParseResult<'_, Token> {
         value(Token::LeftBrace, char('{')),
         value(Token::RightBrace, char('}')),
         value(Token::Comma, char(',')),
-        value(Token::Semicolon, char(';')),
+        // NOTE: Semicolon (;) is NOT a delimiter in IDL/GDL - it starts comments only
+        // Comments are handled by parse_comment which is checked first in parse_token
         value(Token::Colon, char(':')),
         value(Token::Dot, char('.')),
     ))(input)

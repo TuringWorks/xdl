@@ -751,6 +751,12 @@ impl Evaluator {
                         let val = self.evaluate(expr, context)?;
                         index_values.push(val.to_long()? as usize);
                     }
+                    ArrayIndex::All => {
+                        return Err(XdlError::NotImplemented(
+                            "Wildcard array reading not yet supported - use in assignment context"
+                                .to_string(),
+                        ));
+                    }
                     _ => {
                         return Err(XdlError::NotImplemented(
                             "Range indexing not yet supported for multi-dimensional arrays"
