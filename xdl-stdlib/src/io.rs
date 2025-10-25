@@ -937,6 +937,125 @@ pub fn assoc(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Long(lun))
 }
 
+/// FILE_BASENAME - Extract filename from path
+pub fn file_basename(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_BASENAME: Expected path".to_string(),
+        ));
+    }
+    let path_str = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    let path = Path::new(path_str);
+    let basename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    Ok(XdlValue::String(basename.to_string()))
+}
+
+/// FILE_DIRNAME - Extract directory from path
+pub fn file_dirname(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_DIRNAME: Expected path".to_string(),
+        ));
+    }
+    let path_str = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    let path = Path::new(path_str);
+    let dirname = path.parent().and_then(|p| p.to_str()).unwrap_or("");
+    Ok(XdlValue::String(dirname.to_string()))
+}
+
+/// FILE_MKDIR - Create directory
+pub fn file_mkdir(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_MKDIR: Expected path".to_string(),
+        ));
+    }
+    let path_str = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    std::fs::create_dir_all(path_str)
+        .map_err(|e| XdlError::RuntimeError(format!("FILE_MKDIR: {}", e)))?;
+    Ok(XdlValue::Undefined)
+}
+
+/// FILE_DELETE - Delete file or directory
+pub fn file_delete(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_DELETE: Expected path".to_string(),
+        ));
+    }
+    let path_str = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    let path = Path::new(path_str);
+    if path.is_dir() {
+        std::fs::remove_dir_all(path)
+            .map_err(|e| XdlError::RuntimeError(format!("FILE_DELETE: {}", e)))?;
+    } else {
+        std::fs::remove_file(path)
+            .map_err(|e| XdlError::RuntimeError(format!("FILE_DELETE: {}", e)))?;
+    }
+    Ok(XdlValue::Undefined)
+}
+
+/// FILE_COPY - Copy file
+pub fn file_copy(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "FILE_COPY: Expected source and destination".to_string(),
+        ));
+    }
+    let src = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+    let dst = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+    std::fs::copy(src, dst).map_err(|e| XdlError::RuntimeError(format!("FILE_COPY: {}", e)))?;
+    Ok(XdlValue::Undefined)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

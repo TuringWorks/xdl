@@ -240,6 +240,9 @@ impl StandardLibrary {
 
             // Image processing
             "CONVOL" => image::convol(args),
+            "DILATE" => image::dilate(args),
+            "ERODE" => image::erode(args),
+            "SOBEL" => image::sobel(args),
 
             // Type conversion functions
             "FLOAT" | "FLT" => math::float(args),
@@ -247,6 +250,10 @@ impl StandardLibrary {
             "LONG" => math::long(args),
             "BYTE" => math::byte(args),
             "DOUBLE" | "DBL" => math::double(args),
+            "UINT" => math::uint(args),
+            "ULONG" => math::ulong(args),
+            "LONG64" => math::long64(args),
+            "ULONG64" => math::ulong64(args),
 
             // Array creation functions
             "BYTARR" => array::bytarr(args),
@@ -258,6 +265,10 @@ impl StandardLibrary {
 
             "N_ELEMENTS" => array::n_elements(args),
             "WHERE" => array::where_func(args),
+            "SIZE" => array::size(args),
+            "N_PARAMS" => array::n_params(args),
+            "TAG_NAMES" => array::tag_names(args),
+            "N_TAGS" => array::n_tags(args),
 
             // Array manipulation functions
             "REFORM" => array::reform_func(args),
@@ -322,6 +333,11 @@ impl StandardLibrary {
             "FILE_TEST" => io::file_test(args),
             "FILE_LINES" => io::file_lines(args),
             "FILE_INFO" => io::file_info(args),
+            "FILE_BASENAME" => io::file_basename(args),
+            "FILE_DIRNAME" => io::file_dirname(args),
+            "FILE_MKDIR" => io::file_mkdir(args),
+            "FILE_DELETE" => io::file_delete(args),
+            "FILE_COPY" => io::file_copy(args),
             "EOF" => io::eof_func(args),
             "ASSOC" => io::assoc(args),
 
@@ -329,6 +345,9 @@ impl StandardLibrary {
             "SYSTIME" => system::systime(args),
             "JULDAY" => system::julday(args),
             "CALDAT" => system::caldat(args),
+            "BIN_DATE" => system::bin_date(args),
+            "TIMESTAMP" => system::timestamp(args),
+            "TIMEGEN" => system::timegen(args),
 
             // Data structure functions
             "HASH" => create_hash(args),
@@ -364,6 +383,10 @@ impl StandardLibrary {
             "NORM" => linalg::norm(args),
             "DIAGONAL" => linalg::diagonal(args),
             "TRACE" => linalg::trace(args),
+            "SVDC" => linalg::svdc(args),
+            "LA_EIGENVAL" => linalg::la_eigenval(args),
+            "LUDC" => linalg::ludc(args),
+            "LUSOL" => linalg::lusol(args),
 
             // Python integration functions
             "PYTHON_IMPORT" => python::python_import(args),

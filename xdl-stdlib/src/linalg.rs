@@ -358,6 +358,172 @@ pub fn trace(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
+/// SVDC - Singular Value Decomposition
+/// SVDC(matrix, w, u, v) computes SVD: A = U * W * V^T
+/// Returns singular values in w
+pub fn svdc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "SVDC: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "SVDC: Expected 2D matrix".to_string(),
+        ));
+    }
+
+    let m = shape[0];
+    let n = shape[1];
+    let matrix = DMatrix::from_row_slice(m, n, &data);
+
+    // Compute SVD
+    let svd = matrix.svd(true, true);
+
+    // Return singular values as array
+    let singular_values: Vec<f64> = svd.singular_values.iter().copied().collect();
+
+    Ok(XdlValue::Array(singular_values))
+}
+
+/// LA_EIGENVAL - Compute eigenvalues of a matrix
+/// LA_EIGENVAL(matrix) returns eigenvalues
+pub fn la_eigenval(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "LA_EIGENVAL: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "LA_EIGENVAL: Expected square matrix".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+    let matrix = DMatrix::from_row_slice(n, n, &data);
+
+    // Compute eigenvalues
+    match matrix.symmetric_eigen() {
+        eigen => {
+            let eigenvalues: Vec<f64> = eigen.eigenvalues.iter().copied().collect();
+            Ok(XdlValue::Array(eigenvalues))
+        }
+    }
+}
+
+/// LUDC - LU Decomposition
+/// LUDC(matrix) computes LU decomposition
+pub fn ludc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "LUDC: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "LUDC: Expected square matrix".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+    let matrix = DMatrix::from_row_slice(n, n, &data);
+
+    // Compute LU decomposition
+    let lu = matrix.lu();
+    let l = lu.l();
+    let result_data: Vec<f64> = l.iter().copied().collect();
+
+    Ok(XdlValue::MultiDimArray {
+        data: result_data,
+        shape,
+    })
+}
+
+/// LUSOL - Solve linear system using LU decomposition
+/// LUSOL(lu_matrix, b) solves A*x = b
+pub fn lusol(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "LUSOL: Expected LU matrix and vector b".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let b = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "LUSOL: Expected square matrix".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+    let matrix = DMatrix::from_row_slice(n, n, &data);
+    let lu = matrix.lu();
+
+    let b_vec = nalgebra::DVector::from_vec(b);
+    match lu.solve(&b_vec) {
+        Some(x) => {
+            let result: Vec<f64> = x.iter().copied().collect();
+            Ok(XdlValue::Array(result))
+        }
+        None => Err(XdlError::RuntimeError(
+            "LUSOL: Could not solve system".to_string(),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

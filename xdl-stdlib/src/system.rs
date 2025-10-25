@@ -551,3 +551,231 @@ pub fn caldat(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::NestedArray(result))
 }
+
+/// BIN_DATE - Convert system time to date/time array
+/// BIN_DATE(time_value)
+/// Returns [year, month, day, hour, minute, second]
+pub fn bin_date(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "BIN_DATE: Expected time value in seconds since epoch".to_string(),
+        ));
+    }
+
+    let secs = match &args[0] {
+        XdlValue::Double(v) => *v as u64,
+        XdlValue::Float(v) => *v as u64,
+        XdlValue::Long(v) => *v as u64,
+        XdlValue::Int(v) => *v as u64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Calculate components from Unix timestamp
+    const SECS_PER_DAY: u64 = 86400;
+    const SECS_PER_HOUR: u64 = 3600;
+    const SECS_PER_MIN: u64 = 60;
+
+    let days_since_epoch = secs / SECS_PER_DAY;
+    let time_of_day = secs % SECS_PER_DAY;
+
+    let hours = time_of_day / SECS_PER_HOUR;
+    let minutes = (time_of_day % SECS_PER_HOUR) / SECS_PER_MIN;
+    let seconds = time_of_day % SECS_PER_MIN;
+
+    // Simplified Gregorian calendar calculation
+    let mut year = 1970;
+    let mut remaining_days = days_since_epoch as i32;
+
+    loop {
+        let days_in_year = if is_leap_year(year) { 366 } else { 365 };
+        if remaining_days < days_in_year {
+            break;
+        }
+        remaining_days -= days_in_year;
+        year += 1;
+    }
+
+    let days_in_months = if is_leap_year(year) {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    };
+
+    let mut month = 1;
+    for &days_in_month in &days_in_months {
+        if remaining_days < days_in_month {
+            break;
+        }
+        remaining_days -= days_in_month;
+        month += 1;
+    }
+    let day = remaining_days + 1;
+
+    let result = vec![
+        XdlValue::Long(year as i32),
+        XdlValue::Long(month),
+        XdlValue::Long(day),
+        XdlValue::Long(hours as i32),
+        XdlValue::Long(minutes as i32),
+        XdlValue::Long(seconds as i32),
+    ];
+
+    Ok(XdlValue::NestedArray(result))
+}
+
+fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+/// TIMESTAMP - Generate timestamp string
+/// TIMESTAMP([/DATE, /TIME, /DATETIME])
+pub fn timestamp(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let now = SystemTime::now();
+    let duration = now
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| XdlError::RuntimeError(format!("System time error: {}", e)))?;
+
+    let secs = duration.as_secs();
+
+    // Parse as date/time components
+    let bin = bin_date(&[XdlValue::Double(secs as f64)])?;
+    let components = match bin {
+        XdlValue::NestedArray(ref v) => v,
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Invalid date conversion".to_string(),
+            ))
+        }
+    };
+
+    let year = match components[0] {
+        XdlValue::Long(v) => v,
+        _ => 0,
+    };
+    let month = match components[1] {
+        XdlValue::Long(v) => v,
+        _ => 0,
+    };
+    let day = match components[2] {
+        XdlValue::Long(v) => v,
+        _ => 0,
+    };
+    let hour = match components[3] {
+        XdlValue::Long(v) => v,
+        _ => 0,
+    };
+    let minute = match components[4] {
+        XdlValue::Long(v) => v,
+        _ => 0,
+    };
+    let second = match components[5] {
+        XdlValue::Long(v) => v,
+        _ => 0,
+    };
+
+    // Default: datetime format
+    let timestamp = if args.is_empty() {
+        format!(
+            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
+            year, month, day, hour, minute, second
+        )
+    } else {
+        // Simple implementation - can be extended with keywords
+        format!(
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+            year, month, day, hour, minute, second
+        )
+    };
+
+    Ok(XdlValue::String(timestamp))
+}
+
+/// TIMEGEN - Generate array of time values
+/// TIMEGEN(start, [final, step])
+pub fn timegen(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "TIMEGEN: Expected at least start time".to_string(),
+        ));
+    }
+
+    let start = match &args[0] {
+        XdlValue::Double(v) => *v,
+        XdlValue::Float(v) => *v as f64,
+        XdlValue::Long(v) => *v as f64,
+        XdlValue::Int(v) => *v as f64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if args.len() == 1 {
+        // Return array from 0 to start-1
+        let n = start as usize;
+        let result: Vec<XdlValue> = (0..n).map(|i| XdlValue::Double(i as f64)).collect();
+        return Ok(XdlValue::NestedArray(result));
+    }
+
+    let final_val = match &args[1] {
+        XdlValue::Double(v) => *v,
+        XdlValue::Float(v) => *v as f64,
+        XdlValue::Long(v) => *v as f64,
+        XdlValue::Int(v) => *v as f64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let step = if args.len() > 2 {
+        match &args[2] {
+            XdlValue::Double(v) => *v,
+            XdlValue::Float(v) => *v as f64,
+            XdlValue::Long(v) => *v as f64,
+            XdlValue::Int(v) => *v as f64,
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", args[2].gdl_type()),
+                })
+            }
+        }
+    } else {
+        1.0
+    };
+
+    if step == 0.0 {
+        return Err(XdlError::InvalidArgument(
+            "TIMEGEN: Step cannot be zero".to_string(),
+        ));
+    }
+
+    let mut result = Vec::new();
+    let mut current = start;
+
+    if step > 0.0 {
+        while current <= final_val {
+            result.push(XdlValue::Double(current));
+            current += step;
+        }
+    } else {
+        while current >= final_val {
+            result.push(XdlValue::Double(current));
+            current += step;
+        }
+    }
+
+    Ok(XdlValue::NestedArray(result))
+}
