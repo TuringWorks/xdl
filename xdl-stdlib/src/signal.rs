@@ -150,7 +150,7 @@ pub fn smooth(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let mut result = Vec::with_capacity(n);
 
     for i in 0..n {
-        let start = if i < half { 0 } else { i - half };
+        let start = i.saturating_sub(half);
         let end = (i + half + 1).min(n);
         let sum: f64 = data[start..end].iter().sum();
         result.push(sum / (end - start) as f64);
@@ -270,15 +270,15 @@ pub fn convol_1d(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let mut result = vec![0.0; n];
 
-    for i in 0..n {
+    for (i, result_item) in result.iter_mut().enumerate().take(n) {
         let mut sum = 0.0;
-        for j in 0..k {
+        for (j, &kernel_item) in kernel.iter().enumerate().take(k) {
             let idx = (i + j).wrapping_sub(half_k);
             if idx < n {
-                sum += signal[idx] * kernel[j];
+                sum += signal[idx] * kernel_item;
             }
         }
-        result[i] = sum;
+        *result_item = sum;
     }
 
     Ok(XdlValue::Array(result))
@@ -318,7 +318,7 @@ pub fn median_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let mut result = Vec::with_capacity(n);
 
     for i in 0..n {
-        let start = if i < half { 0 } else { i - half };
+        let start = i.saturating_sub(half);
         let end = (i + half + 1).min(n);
 
         let mut window: Vec<f64> = data[start..end].to_vec();

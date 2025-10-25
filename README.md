@@ -134,8 +134,13 @@ cargo check --workspace
 # Build everything
 cargo build --workspace
 
-# Run tests
+# Run tests (fast tests only, completes in ~6 seconds)
 cargo test --workspace
+
+# Run slow tests (tests that take >10 seconds)
+./run_slow_tests.sh
+# Or manually:
+# cargo test -- --ignored
 
 # Format code
 cargo fmt --all
