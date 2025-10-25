@@ -1,0 +1,296 @@
+; ================================================================
+; Medical Imaging Workflow - CT/MRI Visualization
+; ================================================================
+; Demonstrates:
+; - Synthetic CT/MRI data generation
+; - Bone/tissue/air segmentation
+; - Windowing controls (HU units)
+; - Multi-slice visualization
+; - 3D volume rendering with tissue-specific colormaps
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Medical Imaging Workflow: CT/MRI Visualization'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+; ================================================================
+; STEP 1: Generate Synthetic CT Data (Hounsfield Units)
+; ================================================================
+PRINT, '▶ Step 1: Generating synthetic CT scan data...'
+PRINT, ''
+
+; Volume dimensions (simulating head CT)
+nx = 128
+ny = 128
+nz = 64
+PRINT, '  Creating volume:', nx, 'x', ny, 'x', nz
+
+; Initialize volume with air (-1000 HU)
+ct_volume = FLTARR(nx, ny, nz)
+ct_volume[*, *, *] = -1000.0
+
+; Define anatomical regions (simplified head model)
+center_x = nx / 2
+center_y = ny / 2
+center_z = nz / 2
+
+PRINT, '  Simulating anatomical structures...'
+
+; Create skull (bone: +700 to +3000 HU)
+skull_outer_radius = 55.0
+skull_inner_radius = 50.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            dx = i - center_x
+            dy = j - center_y
+            dz = (k - center_z) * 1.5  ; Elongated in z
+            r = SQRT(dx*dx + dy*dy + dz*dz)
+
+            ; Skull
+            IF (r GT skull_inner_radius) AND (r LT skull_outer_radius) THEN BEGIN
+                ; Bone density with some variation
+                noise = RANDOMN(seed) * 100.0
+                ct_volume[i, j, k] = 1500.0 + noise
+            ENDIF
+
+            ; Brain tissue (soft tissue: +20 to +45 HU)
+            IF r LT skull_inner_radius THEN BEGIN
+                ; Different brain regions with varying density
+                gray_matter = 40.0
+                white_matter = 30.0
+
+                ; Simple gray/white matter distribution
+                inner_radius = skull_inner_radius * 0.6
+                IF r LT inner_radius THEN BEGIN
+                    ct_volume[i, j, k] = white_matter + RANDOMN(seed) * 5.0
+                ENDIF ELSE BEGIN
+                    ct_volume[i, j, k] = gray_matter + RANDOMN(seed) * 5.0
+                ENDELSE
+            ENDIF
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  ✓ CT volume generated'
+PRINT, '    HU range:', MIN(ct_volume), 'to', MAX(ct_volume)
+PRINT, ''
+
+; ================================================================
+; STEP 2: Tissue Segmentation
+; ================================================================
+PRINT, '▶ Step 2: Segmenting tissues by HU values...'
+PRINT, ''
+
+; Create segmentation masks
+air_mask = ct_volume LT -500.0
+soft_tissue_mask = (ct_volume GE -100.0) AND (ct_volume LT 200.0)
+bone_mask = ct_volume GE 200.0
+
+; Count voxels in each category
+n_air = TOTAL(air_mask)
+n_soft = TOTAL(soft_tissue_mask)
+n_bone = TOTAL(bone_mask)
+n_total = nx * ny * nz
+
+PRINT, '  Segmentation results:'
+PRINT, '    Air:         ', n_air, ' voxels (', 100.0*n_air/n_total, '%)'
+PRINT, '    Soft tissue: ', n_soft, ' voxels (', 100.0*n_soft/n_total, '%)'
+PRINT, '    Bone:        ', n_bone, ' voxels (', 100.0*n_bone/n_total, '%)'
+PRINT, ''
+
+; ================================================================
+; STEP 3: Create Windowed Views
+; ================================================================
+PRINT, '▶ Step 3: Creating windowed views...'
+PRINT, ''
+
+; Window function: map HU range to [0, 1]
+FUNCTION CT_WINDOW, data, center, width
+    min_hu = center - width/2.0
+    max_hu = center + width/2.0
+    windowed = (data - min_hu) / width
+    windowed = windowed > 0.0 < 1.0
+    RETURN, windowed
+END
+
+; Brain window (center=40 HU, width=80 HU)
+brain_window = CT_WINDOW(ct_volume, 40.0, 80.0)
+PRINT, '  ✓ Brain window created (W:80 L:40)'
+
+; Bone window (center=400 HU, width=2000 HU)
+bone_window = CT_WINDOW(ct_volume, 400.0, 2000.0)
+PRINT, '  ✓ Bone window created (W:2000 L:400)'
+
+; Soft tissue window (center=50 HU, width=350 HU)
+soft_window = CT_WINDOW(ct_volume, 50.0, 350.0)
+PRINT, '  ✓ Soft tissue window created (W:350 L:50)'
+PRINT, ''
+
+; ================================================================
+; STEP 4: Extract Key Slices
+; ================================================================
+PRINT, '▶ Step 4: Extracting anatomical slices...'
+PRINT, ''
+
+; Axial slice (horizontal plane)
+axial_slice = ct_volume[*, *, nz/2]
+PRINT, '  ✓ Axial slice extracted (z =', nz/2, ')'
+
+; Coronal slice (frontal plane)
+coronal_slice = FLTARR(nx, nz)
+FOR i = 0, nx-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        coronal_slice[i, k] = ct_volume[i, ny/2, k]
+    ENDFOR
+ENDFOR
+PRINT, '  ✓ Coronal slice extracted (y =', ny/2, ')'
+
+; Sagittal slice (side view)
+sagittal_slice = FLTARR(ny, nz)
+FOR j = 0, ny-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        sagittal_slice[j, k] = ct_volume[nx/2, j, k]
+    ENDFOR
+ENDFOR
+PRINT, '  ✓ Sagittal slice extracted (x =', nx/2, ')'
+PRINT, ''
+
+; ================================================================
+; STEP 5: Visualize Slices
+; ================================================================
+PRINT, '▶ Step 5: Visualizing 2D slices...'
+PRINT, ''
+
+; Plot axial slice
+WINDOW, 0, XSIZE=800, YSIZE=600, TITLE='Axial Slice (Brain Window)'
+TV, BYTSCL(CT_WINDOW(axial_slice, 40.0, 80.0))
+PRINT, '  ✓ Axial slice displayed'
+
+; Plot coronal slice
+WINDOW, 1, XSIZE=800, YSIZE=400, TITLE='Coronal Slice (Bone Window)'
+TV, BYTSCL(CT_WINDOW(coronal_slice, 400.0, 2000.0))
+PRINT, '  ✓ Coronal slice displayed'
+
+; Plot sagittal slice
+WINDOW, 2, XSIZE=800, YSIZE=400, TITLE='Sagittal Slice (Soft Tissue Window)'
+TV, BYTSCL(CT_WINDOW(sagittal_slice, 50.0, 350.0))
+PRINT, '  ✓ Sagittal slice displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 6: 3D Volume Rendering - Brain Window
+; ================================================================
+PRINT, '▶ Step 6: 3D volume rendering (brain window)...'
+PRINT, ''
+
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='CT Brain Visualization'
+VIZ3D_COLORMAP, 'GRAYSCALE'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, brain_window, DIMENSIONS=[nx, ny, nz]
+
+PRINT, '  Launching 3D brain visualization...'
+VIZ3D_RENDER, /INTERACTIVE, TITLE='CT Brain (Soft Tissue Window)'
+PRINT, '  ✓ Brain visualization complete'
+PRINT, ''
+
+; ================================================================
+; STEP 7: 3D Volume Rendering - Bone Window
+; ================================================================
+PRINT, '▶ Step 7: 3D volume rendering (bone window)...'
+PRINT, ''
+
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='CT Bone Visualization'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, bone_window, DIMENSIONS=[nx, ny, nz]
+
+PRINT, '  Launching 3D bone visualization...'
+VIZ3D_RENDER, /INTERACTIVE, TITLE='CT Skull (Bone Window)'
+PRINT, '  ✓ Bone visualization complete'
+PRINT, ''
+
+; ================================================================
+; STEP 8: Histogram Analysis
+; ================================================================
+PRINT, '▶ Step 8: Analyzing intensity histogram...'
+PRINT, ''
+
+; Create histogram of HU values
+nbins = 100
+hist = HISTOGRAM(ct_volume, NBINS=nbins, MIN=-1000, MAX=2000)
+bin_centers = FINDGEN(nbins) * (3000.0/nbins) - 1000.0
+
+PRINT, '  Histogram computed (', nbins, 'bins)'
+PRINT, '  Peak locations:'
+
+; Find peaks (simplified)
+max_hist = MAX(hist)
+FOR i = 1, nbins-2 DO BEGIN
+    IF (hist[i] GT hist[i-1]) AND (hist[i] GT hist[i+1]) AND (hist[i] GT max_hist*0.1) THEN BEGIN
+        PRINT, '    HU =', bin_centers[i], ' (', hist[i], 'voxels)'
+    ENDIF
+ENDFOR
+PRINT, ''
+
+; Plot histogram
+WINDOW, 3, XSIZE=800, YSIZE=400, TITLE='HU Intensity Histogram'
+PLOT, bin_centers, hist, XTITLE='Hounsfield Units (HU)', YTITLE='Voxel Count', $
+      TITLE='CT Intensity Distribution'
+PRINT, '  ✓ Histogram displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 9: Statistics Summary
+; ================================================================
+PRINT, '▶ Step 9: Statistical summary...'
+PRINT, ''
+
+PRINT, '  Overall Statistics:'
+PRINT, '    Mean HU:     ', MEAN(ct_volume)
+PRINT, '    Std Dev:     ', STDDEV(ct_volume)
+PRINT, '    Median HU:   ', MEDIAN(ct_volume)
+PRINT, ''
+
+PRINT, '  Tissue-specific Statistics:'
+; Bone stats
+bone_values = ct_volume[WHERE(bone_mask)]
+IF N_ELEMENTS(bone_values) GT 0 THEN BEGIN
+    PRINT, '    Bone:  mean=', MEAN(bone_values), ' std=', STDDEV(bone_values)
+ENDIF
+
+; Soft tissue stats
+soft_values = ct_volume[WHERE(soft_tissue_mask)]
+IF N_ELEMENTS(soft_values) GT 0 THEN BEGIN
+    PRINT, '    Soft:  mean=', MEAN(soft_values), ' std=', STDDEV(soft_values)
+ENDIF
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '✓ Medical Imaging Workflow Complete!'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+PRINT, 'Demonstrated:'
+PRINT, '  ✓ Synthetic CT data generation with HU values'
+PRINT, '  ✓ Anatomical structure simulation (skull, brain)'
+PRINT, '  ✓ Tissue segmentation by density'
+PRINT, '  ✓ Multiple window/level presets'
+PRINT, '  ✓ Multi-planar reconstruction (axial, coronal, sagittal)'
+PRINT, '  ✓ 3D volume rendering with tissue-specific views'
+PRINT, '  ✓ Histogram analysis and statistics'
+PRINT, ''
+PRINT, 'Clinical Window Presets Used:'
+PRINT, '  • Brain:       W=80   L=40   (gray/white matter differentiation)'
+PRINT, '  • Bone:        W=2000 L=400  (skeletal structures)'
+PRINT, '  • Soft Tissue: W=350  L=50   (organs, muscle)'
+PRINT, ''
+PRINT, 'Next Steps:'
+PRINT, '  - Apply to real DICOM data'
+PRINT, '  - Add MPR (multi-planar reconstruction) tools'
+PRINT, '  - Implement measurement tools (distance, angle, volume)'
+PRINT, '  - Add annotation and reporting features'
+PRINT, ''
