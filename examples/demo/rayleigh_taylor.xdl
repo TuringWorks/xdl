@@ -43,9 +43,7 @@ FOR i = 0, grid_size - 1 DO BEGIN
     FOR j = 0, grid_size - 1 DO BEGIN
         FOR k = 0, grid_size - 1 DO BEGIN
             ; Add sinusoidal perturbation at interface
-            perturbation = perturbation_amplitude * $
-                SIN(4.0 * !PI * x[i]) * $
-                SIN(4.0 * !PI * y[j])
+            perturbation = perturbation_amplitude * SIN(4.0 * !PI * x[i]) * SIN(4.0 * !PI * y[j])
 
             interface_height = perturbation
 
@@ -56,9 +54,9 @@ FOR i = 0, grid_size - 1 DO BEGIN
                 ; Light fluid
                 density[i, j, k] = 1.0 - atwood
             END
-        END
-    END
-END
+        ENDFOR
+    ENDFOR
+ENDFOR
 
 PRINT, 'Density field initialized'
 PRINT, 'Min density: ', MIN(density)
@@ -83,9 +81,9 @@ FOR i = 1, grid_size - 2 DO BEGIN
             ; Simple buoyancy-driven velocity
             density_gradient = density[i, j, k+1] - density[i, j, k-1]
             velocity_z[i, j, k] = gravity * density_gradient
-        END
-    END
-END
+        ENDFOR
+    ENDFOR
+ENDFOR
 
 PRINT, 'Velocity field computed'
 PRINT, ''
@@ -153,10 +151,7 @@ FOR t = 1, time_steps DO BEGIN
             FOR k = 0, grid_size - 1 DO BEGIN
                 ; Grow the perturbation over time
                 growth_factor = 1.0 + 0.05 * t
-                perturbation = perturbation_amplitude * growth_factor * $
-                    SIN(4.0 * !PI * x[i]) * $
-                    SIN(4.0 * !PI * y[j]) * $
-                    EXP(-0.1 * ABS(z[k]))
+                perturbation = perturbation_amplitude * growth_factor * SIN(4.0 * !PI * x[i]) * SIN(4.0 * !PI * y[j]) * EXP(-0.1 * ABS(z[k]))
 
                 ; Add mushroom-like structures
                 interface = perturbation * (1.0 + 0.3 * SIN(2.0 * !PI * z[k]))
@@ -172,9 +167,9 @@ FOR t = 1, time_steps DO BEGIN
                     mixing = 0.5 + 0.5 * SIN(10.0 * !PI * (x[i] + y[j] + t/10.0))
                     density[i, j, k] = 1.0 + atwood * (2.0 * mixing - 1.0)
                 END
-            END
-        END
-    END
+            ENDFOR
+        ENDFOR
+    ENDFOR
 
     ; Render every 5 timesteps
     IF (t MOD 5) EQ 0 THEN BEGIN
@@ -183,7 +178,7 @@ FOR t = 1, time_steps DO BEGIN
         VIZ3D_RENDER, TITLE='Rayleigh-Taylor t=' + STRING(t)
         ; WAIT, 0.1  ; Brief pause for visualization (not yet implemented)
     END
-END
+ENDFOR
 
 PRINT, ''
 PRINT, 'Simulation complete!'
