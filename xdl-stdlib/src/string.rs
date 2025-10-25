@@ -660,3 +660,67 @@ pub fn strput(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let result: String = chars.iter().collect();
     Ok(XdlValue::String(result))
 }
+
+/// STRMESSAGE - Return error message text for error code
+/// STRMESSAGE(error_code)
+pub fn strmessage(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "STRMESSAGE: Expected error code argument".to_string(),
+        ));
+    }
+
+    let code = match &args[0] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Simple implementation - map common error codes to messages
+    let message = match code {
+        0 => "Success",
+        -1 => "General error",
+        -2 => "File not found",
+        -3 => "Invalid argument",
+        -4 => "Type mismatch",
+        -5 => "Dimension error",
+        -6 => "Math error",
+        -7 => "Runtime error",
+        _ => "Unknown error",
+    };
+
+    Ok(XdlValue::String(message.to_string()))
+}
+
+/// FORMAT_AXIS_VALUES - Format numeric values for axis labels (placeholder)
+/// Simplified version for now
+pub fn format_axis_values(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FORMAT_AXIS_VALUES: Expected value argument".to_string(),
+        ));
+    }
+
+    match &args[0] {
+        XdlValue::Double(v) => Ok(XdlValue::String(format!("{:.2}", v))),
+        XdlValue::Float(v) => Ok(XdlValue::String(format!("{:.2}", v))),
+        XdlValue::Long(v) => Ok(XdlValue::String(format!("{}", v))),
+        XdlValue::Int(v) => Ok(XdlValue::String(format!("{}", v))),
+        XdlValue::Array(arr) => {
+            let formatted: Vec<XdlValue> = arr
+                .iter()
+                .map(|&x| XdlValue::String(format!("{:.2}", x)))
+                .collect();
+            Ok(XdlValue::NestedArray(formatted))
+        }
+        _ => Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    }
+}
