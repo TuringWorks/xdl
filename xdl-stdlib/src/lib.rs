@@ -250,6 +250,10 @@ impl StandardLibrary {
             "LONG" => math::long(args),
             "BYTE" => math::byte(args),
             "DOUBLE" | "DBL" => math::double(args),
+            "UINT" => math::uint(args),
+            "ULONG" => math::ulong(args),
+            "LONG64" => math::long64(args),
+            "ULONG64" => math::ulong64(args),
 
             // Array creation functions
             "BYTARR" => array::bytarr(args),
@@ -261,6 +265,10 @@ impl StandardLibrary {
 
             "N_ELEMENTS" => array::n_elements(args),
             "WHERE" => array::where_func(args),
+            "SIZE" => array::size(args),
+            "N_PARAMS" => array::n_params(args),
+            "TAG_NAMES" => array::tag_names(args),
+            "N_TAGS" => array::n_tags(args),
 
             // Array manipulation functions
             "REFORM" => array::reform_func(args),
@@ -337,6 +345,9 @@ impl StandardLibrary {
             "SYSTIME" => system::systime(args),
             "JULDAY" => system::julday(args),
             "CALDAT" => system::caldat(args),
+            "BIN_DATE" => system::bin_date(args),
+            "TIMESTAMP" => system::timestamp(args),
+            "TIMEGEN" => system::timegen(args),
 
             // Data structure functions
             "HASH" => create_hash(args),

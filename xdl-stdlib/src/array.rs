@@ -1954,3 +1954,80 @@ pub fn permute(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }),
     }
 }
+
+/// SIZE - Return size and type information about a variable
+/// SIZE(array [, /DIMENSIONS, /N_DIMENSIONS, /N_ELEMENTS, /TYPE])
+/// Returns array with [ndims, dim1, dim2, ..., type, total_elements]
+pub fn size(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "SIZE: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let var = &args[0];
+
+    let (dims, type_code, total_elements) = match var {
+        XdlValue::Undefined => (vec![], 0, 0),
+        XdlValue::Byte(_) => (vec![], 1, 1),
+        XdlValue::Int(_) => (vec![], 2, 1),
+        XdlValue::Long(_) => (vec![], 3, 1),
+        XdlValue::Float(_) => (vec![], 4, 1),
+        XdlValue::Double(_) => (vec![], 5, 1),
+        XdlValue::Complex { .. } => (vec![], 6, 1),
+        XdlValue::String(_) => (vec![], 7, 1),
+        XdlValue::UInt(_) => (vec![], 12, 1),
+        XdlValue::ULong(_) => (vec![], 13, 1),
+        XdlValue::Long64(_) => (vec![], 14, 1),
+        XdlValue::ULong64(_) => (vec![], 15, 1),
+        XdlValue::Array(arr) => (vec![arr.len()], 5, arr.len()), // Default to double for arrays
+        XdlValue::MultiDimArray { data, shape } => {
+            (shape.clone(), 5, data.len()) // Default to double
+        }
+        XdlValue::NestedArray(arr) => (vec![arr.len()], 0, arr.len()), // Mixed type
+        _ => (vec![], 0, 0),
+    };
+
+    // Build result: [ndims, dim1, dim2, ..., type, n_elements]
+    let mut result = vec![XdlValue::Long(dims.len() as i32)];
+    for d in &dims {
+        result.push(XdlValue::Long(*d as i32));
+    }
+    result.push(XdlValue::Long(type_code));
+    result.push(XdlValue::Long(total_elements as i32));
+
+    Ok(XdlValue::NestedArray(result))
+}
+
+/// N_PARAMS - Return number of parameters passed to procedure
+/// For now, simple implementation returns argument count
+pub fn n_params(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    Ok(XdlValue::Long(args.len() as i32))
+}
+
+/// TAG_NAMES - Return names of structure tags (placeholder)
+/// Currently returns empty array - structures not fully implemented yet
+pub fn tag_names(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "TAG_NAMES: Expected structure argument".to_string(),
+        ));
+    }
+
+    // Placeholder: structures not fully implemented yet
+    // Return empty array for now
+    Ok(XdlValue::NestedArray(vec![]))
+}
+
+/// N_TAGS - Return number of tags in structure
+/// Currently returns 0 - structures not fully implemented yet
+pub fn n_tags(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "N_TAGS: Expected structure argument".to_string(),
+        ));
+    }
+
+    // Placeholder: structures not fully implemented yet
+    Ok(XdlValue::Long(0))
+}

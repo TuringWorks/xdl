@@ -1627,6 +1627,154 @@ pub fn binomial(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Double(result))
 }
 
+/// UINT - Convert to unsigned integer (16-bit)
+pub fn uint(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "UINT: Expected 1 argument".to_string(),
+        ));
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<XdlValue> = arr.iter().map(|&x| XdlValue::UInt(x as u16)).collect();
+        return Ok(XdlValue::NestedArray(result));
+    }
+
+    let value = match input {
+        XdlValue::Byte(v) => *v as u16,
+        XdlValue::Int(v) => *v as u16,
+        XdlValue::Long(v) => *v as u16,
+        XdlValue::Float(v) => *v as u16,
+        XdlValue::Double(v) => *v as u16,
+        XdlValue::UInt(v) => *v,
+        XdlValue::ULong(v) => *v as u16,
+        XdlValue::Long64(v) => *v as u16,
+        XdlValue::ULong64(v) => *v as u16,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", input.gdl_type()),
+            })
+        }
+    };
+
+    Ok(XdlValue::UInt(value))
+}
+
+/// ULONG - Convert to unsigned long integer (32-bit)
+pub fn ulong(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ULONG: Expected 1 argument".to_string(),
+        ));
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<XdlValue> = arr.iter().map(|&x| XdlValue::ULong(x as u32)).collect();
+        return Ok(XdlValue::NestedArray(result));
+    }
+
+    let value = match input {
+        XdlValue::Byte(v) => *v as u32,
+        XdlValue::Int(v) => *v as u32,
+        XdlValue::Long(v) => *v as u32,
+        XdlValue::Float(v) => *v as u32,
+        XdlValue::Double(v) => *v as u32,
+        XdlValue::UInt(v) => *v as u32,
+        XdlValue::ULong(v) => *v,
+        XdlValue::Long64(v) => *v as u32,
+        XdlValue::ULong64(v) => *v as u32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", input.gdl_type()),
+            })
+        }
+    };
+
+    Ok(XdlValue::ULong(value))
+}
+
+/// LONG64 - Convert to 64-bit signed integer
+pub fn long64(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "LONG64: Expected 1 argument".to_string(),
+        ));
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<XdlValue> = arr.iter().map(|&x| XdlValue::Long64(x as i64)).collect();
+        return Ok(XdlValue::NestedArray(result));
+    }
+
+    let value = match input {
+        XdlValue::Byte(v) => *v as i64,
+        XdlValue::Int(v) => *v as i64,
+        XdlValue::Long(v) => *v as i64,
+        XdlValue::Float(v) => *v as i64,
+        XdlValue::Double(v) => *v as i64,
+        XdlValue::UInt(v) => *v as i64,
+        XdlValue::ULong(v) => *v as i64,
+        XdlValue::Long64(v) => *v,
+        XdlValue::ULong64(v) => *v as i64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", input.gdl_type()),
+            })
+        }
+    };
+
+    Ok(XdlValue::Long64(value))
+}
+
+/// ULONG64 - Convert to 64-bit unsigned integer
+pub fn ulong64(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ULONG64: Expected 1 argument".to_string(),
+        ));
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<XdlValue> = arr.iter().map(|&x| XdlValue::ULong64(x as u64)).collect();
+        return Ok(XdlValue::NestedArray(result));
+    }
+
+    let value = match input {
+        XdlValue::Byte(v) => *v as u64,
+        XdlValue::Int(v) => *v as u64,
+        XdlValue::Long(v) => *v as u64,
+        XdlValue::Float(v) => *v as u64,
+        XdlValue::Double(v) => *v as u64,
+        XdlValue::UInt(v) => *v as u64,
+        XdlValue::ULong(v) => *v as u64,
+        XdlValue::Long64(v) => *v as u64,
+        XdlValue::ULong64(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", input.gdl_type()),
+            })
+        }
+    };
+
+    Ok(XdlValue::ULong64(value))
+}
+
 #[cfg(test)]
 mod more_tests {
     use super::*;
