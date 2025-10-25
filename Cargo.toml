@@ -9,8 +9,13 @@ members = [
     "xdl-ffi",
     "xdl-gui",
     "xdl-matlab",
-    "xdl-viz3d"
-, "xdl-viz3d-web", "xdl-desktop-viewer", "xdl-charts", "xdl-chart-viewer"]
+    "xdl-viz3d",
+    "xdl-viz3d-web",
+    "xdl-viz3d-threejs",
+    "xdl-desktop-viewer",
+    "xdl-charts",
+    "xdl-chart-viewer"
+]
 resolver = "2"
 
 [workspace.package]

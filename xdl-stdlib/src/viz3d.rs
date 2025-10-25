@@ -1,10 +1,60 @@
 //! 3D Volume Visualization functions for XDL
 //!
-//! Provides high-fidelity WebGPU-based volume rendering through the xdl-viz3d crate
+//! Supports multiple rendering backends:
+//! - Three.js (WebGL) - Better compatibility, runs in Tauri
+//! - WebGPU (Native) - High performance, native window
+//! - WebGPU (Browser) - Browser-based, requires modern browser
 
 use std::collections::HashMap;
 use std::sync::Mutex;
 use xdl_core::{XdlError, XdlResult, XdlValue};
+
+/// Backend selection for VIZ3D rendering
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Viz3DBackend {
+    /// Three.js WebGL renderer (Tauri-based)
+    ThreeJS,
+    /// Native WebGPU renderer (winit window)
+    WebGPU,
+    /// Browser-based WebGPU renderer
+    Browser,
+    /// Automatically select best available backend
+    Auto,
+}
+
+impl Viz3DBackend {
+    /// Detect backend from environment variable
+    fn from_env() -> Self {
+        match std::env::var("VIZ3D_BACKEND")
+            .unwrap_or_else(|_| "auto".to_string())
+            .to_lowercase()
+            .as_str()
+        {
+            "threejs" | "three" => Self::ThreeJS,
+            "webgpu" | "native" => Self::WebGPU,
+            "browser" | "web" => Self::Browser,
+            _ => Self::Auto,
+        }
+    }
+
+    /// Resolve Auto to concrete backend
+    fn resolve(self) -> Self {
+        match self {
+            Self::Auto => {
+                // Prefer Three.js for better compatibility
+                // Check if we're in GUI mode or browser explicitly requested
+                if std::env::var("XDL_GUI_MODE").is_ok()
+                    || std::env::var("VIZ3D_BROWSER").unwrap_or_default() == "1"
+                {
+                    Self::Browser
+                } else {
+                    Self::ThreeJS // Default to Three.js
+                }
+            }
+            other => other,
+        }
+    }
+}
 
 // Global state for the 3D visualization
 static VIZ3D_STATE: Mutex<Option<Viz3DState>> = Mutex::new(None);
@@ -281,14 +331,39 @@ pub fn viz3d_render(
             _ => None,
         });
 
-    // Check rendering mode preference (native UI is default)
-    let use_browser = std::env::var("VIZ3D_BROWSER").unwrap_or_else(|_| "0".to_string()) == "1";
-    let in_gui_mode = std::env::var("XDL_GUI_MODE").is_ok();
+    // Detect and resolve backend
+    let backend = Viz3DBackend::from_env().resolve();
+    println!("  Backend: {:?}", backend);
 
-    // Use native window rendering by default, browser if VIZ3D_BROWSER=1
-    if interactive && !use_browser && !in_gui_mode {
-        // Native window rendering (default)
-        println!("\nLaunching native 3D visualization window...");
+    // Route to appropriate backend
+    if interactive && backend == Viz3DBackend::ThreeJS {
+        // Three.js WebGL rendering (Tauri-based)
+        println!("\n🚀 Launching Three.js volume visualization...");
+        println!("Controls:");
+        println!("  - Left mouse: Rotate camera");
+        println!("  - Mouse wheel: Zoom in/out");
+        println!("  - GUI sliders: Adjust threshold and opacity\n");
+
+        let result = xdl_viz3d_threejs::launch_visualization(
+            state.volume_data.clone().unwrap(),
+            state.volume_dims.unwrap(),
+            &state.colormap,
+            title,
+        );
+
+        match result {
+            Ok(_) => {
+                println!("\n✓ Three.js visualization launched.");
+                Ok(XdlValue::Undefined)
+            }
+            Err(e) => Err(XdlError::RuntimeError(format!(
+                "Failed to launch Three.js visualization: {}",
+                e
+            ))),
+        }
+    } else if interactive && backend == Viz3DBackend::WebGPU {
+        // Native WebGPU window rendering
+        println!("\n🎮 Launching native WebGPU visualization...");
         println!("Controls:");
         println!("  - Left mouse button: Rotate camera");
         println!("  - Mouse wheel: Zoom in/out");
@@ -307,12 +382,12 @@ pub fn viz3d_render(
                 Ok(XdlValue::Undefined)
             }
             Err(e) => Err(XdlError::RuntimeError(format!(
-                "Failed to launch visualization: {}",
+                "Failed to launch WebGPU visualization: {}",
                 e
             ))),
         }
-    } else if interactive && use_browser {
-        println!("\n🌐 Launching browser-based visualization...");
+    } else if interactive && backend == Viz3DBackend::Browser {
+        println!("\n🌐 Launching browser-based WebGPU visualization...");
         println!("Controls:");
         println!("  - Left mouse drag: Rotate camera");
         println!("  - Mouse wheel: Zoom in/out");
@@ -343,7 +418,7 @@ pub fn viz3d_render(
                 e
             ))),
         }
-    } else if interactive && in_gui_mode {
+    } else if interactive {
         // In GUI mode, can't open blocking windows
         println!("\n⚠️  Interactive visualization not available in GUI mode.");
         println!("   Use xdl CLI to view interactive 3D windows.");
