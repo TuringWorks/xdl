@@ -117,7 +117,25 @@ pub fn sqrt(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let input = &_args[0];
 
-    // Handle arrays
+    // Handle multi-dimensional arrays
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| {
+                if x < 0.0 {
+                    f64::NAN // Return NaN for negative values
+                } else {
+                    x.sqrt()
+                }
+            })
+            .collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D arrays
     if let XdlValue::Array(arr) = input {
         let result: Vec<f64> = arr
             .iter()
@@ -204,6 +222,21 @@ pub fn abs(_args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => {}
     }
 
+    // Handle multi-dimensional arrays
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.abs()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.abs()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
     let float_val = to_float(input)?;
     let result = float_val.abs();
 
@@ -221,6 +254,99 @@ pub fn tan(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     let input = &_args[0];
     let float_val = to_float(input)?;
     let result = float_val.tan();
+
+    Ok(from_float(result, input.gdl_type()))
+}
+
+pub fn sinh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "SINH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.sinh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle multi-dimensional arrays
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.sinh()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    let float_val = to_float(input)?;
+    let result = float_val.sinh();
+
+    Ok(from_float(result, input.gdl_type()))
+}
+
+pub fn cosh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "COSH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.cosh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle multi-dimensional arrays
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.cosh()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    let float_val = to_float(input)?;
+    let result = float_val.cosh();
+
+    Ok(from_float(result, input.gdl_type()))
+}
+
+pub fn tanh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "TANH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.tanh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle multi-dimensional arrays
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.tanh()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    let float_val = to_float(input)?;
+    let result = float_val.tanh();
 
     Ok(from_float(result, input.gdl_type()))
 }
@@ -288,6 +414,23 @@ pub fn atan(_args: &[XdlValue]) -> XdlResult<XdlValue> {
         let result = y.atan2(x);
         Ok(XdlValue::Double(result))
     }
+}
+
+/// ATAN2 - Two-argument arctangent
+/// ATAN2(y, x) computes arctan(y/x) with proper quadrant handling
+/// Returns angle in radians in range [-π, π]
+pub fn atan2(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ATAN2: Expected 2 arguments (y, x), got {}",
+            _args.len()
+        )));
+    }
+
+    let y = to_float(&_args[0])?;
+    let x = to_float(&_args[1])?;
+    let result = y.atan2(x);
+    Ok(XdlValue::Double(result))
 }
 
 pub fn floor(_args: &[XdlValue]) -> XdlResult<XdlValue> {
@@ -918,6 +1061,570 @@ pub fn randomu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
         Ok(XdlValue::Array(values))
     }
+}
+
+/// RANDOMN - Generate normal/Gaussian random numbers
+/// Uses Box-Muller transform to generate from uniform distribution
+pub fn randomn(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "RANDOMN: Expected at least 1 argument (seed)".to_string(),
+        ));
+    }
+
+    // Get seed from first argument
+    let seed = match &args[0] {
+        XdlValue::Long(v) => *v as u64,
+        XdlValue::Int(v) => *v as u64,
+        XdlValue::Byte(v) => *v as u64,
+        XdlValue::Double(v) => *v as u64,
+        XdlValue::Float(v) => *v as u64,
+        _ => 12345u64, // Default seed
+    };
+
+    // Helper to generate uniform [0,1) using LCG
+    let mut rng_state = seed;
+    let mut uniform = || -> f64 {
+        let a = 1664525u64;
+        let c = 1013904223u64;
+        rng_state = a.wrapping_mul(rng_state).wrapping_add(c);
+        ((rng_state % 1000000) as f64) / 1000000.0
+    };
+
+    // Box-Muller transform to generate normal random number
+    let mut box_muller = || -> f64 {
+        let u1 = uniform();
+        let u2 = uniform();
+        // Avoid log(0) by ensuring u1 > 0
+        let u1 = if u1 < 1e-10 { 1e-10 } else { u1 };
+        (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
+    };
+
+    if args.len() == 1 {
+        // Single normal random number
+        Ok(XdlValue::Double(box_muller()))
+    } else {
+        // Array of normal random numbers
+        let n = args[1].to_long()? as usize;
+        let values: Vec<f64> = (0..n).map(|_| box_muller()).collect();
+        Ok(XdlValue::Array(values))
+    }
+}
+
+/// GAMMA - Gamma function
+/// GAMMA(x) computes the gamma function Γ(x)
+/// For positive integers: Γ(n) = (n-1)!
+pub fn gamma(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GAMMA: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| gamma_function(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    let x = to_float(input)?;
+    let result = gamma_function(x);
+    Ok(from_float(result, input.gdl_type()))
+}
+
+/// Helper: Gamma function using Lanczos approximation
+fn gamma_function(x: f64) -> f64 {
+    // Lanczos approximation coefficients (g=7)
+    const G: f64 = 7.0;
+    const COEF: [f64; 9] = [
+        0.9999999999998099,
+        676.5203681218851,
+        -1259.139216722403,
+        771.3234287776531,
+        -176.6150291621406,
+        12.507343278686905,
+        -0.1385710952657201,
+        9.984369578019572e-6,
+        1.505632735149312e-7,
+    ];
+
+    if x < 0.5 {
+        // Reflection formula: Γ(1-x)Γ(x) = π/sin(πx)
+        std::f64::consts::PI / ((std::f64::consts::PI * x).sin() * gamma_function(1.0 - x))
+    } else {
+        let x = x - 1.0;
+        let mut a = COEF[0];
+        for (i, &c) in COEF.iter().enumerate().skip(1) {
+            a += c / (x + i as f64);
+        }
+        let t = x + G + 0.5;
+        (2.0 * std::f64::consts::PI).sqrt() * t.powf(x + 0.5) * (-t).exp() * a
+    }
+}
+
+/// LNGAMMA - Natural log of gamma function
+/// LNGAMMA(x) computes ln(Γ(x))
+pub fn lngamma(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "LNGAMMA: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| gamma_function(x).ln()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    let x = to_float(input)?;
+    let result = gamma_function(x).ln();
+    Ok(from_float(result, input.gdl_type()))
+}
+
+/// ERF - Error function
+/// ERF(x) = (2/√π) ∫₀ˣ e^(-t²) dt
+pub fn erf(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ERF: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| erf_function(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    let x = to_float(input)?;
+    let result = erf_function(x);
+    Ok(from_float(result, input.gdl_type()))
+}
+
+/// Helper: Error function using polynomial approximation
+fn erf_function(x: f64) -> f64 {
+    // Abramowitz and Stegun approximation
+    let a1 = 0.254829592;
+    let a2 = -0.284496736;
+    let a3 = 1.421413741;
+    let a4 = -1.453152027;
+    let a5 = 1.061405429;
+    let p = 0.3275911;
+
+    let sign = if x < 0.0 { -1.0 } else { 1.0 };
+    let x = x.abs();
+
+    let t = 1.0 / (1.0 + p * x);
+    let y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * (-x * x).exp();
+
+    sign * y
+}
+
+/// ERFC - Complementary error function
+/// ERFC(x) = 1 - ERF(x)
+pub fn erfc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ERFC: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| 1.0 - erf_function(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    let x = to_float(input)?;
+    let result = 1.0 - erf_function(x);
+    Ok(from_float(result, input.gdl_type()))
+}
+
+/// BESSEL_J - Bessel function of the first kind
+/// BESSEL_J(x, n) computes Jₙ(x)
+pub fn bessel_j(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BESSEL_J: Expected 2 arguments (x, n), got {}",
+            args.len()
+        )));
+    }
+
+    let x = to_float(&args[0])?;
+    let n = match &args[1] {
+        XdlValue::Int(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let result = bessel_j_function(x, n);
+    Ok(XdlValue::Double(result))
+}
+
+/// Helper: Bessel function J using series expansion (for small x)
+fn bessel_j_function(x: f64, n: i32) -> f64 {
+    if n < 0 {
+        return if n % 2 == 0 {
+            bessel_j_function(x, -n)
+        } else {
+            -bessel_j_function(x, -n)
+        };
+    }
+
+    // Series expansion for small to moderate x
+    let mut sum = 0.0;
+    let half_x = x / 2.0;
+
+    for k in 0..50 {
+        let term = (-1.0_f64).powi(k as i32) * half_x.powi(n + 2 * (k as i32))
+            / (factorial(k) * factorial(n as usize + k));
+        sum += term;
+        if term.abs() < 1e-15 * sum.abs() {
+            break;
+        }
+    }
+
+    sum
+}
+
+/// Helper: Factorial function
+fn factorial(n: usize) -> f64 {
+    if n == 0 || n == 1 {
+        1.0
+    } else {
+        (1..=n).fold(1.0, |acc, x| acc * x as f64)
+    }
+}
+
+/// FACTORIAL - Factorial function
+/// FACTORIAL(n) computes n!
+pub fn factorial_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "FACTORIAL: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let n = match &args[0] {
+        XdlValue::Int(v) => *v as usize,
+        XdlValue::Long(v) => *v as usize,
+        XdlValue::Byte(v) => *v as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if n > 170 {
+        return Err(XdlError::MathError(
+            "FACTORIAL: Argument too large (>170)".to_string(),
+        ));
+    }
+
+    let result = factorial(n);
+    Ok(XdlValue::Double(result))
+}
+
+/// ASINH - Inverse hyperbolic sine
+/// ASINH(x) = ln(x + sqrt(x² + 1))
+pub fn asinh(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ASINH: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.asinh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    let x = to_float(input)?;
+    let result = x.asinh();
+    Ok(from_float(result, input.gdl_type()))
+}
+
+/// ACOSH - Inverse hyperbolic cosine
+/// ACOSH(x) = ln(x + sqrt(x² - 1)), x >= 1
+pub fn acosh(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ACOSH: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| if x < 1.0 { f64::NAN } else { x.acosh() })
+            .collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    let x = to_float(input)?;
+    if x < 1.0 {
+        return Err(XdlError::MathError(
+            "ACOSH: Argument must be >= 1".to_string(),
+        ));
+    }
+    let result = x.acosh();
+    Ok(from_float(result, input.gdl_type()))
+}
+
+/// ATANH - Inverse hyperbolic tangent
+/// ATANH(x) = 0.5 * ln((1+x)/(1-x)), |x| < 1
+pub fn atanh(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ATANH: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| if x.abs() >= 1.0 { f64::NAN } else { x.atanh() })
+            .collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    let x = to_float(input)?;
+    if x.abs() >= 1.0 {
+        return Err(XdlError::MathError(
+            "ATANH: Argument must be in range (-1, 1)".to_string(),
+        ));
+    }
+    let result = x.atanh();
+    Ok(from_float(result, input.gdl_type()))
+}
+
+/// BETA - Beta function
+/// BETA(x, y) = Γ(x)Γ(y)/Γ(x+y)
+pub fn beta(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BETA: Expected 2 arguments (x, y), got {}",
+            args.len()
+        )));
+    }
+
+    let x = to_float(&args[0])?;
+    let y = to_float(&args[1])?;
+
+    // Beta(x, y) = Gamma(x) * Gamma(y) / Gamma(x + y)
+    let result = gamma_function(x) * gamma_function(y) / gamma_function(x + y);
+    Ok(XdlValue::Double(result))
+}
+
+/// GCD - Greatest Common Divisor
+/// GCD(a, b) computes the GCD of two integers
+pub fn gcd(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GCD: Expected 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let a = match &args[0] {
+        XdlValue::Int(v) => (*v).abs() as i64,
+        XdlValue::Long(v) => (*v).abs() as i64,
+        XdlValue::Long64(v) => v.abs(),
+        XdlValue::Double(v) => (*v as i64).abs(),
+        XdlValue::Float(v) => (*v as i64).abs(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let b = match &args[1] {
+        XdlValue::Int(v) => (*v).abs() as i64,
+        XdlValue::Long(v) => (*v).abs() as i64,
+        XdlValue::Long64(v) => v.abs(),
+        XdlValue::Double(v) => (*v as i64).abs(),
+        XdlValue::Float(v) => (*v as i64).abs(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Euclidean algorithm
+    let result = gcd_helper(a, b);
+    Ok(XdlValue::Long64(result))
+}
+
+fn gcd_helper(mut a: i64, mut b: i64) -> i64 {
+    while b != 0 {
+        let temp = b;
+        b = a % b;
+        a = temp;
+    }
+    a
+}
+
+/// LCM - Least Common Multiple
+/// LCM(a, b) computes the LCM of two integers
+pub fn lcm(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "LCM: Expected 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let a = match &args[0] {
+        XdlValue::Int(v) => (*v).abs() as i64,
+        XdlValue::Long(v) => (*v).abs() as i64,
+        XdlValue::Long64(v) => v.abs(),
+        XdlValue::Double(v) => (*v as i64).abs(),
+        XdlValue::Float(v) => (*v as i64).abs(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let b = match &args[1] {
+        XdlValue::Int(v) => (*v).abs() as i64,
+        XdlValue::Long(v) => (*v).abs() as i64,
+        XdlValue::Long64(v) => v.abs(),
+        XdlValue::Double(v) => (*v as i64).abs(),
+        XdlValue::Float(v) => (*v as i64).abs(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if a == 0 || b == 0 {
+        return Ok(XdlValue::Long64(0));
+    }
+
+    // LCM(a, b) = |a * b| / GCD(a, b)
+    let result = (a * b).abs() / gcd_helper(a, b);
+    Ok(XdlValue::Long64(result))
+}
+
+/// POLY - Evaluate polynomial
+/// POLY(x, coeffs) evaluates polynomial with given coefficients
+/// Result = c[0] + c[1]*x + c[2]*x^2 + ... + c[n]*x^n
+pub fn poly(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "POLY: Expected 2 arguments (x, coeffs), got {}",
+            args.len()
+        )));
+    }
+
+    let x = to_float(&args[0])?;
+
+    let coeffs = match &args[1] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if coeffs.is_empty() {
+        return Ok(XdlValue::Double(0.0));
+    }
+
+    // Horner's method for polynomial evaluation
+    let mut result = coeffs[coeffs.len() - 1];
+    for i in (0..coeffs.len() - 1).rev() {
+        result = result * x + coeffs[i];
+    }
+
+    Ok(XdlValue::Double(result))
+}
+
+/// BINOMIAL - Binomial coefficient
+/// BINOMIAL(n, k) computes "n choose k" = n! / (k! * (n-k)!)
+pub fn binomial(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BINOMIAL: Expected 2 arguments (n, k), got {}",
+            args.len()
+        )));
+    }
+
+    let n = match &args[0] {
+        XdlValue::Int(v) => *v as i64,
+        XdlValue::Long(v) => *v as i64,
+        XdlValue::Long64(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let k = match &args[1] {
+        XdlValue::Int(v) => *v as i64,
+        XdlValue::Long(v) => *v as i64,
+        XdlValue::Long64(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if k < 0 || k > n {
+        return Ok(XdlValue::Double(0.0));
+    }
+
+    // Use efficient calculation: C(n,k) = n! / (k! * (n-k)!)
+    // Optimize by computing C(n,k) = C(n, n-k) when k > n/2
+    let k = if k > n - k { n - k } else { k };
+
+    let mut result = 1.0;
+    for i in 0..k {
+        result *= (n - i) as f64 / (i + 1) as f64;
+    }
+
+    Ok(XdlValue::Double(result))
 }
 
 #[cfg(test)]

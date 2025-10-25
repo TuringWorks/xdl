@@ -404,3 +404,150 @@ pub fn wait(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::Undefined)
 }
+
+/// SYSTIME - Get system time
+/// SYSTIME([/SECONDS, /JULIAN])
+/// Returns current system time as string or seconds since epoch
+pub fn systime(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    // Get current time
+    let now = SystemTime::now();
+    let duration = now
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| XdlError::RuntimeError(format!("System time error: {}", e)))?;
+
+    // Check if /SECONDS keyword is present (return as numeric)
+    // For now, simple implementation returns seconds as default
+    if args.is_empty() {
+        // Return formatted string like "Sat Jan 25 08:30:00 2025"
+        let secs = duration.as_secs();
+        // Simple date formatting
+        let datetime = format_unix_time(secs);
+        Ok(XdlValue::String(datetime))
+    } else {
+        // Return seconds since epoch
+        Ok(XdlValue::Double(duration.as_secs() as f64))
+    }
+}
+
+/// Helper to format unix timestamp
+fn format_unix_time(secs: u64) -> String {
+    // Simple formatting - days since 1970
+    let days = secs / 86400;
+    let year = 1970 + (days / 365) as i32;
+    let day_of_year = (days % 365) as i32;
+    let _month = (day_of_year / 30).min(11) + 1;
+    let day = (day_of_year % 30) + 1;
+
+    let time_of_day = secs % 86400;
+    let hours = time_of_day / 3600;
+    let minutes = (time_of_day % 3600) / 60;
+    let seconds = time_of_day % 60;
+
+    format!(
+        "Day {} {:02}:{:02}:{:02} {}",
+        day, hours, minutes, seconds, year
+    )
+}
+
+/// JULDAY - Convert calendar date to Julian day number
+/// JULDAY(month, day, year [, hour, minute, second])
+/// Returns Julian day number
+pub fn julday(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "JULDAY: Expected at least 3 arguments (month, day, year)".to_string(),
+        ));
+    }
+
+    let month = match &args[0] {
+        XdlValue::Int(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let day = match &args[1] {
+        XdlValue::Int(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let year = match &args[2] {
+        XdlValue::Int(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    // Julian day calculation (simplified algorithm)
+    // Based on standard astronomical formula
+    let a = (14 - month) / 12;
+    let y = year + 4800 - a;
+    let m = month + 12 * a - 3;
+
+    let jdn = day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
+
+    Ok(XdlValue::Double(jdn as f64))
+}
+
+/// CALDAT - Convert Julian day to calendar date
+/// CALDAT(julian, month, day, year [, hour, minute, second])
+/// Decomposes Julian day number into calendar components
+pub fn caldat(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 4 {
+        return Err(XdlError::InvalidArgument(
+            "CALDAT: Expected at least 4 arguments (julian, month_var, day_var, year_var)"
+                .to_string(),
+        ));
+    }
+
+    let julian = match &args[0] {
+        XdlValue::Double(v) => *v as i32,
+        XdlValue::Float(v) => *v as i32,
+        XdlValue::Long(v) => *v,
+        XdlValue::Int(v) => *v as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Inverse Julian day calculation
+    let a = julian + 32044;
+    let b = (4 * a + 3) / 146097;
+    let c = a - (146097 * b) / 4;
+    let d = (4 * c + 3) / 1461;
+    let e = c - (1461 * d) / 4;
+    let m = (5 * e + 2) / 153;
+
+    let day = e - (153 * m + 2) / 5 + 1;
+    let month = m + 3 - 12 * (m / 10);
+    let year = 100 * b + d - 4800 + m / 10;
+
+    // In GDL, CALDAT modifies variables passed by reference
+    // For now, return as array: [month, day, year]
+    let result = vec![
+        XdlValue::Long(month),
+        XdlValue::Long(day),
+        XdlValue::Long(year),
+    ];
+
+    Ok(XdlValue::NestedArray(result))
+}

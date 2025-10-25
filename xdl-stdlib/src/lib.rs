@@ -9,6 +9,7 @@ pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
 pub mod image; // Image processing
 pub mod io;
+pub mod linalg; // Linear algebra
 pub mod math;
 pub mod ml;
 pub mod python;
@@ -151,6 +152,10 @@ impl StandardLibrary {
             "CLOSE" => io::close_file(args),
             "WRITEF" => io::writef(args),
             "PRINTF" => io::printf(args),
+            "WRITEU" => io::writeu(args),
+            "READU" => io::readu(args),
+            "FLUSH" => io::flush_func(args),
+            "POINT_LUN" => io::point_lun(args),
 
             _ => Err(xdl_core::XdlError::RuntimeError(format!(
                 "Unknown procedure: {}",
@@ -182,6 +187,15 @@ impl StandardLibrary {
             "ASIN" => math::asin(args),
             "ACOS" => math::acos(args),
             "ATAN" => math::atan(args),
+            "ATAN2" => math::atan2(args),
+
+            // Hyperbolic functions
+            "SINH" => math::sinh(args),
+            "COSH" => math::cosh(args),
+            "TANH" => math::tanh(args),
+            "ASINH" => math::asinh(args),
+            "ACOSH" => math::acosh(args),
+            "ATANH" => math::atanh(args),
 
             // Exponential and logarithmic functions
             "EXP" => math::exp(args),
@@ -196,6 +210,19 @@ impl StandardLibrary {
             "ROUND" => math::round(args),
             "NCHOOSEK" => math::nchoosek(args),
 
+            // Special functions
+            "GAMMA" => math::gamma(args),
+            "LNGAMMA" => math::lngamma(args),
+            "ERF" => math::erf(args),
+            "ERFC" => math::erfc(args),
+            "BESSEL_J" => math::bessel_j(args),
+            "FACTORIAL" => math::factorial_func(args),
+            "BETA" => math::beta(args),
+            "GCD" => math::gcd(args),
+            "LCM" => math::lcm(args),
+            "POLY" => math::poly(args),
+            "BINOMIAL" => math::binomial(args),
+
             // Array generation functions
             "FINDGEN" => math::findgen(args),
             "INDGEN" => math::indgen(args),
@@ -206,6 +233,7 @@ impl StandardLibrary {
             "ULINDGEN" => math::ulindgen(args),
             "L64INDGEN" => math::l64indgen(args),
             "RANDOMU" => math::randomu(args),
+            "RANDOMN" => math::randomn(args),
 
             // Signal processing
             "FFT" => math::fft(args),
@@ -234,7 +262,18 @@ impl StandardLibrary {
             // Array manipulation functions
             "REFORM" => array::reform_func(args),
             "TRANSPOSE" => array::transpose_func(args),
+            "ROTATE" => array::rotate_func(args),
+            "SHIFT" => array::shift_func(args),
+            "REBIN" => array::rebin_func(args),
+            "REPLICATE" => array::replicate_func(args),
+            "HISTOGRAM" => array::histogram_func(args),
             "MESHGRID" => array::meshgrid(args),
+            "INTERPOL" => array::interpol(args),
+            "CONGRID" => array::congrid(args),
+            "UNIQ" => array::uniq(args),
+            "ARRAY_INDICES" => array::array_indices(args),
+            "ARRAY_EQUAL" => array::array_equal(args),
+            "PERMUTE" => array::permute(args),
 
             // Array statistics functions
             "MIN" => array::min_func(args),
@@ -259,6 +298,14 @@ impl StandardLibrary {
             "MEANABSDEV" => statistics::meanabsdev(args),
             "SKEWNESS" => statistics::skewness(args),
             "KURTOSIS" => statistics::kurtosis(args),
+            "CORRELATE" => statistics::correlate(args),
+            "REGRESS" => statistics::regress(args),
+            "LINFIT" => statistics::linfit(args),
+            "PERCENTILES" => statistics::percentiles(args),
+            "ROBUST_MEAN" => statistics::robust_mean(args),
+            "TRIMMED_MEAN" => statistics::trimmed_mean(args),
+            "RESISTANT_MEAN" => statistics::resistant_mean(args),
+            "RANDOM_POISSON" => statistics::random_poisson(args),
 
             // Probability density functions
             "GAUSS_PDF" => statistics::gauss_pdf(args),
@@ -271,6 +318,17 @@ impl StandardLibrary {
             "FILEPATH" => io::filepath(args),
             "READ_JPEG" => io::read_jpeg(args),
             "READF" => io::readf(args),
+            "READU" => io::readu(args),
+            "FILE_TEST" => io::file_test(args),
+            "FILE_LINES" => io::file_lines(args),
+            "FILE_INFO" => io::file_info(args),
+            "EOF" => io::eof_func(args),
+            "ASSOC" => io::assoc(args),
+
+            // Time/Date functions
+            "SYSTIME" => system::systime(args),
+            "JULDAY" => system::julday(args),
+            "CALDAT" => system::caldat(args),
 
             // Data structure functions
             "HASH" => create_hash(args),
@@ -281,6 +339,12 @@ impl StandardLibrary {
             "STRMID" => string::strmid(args),
             "STRUPCASE" => string::strupcase(args),
             "STRLOWCASE" => string::strlowcase(args),
+            "STRTRIM" => string::strtrim(args),
+            "STRJOIN" => string::strjoin(args),
+            "STRSPLIT" => string::strsplit(args),
+            "STRCMP" => string::strcmp(args),
+            "STRCOMPRESS" => string::strcompress(args),
+            "STRMATCH" => string::strmatch(args),
             "STRING" => string::string_fn(args),
 
             // Complex number functions
@@ -288,6 +352,16 @@ impl StandardLibrary {
             "REAL" => complex::real_part(args),
             "IMAGINARY" | "IMAG" => complex::imaginary_part(args),
             "CONJ" => complex::conj(args),
+
+            // Linear algebra functions
+            "IDENTITY" => linalg::identity(args),
+            "INVERT" => linalg::invert(args),
+            "DETERM" => linalg::determ(args),
+            "CROSSP" => linalg::crossp(args),
+            "DOTP" => linalg::dotp(args),
+            "NORM" => linalg::norm(args),
+            "DIAGONAL" => linalg::diagonal(args),
+            "TRACE" => linalg::trace(args),
 
             // Python integration functions
             "PYTHON_IMPORT" => python::python_import(args),
