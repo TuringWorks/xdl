@@ -142,6 +142,8 @@ impl StandardLibrary {
             ".CONTINUE" => system::continue_execution(args),
             "CATCH" => system::catch_error(args),
             "WAIT" => system::wait(args),
+            "STOP" => system::stop(args),
+            "RETALL" => system::retall(args),
 
             // I/O procedures
             "FREE_LUN" => io::free_lun(args),
@@ -348,6 +350,11 @@ impl StandardLibrary {
             "BIN_DATE" => system::bin_date(args),
             "TIMESTAMP" => system::timestamp(args),
             "TIMEGEN" => system::timegen(args),
+            "MESSAGE" => system::message(args),
+            "ON_ERROR" => system::on_error(args),
+            "MEMORY" => system::memory(args),
+            "EXIT" => system::exit(args),
+            "ROUTINE_INFO" => system::routine_info(args),
 
             // Data structure functions
             "HASH" => create_hash(args),
@@ -367,6 +374,8 @@ impl StandardLibrary {
             "STRING" => string::string_fn(args),
             "STRREPLACE" => string::strreplace(args),
             "STRPUT" => string::strput(args),
+            "STRMESSAGE" => string::strmessage(args),
+            "FORMAT_AXIS_VALUES" => string::format_axis_values(args),
 
             // Complex number functions
             "COMPLEX" => complex::complex(args),

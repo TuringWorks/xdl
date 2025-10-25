@@ -552,6 +552,128 @@ pub fn caldat(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::NestedArray(result))
 }
 
+/// MESSAGE - Print message or error
+/// MESSAGE(text [, /INFORMATIONAL, /CONTINUE])
+pub fn message(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "MESSAGE: Expected message text".to_string(),
+        ));
+    }
+
+    let text = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Simple implementation - just print the message
+    eprintln!("% {}", text);
+    Ok(XdlValue::Undefined)
+}
+
+/// ON_ERROR - Set error handling mode (placeholder)
+/// ON_ERROR(mode)
+pub fn on_error(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ON_ERROR: Expected error mode".to_string(),
+        ));
+    }
+
+    let _mode = match &args[0] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Placeholder - error handling mode not fully implemented
+    Ok(XdlValue::Undefined)
+}
+
+/// MEMORY - Return memory usage information
+/// MEMORY([/CURRENT, /HIGHWATER, /L64])
+pub fn memory(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Placeholder implementation - return mock memory info
+    // In full implementation, would query actual memory usage
+    let memory_info = vec![
+        XdlValue::Long64(1024 * 1024 * 100), // Current memory (100MB mock)
+        XdlValue::Long64(1024 * 1024 * 200), // High water mark (200MB mock)
+    ];
+
+    Ok(XdlValue::NestedArray(memory_info))
+}
+
+/// EXIT - Exit XDL session
+/// EXIT([status])
+pub fn exit(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let status = if args.is_empty() {
+        0
+    } else {
+        match &args[0] {
+            XdlValue::Long(n) => *n,
+            XdlValue::Int(n) => *n as i32,
+            _ => 0,
+        }
+    };
+
+    // Return special exit signal
+    // Interpreter should catch this and terminate
+    Err(XdlError::RuntimeError(format!("EXIT:{}", status)))
+}
+
+/// STOP - Halt program execution (debugging)
+pub fn stop(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    eprintln!("% Program stopped - STOP");
+    // In full implementation, would enter debugger
+    Ok(XdlValue::Undefined)
+}
+
+/// RETALL - Return from all levels
+pub fn retall(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Signal to return to top level
+    Err(XdlError::RuntimeError("RETALL".to_string()))
+}
+
+/// ROUTINE_INFO - Get information about routines
+/// ROUTINE_INFO([name] [, /FUNCTIONS, /PROCEDURES])
+pub fn routine_info(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        // Return list of all loaded routines (placeholder)
+        let routines = vec![
+            XdlValue::String("PLOT".to_string()),
+            XdlValue::String("PRINT".to_string()),
+            XdlValue::String("HELP".to_string()),
+        ];
+        return Ok(XdlValue::NestedArray(routines));
+    }
+
+    // Get info about specific routine
+    match &args[0] {
+        XdlValue::String(name) => {
+            // Placeholder - return mock info
+            let info = vec![
+                XdlValue::String(name.clone()),
+                XdlValue::String("compiled".to_string()),
+            ];
+            Ok(XdlValue::NestedArray(info))
+        }
+        _ => Err(XdlError::TypeMismatch {
+            expected: "string".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    }
+}
+
 /// BIN_DATE - Convert system time to date/time array
 /// BIN_DATE(time_value)
 /// Returns [year, month, day, hour, minute, second]
