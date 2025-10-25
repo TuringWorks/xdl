@@ -21,9 +21,11 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - **Phase 17: Complex Numbers** (50%)
 - **Phase 18: System & Control** (65%)
 
+### Newly Completed Phases ✅
+- **Phase 11: Signal Processing** (50%)
+
 ### Partial/Deferred Phases ⏸️
 - **Phase 10: Image I/O** (Requires external image crates)
-- **Phase 11: Signal Processing** (Complex DSP - deferred)
 - **Phase 19: Graphics** (Extensive - partially complete via existing modules)
 
 ---
@@ -197,16 +199,36 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 
 ---
 
-### Phase 13: Image Processing ✅ 35%
-**Status:** Basic Morphology & Edge Detection
+### Phase 11: Signal Processing ✅ 50%
+**Status:** Core Functions Complete
+
+**Implemented Functions:**
+- `FFT` - Fast Fourier Transform (1D)
+- `A_CORRELATE` - Auto-correlation
+- `C_CORRELATE` - Cross-correlation
+- `SMOOTH` - Boxcar smoothing
+- `DIGITAL_FILTER` - Filter design
+- `HILBERT` - Hilbert transform
+- `MEDIAN_FILTER` - Median filtering
+
+**Remaining:** 2D/3D FFT, DECONVOL, IIR/FIR filters (BUTTERWORTH, CHEBYSHEV), WAVELET, MORLET, SPEC_GRAM, POWER_SPECTRUM
+
+---
+
+### Phase 13: Image Processing ✅ 60%
+**Status:** Edge Detection & Filtering Complete
 
 **Implemented Functions:**
 - `CONVOL` - 2D convolution
 - `DILATE` - Morphological dilation
 - `ERODE` - Morphological erosion
 - `SOBEL` - Sobel edge detection
+- `ROBERTS` - Roberts cross edge detection
+- `PREWITT` - Prewitt edge detection
+- `GAUSSIAN_FILTER` - Gaussian blur
+- `THRESHOLD` - Binary thresholding
 
-**Remaining:** ROBERTS, PREWITT, CANNY edge detectors; HOUGH, RADON transforms; LABEL_REGION, WATERSHED; MEDIAN, GAUSSIAN, WIENER filters; THRESHOLD
+**Remaining:** CANNY edge detector; HOUGH, RADON transforms; LABEL_REGION, WATERSHED; WIENER filter; advanced morphology
 
 ---
 
@@ -306,10 +328,10 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 ## Statistics
 
 ### Total Functions Implemented
-- **Core Functions:** ~120+
+- **Core Functions:** ~130+
 - **ML Functions:** 60+ (separate ML module)
 - **Graphics Procedures:** 40+ (separate graphics module)
-- **Total:** 220+ functions/procedures
+- **Total:** 230+ functions/procedures
 
 ### Code Metrics
 - **Lines of Code:** ~15,000+ (stdlib only)
