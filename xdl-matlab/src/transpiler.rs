@@ -75,6 +75,45 @@ impl Transpiler {
                 TokenKind::If => {
                     self.transpile_if_statement()?;
                 }
+                TokenKind::Switch => {
+                    self.transpile_switch_statement()?;
+                }
+                TokenKind::Try => {
+                    self.transpile_try_catch()?;
+                }
+                TokenKind::Break => {
+                    self.emit_line("BREAK");
+                    self.advance();
+                    // Skip optional semicolon/newline
+                    if matches!(
+                        self.current_token().kind,
+                        TokenKind::Semicolon | TokenKind::Newline
+                    ) {
+                        self.advance();
+                    }
+                }
+                TokenKind::Continue => {
+                    self.emit_line("CONTINUE");
+                    self.advance();
+                    // Skip optional semicolon/newline
+                    if matches!(
+                        self.current_token().kind,
+                        TokenKind::Semicolon | TokenKind::Newline
+                    ) {
+                        self.advance();
+                    }
+                }
+                TokenKind::Return => {
+                    self.emit_line("RETURN");
+                    self.advance();
+                    // Skip optional semicolon/newline
+                    if matches!(
+                        self.current_token().kind,
+                        TokenKind::Semicolon | TokenKind::Newline
+                    ) {
+                        self.advance();
+                    }
+                }
                 TokenKind::Identifier(_) => {
                     self.transpile_statement()?;
                 }
@@ -166,7 +205,12 @@ impl Transpiler {
                         break;
                     }
                 }
-                TokenKind::Function | TokenKind::For | TokenKind::While | TokenKind::If => {
+                TokenKind::Function
+                | TokenKind::For
+                | TokenKind::While
+                | TokenKind::If
+                | TokenKind::Switch
+                | TokenKind::Try => {
                     depth += 1;
                 }
                 _ => {}
@@ -207,8 +251,20 @@ impl Transpiler {
         // Get range (start:end or start:step:end or array)
         let range_expr = self.collect_expression_until_newline();
 
-        // Convert MATLAB 1-based to XDL 0-based
-        let xdl_range = self.convert_range(&range_expr)?;
+        // Check if this is a simple range expression with colons
+        let xdl_range = if range_expr.contains(':') && !range_expr.contains('(') {
+            // Simple range: try to convert
+            match self.convert_range(&range_expr) {
+                Ok(r) => r,
+                Err(_) => {
+                    // Complex range expression, use convert_range_to_findgen
+                    self.convert_range_to_findgen(&range_expr)
+                }
+            }
+        } else {
+            // Not a simple range, output as-is
+            range_expr
+        };
 
         self.emit_line(&format!("for {} = {}", var_name, xdl_range));
         self.indent_level += 1;
@@ -286,7 +342,228 @@ impl Transpiler {
         Ok(())
     }
 
+    fn transpile_switch_statement(&mut self) -> Result<(), String> {
+        self.advance(); // skip 'switch'
+
+        // Get switch expression
+        let switch_expr = self.collect_expression_until_newline();
+
+        self.emit_line(&format!("CASE {} OF", switch_expr));
+        self.indent_level += 1;
+
+        // Process case statements
+        while !matches!(self.current_token().kind, TokenKind::End | TokenKind::EOF) {
+            match &self.current_token().kind {
+                TokenKind::Case => {
+                    self.advance(); // skip 'case'
+
+                    // Collect case value(s)
+                    let mut case_values = Vec::new();
+
+                    // Check if it's a cell array {val1, val2, ...}
+                    if matches!(self.current_token().kind, TokenKind::LeftBrace) {
+                        self.advance(); // skip '{'
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::RightBrace | TokenKind::EOF
+                        ) {
+                            let mut value = String::new();
+                            while !matches!(
+                                self.current_token().kind,
+                                TokenKind::Comma
+                                    | TokenKind::RightBrace
+                                    | TokenKind::Newline
+                                    | TokenKind::EOF
+                            ) {
+                                value.push_str(&self.current_token().lexeme);
+                                self.advance();
+                            }
+                            if !value.trim().is_empty() {
+                                case_values.push(value.trim().to_string());
+                            }
+                            if matches!(self.current_token().kind, TokenKind::Comma) {
+                                self.advance();
+                            }
+                        }
+                        if matches!(self.current_token().kind, TokenKind::RightBrace) {
+                            self.advance();
+                        }
+                    } else {
+                        // Single case value
+                        let mut value = String::new();
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::Newline | TokenKind::Semicolon | TokenKind::EOF
+                        ) {
+                            value.push_str(&self.current_token().lexeme);
+                            self.advance();
+                        }
+                        case_values.push(value.trim().to_string());
+                    }
+
+                    // Skip newline after case
+                    if matches!(
+                        self.current_token().kind,
+                        TokenKind::Newline | TokenKind::Semicolon
+                    ) {
+                        self.advance();
+                    }
+
+                    // Emit case values (XDL supports multiple values with commas)
+                    for val in case_values.iter() {
+                        self.emit_line(&format!("{}: BEGIN", val));
+                    }
+                    self.indent_level += 1;
+
+                    // Process statements until next case/otherwise/end
+                    while !matches!(
+                        self.current_token().kind,
+                        TokenKind::Case | TokenKind::Otherwise | TokenKind::End | TokenKind::EOF
+                    ) {
+                        self.transpile_statement()?;
+                    }
+
+                    self.indent_level -= 1;
+                    self.emit_line("END");
+                }
+                TokenKind::Otherwise => {
+                    self.advance(); // skip 'otherwise'
+
+                    // Skip newline
+                    if matches!(
+                        self.current_token().kind,
+                        TokenKind::Newline | TokenKind::Semicolon
+                    ) {
+                        self.advance();
+                    }
+
+                    self.emit_line("ELSE: BEGIN");
+                    self.indent_level += 1;
+
+                    // Process statements until end
+                    while !matches!(self.current_token().kind, TokenKind::End | TokenKind::EOF) {
+                        self.transpile_statement()?;
+                    }
+
+                    self.indent_level -= 1;
+                    self.emit_line("END");
+                }
+                _ => {
+                    self.advance();
+                }
+            }
+        }
+
+        self.indent_level -= 1;
+        self.emit_line("ENDCASE");
+
+        if matches!(self.current_token().kind, TokenKind::End) {
+            self.advance();
+        }
+
+        Ok(())
+    }
+
+    fn transpile_try_catch(&mut self) -> Result<(), String> {
+        self.advance(); // skip 'try'
+
+        // XDL doesn't have direct try/catch, so we'll emit comments and the code
+        self.emit_line("; TRY block (error handling not directly supported in XDL)");
+        self.emit_line("BEGIN");
+        self.indent_level += 1;
+
+        // Process try block
+        while !matches!(
+            self.current_token().kind,
+            TokenKind::Catch | TokenKind::End | TokenKind::EOF
+        ) {
+            self.transpile_statement()?;
+        }
+
+        self.indent_level -= 1;
+        self.emit_line("END");
+
+        // Handle catch block if present
+        if matches!(self.current_token().kind, TokenKind::Catch) {
+            self.advance(); // skip 'catch'
+
+            // Skip optional error variable
+            if let TokenKind::Identifier(_err_var) = &self.current_token().kind {
+                self.advance();
+            }
+
+            // Skip newline
+            if matches!(
+                self.current_token().kind,
+                TokenKind::Newline | TokenKind::Semicolon
+            ) {
+                self.advance();
+            }
+
+            self.emit_line("; CATCH block (error handling not directly supported in XDL)");
+            self.emit_line("BEGIN");
+            self.indent_level += 1;
+
+            // Process catch block
+            while !matches!(self.current_token().kind, TokenKind::End | TokenKind::EOF) {
+                self.transpile_statement()?;
+            }
+
+            self.indent_level -= 1;
+            self.emit_line("END");
+        }
+
+        if matches!(self.current_token().kind, TokenKind::End) {
+            self.advance();
+        }
+
+        Ok(())
+    }
+
     fn transpile_statement(&mut self) -> Result<(), String> {
+        // Handle control flow statements that might appear nested
+        match &self.current_token().kind {
+            TokenKind::For => return self.transpile_for_loop(),
+            TokenKind::While => return self.transpile_while_loop(),
+            TokenKind::If => return self.transpile_if_statement(),
+            TokenKind::Switch => return self.transpile_switch_statement(),
+            TokenKind::Try => return self.transpile_try_catch(),
+            TokenKind::Break => {
+                self.emit_line("BREAK");
+                self.advance();
+                if matches!(
+                    self.current_token().kind,
+                    TokenKind::Semicolon | TokenKind::Newline
+                ) {
+                    self.advance();
+                }
+                return Ok(());
+            }
+            TokenKind::Continue => {
+                self.emit_line("CONTINUE");
+                self.advance();
+                if matches!(
+                    self.current_token().kind,
+                    TokenKind::Semicolon | TokenKind::Newline
+                ) {
+                    self.advance();
+                }
+                return Ok(());
+            }
+            TokenKind::Return => {
+                self.emit_line("RETURN");
+                self.advance();
+                if matches!(
+                    self.current_token().kind,
+                    TokenKind::Semicolon | TokenKind::Newline
+                ) {
+                    self.advance();
+                }
+                return Ok(());
+            }
+            _ => {}
+        }
+
         // Check if this is a graphics command that should be handled specially
         if let TokenKind::Identifier(name) = &self.current_token().kind {
             match name.as_str() {
@@ -579,11 +856,80 @@ impl Transpiler {
             }
 
             match &token.kind {
+                TokenKind::LeftBracket => {
+                    // Check if this is an array literal or array indexing
+                    // Array literal: appears at start of expression or after = or ,
+                    // Array indexing: appears after an identifier
+                    let is_array_literal = expr.is_empty()
+                        || expr.trim().ends_with('=')
+                        || expr.trim().ends_with(',')
+                        || expr.trim().ends_with('(');
+
+                    if is_array_literal {
+                        // Parse as array literal
+                        match self.parse_array_literal() {
+                            Ok(array_str) => {
+                                expr.push_str(&array_str);
+                                continue;
+                            }
+                            Err(e) => {
+                                expr.push_str(&format!("/* array parse error: {} */", e));
+                                self.advance();
+                                continue;
+                            }
+                        }
+                    } else {
+                        // Array indexing - adjust for 0-based
+                        expr.push('[');
+                        self.advance();
+
+                        // Collect index expression
+                        let mut index_expr = String::new();
+                        let mut paren_depth = 0;
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::RightBracket | TokenKind::EOF
+                        ) || paren_depth > 0
+                        {
+                            if matches!(self.current_token().kind, TokenKind::LeftParen) {
+                                paren_depth += 1;
+                            } else if matches!(self.current_token().kind, TokenKind::RightParen) {
+                                paren_depth -= 1;
+                            }
+                            index_expr.push_str(&self.current_token().lexeme);
+                            self.advance();
+                        }
+
+                        // Convert 1-based to 0-based if it's a simple number
+                        if let Ok(num) = index_expr.trim().parse::<i32>() {
+                            expr.push_str(&format!("{}", num - 1));
+                        } else {
+                            expr.push_str(&format!("({}) - 1", index_expr));
+                        }
+
+                        if matches!(self.current_token().kind, TokenKind::RightBracket) {
+                            expr.push(']');
+                            self.advance();
+                        }
+                        continue;
+                    }
+                }
+                TokenKind::Colon => {
+                    // Colon operator: could be part of a range expression
+                    // If we're building a standalone range (not in array indexing context)
+                    // we need to convert to FINDGEN
+                    expr.push_str(" : ");
+                    self.advance();
+                    continue;
+                }
                 TokenKind::Identifier(name) => {
                     // Map MATLAB constants to XDL system variables
+                    // BUT: Don't map single-letter identifiers on LHS of assignment
+                    let is_lhs_of_assignment =
+                        expr.trim().is_empty() || expr.trim().ends_with('\n');
                     let mapped_name = match name.as_str() {
                         "pi" => "!PI",
-                        "e" => "!E",
+                        "e" if !is_lhs_of_assignment => "!E", // Only map 'e' if not on LHS
                         _ => name.as_str(),
                     };
 
@@ -768,6 +1114,123 @@ impl Transpiler {
                             expr.push_str(&args[0]);
                         } else {
                             expr.push_str("/* complex() needs 1-2 args */");
+                        }
+                        continue;
+                    }
+
+                    // Special handling for zeros(n) or zeros(m, n) -> FLTARR(m, n)
+                    if mapped_name == "zeros"
+                        && next_pos < self.tokens.len()
+                        && matches!(self.tokens[next_pos].kind, TokenKind::LeftParen)
+                    {
+                        self.advance(); // skip 'zeros'
+                        self.advance(); // skip '('
+
+                        let mut args = Vec::new();
+                        let mut current_arg = String::new();
+
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::RightParen | TokenKind::EOF
+                        ) {
+                            if matches!(self.current_token().kind, TokenKind::Comma) {
+                                args.push(current_arg.trim().to_string());
+                                current_arg = String::new();
+                            } else {
+                                current_arg.push_str(&self.current_token().lexeme);
+                            }
+                            self.advance();
+                        }
+
+                        if !current_arg.trim().is_empty() {
+                            args.push(current_arg.trim().to_string());
+                        }
+
+                        if matches!(self.current_token().kind, TokenKind::RightParen) {
+                            self.advance(); // skip ')'
+                        }
+
+                        // Generate FLTARR with appropriate dimensions
+                        expr.push_str(&format!("FLTARR({})", args.join(", ")));
+                        continue;
+                    }
+
+                    // Special handling for ones(n) or ones(m, n) -> FLTARR(m, n) + 1
+                    if mapped_name == "ones"
+                        && next_pos < self.tokens.len()
+                        && matches!(self.tokens[next_pos].kind, TokenKind::LeftParen)
+                    {
+                        self.advance(); // skip 'ones'
+                        self.advance(); // skip '('
+
+                        let mut args = Vec::new();
+                        let mut current_arg = String::new();
+
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::RightParen | TokenKind::EOF
+                        ) {
+                            if matches!(self.current_token().kind, TokenKind::Comma) {
+                                args.push(current_arg.trim().to_string());
+                                current_arg = String::new();
+                            } else {
+                                current_arg.push_str(&self.current_token().lexeme);
+                            }
+                            self.advance();
+                        }
+
+                        if !current_arg.trim().is_empty() {
+                            args.push(current_arg.trim().to_string());
+                        }
+
+                        if matches!(self.current_token().kind, TokenKind::RightParen) {
+                            self.advance(); // skip ')'
+                        }
+
+                        // Generate FLTARR with appropriate dimensions + 1
+                        expr.push_str(&format!("FLTARR({}) + 1", args.join(", ")));
+                        continue;
+                    }
+
+                    // Special handling for eye(n) -> IDENTITY(n)
+                    if mapped_name == "eye"
+                        && next_pos < self.tokens.len()
+                        && matches!(self.tokens[next_pos].kind, TokenKind::LeftParen)
+                    {
+                        self.advance(); // skip 'eye'
+                        self.advance(); // skip '('
+
+                        let mut args = Vec::new();
+                        let mut current_arg = String::new();
+
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::RightParen | TokenKind::EOF
+                        ) {
+                            if matches!(self.current_token().kind, TokenKind::Comma) {
+                                args.push(current_arg.trim().to_string());
+                                current_arg = String::new();
+                            } else {
+                                current_arg.push_str(&self.current_token().lexeme);
+                            }
+                            self.advance();
+                        }
+
+                        if !current_arg.trim().is_empty() {
+                            args.push(current_arg.trim().to_string());
+                        }
+
+                        if matches!(self.current_token().kind, TokenKind::RightParen) {
+                            self.advance(); // skip ')'
+                        }
+
+                        // Generate IDENTITY
+                        // eye(n) -> IDENTITY(n), eye(m,n) -> use IDENTITY(n) for square matrix
+                        if args.len() == 1 {
+                            expr.push_str(&format!("IDENTITY({})", args[0]));
+                        } else if args.len() >= 2 {
+                            // For non-square, we need a custom approach but IDENTITY only works for square
+                            expr.push_str(&format!("IDENTITY({})", args[0]));
                         }
                         continue;
                     }
@@ -1006,41 +1469,6 @@ impl Transpiler {
                     }
                     continue;
                 }
-                TokenKind::LeftBracket => {
-                    // Array indexing - adjust for 0-based
-                    expr.push('[');
-                    self.advance();
-
-                    // Collect index expression
-                    let mut index_expr = String::new();
-                    let mut paren_depth = 0;
-                    while !matches!(
-                        self.current_token().kind,
-                        TokenKind::RightBracket | TokenKind::EOF
-                    ) || paren_depth > 0
-                    {
-                        if matches!(self.current_token().kind, TokenKind::LeftParen) {
-                            paren_depth += 1;
-                        } else if matches!(self.current_token().kind, TokenKind::RightParen) {
-                            paren_depth -= 1;
-                        }
-                        index_expr.push_str(&self.current_token().lexeme);
-                        self.advance();
-                    }
-
-                    // Convert 1-based to 0-based if it's a simple number
-                    if let Ok(num) = index_expr.trim().parse::<i32>() {
-                        expr.push_str(&format!("{}", num - 1));
-                    } else {
-                        expr.push_str(&format!("({}) - 1", index_expr));
-                    }
-
-                    if matches!(self.current_token().kind, TokenKind::RightBracket) {
-                        expr.push(']');
-                        self.advance();
-                    }
-                    continue;
-                }
                 TokenKind::ElementMultiply => expr.push_str(" * "),
                 TokenKind::ElementDivide => expr.push_str(" / "),
                 TokenKind::ElementPower => expr.push_str(" ^ "),
@@ -1064,7 +1492,36 @@ impl Transpiler {
             self.advance();
         }
 
-        expr.trim().to_string()
+        let expr_trimmed = expr.trim();
+
+        // Post-process: detect standalone range expressions with colons
+        // Pattern: "var = start : end" or "var = start : step : end"
+        // Only convert if this looks like a simple assignment with a range
+        if expr_trimmed.contains(" = ") && expr_trimmed.contains(" : ") {
+            // Split by = to get left and right sides
+            let parts: Vec<&str> = expr_trimmed.splitn(2, " = ").collect();
+            if parts.len() == 2 {
+                let lhs = parts[0].trim();
+                let rhs = parts[1].trim();
+
+                // Check if RHS is primarily a colon expression (not complex)
+                // Simple heuristic: count colons vs other operators
+                let colon_count = rhs.matches(" : ").count();
+                let has_other_ops = rhs.contains(" + ")
+                    || rhs.contains(" * ")
+                    || rhs.contains(" / ")
+                    || rhs.contains("(")
+                    || rhs.contains("[");
+
+                if colon_count > 0 && !has_other_ops {
+                    // This looks like a simple range: convert it
+                    let converted = self.convert_range_to_findgen(rhs);
+                    return format!("{} = {}", lhs, converted);
+                }
+            }
+        }
+
+        expr_trimmed.to_string()
     }
 
     fn convert_range(&self, range: &str) -> Result<String, String> {
@@ -1164,6 +1621,223 @@ impl Transpiler {
             }
         }
     }
+
+    /// Parse MATLAB array literal [1, 2, 3] or [1, 2; 3, 4] to XDL array syntax
+    fn parse_array_literal(&mut self) -> Result<String, String> {
+        // Skip opening bracket
+        self.advance();
+
+        let mut rows: Vec<Vec<String>> = Vec::new();
+        let mut current_row: Vec<String> = Vec::new();
+        let mut current_element = String::new();
+        let mut paren_depth = 0;
+        let mut bracket_depth = 0;
+
+        while !matches!(self.current_token().kind, TokenKind::EOF) {
+            match &self.current_token().kind {
+                TokenKind::RightBracket if bracket_depth == 0 && paren_depth == 0 => {
+                    // End of array literal
+                    if !current_element.trim().is_empty() {
+                        current_row.push(current_element.trim().to_string());
+                    }
+                    if !current_row.is_empty() {
+                        rows.push(current_row.clone());
+                    }
+                    self.advance();
+                    break;
+                }
+                TokenKind::Comma if paren_depth == 0 && bracket_depth == 0 => {
+                    // Element separator within a row
+                    if !current_element.trim().is_empty() {
+                        current_row.push(current_element.trim().to_string());
+                        current_element.clear();
+                    }
+                    self.advance();
+                }
+                TokenKind::Semicolon if paren_depth == 0 && bracket_depth == 0 => {
+                    // Row separator
+                    if !current_element.trim().is_empty() {
+                        current_row.push(current_element.trim().to_string());
+                        current_element.clear();
+                    }
+                    if !current_row.is_empty() {
+                        rows.push(current_row.clone());
+                        current_row.clear();
+                    }
+                    self.advance();
+                }
+                TokenKind::Colon => {
+                    // Handle colon operator for ranges
+                    current_element.push(':');
+                    self.advance();
+                }
+                TokenKind::LeftParen => {
+                    paren_depth += 1;
+                    current_element.push('(');
+                    self.advance();
+                }
+                TokenKind::RightParen => {
+                    paren_depth -= 1;
+                    current_element.push(')');
+                    self.advance();
+                }
+                TokenKind::LeftBracket => {
+                    bracket_depth += 1;
+                    current_element.push('[');
+                    self.advance();
+                }
+                TokenKind::RightBracket => {
+                    bracket_depth -= 1;
+                    current_element.push(']');
+                    self.advance();
+                }
+                TokenKind::Identifier(name) => {
+                    // Map constants and check for function calls
+                    let mapped = match name.as_str() {
+                        "pi" => "!PI".to_string(),
+                        "e" => "!E".to_string(),
+                        other => {
+                            // Check if this is a function call
+                            if get_xdl_function(other).is_some() {
+                                get_xdl_function(other).unwrap().to_string()
+                            } else {
+                                other.to_string()
+                            }
+                        }
+                    };
+                    current_element.push_str(&mapped);
+                    self.advance();
+                }
+                TokenKind::Number(n) => {
+                    // If we have an existing element and it's also a number, treat space as separator
+                    if !current_element.trim().is_empty()
+                        && current_element
+                            .trim()
+                            .chars()
+                            .all(|c| c.is_ascii_digit() || c == '.' || c == '-')
+                    {
+                        // Push the previous number as an element
+                        current_row.push(current_element.trim().to_string());
+                        current_element.clear();
+                    }
+                    current_element.push_str(&n.to_string());
+                    self.advance();
+                }
+                TokenKind::Newline => {
+                    // Skip newlines inside array literals
+                    self.advance();
+                }
+                _ => {
+                    current_element.push_str(&self.current_token().lexeme);
+                    self.advance();
+                }
+            }
+        }
+
+        // Convert to XDL array syntax
+        if rows.is_empty() {
+            return Ok("[]".to_string());
+        }
+
+        if rows.len() == 1 {
+            // Simple vector (1D array)
+            let elements = &rows[0];
+            if elements.len() == 1 {
+                // Check if single element contains colon (range expression)
+                let elem = &elements[0];
+                if elem.contains(':') {
+                    // Parse as range expression
+                    Ok(self.convert_range_to_findgen(elem))
+                } else {
+                    Ok(format!("[{}]", elem))
+                }
+            } else {
+                // Multiple elements: [e1, e2, e3, ...]
+                let converted: Vec<String> = elements
+                    .iter()
+                    .map(|e| {
+                        if e.contains(':') {
+                            self.convert_range_to_findgen(e)
+                        } else {
+                            e.clone()
+                        }
+                    })
+                    .collect();
+                Ok(format!("[{}]", converted.join(", ")))
+            }
+        } else {
+            // 2D matrix: [[row1], [row2], ...] or use TRANSPOSE if needed
+            let row_strs: Vec<String> = rows
+                .iter()
+                .map(|row| {
+                    let elements: Vec<String> = row
+                        .iter()
+                        .map(|e| {
+                            if e.contains(':') {
+                                self.convert_range_to_findgen(e)
+                            } else {
+                                e.clone()
+                            }
+                        })
+                        .collect();
+                    format!("[{}]", elements.join(", "))
+                })
+                .collect();
+            Ok(format!("[{}]", row_strs.join(", ")))
+        }
+    }
+
+    /// Convert MATLAB range expression (e.g., "1:10" or "0:0.1:1") to XDL FINDGEN-based expression
+    fn convert_range_to_findgen(&self, range_str: &str) -> String {
+        let parts: Vec<&str> = range_str.split(':').collect();
+
+        match parts.len() {
+            2 => {
+                // start:end
+                let start = parts[0].trim();
+                let end = parts[1].trim();
+
+                // Try to parse as numbers for special cases
+                if let (Ok(s), Ok(e)) = (start.parse::<f64>(), end.parse::<f64>()) {
+                    let count = (e - s + 1.0).max(0.0) as i32;
+                    if s == 0.0 {
+                        format!("FINDGEN({})", count)
+                    } else {
+                        format!("FINDGEN({}) + {}", count, start)
+                    }
+                } else {
+                    // Complex expression
+                    format!("FINDGEN((({}) - ({})) + 1) + ({})", end, start, start)
+                }
+            }
+            3 => {
+                // start:step:end
+                let start = parts[0].trim();
+                let step = parts[1].trim();
+                let end = parts[2].trim();
+
+                if let (Ok(s), Ok(st), Ok(e)) = (
+                    start.parse::<f64>(),
+                    step.parse::<f64>(),
+                    end.parse::<f64>(),
+                ) {
+                    let count = ((e - s) / st + 1.0).max(0.0) as i32;
+                    if s == 0.0 {
+                        format!("FINDGEN({}) * {}", count, step)
+                    } else {
+                        format!("FINDGEN({}) * {} + {}", count, step, start)
+                    }
+                } else {
+                    // Complex expression
+                    format!(
+                        "FINDGEN(((({}) - ({})) / ({})) + 1) * ({}) + ({})",
+                        end, start, step, step, start
+                    )
+                }
+            }
+            _ => format!("/* invalid range: {} */", range_str),
+        }
+    }
 }
 
 /// Main transpilation function
@@ -1191,5 +1865,190 @@ mod tests {
         let matlab = "y = sin(x);";
         let result = transpile_matlab_to_xdl(matlab).unwrap();
         assert!(result.contains("SIN"));
+    }
+
+    #[test]
+    fn test_simple_array_literal() {
+        let matlab = "a = [1, 2, 3, 4, 5];";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("a = [1, 2, 3, 4, 5]"));
+    }
+
+    #[test]
+    fn test_array_literal_with_spaces() {
+        let matlab = "b = [1 2 3];";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("[1") && result.contains("2") && result.contains("3]"));
+    }
+
+    #[test]
+    fn test_column_vector() {
+        let matlab = "c = [1; 2; 3];";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        // Should be represented as nested arrays
+        assert!(result.contains("c = [[1], [2], [3]]"));
+    }
+
+    #[test]
+    fn test_matrix_literal() {
+        let matlab = "M = [1, 2, 3; 4, 5, 6];";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        // Should be represented as nested arrays: [[1, 2, 3], [4, 5, 6]]
+        assert!(result.contains("M = [[1, 2, 3], [4, 5, 6]]"));
+    }
+
+    #[test]
+    fn test_colon_range_simple() {
+        let matlab = "x = 1:10;";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        // Should convert to FINDGEN
+        assert!(result.contains("FINDGEN"));
+    }
+
+    #[test]
+    fn test_colon_range_with_step() {
+        let matlab = "y = 0:0.1:1;";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        // Should convert to FINDGEN with step
+        assert!(result.contains("FINDGEN"));
+    }
+
+    #[test]
+    fn test_zeros_function() {
+        let matlab = "z = zeros(5);";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("FLTARR(5)"));
+    }
+
+    #[test]
+    fn test_zeros_function_2d() {
+        let matlab = "z = zeros(3, 4);";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("FLTARR(3, 4)"));
+    }
+
+    #[test]
+    fn test_ones_function() {
+        let matlab = "o = ones(5);";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("FLTARR(5) + 1"));
+    }
+
+    #[test]
+    fn test_eye_function() {
+        let matlab = "I = eye(4);";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("IDENTITY(4)"));
+    }
+
+    #[test]
+    fn test_linspace_function() {
+        let matlab = "x = linspace(0, 10, 100);";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        // Should convert to FINDGEN expression
+        assert!(result.contains("FINDGEN"));
+    }
+
+    #[test]
+    fn test_array_with_range() {
+        let matlab = "a = [1:5];";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        // Array containing a range
+        assert!(result.contains("FINDGEN"));
+    }
+
+    #[test]
+    fn test_array_element_operations() {
+        let matlab = "result = a .* b;";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        println!("Result: {}", result);
+        // Element-wise multiply should convert to *
+        // The actual format has spaces around operators
+        assert!(result.contains("result = a * b") || result.contains("result = a  *  b"));
+    }
+
+    #[test]
+    fn test_break_statement() {
+        let matlab = "break;";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("BREAK"));
+    }
+
+    #[test]
+    fn test_continue_statement() {
+        let matlab = "continue;";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("CONTINUE"));
+    }
+
+    #[test]
+    fn test_return_statement() {
+        let matlab = "return;";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("RETURN"));
+    }
+
+    #[test]
+    fn test_simple_switch() {
+        let matlab = r#"switch x
+            case 1
+                y = 'one';
+            case 2
+                y = 'two';
+            otherwise
+                y = 'other';
+        end"#;
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("CASE x OF"));
+        assert!(result.contains("1: BEGIN"));
+        assert!(result.contains("2: BEGIN"));
+        assert!(result.contains("ELSE: BEGIN"));
+        assert!(result.contains("ENDCASE"));
+    }
+
+    #[test]
+    fn test_switch_with_cell_array() {
+        let matlab = r#"switch x
+            case {1, 2}
+                y = 'one or two';
+        end"#;
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("CASE x OF"));
+        assert!(result.contains(": BEGIN"));
+    }
+
+    #[test]
+    fn test_try_catch() {
+        let matlab = r#"try
+            result = risky_operation();
+        catch err
+            result = 0;
+        end"#;
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("TRY block"));
+        assert!(result.contains("CATCH block"));
+    }
+
+    #[test]
+    fn test_for_loop_with_step() {
+        let matlab = "for i = 1:2:10\n  disp(i);\nend";
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("for i ="));
+        // Should have converted the range
+        assert!(!result.contains("1:2:10"));
+    }
+
+    #[test]
+    fn test_nested_control_flow() {
+        let matlab = r#"for i = 1:5
+            if i == 3
+                continue;
+            end
+            disp(i);
+        end"#;
+        let result = transpile_matlab_to_xdl(matlab).unwrap();
+        assert!(result.contains("for i"));
+        assert!(result.contains("if"));
+        assert!(result.contains("CONTINUE"));
     }
 }

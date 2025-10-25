@@ -601,15 +601,15 @@ pub fn dayofyear(args: &[XdlValue]) -> XdlResult<XdlValue> {
         [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     };
 
-    if month < 1 || month > 12 {
+    if !(1..=12).contains(&month) {
         return Err(XdlError::InvalidArgument(
             "DAYOFYEAR: Month must be between 1 and 12".to_string(),
         ));
     }
 
     let mut doy = day;
-    for i in 0..(month - 1) as usize {
-        doy += days_in_months[i];
+    for &days_in_month in days_in_months.iter().take((month - 1) as usize) {
+        doy += days_in_month;
     }
 
     Ok(XdlValue::Long(doy))
@@ -831,7 +831,7 @@ pub fn bin_date(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let day = remaining_days + 1;
 
     let result = vec![
-        XdlValue::Long(year as i32),
+        XdlValue::Long(year),
         XdlValue::Long(month),
         XdlValue::Long(day),
         XdlValue::Long(hours as i32),

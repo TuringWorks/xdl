@@ -426,12 +426,9 @@ pub fn la_eigenval(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let matrix = DMatrix::from_row_slice(n, n, &data);
 
     // Compute eigenvalues
-    match matrix.symmetric_eigen() {
-        eigen => {
-            let eigenvalues: Vec<f64> = eigen.eigenvalues.iter().copied().collect();
-            Ok(XdlValue::Array(eigenvalues))
-        }
-    }
+    let eigen = matrix.symmetric_eigen();
+    let eigenvalues: Vec<f64> = eigen.eigenvalues.iter().copied().collect();
+    Ok(XdlValue::Array(eigenvalues))
 }
 
 /// LUDC - LU Decomposition

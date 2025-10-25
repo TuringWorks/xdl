@@ -831,7 +831,7 @@ pub fn resistant_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Calculate MAD (Median Absolute Deviation)
     let mut abs_devs: Vec<f64> = values.iter().map(|&x| (x - med).abs()).collect();
     abs_devs.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let mad = if abs_devs.len() % 2 == 0 {
+    let mad = if abs_devs.len().is_multiple_of(2) {
         (abs_devs[abs_devs.len() / 2 - 1] + abs_devs[abs_devs.len() / 2]) / 2.0
     } else {
         abs_devs[abs_devs.len() / 2]
