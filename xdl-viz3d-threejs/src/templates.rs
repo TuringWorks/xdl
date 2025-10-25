@@ -150,10 +150,17 @@ pub fn generate_volume_html(
         );
         colormapTexture.needsUpdate = true;
 
-        // Shader material
+        // Shader material with enhanced parameters
         const params = {{
             threshold: {threshold},
             opacity: {opacity},
+            stepSize: 0.01,
+            maxSteps: 256,
+            enableLighting: true,
+            ambient: 0.3,
+            diffuse: 0.6,
+            specular: 0.3,
+            shininess: 32.0,
         }};
 
         const material = new THREE.ShaderMaterial({{
@@ -164,6 +171,14 @@ pub fn generate_volume_html(
                 u_opacity: {{ value: params.opacity }},
                 u_volumeDims: {{ value: new THREE.Vector3(dims[0], dims[1], dims[2]) }},
                 u_cameraPos: {{ value: camera.position }},
+                u_stepSize: {{ value: params.stepSize }},
+                u_maxSteps: {{ value: params.maxSteps }},
+                u_enableLighting: {{ value: params.enableLighting }},
+                u_lightDirection: {{ value: new THREE.Vector3(1, 1, 1).normalize() }},
+                u_ambient: {{ value: params.ambient }},
+                u_diffuse: {{ value: params.diffuse }},
+                u_specular: {{ value: params.specular }},
+                u_shininess: {{ value: params.shininess }},
             }},
             vertexShader: `{vert_shader}`,
             fragmentShader: `{frag_shader}`,
@@ -176,14 +191,43 @@ pub fn generate_volume_html(
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
 
-        // GUI
+        // GUI with organized folders
         const gui = new GUI();
-        gui.add(params, 'threshold', 0.0, 1.0, 0.01).name('Threshold').onChange((value) => {{
+
+        // Volume rendering folder
+        const renderFolder = gui.addFolder('Rendering');
+        renderFolder.add(params, 'threshold', 0.0, 1.0, 0.01).name('Threshold').onChange((value) => {{
             material.uniforms.u_threshold.value = value;
         }});
-        gui.add(params, 'opacity', 0.0, 1.0, 0.01).name('Opacity').onChange((value) => {{
+        renderFolder.add(params, 'opacity', 0.0, 1.0, 0.01).name('Opacity').onChange((value) => {{
             material.uniforms.u_opacity.value = value;
         }});
+        renderFolder.add(params, 'stepSize', 0.001, 0.05, 0.001).name('Step Size').onChange((value) => {{
+            material.uniforms.u_stepSize.value = value;
+        }});
+        renderFolder.add(params, 'maxSteps', 64, 512, 1).name('Max Steps').onChange((value) => {{
+            material.uniforms.u_maxSteps.value = value;
+        }});
+        renderFolder.open();
+
+        // Lighting folder
+        const lightFolder = gui.addFolder('Lighting');
+        lightFolder.add(params, 'enableLighting').name('Enable Lighting').onChange((value) => {{
+            material.uniforms.u_enableLighting.value = value;
+        }});
+        lightFolder.add(params, 'ambient', 0.0, 1.0, 0.1).name('Ambient').onChange((value) => {{
+            material.uniforms.u_ambient.value = value;
+        }});
+        lightFolder.add(params, 'diffuse', 0.0, 1.0, 0.1).name('Diffuse').onChange((value) => {{
+            material.uniforms.u_diffuse.value = value;
+        }});
+        lightFolder.add(params, 'specular', 0.0, 1.0, 0.1).name('Specular').onChange((value) => {{
+            material.uniforms.u_specular.value = value;
+        }});
+        lightFolder.add(params, 'shininess', 1.0, 128.0, 1.0).name('Shininess').onChange((value) => {{
+            material.uniforms.u_shininess.value = value;
+        }});
+        lightFolder.open();
 
         // Lighting (for reference, not used in volume rendering)
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);

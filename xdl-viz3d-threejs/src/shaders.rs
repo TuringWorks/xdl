@@ -14,7 +14,7 @@ void main() {
 "#
 }
 
-/// Fragment shader for volume raycasting
+/// Fragment shader for volume raycasting with lighting
 pub fn fragment_shader() -> &'static str {
     r#"
 uniform sampler3D u_volume;
@@ -23,6 +23,14 @@ uniform float u_threshold;
 uniform float u_opacity;
 uniform vec3 u_volumeDims;
 uniform vec3 u_cameraPos;
+uniform float u_stepSize;
+uniform int u_maxSteps;
+uniform bool u_enableLighting;
+uniform vec3 u_lightDirection;
+uniform float u_ambient;
+uniform float u_diffuse;
+uniform float u_specular;
+uniform float u_shininess;
 
 varying vec3 vPosition;
 varying vec3 vNormal;
@@ -41,6 +49,35 @@ vec2 intersectBox(vec3 orig, vec3 dir) {
     return vec2(t0, t1);
 }
 
+// Calculate gradient for normal estimation
+vec3 calculateGradient(vec3 texCoord, float delta) {
+    vec3 gradient;
+    gradient.x = texture(u_volume, texCoord + vec3(delta, 0.0, 0.0)).r -
+                 texture(u_volume, texCoord - vec3(delta, 0.0, 0.0)).r;
+    gradient.y = texture(u_volume, texCoord + vec3(0.0, delta, 0.0)).r -
+                 texture(u_volume, texCoord - vec3(0.0, delta, 0.0)).r;
+    gradient.z = texture(u_volume, texCoord + vec3(0.0, 0.0, delta)).r -
+                 texture(u_volume, texCoord - vec3(0.0, 0.0, delta)).r;
+    return normalize(gradient);
+}
+
+// Phong lighting calculation
+vec3 calculateLighting(vec3 normal, vec3 viewDir, vec3 baseColor) {
+    // Ambient
+    vec3 ambient = u_ambient * baseColor;
+
+    // Diffuse
+    float diff = max(dot(normal, u_lightDirection), 0.0);
+    vec3 diffuse = u_diffuse * diff * baseColor;
+
+    // Specular
+    vec3 reflectDir = reflect(-u_lightDirection, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), u_shininess);
+    vec3 specular = u_specular * spec * vec3(1.0);
+
+    return ambient + diffuse + specular;
+}
+
 void main() {
     // Ray direction from camera to fragment
     vec3 rayOrigin = u_cameraPos;
@@ -52,14 +89,13 @@ void main() {
         discard;
     }
 
-    // Ray marching parameters
-    float stepSize = 0.01;
-    int maxSteps = 256;
+    // Ray marching parameters (now uniforms for dynamic control)
     vec4 color = vec4(0.0);
 
     // Start ray marching
     float t_current = max(t.x, 0.0);
-    for (int i = 0; i < maxSteps; i++) {
+    for (int i = 0; i < 512; i++) {
+        if (i >= u_maxSteps) break;
         if (t_current > t.y) break;
 
         vec3 pos = rayOrigin + rayDir * t_current;
@@ -72,9 +108,27 @@ void main() {
 
         // Apply threshold
         if (density > u_threshold) {
-            // Lookup color from colormap
+            // Lookup base color from colormap
             vec4 sampleColor = texture2D(u_colormap, vec2(density, 0.5));
+
+            // Apply lighting if enabled
+            if (u_enableLighting) {
+                // Calculate gradient normal
+                vec3 normal = calculateGradient(texCoord, 0.01);
+                if (length(normal) > 0.01) {
+                    vec3 litColor = calculateLighting(normal, -rayDir, sampleColor.rgb);
+                    sampleColor.rgb = litColor;
+                }
+            }
+
+            // Apply opacity
             sampleColor.a *= u_opacity;
+
+            // Gradient-based opacity modulation (enhance edges)
+            vec3 gradient = calculateGradient(texCoord, 0.01);
+            float gradientMag = length(gradient);
+            sampleColor.a *= (1.0 + gradientMag * 2.0);
+            sampleColor.a = clamp(sampleColor.a, 0.0, 1.0);
 
             // Front-to-back compositing
             color.rgb += (1.0 - color.a) * sampleColor.rgb * sampleColor.a;
@@ -84,7 +138,7 @@ void main() {
             if (color.a >= 0.95) break;
         }
 
-        t_current += stepSize;
+        t_current += u_stepSize;
     }
 
     gl_FragColor = color;
