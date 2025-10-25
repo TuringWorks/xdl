@@ -1775,6 +1775,125 @@ pub fn ulong64(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::ULong64(value))
 }
 
+/// DERIV - Compute numerical derivative
+/// DERIV(array [, x_array])
+pub fn deriv(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "DERIV: Expected array argument".to_string(),
+        ));
+    }
+
+    let y = match &args[0] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if y.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "DERIV: Need at least 2 points".to_string(),
+        ));
+    }
+
+    // If x array provided, use it; otherwise assume uniform spacing
+    let x = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::Array(arr) => {
+                if arr.len() != y.len() {
+                    return Err(XdlError::DimensionError(
+                        "DERIV: X and Y arrays must have same length".to_string(),
+                    ));
+                }
+                arr.clone()
+            }
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "array".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                })
+            }
+        }
+    } else {
+        // Generate uniform x spacing
+        (0..y.len()).map(|i| i as f64).collect()
+    };
+
+    let n = y.len();
+    let mut deriv = Vec::with_capacity(n);
+
+    // Forward difference at start
+    deriv.push((y[1] - y[0]) / (x[1] - x[0]));
+
+    // Central differences in the middle
+    for i in 1..n - 1 {
+        let dy = y[i + 1] - y[i - 1];
+        let dx = x[i + 1] - x[i - 1];
+        deriv.push(dy / dx);
+    }
+
+    // Backward difference at end
+    deriv.push((y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
+
+    Ok(XdlValue::Array(deriv))
+}
+
+/// INT_TABULATED - Integrate using trapezoidal rule
+/// INT_TABULATED(x, y)
+pub fn int_tabulated(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "INT_TABULATED: Expected x and y arrays".to_string(),
+        ));
+    }
+
+    let x = match &args[0] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let y = match &args[1] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if x.len() != y.len() {
+        return Err(XdlError::DimensionError(
+            "INT_TABULATED: X and Y arrays must have same length".to_string(),
+        ));
+    }
+
+    if x.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "INT_TABULATED: Need at least 2 points".to_string(),
+        ));
+    }
+
+    // Trapezoidal rule
+    let mut integral = 0.0;
+    for i in 0..x.len() - 1 {
+        let dx = x[i + 1] - x[i];
+        let avg_y = (y[i] + y[i + 1]) * 0.5;
+        integral += dx * avg_y;
+    }
+
+    Ok(XdlValue::Double(integral))
+}
+
 #[cfg(test)]
 mod more_tests {
     use super::*;

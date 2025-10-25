@@ -13,6 +13,7 @@ pub mod linalg; // Linear algebra
 pub mod math;
 pub mod ml;
 pub mod python;
+pub mod signal; // Signal processing
 pub mod statistics;
 pub mod string;
 pub mod system;
@@ -224,6 +225,8 @@ impl StandardLibrary {
             "LCM" => math::lcm(args),
             "POLY" => math::poly(args),
             "BINOMIAL" => math::binomial(args),
+            "DERIV" => math::deriv(args),
+            "INT_TABULATED" => math::int_tabulated(args),
 
             // Array generation functions
             "FINDGEN" => math::findgen(args),
@@ -239,12 +242,21 @@ impl StandardLibrary {
 
             // Signal processing
             "FFT" => math::fft(args),
+            "A_CORRELATE" => signal::a_correlate(args),
+            "C_CORRELATE" => signal::c_correlate(args),
+            "DIGITAL_FILTER" => signal::digital_filter(args),
+            "HILBERT" => signal::hilbert(args),
+            "MEDIAN_FILTER" => signal::median_filter(args),
 
             // Image processing
             "CONVOL" => image::convol(args),
             "DILATE" => image::dilate(args),
             "ERODE" => image::erode(args),
             "SOBEL" => image::sobel(args),
+            "ROBERTS" => image::roberts(args),
+            "PREWITT" => image::prewitt(args),
+            "GAUSSIAN_FILTER" => image::gaussian_filter(args),
+            "THRESHOLD" => image::threshold(args),
 
             // Type conversion functions
             "FLOAT" | "FLT" => math::float(args),
@@ -350,6 +362,8 @@ impl StandardLibrary {
             "BIN_DATE" => system::bin_date(args),
             "TIMESTAMP" => system::timestamp(args),
             "TIMEGEN" => system::timegen(args),
+            "DAYOFYEAR" => system::dayofyear(args),
+            "JS2JD" => system::js2jd(args),
             "MESSAGE" => system::message(args),
             "ON_ERROR" => system::on_error(args),
             "MEMORY" => system::memory(args),
