@@ -477,6 +477,18 @@ impl Interpreter {
         if indices.len() > 1 {
             // Check if this is a MultiDimArray with proper shape
             if let XdlValue::MultiDimArray { data, shape } = array_val {
+                // Check if all indices are wildcards: arr[*, *, *] = value
+                let all_wildcards = indices.iter().all(|idx| matches!(idx, ArrayIndex::All));
+
+                if all_wildcards {
+                    // Fill all elements with the value
+                    let fill_value = value.to_double()?;
+                    for elem in data.iter_mut() {
+                        *elem = fill_value;
+                    }
+                    return Ok(());
+                }
+
                 if indices.len() == shape.len() {
                     // N-dimensional assignment: arr[i, j, k, ...] = value
                     let mut index_values = Vec::new();
@@ -485,6 +497,12 @@ impl Interpreter {
                             ArrayIndex::Single(expr) => {
                                 let val = self.evaluate_expression(expr)?;
                                 index_values.push(val.to_long()? as usize);
+                            }
+                            ArrayIndex::All => {
+                                return Err(XdlError::NotImplemented(
+                                    "Mixed wildcard and single index assignment not yet supported"
+                                        .to_string(),
+                                ));
                             }
                             _ => {
                                 return Err(XdlError::NotImplemented(
@@ -615,9 +633,15 @@ impl Interpreter {
                         ArrayIndex::Range { .. } => Err(XdlError::NotImplemented(
                             "Range assignment not supported".to_string(),
                         )),
-                        ArrayIndex::All => Err(XdlError::NotImplemented(
-                            "All-element assignment not supported".to_string(),
-                        )),
+                        ArrayIndex::All => {
+                            // Wildcard assignment: arr[*] = value
+                            // Fill all elements with the value
+                            let fill_value = value.to_double()?;
+                            for elem in arr.iter_mut() {
+                                *elem = fill_value;
+                            }
+                            Ok(())
+                        }
                     }
                 }
                 XdlValue::NestedArray(rows) => match &indices[0] {
