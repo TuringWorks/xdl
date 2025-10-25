@@ -90,6 +90,10 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - `LINDGEN`, `UINDGEN`, `ULINDGEN`, `L64INDGEN`
 - `RANDOMU`, `RANDOMN`
 
+**Calculus:**
+- `DERIV` - Numerical derivative
+- `INT_TABULATED` - Numerical integration (trapezoidal)
+
 **Remaining:** BESSEL_Y/I/K variants, PRIME, advanced polynomial fitting
 
 ---
@@ -232,8 +236,8 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 
 ---
 
-### Phase 14: Time & Date ✅ 85%
-**Status:** Core Functions Complete
+### Phase 14: Time & Date ✅ 90%
+**Status:** Nearly Complete
 
 **Implemented Functions:**
 - `SYSTIME` - System time
@@ -242,8 +246,10 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - `BIN_DATE` - Binary date/time array
 - `TIMESTAMP` - Generate timestamp
 - `TIMEGEN` - Generate time array
+- `DAYOFYEAR` - Day of year from date
+- `JS2JD` - Julian seconds to Julian date
 
-**Remaining:** DATE_CONV, DT_STRING, TIME_TEST1/2, DAYOFYEAR, WEEKDAY
+**Remaining:** DATE_CONV, DT_STRING, TIME_TEST1/2, WEEKDAY
 
 ---
 
@@ -328,10 +334,10 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 ## Statistics
 
 ### Total Functions Implemented
-- **Core Functions:** ~130+
+- **Core Functions:** ~135+
 - **ML Functions:** 60+ (separate ML module)
 - **Graphics Procedures:** 40+ (separate graphics module)
-- **Total:** 230+ functions/procedures
+- **Total:** 235+ functions/procedures
 
 ### Code Metrics
 - **Lines of Code:** ~15,000+ (stdlib only)
