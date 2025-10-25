@@ -23,6 +23,7 @@ egui_plot = { workspace = true }
 pyo3 = { workspace = true }
 lazy_static = "1.4"
 rustfft = "6.1"
+nalgebra = "0.32"
 
 # GIS and Geospatial (optional - requires PROJ system library)
 geo = { version = "0.28", optional = true }

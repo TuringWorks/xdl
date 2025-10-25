@@ -174,6 +174,208 @@ pub fn strlowcase(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::String(s.to_lowercase()))
 }
 
+/// STRTRIM - Remove leading and/or trailing whitespace from string
+/// Syntax: result = STRTRIM(string [, flag])
+/// flag: 0=both (default), 1=leading only, 2=trailing only
+pub fn strtrim(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRTRIM: Expected 1 or 2 arguments".to_string(),
+        ));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Get flag (0=both, 1=leading, 2=trailing)
+    let flag = if args.len() == 2 {
+        match &args[1] {
+            XdlValue::Long(n) => *n,
+            XdlValue::Int(n) => *n as i32,
+            XdlValue::Byte(n) => *n as i32,
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "integer".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                })
+            }
+        }
+    } else {
+        0 // Default: trim both
+    };
+
+    let result = match flag {
+        1 => s.trim_start().to_string(), // Leading only
+        2 => s.trim_end().to_string(),   // Trailing only
+        _ => s.trim().to_string(),       // Both (default for 0 or any other value)
+    };
+
+    Ok(XdlValue::String(result))
+}
+
+/// STRJOIN - Join array of strings with delimiter
+/// Syntax: result = STRJOIN(string_array [, delimiter])
+pub fn strjoin(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRJOIN: Expected 1 or 2 arguments".to_string(),
+        ));
+    }
+
+    // Get array of strings
+    let strings = match &args[0] {
+        XdlValue::Array(arr) => {
+            // Convert array elements to strings
+            arr.iter().map(|v| format!("{}", v)).collect::<Vec<_>>()
+        }
+        XdlValue::NestedArray(nested) => {
+            // Convert nested array elements to strings
+            nested
+                .iter()
+                .map(|v| match v {
+                    XdlValue::String(s) => s.clone(),
+                    XdlValue::Int(n) => n.to_string(),
+                    XdlValue::Long(n) => n.to_string(),
+                    XdlValue::Float(f) => f.to_string(),
+                    XdlValue::Double(d) => d.to_string(),
+                    XdlValue::Byte(b) => b.to_string(),
+                    _ => format!("{:?}", v),
+                })
+                .collect::<Vec<_>>()
+        }
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Get delimiter (default is empty string)
+    let delimiter = if args.len() == 2 {
+        match &args[1] {
+            XdlValue::String(s) => s.clone(),
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "string".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                })
+            }
+        }
+    } else {
+        String::new()
+    };
+
+    Ok(XdlValue::String(strings.join(&delimiter)))
+}
+
+/// STRSPLIT - Split string by delimiter
+/// Syntax: result = STRSPLIT(string, pattern [, /EXTRACT])
+/// For now, simple implementation without regex
+pub fn strsplit(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRSPLIT: Expected at least 2 arguments".to_string(),
+        ));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let delimiter = match &args[1] {
+        XdlValue::String(d) => d,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Split the string
+    let parts: Vec<XdlValue> = s
+        .split(delimiter.as_str())
+        .map(|part| XdlValue::String(part.to_string()))
+        .collect();
+
+    // Return as nested array (array of strings)
+    Ok(XdlValue::NestedArray(parts))
+}
+
+/// STRCMP - Compare two strings
+/// Syntax: result = STRCMP(string1, string2 [, /FOLD_CASE])
+/// Returns 1 if equal, 0 if not
+pub fn strcmp(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRCMP: Expected at least 2 arguments".to_string(),
+        ));
+    }
+
+    let s1 = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let s2 = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Case-sensitive comparison
+    let result = if s1 == s2 { 1 } else { 0 };
+    Ok(XdlValue::Long(result))
+}
+
+/// STRCOMPRESS - Remove excess whitespace
+/// Syntax: result = STRCOMPRESS(string [, /REMOVE_ALL])
+pub fn strcompress(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "STRCOMPRESS: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Compress multiple spaces to single space and trim
+    let result = s.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    Ok(XdlValue::String(result))
+}
+
 /// STRING - Convert any value to string representation
 /// Syntax: result = STRING(expression [, FORMAT=format_string])
 pub fn string_fn(args: &[XdlValue]) -> XdlResult<XdlValue> {
@@ -238,5 +440,223 @@ pub fn string_fn(args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Undefined => "!NULL".to_string(),
     };
 
+    Ok(XdlValue::String(result))
+}
+
+/// STRMATCH - Pattern matching with wildcards
+/// STRMATCH(string, pattern [, /FOLD_CASE])
+/// Supports * (any chars) and ? (single char) wildcards
+/// Returns 1 if match, 0 if no match
+/// For array of strings, returns array of match results
+pub fn strmatch(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRMATCH: Expected at least 2 arguments (string, pattern)".to_string(),
+        ));
+    }
+
+    let pattern = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Simple wildcard matching implementation
+    // * matches any sequence of characters
+    // ? matches any single character
+    let matches_pattern = |s: &str, pat: &str| -> bool { wildcard_match(s, pat) };
+
+    match &args[0] {
+        XdlValue::String(s) => {
+            let result = if matches_pattern(s, pattern) { 1 } else { 0 };
+            Ok(XdlValue::Long(result))
+        }
+        XdlValue::NestedArray(arr) => {
+            // For array of strings, return array of results
+            let results: Vec<f64> = arr
+                .iter()
+                .map(|v| match v {
+                    XdlValue::String(s) => {
+                        if matches_pattern(s, pattern) {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    _ => 0.0,
+                })
+                .collect();
+            Ok(XdlValue::Array(results))
+        }
+        _ => Err(XdlError::TypeMismatch {
+            expected: "string or string array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    }
+}
+
+/// Helper function for wildcard pattern matching
+/// Supports * (any chars) and ? (single char)
+fn wildcard_match(text: &str, pattern: &str) -> bool {
+    let text_chars: Vec<char> = text.chars().collect();
+    let pat_chars: Vec<char> = pattern.chars().collect();
+
+    wildcard_match_recursive(&text_chars, &pat_chars, 0, 0)
+}
+
+fn wildcard_match_recursive(
+    text: &[char],
+    pattern: &[char],
+    text_idx: usize,
+    pat_idx: usize,
+) -> bool {
+    // If we've matched the entire pattern and text
+    if pat_idx == pattern.len() && text_idx == text.len() {
+        return true;
+    }
+
+    // If pattern is exhausted but text remains
+    if pat_idx == pattern.len() {
+        return false;
+    }
+
+    // If text is exhausted but pattern has only '*' remaining
+    if text_idx == text.len() {
+        return pattern[pat_idx..].iter().all(|&c| c == '*');
+    }
+
+    match pattern[pat_idx] {
+        '*' => {
+            // Try matching zero or more characters
+            // First, try matching zero characters (skip the *)
+            if wildcard_match_recursive(text, pattern, text_idx, pat_idx + 1) {
+                return true;
+            }
+            // Try matching one more character and continue with *
+            wildcard_match_recursive(text, pattern, text_idx + 1, pat_idx)
+        }
+        '?' => {
+            // Match any single character
+            wildcard_match_recursive(text, pattern, text_idx + 1, pat_idx + 1)
+        }
+        c => {
+            // Exact character match
+            if text[text_idx] == c {
+                wildcard_match_recursive(text, pattern, text_idx + 1, pat_idx + 1)
+            } else {
+                false
+            }
+        }
+    }
+}
+
+/// STRREPLACE - Replace all occurrences of search string with replacement
+/// STRREPLACE(string, search, replace)
+pub fn strreplace(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 3 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRREPLACE: Expected 3 arguments (string, search, replace), got {}",
+            args.len()
+        )));
+    }
+
+    let string = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let search = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let replace = match &args[2] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    let result = string.replace(search, replace);
+    Ok(XdlValue::String(result))
+}
+
+/// STRPUT - Insert/overlay string at position
+/// STRPUT(destination, insert, position)
+pub fn strput(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 3 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRPUT: Expected 3 arguments (destination, insert, position), got {}",
+            args.len()
+        )));
+    }
+
+    let dest = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let insert = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let position = match &args[2] {
+        XdlValue::Long(n) => *n as usize,
+        XdlValue::Int(n) => *n as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    let mut chars: Vec<char> = dest.chars().collect();
+
+    // Extend string if needed
+    while chars.len() < position {
+        chars.push(' ');
+    }
+
+    // Overlay/insert the new string
+    let insert_chars: Vec<char> = insert.chars().collect();
+    for (i, &ch) in insert_chars.iter().enumerate() {
+        let idx = position + i;
+        if idx < chars.len() {
+            chars[idx] = ch;
+        } else {
+            chars.push(ch);
+        }
+    }
+
+    let result: String = chars.iter().collect();
     Ok(XdlValue::String(result))
 }

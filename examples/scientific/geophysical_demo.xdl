@@ -18,9 +18,7 @@ PRINT, ''
 ; ================================================================
 ; STEP 1: Define Survey Parameters
 ; ================================================================
-PRINT, '▶ Step 1: Setting up survey parameters...
-
-'
+PRINT, '▶ Step 1: Setting up survey parameters...'
 PRINT, ''
 
 ; 3D seismic cube dimensions

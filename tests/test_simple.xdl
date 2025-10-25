@@ -1,0 +1,2 @@
+x = TEST(1, 2)
+PRINT, x
