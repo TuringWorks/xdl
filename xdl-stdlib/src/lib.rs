@@ -346,6 +346,8 @@ impl StandardLibrary {
             "STRCOMPRESS" => string::strcompress(args),
             "STRMATCH" => string::strmatch(args),
             "STRING" => string::string_fn(args),
+            "STRREPLACE" => string::strreplace(args),
+            "STRPUT" => string::strput(args),
 
             // Complex number functions
             "COMPLEX" => complex::complex(args),

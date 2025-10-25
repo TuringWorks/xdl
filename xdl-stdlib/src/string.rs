@@ -553,3 +553,110 @@ fn wildcard_match_recursive(
         }
     }
 }
+
+/// STRREPLACE - Replace all occurrences of search string with replacement
+/// STRREPLACE(string, search, replace)
+pub fn strreplace(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 3 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRREPLACE: Expected 3 arguments (string, search, replace), got {}",
+            args.len()
+        )));
+    }
+
+    let string = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let search = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let replace = match &args[2] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    let result = string.replace(search, replace);
+    Ok(XdlValue::String(result))
+}
+
+/// STRPUT - Insert/overlay string at position
+/// STRPUT(destination, insert, position)
+pub fn strput(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 3 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRPUT: Expected 3 arguments (destination, insert, position), got {}",
+            args.len()
+        )));
+    }
+
+    let dest = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let insert = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let position = match &args[2] {
+        XdlValue::Long(n) => *n as usize,
+        XdlValue::Int(n) => *n as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    let mut chars: Vec<char> = dest.chars().collect();
+
+    // Extend string if needed
+    while chars.len() < position {
+        chars.push(' ');
+    }
+
+    // Overlay/insert the new string
+    let insert_chars: Vec<char> = insert.chars().collect();
+    for (i, &ch) in insert_chars.iter().enumerate() {
+        let idx = position + i;
+        if idx < chars.len() {
+            chars[idx] = ch;
+        } else {
+            chars.push(ch);
+        }
+    }
+
+    let result: String = chars.iter().collect();
+    Ok(XdlValue::String(result))
+}
