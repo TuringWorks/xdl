@@ -25,9 +25,9 @@ FOR i = 0, grid-1 DO BEGIN
             dz = k - center
             r2 = dx*dx + dy*dy + dz*dz
             volume1[i, j, k] = EXP(-r2 / (2.0 * sigma * sigma))
-        END
-    END
-END
+        ENDFOR
+    ENDFOR
+ENDFOR
 
 PRINT, '  Volume created:', grid*grid*grid, 'voxels'
 PRINT, '  Data range:', MIN(volume1), 'to', MAX(volume1)

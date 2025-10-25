@@ -23,7 +23,7 @@ print, 'Array after increment:', arr
 print, 'Test 3: FOR loop with BEGIN...END'
 for i = 0, 9 do begin
     arr[i] = arr[i] * 2.0
-end
+endfor
 
 print, 'Array after doubling:', arr
 

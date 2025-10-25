@@ -37,7 +37,7 @@ FOR i = 0, grid-1 DO BEGIN
                 IF arm_dist LT 0.3 THEN BEGIN
                     spiral_val = 1.0
                 END
-            END
+            ENDFOR
 
             ; Radial density profile - sharp cutoff
             disk_density = 0.0
@@ -60,9 +60,9 @@ FOR i = 0, grid-1 DO BEGIN
             END
 
             volume4[i, j, k] = disk_density * thickness * spiral_val + bulge
-        END
-    END
-END
+        ENDFOR
+    ENDFOR
+ENDFOR
 
 PRINT, '  Galaxy structure created'
 PRINT, ''

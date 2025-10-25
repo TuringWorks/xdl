@@ -39,9 +39,9 @@ FOR i = 0, grid-1 DO BEGIN
             END ELSE BEGIN
                 volume2[i, j, k] = 0.0
             END
-        END
-    END
-END
+        ENDFOR
+    ENDFOR
+ENDFOR
 
 PRINT, '  Torus generated'
 PRINT, ''
