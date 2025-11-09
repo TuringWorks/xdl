@@ -360,7 +360,7 @@ IF search_end GT nz-1 THEN search_end = nz-1
 FOR i = 0, nx-1 DO BEGIN
     FOR j = 0, ny-1 DO BEGIN
         ; Search for maximum amplitude in window around expected depth
-        max_amp = -999999.0
+        max_amp = -1e10
         max_idx = search_start
 
         FOR k = search_start, search_end DO BEGIN
@@ -416,7 +416,7 @@ FOR i = 0, nx-1 DO BEGIN
         END
     ENDFOR
 ENDFOR
-closure_area = closure_count * dx * dy / 1000000.0  ; km²
+closure_area = closure_count * dx * dy / 1e6  ; km²
 
 PRINT, '  Anticline Structure:'
 PRINT, '    Mean horizon depth: ', mean_depth, ' ms'
