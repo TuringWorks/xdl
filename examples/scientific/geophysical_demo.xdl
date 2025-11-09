@@ -102,7 +102,7 @@ FOR i = 0, nx-1 DO BEGIN
         IF i GT fault_center THEN BEGIN
             fault_offset = 20.0 * EXP(-dist_from_fault / fault_width)
             interface3_depth[i,j] = base_depth + fault_offset
-        ENDIF
+        END
     ENDFOR
 ENDFOR
 PRINT, '    Layer 3: Faulted shale cap (50-70ms with fault)'
@@ -135,7 +135,7 @@ FOR i = 0, nx-1 DO BEGIN
             IF dt1 LT 0.0 THEN dt1 = -dt1
             IF dt1 LT 3.0 THEN BEGIN
                 amp = amp + 0.5 * EXP(-((t - t1) / 1.5) * ((t - t1) / 1.5))
-            ENDIF
+            END
 
             ; Layer 2 reflection (anticline)
             t2 = interface2_depth[i,j]
@@ -143,7 +143,7 @@ FOR i = 0, nx-1 DO BEGIN
             IF dt2 LT 0.0 THEN dt2 = -dt2
             IF dt2 LT 3.0 THEN BEGIN
                 amp = amp + 0.8 * EXP(-((t - t2) / 1.5) * ((t - t2) / 1.5))  ; Strong reflection
-            ENDIF
+            END
 
             ; Layer 3 reflection (fault)
             t3 = interface3_depth[i,j]
@@ -151,7 +151,7 @@ FOR i = 0, nx-1 DO BEGIN
             IF dt3 LT 0.0 THEN dt3 = -dt3
             IF dt3 LT 3.0 THEN BEGIN
                 amp = amp + 0.6 * EXP(-((t - t3) / 1.5) * ((t - t3) / 1.5))
-            ENDIF
+            END
 
             seismic[i,j,k] = amp
         ENDFOR
@@ -319,7 +319,7 @@ FOR i = 0, nx-1 DO BEGIN
             IF val GT max_amp THEN BEGIN
                 max_amp = val
                 max_idx = k
-            ENDIF
+            END
         ENDFOR
 
         horizon_picks[i,j] = max_idx * dz
@@ -353,7 +353,7 @@ FOR i = 0, nx-1 DO BEGIN
     FOR j = 0, ny-1 DO BEGIN
         IF horizon_picks[i,j] LT mean_depth THEN BEGIN
             closure_count = closure_count + 1.0
-        ENDIF
+        END
     ENDFOR
 ENDFOR
 closure_area = closure_count * dx * dy / 1e6  ; km²
@@ -374,7 +374,7 @@ FOR i = 0, nx-2 DO BEGIN
         IF fault_prob[i,j] EQ max_fault THEN BEGIN
             fault_i = i
             fault_j = j
-        ENDIF
+        END
     ENDFOR
 ENDFOR
 
@@ -410,10 +410,10 @@ IF abs_amp LT 0.0 THEN abs_amp = -abs_amp
 
 IF abs_amp GT 0.5 THEN BEGIN
     PRINT, '    Interpretation: Strong reflection - possible hydrocarbon indicator'
-ENDIF
+END
 IF abs_amp LE 0.5 THEN BEGIN
     PRINT, '    Interpretation: Moderate reflection - brine-filled'
-ENDIF
+END
 PRINT, ''
 
 ; ================================================================
