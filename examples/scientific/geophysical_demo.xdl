@@ -538,3 +538,42 @@ PRINT, '  - Implement advanced attribute analysis'
 PRINT, '  - Add well log correlation'
 PRINT, '  - Perform reservoir characterization'
 PRINT, ''
+
+; ================================================================
+; STEP 13: 3D Volume Visualization (Optional)
+; ================================================================
+PRINT, '> Step 13: Launching 3D visualization...'
+PRINT, ''
+
+; Initialize VIZ3D
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Geophysical Data - Seismic Cube'
+
+; Set colormap for seismic data (rainbow shows amplitude variations well)
+VIZ3D_COLORMAP, 'RAINBOW'
+
+; Set camera position to view the cube
+cam_dist = 2.5
+VIZ3D_CAMERA, POSITION=[cam_dist, cam_dist, cam_dist], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+
+; Load seismic volume
+VIZ3D_VOLUME, seismic, DIMENSIONS=[nx, ny, nz]
+
+PRINT, '  Volume loaded: ', nx, ' x ', ny, ' x ', nz
+PRINT, '  Amplitude range: [', seismic_min, ', ', seismic_max, ']'
+PRINT, ''
+PRINT, '  Rendering 3D seismic cube...'
+PRINT, '  - Blue/negative: Troughs (possible hydrocarbon indicators)'
+PRINT, '  - Red/positive: Peaks (strong reflections)'
+PRINT, '  - Structures: Anticline and fault visible in volume'
+PRINT, ''
+
+; Render the volume
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Seismic Amplitude Cube - Interactive 3D View'
+
+PRINT, ''
+PRINT, '✓ 3D visualization complete!'
+PRINT, ''
+PRINT, '=================================================='
+PRINT, 'All Workflow Steps Complete!'
+PRINT, '=================================================='
+PRINT, ''
