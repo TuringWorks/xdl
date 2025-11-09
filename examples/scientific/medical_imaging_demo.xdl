@@ -399,6 +399,38 @@ PRINT, ''
 PRINT, '> Step 10: Launching 3D visualization...'
 PRINT, ''
 
+; Prepare volume for visualization by normalizing and windowing
+; Apply brain window (center=40, width=80) to emphasize soft tissue
+PRINT, '  Preparing volume for visualization...'
+PRINT, '  Applying brain window (C=40, W=80 HU)...'
+
+brain_center = 40.0
+brain_width = 80.0
+brain_min_hu = brain_center - brain_width / 2.0  ; 0 HU
+brain_max_hu = brain_center + brain_width / 2.0  ; 80 HU
+
+; Create normalized volume for visualization
+viz_volume = FLTARR(nx, ny, nz)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            hu_val = ct_volume[i,j,k]
+
+            ; Apply windowing: clip to brain window range
+            windowed = hu_val
+            IF windowed LT brain_min_hu THEN windowed = brain_min_hu
+            IF windowed GT brain_max_hu THEN windowed = brain_max_hu
+
+            ; Normalize to 0-1 range
+            normalized = (windowed - brain_min_hu) / (brain_max_hu - brain_min_hu)
+            viz_volume[i,j,k] = normalized
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  Volume normalized for visualization (0.0 to 1.0)'
+PRINT, ''
+
 ; Initialize VIZ3D
 VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Medical Imaging - CT Head Scan'
 
@@ -409,22 +441,25 @@ VIZ3D_COLORMAP, 'GRAYSCALE'
 cam_dist = 2.5
 VIZ3D_CAMERA, POSITION=[cam_dist, cam_dist, cam_dist], TARGET=[0.0, 0.0, 0.0], FOV=45.0
 
-; Load CT volume
-VIZ3D_VOLUME, ct_volume, DIMENSIONS=[nx, ny, nz]
+; Load normalized volume
+VIZ3D_VOLUME, viz_volume, DIMENSIONS=[nx, ny, nz]
 
 PRINT, '  Volume loaded: ', nx, ' x ', ny, ' x ', nz
 PRINT, '  HU range: [', vol_min, ', ', vol_max, ']'
 PRINT, ''
-PRINT, '  Rendering 3D CT volume...'
-PRINT, '  - Dark: Air (-1000 HU)'
-PRINT, '  - Gray: Soft tissue (20-45 HU)'
-PRINT, '  - Bright: Bone (700-3000 HU)'
-PRINT, '  - Structures: Skull and brain tissue visible'
+PRINT, '  Rendering 3D CT volume with brain windowing...'
+PRINT, '  - Windowed to 0-80 HU (brain/soft tissue)'
+PRINT, '  - Dark values: Low density tissue'
+PRINT, '  - Bright values: Higher density (skull edges)'
+PRINT, '  - Structures: Brain tissue and skull visible'
 PRINT, ''
-PRINT, '  Adjust threshold slider to:'
-PRINT, '    • Show only bone (threshold > 200 HU)'
-PRINT, '    • Show soft tissue (threshold > -500 HU)'
-PRINT, '    • Include air (threshold at minimum)'
+PRINT, '  Using threshold slider (0.0 to 1.0):'
+PRINT, '    • 0.0 = Show all soft tissue (air removed by windowing)'
+PRINT, '    • 0.5 = Show medium to high density tissue'
+PRINT, '    • 0.8 = Show only high density structures (skull)'
+PRINT, ''
+PRINT, '  Tip: Start at threshold 0.0, slowly increase to see'
+PRINT, '       the skull emerge from the brain tissue.'
 PRINT, ''
 
 ; Render the volume
