@@ -392,3 +392,48 @@ PRINT, '  - Implement advanced segmentation algorithms'
 PRINT, '  - Add dose calculation and planning'
 PRINT, '  - Generate 3D surface renderings'
 PRINT, ''
+
+; ================================================================
+; STEP 10: 3D Volume Visualization (Optional)
+; ================================================================
+PRINT, '> Step 10: Launching 3D visualization...'
+PRINT, ''
+
+; Initialize VIZ3D
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Medical Imaging - CT Head Scan'
+
+; Set colormap for CT data (grayscale for medical imaging)
+VIZ3D_COLORMAP, 'GRAYSCALE'
+
+; Set camera position to view the head
+cam_dist = 2.5
+VIZ3D_CAMERA, POSITION=[cam_dist, cam_dist, cam_dist], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+
+; Load CT volume
+VIZ3D_VOLUME, ct_volume, DIMENSIONS=[nx, ny, nz]
+
+PRINT, '  Volume loaded: ', nx, ' x ', ny, ' x ', nz
+PRINT, '  HU range: [', vol_min, ', ', vol_max, ']'
+PRINT, ''
+PRINT, '  Rendering 3D CT volume...'
+PRINT, '  - Dark: Air (-1000 HU)'
+PRINT, '  - Gray: Soft tissue (20-45 HU)'
+PRINT, '  - Bright: Bone (700-3000 HU)'
+PRINT, '  - Structures: Skull and brain tissue visible'
+PRINT, ''
+PRINT, '  Adjust threshold slider to:'
+PRINT, '    • Show only bone (threshold > 200 HU)'
+PRINT, '    • Show soft tissue (threshold > -500 HU)'
+PRINT, '    • Include air (threshold at minimum)'
+PRINT, ''
+
+; Render the volume
+VIZ3D_RENDER, /INTERACTIVE, TITLE='CT Head Scan - Interactive 3D View'
+
+PRINT, ''
+PRINT, '✓ 3D visualization complete!'
+PRINT, ''
+PRINT, '=================================================='
+PRINT, 'All Workflow Steps Complete!'
+PRINT, '=================================================='
+PRINT, ''
