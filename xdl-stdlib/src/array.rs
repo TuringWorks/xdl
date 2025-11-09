@@ -291,6 +291,13 @@ pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let min_val = arr.iter().fold(f64::INFINITY, |a, &b| a.min(b));
             Ok(XdlValue::Double(min_val))
         }
+        XdlValue::MultiDimArray { data, .. } => {
+            if data.is_empty() {
+                return Ok(XdlValue::Undefined);
+            }
+            let min_val = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+            Ok(XdlValue::Double(min_val))
+        }
         val => Ok(val.clone()), // Single value is its own minimum
     }
 }
@@ -310,6 +317,13 @@ pub fn max_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 return Ok(XdlValue::Undefined);
             }
             let max_val = arr.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+            Ok(XdlValue::Double(max_val))
+        }
+        XdlValue::MultiDimArray { data, .. } => {
+            if data.is_empty() {
+                return Ok(XdlValue::Undefined);
+            }
+            let max_val = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
             Ok(XdlValue::Double(max_val))
         }
         val => Ok(val.clone()), // Single value is its own maximum
@@ -334,6 +348,14 @@ pub fn mean_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let mean_val = sum / (arr.len() as f64);
             Ok(XdlValue::Double(mean_val))
         }
+        XdlValue::MultiDimArray { data, .. } => {
+            if data.is_empty() {
+                return Ok(XdlValue::Undefined);
+            }
+            let sum: f64 = data.iter().sum();
+            let mean_val = sum / (data.len() as f64);
+            Ok(XdlValue::Double(mean_val))
+        }
         val => {
             let num_val = val.to_double()?;
             Ok(XdlValue::Double(num_val))
@@ -353,6 +375,10 @@ pub fn total_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     match &args[0] {
         XdlValue::Array(arr) => {
             let sum: f64 = arr.iter().sum();
+            Ok(XdlValue::Double(sum))
+        }
+        XdlValue::MultiDimArray { data, .. } => {
+            let sum: f64 = data.iter().sum();
             Ok(XdlValue::Double(sum))
         }
         val => {

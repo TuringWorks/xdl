@@ -159,16 +159,8 @@ FOR i = 0, nx-1 DO BEGIN
 ENDFOR
 
 ; Find min/max of seismic cube
-seismic_min = seismic[0,0,0]
-seismic_max = seismic[0,0,0]
-FOR i = 0, nx-1 DO BEGIN
-    FOR j = 0, ny-1 DO BEGIN
-        FOR k = 0, nz-1 DO BEGIN
-            IF seismic[i,j,k] LT seismic_min THEN seismic_min = seismic[i,j,k]
-            IF seismic[i,j,k] GT seismic_max THEN seismic_max = seismic[i,j,k]
-        ENDFOR
-    ENDFOR
-ENDFOR
+seismic_min = MIN(seismic)
+seismic_max = MAX(seismic)
 
 PRINT, '  Seismic cube generated'
 PRINT, '    Amplitude range: [', seismic_min, ', ', seismic_max, ']'
@@ -190,14 +182,8 @@ FOR j = 0, ny-1 DO BEGIN
 ENDFOR
 
 ; Find min/max of inline section
-inline_min = inline_section[0,0]
-inline_max = inline_section[0,0]
-FOR j = 0, ny-1 DO BEGIN
-    FOR k = 0, nz-1 DO BEGIN
-        IF inline_section[j,k] LT inline_min THEN inline_min = inline_section[j,k]
-        IF inline_section[j,k] GT inline_max THEN inline_max = inline_section[j,k]
-    ENDFOR
-ENDFOR
+inline_min = MIN(inline_section)
+inline_max = MAX(inline_section)
 
 PRINT, '  Inline section extracted at x = ', inline_idx
 PRINT, '    Section dimensions: ', ny, ' x ', nz
@@ -220,14 +206,8 @@ FOR i = 0, nx-1 DO BEGIN
 ENDFOR
 
 ; Find min/max of crossline section
-crossline_min = crossline_section[0,0]
-crossline_max = crossline_section[0,0]
-FOR i = 0, nx-1 DO BEGIN
-    FOR k = 0, nz-1 DO BEGIN
-        IF crossline_section[i,k] LT crossline_min THEN crossline_min = crossline_section[i,k]
-        IF crossline_section[i,k] GT crossline_max THEN crossline_max = crossline_section[i,k]
-    ENDFOR
-ENDFOR
+crossline_min = MIN(crossline_section)
+crossline_max = MAX(crossline_section)
 
 PRINT, '  Crossline section extracted at y = ', crossline_idx
 PRINT, '    Section dimensions: ', nx, ' x ', nz
@@ -250,14 +230,8 @@ FOR i = 0, nx-1 DO BEGIN
 ENDFOR
 
 ; Find min/max of time slice
-slice_min = time_slice[0,0]
-slice_max = time_slice[0,0]
-FOR i = 0, nx-1 DO BEGIN
-    FOR j = 0, ny-1 DO BEGIN
-        IF time_slice[i,j] LT slice_min THEN slice_min = time_slice[i,j]
-        IF time_slice[i,j] GT slice_max THEN slice_max = time_slice[i,j]
-    ENDFOR
-ENDFOR
+slice_min = MIN(time_slice)
+slice_max = MAX(time_slice)
 
 PRINT, '  Time slice extracted at t = ', t_slice_idx * dz, ' ms'
 PRINT, '    Amplitude range: [', slice_min, ', ', slice_max, ']'
@@ -377,14 +351,8 @@ FOR i = 0, nx-1 DO BEGIN
 ENDFOR
 
 ; Find min/max of horizon picks
-horizon_min = horizon_picks[0,0]
-horizon_max = horizon_picks[0,0]
-FOR i = 0, nx-1 DO BEGIN
-    FOR j = 0, ny-1 DO BEGIN
-        IF horizon_picks[i,j] LT horizon_min THEN horizon_min = horizon_picks[i,j]
-        IF horizon_picks[i,j] GT horizon_max THEN horizon_max = horizon_picks[i,j]
-    ENDFOR
-ENDFOR
+horizon_min = MIN(horizon_picks)
+horizon_max = MAX(horizon_picks)
 
 PRINT, '  Horizon auto-picked'
 PRINT, '    Horizon depth range: [', horizon_min, ', ', horizon_max, '] ms'
