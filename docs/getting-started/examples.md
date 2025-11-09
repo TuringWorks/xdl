@@ -96,11 +96,11 @@ disp(C);
 
 ### Rayleigh-Taylor Simulation
 
-See [Rayleigh-Taylor Demo](../advanced/rayleigh-taylor) for a complete physics simulation example.
+See [Rayleigh-Taylor Demo](../README_RAYLEIGH_TAYLOR) for a complete physics simulation example.
 
 ### Bezier Curves
 
-See [Bezier Demo](../graphics/bezier) for curve drawing examples.
+See [Bezier Demo](../BEZIER_DEMO_FEATURES) for curve drawing examples.
 
 ### GPU Computation
 
@@ -124,3 +124,4 @@ xdl
 - [Core Features](../core) - Language reference
 - [Graphics](../graphics) - Visualization features
 - [Advanced Topics](../advanced) - Complex examples
+- [Full Examples Documentation](../README) - Complete examples guide

@@ -54,6 +54,7 @@ result = function_name(arg1, arg2, KEYWORD=value)
 - [GDL/IDL Syntax](../GDL_IDL_SYNTAX) - Syntax reference
 - [Gap Analysis](../GDL_XDL_GAP_ANALYSIS) - Feature comparison
 - [Porting Status](../GDL_XDL_PORTING_STATUS) - Porting progress
+- [XDL Files Status](../XDL_FILES_STATUS) - File compatibility status
 
 ## MATLAB Compatibility
 
@@ -97,6 +98,7 @@ xdl script.m
 - [MATLAB Limitations](../MATLAB_LIMITATIONS) - Known limitations
 - [MATLAB Support](../MATLAB_SUPPORT) - Feature support
 - [MATLAB Real World](../MATLAB_REAL_WORLD_SUPPORT) - Real-world usage
+- [MATLAB Critical Fixes](../MATLAB_CRITICAL_FIXES) - Bug fixes
 - [Tiled Layout](../MATLAB_TILEDLAYOUT) - Tiled layout support
 
 ## Migration Guide

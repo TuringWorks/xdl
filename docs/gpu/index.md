@@ -121,6 +121,7 @@ Current limitations:
 
 ## Next Steps
 
-- [Quick Start](../getting-started/gpu-demo) - Get started with GPU
+- [Quick Start](../QUICKSTART_GPU_DEMO) - Get started with GPU
 - [Performance Guide](../GPU_ACCELERATION_PERFORMANCE_IMPACT) - Optimization tips
 - [Technical Details](../GPU_COMPUTE_IMPLEMENTATION) - Implementation details
+- [GPU Demo Guide](../README_XDL_AMP_DEMO) - Examples and tutorials

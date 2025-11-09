@@ -90,7 +90,7 @@ python3.13 --version
 # XDL will automatically detect and use Python 3.13
 ```
 
-See [Python Integration Guide](../advanced/python) for details.
+See [Python Integration Guide](../PYTHON_INTEGRATION) for details.
 
 ## GPU Acceleration Setup
 
@@ -161,3 +161,5 @@ cargo clippy --workspace
 ```
 
 See [Development Guide](../development) for more details.
+
+For complete build documentation, see [BUILD_SUCCESS](../BUILD_SUCCESS).

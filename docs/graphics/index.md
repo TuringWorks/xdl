@@ -40,9 +40,12 @@ oplot, x, y2, color='red'
 
 - [Graphics Overview](../GRAPHICS_IMPLEMENTATION) - Implementation details
 - [Graphics Quick Reference](../GRAPHICS_QUICK_REF) - Command reference
-- [Charting](../CHARTING_FINAL_STATUS) - Chart features
+- [Charting Final Status](../CHARTING_FINAL_STATUS) - Chart features
+- [Charting Implementation](../CHARTING_IMPLEMENTATION_STATUS) - Implementation details
 - [ECharts Integration](../ECHARTS_INTEGRATION_COMPLETE) - Web charts
 - [Bezier Curves](../BEZIER_IMPLEMENTATION_SUMMARY) - Curve drawing
+- [Bezier Demo Features](../BEZIER_DEMO_FEATURES) - Demo examples
+- [Graphics Demos](../GRAPHICS_DEMOS_STATUS) - Demo status
 
 ## 3D Visualization
 
@@ -66,6 +69,8 @@ mesh, z, color_table='rainbow'
 - [Three.js Integration](../VIZ3D_THREEJS_COMPLETE) - Advanced features
 - [3D Performance](../VIZ3D_PERFORMANCE_IMPROVEMENTS) - Optimization
 - [3D Usage Guide](../VIZ3D_USAGE) - Using 3D features
+- [3D Quick Start](../VIZ3D_QUICK_START) - Getting started
+- [3D Showcase](../VIZ3D_SHOWCASE_README) - Demonstrations
 
 ## Scientific Visualization
 

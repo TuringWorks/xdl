@@ -209,8 +209,10 @@ See [Session Summary](../SESSION_SUMMARY) for recent development updates.
 ### Implementation Status
 
 - [Implementation Status](../IMPLEMENTATION_STATUS) - Current progress
+- [Implementation Summary](../IMPLEMENTATION_SUMMARY) - Summary overview
 - [IDL Command Status](../IDL_COMMAND_STATUS) - IDL compatibility
 - [Build Success](../BUILD_SUCCESS) - Build system status
+- [Parser and Array Fixes](../PARSER_AND_ARRAY_FIXES) - Recent fixes
 
 ## Release Process
 

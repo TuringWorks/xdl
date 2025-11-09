@@ -75,7 +75,7 @@ save_plot, 'myplot.png'
 
 ## Next Steps
 
-- [Graphics Overview](../graphics/overview) - Complete graphics guide
-- [Graphics Quick Reference](../graphics/quick-ref) - Command reference
+- [Graphics Overview](../GRAPHICS_IMPLEMENTATION) - Complete graphics guide
+- [Graphics Quick Reference](../GRAPHICS_QUICK_REF) - Command reference
 - [3D Visualization](viz3d-quickstart) - 3D graphics
-- [Charting](../graphics/charting) - Advanced charts
+- [Charting](../CHARTING_FINAL_STATUS) - Advanced charts

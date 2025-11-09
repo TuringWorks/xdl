@@ -58,8 +58,8 @@ XDL> .quit
 ## Next Steps
 
 - [Installation Guide](installation) - Detailed installation
-- [Examples](examples) - More sample code
-- [Graphics Quick Start](graphics-quickstart) - Learn plotting
+- [Examples](../README) - More sample code
+- [Graphics Quick Start](../QUICKSTART_GRAPHICS) - Learn plotting
 - [Core Features](../core) - Language reference
 
-For the complete quick start documentation, see [QUICK_START.md](../QUICK_START).
+For the complete quick start documentation, see [QUICK_START](../QUICK_START).

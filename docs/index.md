@@ -55,24 +55,23 @@ plot, x, y, title='XDL Plot'
 
 Essential resources to begin using XDL
 
-- [Quick Start Guide](getting-started/quick-start) - Get up and running in minutes
-- [Installation](getting-started/installation) - Detailed installation instructions
-- [GPU Acceleration Demo](getting-started/gpu-demo) - GPU features walkthrough
-- [Graphics Quick Start](getting-started/graphics-quickstart) - 2D graphics basics
-- [3D Visualization Quick Start](getting-started/viz3d-quickstart) - 3D visualization basics
-- [Examples](getting-started/examples) - Sample code and tutorials
+- [Quick Start Guide](getting-started) - Get up and running in minutes
+- [Quick Start](QUICK_START) - Detailed quick start guide
+- [GPU Acceleration Demo](QUICKSTART_GPU_DEMO) - GPU features walkthrough
+- [Graphics Quick Start](QUICKSTART_GRAPHICS) - 2D graphics basics
+- [3D Visualization Quick Start](QUICKSTART_VIZ3D) - 3D visualization basics
+- [Examples](README) - Sample code and tutorials
 
 ### Core Features
 {: .text-delta }
 
 Language implementation and core functionality
 
-- [Implementation Status](core/implementation-status) - Current implementation progress
-- [Language Features](core/language-features) - Syntax and language constructs
-- [Control Flow](core/control-flow) - IF/THEN/ELSE, FOR, WHILE loops
-- [Array Operations](core/arrays) - N-dimensional array support
-- [Multi-dimensional Arrays](core/multidim-arrays) - Advanced array features
-- [Keyword Arguments](core/keyword-args) - Function keyword arguments
+- [Implementation Status](IMPLEMENTATION_STATUS) - Current implementation progress
+- [Control Flow](CONTROL_FLOW_IMPLEMENTATION) - IF/THEN/ELSE, FOR, WHILE loops
+- [Array Operations](ARRAY_FEATURES) - N-dimensional array support
+- [Multi-dimensional Arrays](MULTIDIM_ARRAY_SUPPORT) - Advanced array features
+- [Keyword Arguments](KEYWORD_ARGS_IMPLEMENTATION) - Function keyword arguments
 
 ### Graphics & Visualization
 {: .text-delta }
@@ -80,28 +79,28 @@ Language implementation and core functionality
 Comprehensive 2D and 3D graphics capabilities
 
 #### 2D Graphics
-- [Graphics Overview](graphics/overview) - 2D graphics implementation
-- [Graphics Quick Reference](graphics/quick-ref) - Command reference
-- [Charting](graphics/charting) - Chart and plot features
-- [ECharts Integration](graphics/echarts) - Web-based charting
-- [Bezier Curves](graphics/bezier) - Curve drawing features
+- [Graphics Overview](GRAPHICS_IMPLEMENTATION) - 2D graphics implementation
+- [Graphics Quick Reference](GRAPHICS_QUICK_REF) - Command reference
+- [Charting Status](CHARTING_FINAL_STATUS) - Chart and plot features
+- [ECharts Integration](ECHARTS_INTEGRATION_COMPLETE) - Web-based charting
+- [Bezier Curves](BEZIER_IMPLEMENTATION_SUMMARY) - Curve drawing features
 
 #### 3D Visualization
-- [3D Visualization Complete](graphics/viz3d-complete) - Full 3D guide
-- [3D Browser Rendering](graphics/viz3d-browser) - Browser-based 3D
-- [Three.js Integration](graphics/viz3d-threejs) - Three.js backend
-- [3D Performance](graphics/viz3d-performance) - Optimization guide
-- [Scientific Visualization](graphics/scientific-viz) - Scientific plotting
+- [3D Visualization Complete](VIZ3D_COMPLETE_FINAL) - Full 3D guide
+- [3D Browser Rendering](VIZ3D_BROWSER_GUIDE) - Browser-based 3D
+- [Three.js Integration](VIZ3D_THREEJS_COMPLETE) - Three.js backend
+- [3D Performance](VIZ3D_PERFORMANCE_IMPROVEMENTS) - Optimization guide
+- [Scientific Visualization](SCIENTIFIC_VISUALIZATION_GUIDE) - Scientific plotting
 
 ### GPU Acceleration
 {: .text-delta }
 
 High-performance GPU computing features
 
-- [GPU Compute Implementation](gpu/compute) - GPU acceleration overview
-- [Performance Impact Analysis](gpu/performance) - Benchmarks and metrics
-- [AMP Multi-Backend](gpu/amp-multibackend) - Multiple GPU backends
-- [GPU Demo Guide](gpu/demo) - GPU examples and tutorials
+- [GPU Compute Implementation](GPU_COMPUTE_IMPLEMENTATION) - GPU acceleration overview
+- [Performance Impact Analysis](GPU_ACCELERATION_PERFORMANCE_IMPACT) - Benchmarks and metrics
+- [AMP Multi-Backend](XDL_AMP_MULTI_BACKEND) - Multiple GPU backends
+- [GPU Demo Guide](README_XDL_AMP_DEMO) - GPU examples and tutorials
 
 ### Compatibility
 {: .text-delta }
@@ -109,38 +108,37 @@ High-performance GPU computing features
 IDL/GDL and MATLAB compatibility layers
 
 #### IDL/GDL Compatibility
-- [IDL Command Status](compatibility/idl-commands) - Supported IDL commands
-- [GDL/IDL Compatibility](compatibility/gdl-idl) - Compatibility layer
-- [GDL/IDL Syntax](compatibility/gdl-idl-syntax) - Syntax reference
-- [Gap Analysis](compatibility/gap-analysis) - Feature comparison
+- [IDL Command Status](IDL_COMMAND_STATUS) - Supported IDL commands
+- [GDL/IDL Compatibility](GDL_IDL_COMPATIBILITY) - Compatibility layer
+- [GDL/IDL Syntax](GDL_IDL_SYNTAX) - Syntax reference
+- [Gap Analysis](GDL_XDL_GAP_ANALYSIS) - Feature comparison
 
 #### MATLAB Compatibility
-- [MATLAB Support](compatibility/matlab) - MATLAB compatibility overview
-- [MATLAB Plotting](compatibility/matlab-plotting) - MATLAB plot functions
-- [MATLAB Limitations](compatibility/matlab-limitations) - Known limitations
-- [Tiled Layout](compatibility/matlab-tiledlayout) - Tiled layout support
+- [MATLAB Support](MATLAB_SUPPORT) - MATLAB compatibility overview
+- [MATLAB Plotting](MATLAB_PLOTTING_GUIDE) - MATLAB plot functions
+- [MATLAB Limitations](MATLAB_LIMITATIONS) - Known limitations
+- [Tiled Layout](MATLAB_TILEDLAYOUT) - Tiled layout support
 
 ### Advanced Topics
 {: .text-delta }
 
 Machine learning, Python integration, and more
 
-- [Machine Learning](advanced/ml-overview) - ML capabilities and roadmap
-- [Python Integration](advanced/python) - Python 3.13 integration
-- [Advanced Visualization](advanced/advanced-viz) - Complex visualizations
-- [Moving Average](advanced/moving-average) - Signal processing
-- [Rayleigh-Taylor Demo](advanced/rayleigh-taylor) - Physics simulation
+- [Machine Learning Overview](ML_COMPLETE_REFERENCE) - ML capabilities and reference
+- [Python Integration](PYTHON_INTEGRATION) - Python 3.13 integration
+- [Advanced Visualization](ADVANCED_VIZ_INTEGRATION) - Complex visualizations
+- [Moving Average](MOVING_AVERAGE) - Signal processing
+- [Rayleigh-Taylor Demo](README_RAYLEIGH_TAYLOR) - Physics simulation
 
 ### Development
 {: .text-delta }
 
 Contributing and building XDL
 
-- [Build Guide](development/build) - Building from source
-- [Testing](development/testing) - Running tests
-- [Validation](development/validation) - Validation reports
-- [Contributing](development/contributing) - How to contribute
-- [Architecture](development/architecture) - System architecture
+- [Build Guide](BUILD_SUCCESS) - Building from source
+- [Session Summary](SESSION_SUMMARY) - Development updates
+- [Validation](VALIDATION_REPORT) - Validation reports
+- [Slow Tests](SLOW_TESTS_CHANGES) - Test organization
 
 ---
 

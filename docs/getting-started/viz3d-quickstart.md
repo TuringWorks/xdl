@@ -89,7 +89,7 @@ endfor
 
 ## Next Steps
 
-- [3D Visualization Complete](../graphics/viz3d-complete) - Full guide
-- [3D Browser Guide](../graphics/viz3d-browser) - Browser rendering
-- [Three.js Integration](../graphics/viz3d-threejs) - Advanced features
-- [Scientific Visualization](../graphics/scientific-viz) - Scientific plots
+- [3D Visualization Complete](../VIZ3D_COMPLETE_FINAL) - Full guide
+- [3D Browser Guide](../VIZ3D_BROWSER_GUIDE) - Browser rendering
+- [Three.js Integration](../VIZ3D_THREEJS_COMPLETE) - Advanced features
+- [Scientific Visualization](../SCIENTIFIC_VISUALIZATION_GUIDE) - Scientific plots

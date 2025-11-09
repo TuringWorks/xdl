@@ -58,6 +58,6 @@ XDL_GPU_PROFILE=1 xdl script.xdl
 
 ## Next Steps
 
-- [GPU Compute Implementation](../gpu/compute) - Technical details
-- [Performance Analysis](../gpu/performance) - Benchmarks
-- [AMP Multi-Backend](../gpu/amp-multibackend) - Backend configuration
+- [GPU Compute Implementation](../GPU_COMPUTE_IMPLEMENTATION) - Technical details
+- [Performance Analysis](../GPU_ACCELERATION_PERFORMANCE_IMPACT) - Benchmarks
+- [AMP Multi-Backend](../XDL_AMP_MULTI_BACKEND) - Backend configuration

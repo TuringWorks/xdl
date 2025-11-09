@@ -45,6 +45,7 @@ XDL includes machine learning capabilities:
 - [ML Status](../ML_STATUS) - Current status
 - [ML Advanced Features](../ML_ADVANCED_FEATURES_STATUS) - Advanced features
 - [ML Final Summary](../ML_FINAL_SUMMARY) - Overview
+- [ML Phase 11](../ML_PHASE_11_ADVANCED_DEEPLEARNING) - Advanced deep learning
 
 ### Example
 
@@ -63,6 +64,8 @@ Complex visualization techniques:
 
 - [Advanced Visualization](../ADVANCED_VIZ_INTEGRATION) - Integration guide
 - [Advanced Reference](../ADVANCED_VIZ_REFERENCE) - API reference
+- [3D Plotting Complete](../3D_PLOTTING_COMPLETE) - Complete 3D plotting guide
+- [3D Plotting with GUI](../3D_PLOTTING_WITH_GUI) - GUI integration
 
 ### Features
 
