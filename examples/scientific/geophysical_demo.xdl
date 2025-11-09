@@ -158,8 +158,20 @@ FOR i = 0, nx-1 DO BEGIN
     ENDFOR
 ENDFOR
 
+; Find min/max of seismic cube
+seismic_min = seismic[0,0,0]
+seismic_max = seismic[0,0,0]
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            IF seismic[i,j,k] LT seismic_min THEN seismic_min = seismic[i,j,k]
+            IF seismic[i,j,k] GT seismic_max THEN seismic_max = seismic[i,j,k]
+        ENDFOR
+    ENDFOR
+ENDFOR
+
 PRINT, '  Seismic cube generated'
-PRINT, '    Amplitude range: [', MIN(seismic), ', ', MAX(seismic), ']'
+PRINT, '    Amplitude range: [', seismic_min, ', ', seismic_max, ']'
 PRINT, ''
 
 ; ================================================================
@@ -177,9 +189,19 @@ FOR j = 0, ny-1 DO BEGIN
     ENDFOR
 ENDFOR
 
+; Find min/max of inline section
+inline_min = inline_section[0,0]
+inline_max = inline_section[0,0]
+FOR j = 0, ny-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        IF inline_section[j,k] LT inline_min THEN inline_min = inline_section[j,k]
+        IF inline_section[j,k] GT inline_max THEN inline_max = inline_section[j,k]
+    ENDFOR
+ENDFOR
+
 PRINT, '  Inline section extracted at x = ', inline_idx
 PRINT, '    Section dimensions: ', ny, ' x ', nz
-PRINT, '    Amplitude range: [', MIN(inline_section), ', ', MAX(inline_section), ']'
+PRINT, '    Amplitude range: [', inline_min, ', ', inline_max, ']'
 PRINT, ''
 
 ; ================================================================
@@ -197,9 +219,19 @@ FOR i = 0, nx-1 DO BEGIN
     ENDFOR
 ENDFOR
 
+; Find min/max of crossline section
+crossline_min = crossline_section[0,0]
+crossline_max = crossline_section[0,0]
+FOR i = 0, nx-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        IF crossline_section[i,k] LT crossline_min THEN crossline_min = crossline_section[i,k]
+        IF crossline_section[i,k] GT crossline_max THEN crossline_max = crossline_section[i,k]
+    ENDFOR
+ENDFOR
+
 PRINT, '  Crossline section extracted at y = ', crossline_idx
 PRINT, '    Section dimensions: ', nx, ' x ', nz
-PRINT, '    Amplitude range: [', MIN(crossline_section), ', ', MAX(crossline_section), ']'
+PRINT, '    Amplitude range: [', crossline_min, ', ', crossline_max, ']'
 PRINT, ''
 
 ; ================================================================
@@ -217,8 +249,18 @@ FOR i = 0, nx-1 DO BEGIN
     ENDFOR
 ENDFOR
 
+; Find min/max of time slice
+slice_min = time_slice[0,0]
+slice_max = time_slice[0,0]
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        IF time_slice[i,j] LT slice_min THEN slice_min = time_slice[i,j]
+        IF time_slice[i,j] GT slice_max THEN slice_max = time_slice[i,j]
+    ENDFOR
+ENDFOR
+
 PRINT, '  Time slice extracted at t = ', t_slice_idx * dz, ' ms'
-PRINT, '    Amplitude range: [', MIN(time_slice), ', ', MAX(time_slice), ']'
+PRINT, '    Amplitude range: [', slice_min, ', ', slice_max, ']'
 PRINT, ''
 
 ; ================================================================
@@ -290,8 +332,16 @@ FOR i = 0, nx-2 DO BEGIN
     ENDFOR
 ENDFOR
 
+; Find max fault probability
+max_fault_prob = fault_prob[0,0]
+FOR i = 0, nx-2 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        IF fault_prob[i,j] GT max_fault_prob THEN max_fault_prob = fault_prob[i,j]
+    ENDFOR
+ENDFOR
+
 PRINT, '  Fault probability map computed'
-PRINT, '    Max fault probability: ', MAX(fault_prob)
+PRINT, '    Max fault probability: ', max_fault_prob
 PRINT, ''
 
 ; ================================================================
@@ -326,8 +376,18 @@ FOR i = 0, nx-1 DO BEGIN
     ENDFOR
 ENDFOR
 
+; Find min/max of horizon picks
+horizon_min = horizon_picks[0,0]
+horizon_max = horizon_picks[0,0]
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        IF horizon_picks[i,j] LT horizon_min THEN horizon_min = horizon_picks[i,j]
+        IF horizon_picks[i,j] GT horizon_max THEN horizon_max = horizon_picks[i,j]
+    ENDFOR
+ENDFOR
+
 PRINT, '  Horizon auto-picked'
-PRINT, '    Horizon depth range: [', MIN(horizon_picks), ', ', MAX(horizon_picks), '] ms'
+PRINT, '    Horizon depth range: [', horizon_min, ', ', horizon_max, '] ms'
 PRINT, ''
 
 ; ================================================================
@@ -360,13 +420,13 @@ closure_area = closure_count * dx * dy / 1000000.0  ; km²
 
 PRINT, '  Anticline Structure:'
 PRINT, '    Mean horizon depth: ', mean_depth, ' ms'
-PRINT, '    Peak depth: ', MIN(horizon_picks), ' ms'
-PRINT, '    Structural relief: ', mean_depth - MIN(horizon_picks), ' ms'
+PRINT, '    Peak depth: ', horizon_min, ' ms'
+PRINT, '    Structural relief: ', mean_depth - horizon_min, ' ms'
 PRINT, '    Closure area: ', closure_area, ' km²'
 PRINT, ''
 
-; Fault characterization
-max_fault = MAX(fault_prob)
+; Fault characterization - reuse max_fault_prob from earlier
+max_fault = max_fault_prob
 fault_i = 0
 fault_j = 0
 FOR i = 0, nx-2 DO BEGIN
@@ -459,7 +519,8 @@ FOR i = 0, nx-1 DO BEGIN
 ENDFOR
 rms_amp = SQRT(sum_sq / count_amp)
 
-max_abs = MAX(seismic)
+; Use seismic_max from earlier (already computed)
+max_abs = seismic_max
 IF max_abs LT 0.0 THEN max_abs = -max_abs
 snr = max_abs / stddev_amp
 
@@ -498,7 +559,7 @@ PRINT, '  - Structural interpretation'
 PRINT, ''
 PRINT, 'Key Features Identified:'
 PRINT, '  • Anticline closure area: ', closure_area, ' km²'
-PRINT, '  • Structural relief: ', mean_depth - MIN(horizon_picks), ' ms'
+PRINT, '  • Structural relief: ', mean_depth - horizon_min, ' ms'
 PRINT, '  • Normal fault with ~20ms throw'
 PRINT, '  • Reservoir reflection amplitude: ', reservoir_amp
 PRINT, ''
