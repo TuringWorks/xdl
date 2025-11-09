@@ -1,5 +1,5 @@
 ; ================================================================
-; Geophysical Data Visualization Workflow
+; Geophysical Data Visualization Workflow (Simplified)
 ; ================================================================
 ; Demonstrates:
 ; - Synthetic seismic data generation
@@ -10,41 +10,41 @@
 ; - Horizon tracking
 ; ================================================================
 
-PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '=================================================='
 PRINT, 'Geophysical Data Visualization Workflow'
-PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '=================================================='
 PRINT, ''
 
 ; ================================================================
 ; STEP 1: Define Survey Parameters
 ; ================================================================
-PRINT, '▶ Step 1: Setting up survey parameters...'
+PRINT, '> Step 1: Setting up survey parameters...'
 PRINT, ''
 
-; 3D seismic cube dimensions
-nx = 256  ; Inline direction
-ny = 256  ; Crossline direction
-nz = 128  ; Time/depth direction
+; 3D seismic cube dimensions (reduced for faster computation)
+nx = 64  ; Inline direction
+ny = 64  ; Crossline direction
+nz = 32  ; Time/depth direction
 
-PRINT, '  Survey dimensions:', nx, 'x', ny, 'x', nz
-PRINT, '  Inline traces:', nx
-PRINT, '  Crossline traces:', ny
-PRINT, '  Time samples:', nz
+PRINT, '  Survey dimensions: ', nx, ' x ', ny, ' x ', nz
+PRINT, '  Inline traces: ', nx
+PRINT, '  Crossline traces: ', ny
+PRINT, '  Time samples: ', nz
 
 ; Spatial sampling
 dx = 25.0  ; meters
 dy = 25.0  ; meters
 dz = 4.0   ; milliseconds (two-way time)
 
-PRINT, '  Inline spacing:', dx, 'm'
-PRINT, '  Crossline spacing:', dy, 'm'
-PRINT, '  Time sampling:', dz, 'ms'
+PRINT, '  Inline spacing: ', dx, ' m'
+PRINT, '  Crossline spacing: ', dy, ' m'
+PRINT, '  Time sampling: ', dz, ' ms'
 PRINT, ''
 
 ; ================================================================
 ; STEP 2: Create Geological Layer Model
 ; ================================================================
-PRINT, '▶ Step 2: Creating geological layer model...'
+PRINT, '> Step 2: Creating geological layer model...'
 PRINT, ''
 
 ; Initialize seismic cube
@@ -54,16 +54,19 @@ seismic = FLTARR(nx, ny, nz)
 PRINT, '  Defining stratigraphic layers...'
 
 ; Layer 1: Shallow sediments (0-30ms)
-; Layer 2: Sandstone reservoir (30-50ms)
-; Layer 3: Shale cap rock (50-70ms)
+; Layer 2: Sandstone reservoir (30-50ms) with anticline
+; Layer 3: Shale cap rock (50-70ms) with fault
 ; Layer 4: Deeper formations (70-128ms)
 
-; Create layer interfaces with gentle dip and structure
+; Create layer interfaces
 x_grid = FINDGEN(nx)
 y_grid = FINDGEN(ny)
 
 ; Interface 1: Gradual dip from west to east
-interface1_depth = 30.0 + 0.05 * x_grid
+interface1_depth = FLTARR(nx)
+FOR i = 0, nx-1 DO BEGIN
+    interface1_depth[i] = 30.0 + 0.05 * i
+ENDFOR
 PRINT, '    Layer 1: Shallow sediments (0-30ms)'
 
 ; Interface 2: Anticline structure (potential reservoir)
@@ -73,7 +76,7 @@ FOR i = 0, nx-1 DO BEGIN
         ; Anticline: dome structure
         dx_center = (i - nx/2.0) / (nx/4.0)
         dy_center = (j - ny/2.0) / (ny/4.0)
-        r2 = dx_center^2 + dy_center^2
+        r2 = dx_center * dx_center + dy_center * dy_center
         uplift = 15.0 * EXP(-r2 / 2.0)  ; Gaussian dome
         interface2_depth[i,j] = 50.0 - uplift + 0.05 * i
     ENDFOR
@@ -89,7 +92,10 @@ FOR i = 0, nx-1 DO BEGIN
         ; Add fault: vertical offset at x = nx/2
         fault_center = nx / 2.0
         fault_width = 10.0
-        dist_from_fault = ABS(i - fault_center)
+        dist_from_fault = i - fault_center
+        IF dist_from_fault LT 0.0 THEN BEGIN
+            dist_from_fault = -dist_from_fault
+        ENDIF
 
         IF i GT fault_center THEN BEGIN
             ; Hanging wall (downthrown side)
@@ -108,8 +114,11 @@ PRINT, ''
 ; ================================================================
 ; STEP 3: Generate Synthetic Seismic Data
 ; ================================================================
-PRINT, '▶ Step 3: Generating synthetic seismic data...'
+PRINT, '> Step 3: Generating synthetic seismic data...'
 PRINT, ''
+
+; Initialize random seed for noise
+seed = 42.0
 
 ; Generate seismic amplitudes based on layer contrasts
 FOR i = 0, nx-1 DO BEGIN
@@ -118,24 +127,32 @@ FOR i = 0, nx-1 DO BEGIN
             t = k * dz  ; Time in ms
 
             ; Base amplitude (background noise)
-            amp = RANDOMN(seed) * 0.1
+            ; Simple pseudo-random using sin function
+            noise_factor = SIN(i * 1.23 + j * 4.56 + k * 7.89 + seed)
+            amp = noise_factor * 0.1
 
             ; Layer 1 reflection (shallow)
             t1 = interface1_depth[i]
-            IF ABS(t - t1) LT 3.0 THEN BEGIN
-                amp = amp + 0.5 * EXP(-((t - t1) / 1.5)^2)
+            dt1 = t - t1
+            IF dt1 LT 0.0 THEN dt1 = -dt1
+            IF dt1 LT 3.0 THEN BEGIN
+                amp = amp + 0.5 * EXP(-((t - t1) / 1.5) * ((t - t1) / 1.5))
             ENDIF
 
             ; Layer 2 reflection (anticline)
             t2 = interface2_depth[i,j]
-            IF ABS(t - t2) LT 3.0 THEN BEGIN
-                amp = amp + 0.8 * EXP(-((t - t2) / 1.5)^2)  ; Strong reflection
+            dt2 = t - t2
+            IF dt2 LT 0.0 THEN dt2 = -dt2
+            IF dt2 LT 3.0 THEN BEGIN
+                amp = amp + 0.8 * EXP(-((t - t2) / 1.5) * ((t - t2) / 1.5))  ; Strong reflection
             ENDIF
 
             ; Layer 3 reflection (fault)
             t3 = interface3_depth[i,j]
-            IF ABS(t - t3) LT 3.0 THEN BEGIN
-                amp = amp + 0.6 * EXP(-((t - t3) / 1.5)^2)
+            dt3 = t - t3
+            IF dt3 LT 0.0 THEN dt3 = -dt3
+            IF dt3 LT 3.0 THEN BEGIN
+                amp = amp + 0.6 * EXP(-((t - t3) / 1.5) * ((t - t3) / 1.5))
             ENDIF
 
             seismic[i,j,k] = amp
@@ -143,163 +160,166 @@ FOR i = 0, nx-1 DO BEGIN
     ENDFOR
 ENDFOR
 
-PRINT, '  ✓ Seismic cube generated'
-PRINT, '    Amplitude range: [', MIN(seismic), ',', MAX(seismic), ']'
+PRINT, '  Seismic cube generated'
+PRINT, '    Amplitude range: [', MIN(seismic), ', ', MAX(seismic), ']'
 PRINT, ''
 
 ; ================================================================
 ; STEP 4: Extract Inline Section
 ; ================================================================
-PRINT, '▶ Step 4: Extracting inline section...'
+PRINT, '> Step 4: Extracting inline section...'
 PRINT, ''
 
 ; Extract section at middle crossline
 inline_idx = nx / 2
-inline_section = seismic[inline_idx, *, *]
+inline_section = FLTARR(ny, nz)
+FOR j = 0, ny-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        inline_section[j,k] = seismic[inline_idx, j, k]
+    ENDFOR
+ENDFOR
 
-PRINT, '  ✓ Inline section extracted at x =', inline_idx
-PRINT, '    Section dimensions:', ny, 'x', nz
+PRINT, '  Inline section extracted at x = ', inline_idx
+PRINT, '    Section dimensions: ', ny, ' x ', nz
+PRINT, '    Amplitude range: [', MIN(inline_section), ', ', MAX(inline_section), ']'
 PRINT, ''
 
 ; ================================================================
-; STEP 5: Visualize Inline Section
+; STEP 5: Extract Crossline Section
 ; ================================================================
-PRINT, '▶ Step 5: Visualizing inline seismic section...'
-PRINT, ''
-
-WINDOW, 0, XSIZE=1000, YSIZE=600, TITLE='Inline Seismic Section'
-; Create wiggle trace display style
-y_axis = FINDGEN(ny) * dy
-t_axis = FINDGEN(nz) * dz
-CONTOUR, inline_section, y_axis, t_axis, NLEVELS=30, /FILL, $
-         XTITLE='Crossline Distance (m)', YTITLE='Time (ms)', $
-         TITLE='Seismic Inline Section (Fault Visible)', $
-         /YINVERT  ; Invert Y-axis (time increases downward)
-
-PRINT, '  ✓ Inline section displayed'
-PRINT, ''
-
-; ================================================================
-; STEP 6: Extract Crossline Section
-; ================================================================
-PRINT, '▶ Step 6: Extracting crossline section...'
+PRINT, '> Step 5: Extracting crossline section...'
 PRINT, ''
 
 ; Extract section through anticline center
 crossline_idx = ny / 2
-crossline_section = seismic[*, crossline_idx, *]
+crossline_section = FLTARR(nx, nz)
+FOR i = 0, nx-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        crossline_section[i,k] = seismic[i, crossline_idx, k]
+    ENDFOR
+ENDFOR
 
-PRINT, '  ✓ Crossline section extracted at y =', crossline_idx
-PRINT, ''
-
-WINDOW, 1, XSIZE=1000, YSIZE=600, TITLE='Crossline Seismic Section'
-x_axis = FINDGEN(nx) * dx
-CONTOUR, crossline_section, x_axis, t_axis, NLEVELS=30, /FILL, $
-         XTITLE='Inline Distance (m)', YTITLE='Time (ms)', $
-         TITLE='Seismic Crossline Section (Anticline Visible)', $
-         /YINVERT
-
-PRINT, '  ✓ Crossline section displayed'
+PRINT, '  Crossline section extracted at y = ', crossline_idx
+PRINT, '    Section dimensions: ', nx, ' x ', nz
+PRINT, '    Amplitude range: [', MIN(crossline_section), ', ', MAX(crossline_section), ']'
 PRINT, ''
 
 ; ================================================================
-; STEP 7: Extract Time Slice (Horizon)
+; STEP 6: Extract Time Slice (Horizon)
 ; ================================================================
-PRINT, '▶ Step 7: Extracting time slice at reservoir level...'
+PRINT, '> Step 6: Extracting time slice at reservoir level...'
 PRINT, ''
 
 ; Time slice at anticline level (approximately t=40ms)
 t_slice_idx = 40 / dz  ; Convert ms to sample index
-time_slice = seismic[*, *, t_slice_idx]
+time_slice = FLTARR(nx, ny)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        time_slice[i,j] = seismic[i, j, t_slice_idx]
+    ENDFOR
+ENDFOR
 
-PRINT, '  ✓ Time slice extracted at t =', t_slice_idx * dz, 'ms'
-PRINT, ''
-
-WINDOW, 2, XSIZE=800, YSIZE=800, TITLE='Horizon Time Slice'
-CONTOUR, time_slice, x_axis, y_axis, NLEVELS=25, /FILL, $
-         XTITLE='Inline Distance (m)', YTITLE='Crossline Distance (m)', $
-         TITLE='Amplitude Map at Reservoir Level (40ms)'
-
-PRINT, '  ✓ Time slice displayed'
+PRINT, '  Time slice extracted at t = ', t_slice_idx * dz, ' ms'
+PRINT, '    Amplitude range: [', MIN(time_slice), ', ', MAX(time_slice), ']'
 PRINT, ''
 
 ; ================================================================
-; STEP 8: Compute Seismic Attributes
+; STEP 7: Compute Seismic Attributes
 ; ================================================================
-PRINT, '▶ Step 8: Computing seismic attributes...'
+PRINT, '> Step 7: Computing seismic attributes...'
 PRINT, ''
 
-; Instantaneous amplitude (envelope)
-inst_amp = ABS(seismic)
-PRINT, '  ✓ Instantaneous amplitude computed'
+; Instantaneous amplitude (envelope) - using absolute value
+inst_amp = FLTARR(nx, ny, nz)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            val = seismic[i,j,k]
+            IF val LT 0.0 THEN val = -val
+            inst_amp[i,j,k] = val
+        ENDFOR
+    ENDFOR
+ENDFOR
+PRINT, '  Instantaneous amplitude computed'
 
 ; Vertical gradient (structural discontinuities)
 gradient_z = FLTARR(nx, ny, nz-1)
-FOR k = 0, nz-2 DO BEGIN
-    gradient_z[*, *, k] = ABS(seismic[*, *, k+1] - seismic[*, *, k])
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-2 DO BEGIN
+            diff = seismic[i, j, k+1] - seismic[i, j, k]
+            IF diff LT 0.0 THEN diff = -diff
+            gradient_z[i, j, k] = diff
+        ENDFOR
+    ENDFOR
 ENDFOR
-PRINT, '  ✓ Vertical gradient computed'
+PRINT, '  Vertical gradient computed'
 
 ; Horizontal gradient (fault detection)
 gradient_x = FLTARR(nx-1, ny, nz)
 FOR i = 0, nx-2 DO BEGIN
-    gradient_x[i, *, *] = ABS(seismic[i+1, *, *] - seismic[i, *, *])
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            diff = seismic[i+1, j, k] - seismic[i, j, k]
+            IF diff LT 0.0 THEN diff = -diff
+            gradient_x[i, j, k] = diff
+        ENDFOR
+    ENDFOR
 ENDFOR
-PRINT, '  ✓ Horizontal gradient computed (fault indicator)'
+PRINT, '  Horizontal gradient computed (fault indicator)'
 PRINT, ''
 
 ; ================================================================
-; STEP 9: Fault Detection via Gradient Analysis
+; STEP 8: Fault Detection via Gradient Analysis
 ; ================================================================
-PRINT, '▶ Step 9: Detecting fault via gradient analysis...'
+PRINT, '> Step 8: Detecting fault via gradient analysis...'
 PRINT, ''
 
 ; Sum gradient along time axis to create fault probability map
 fault_prob = FLTARR(nx-1, ny)
+depth_start = 40 / dz
+depth_end = 90 / dz
+IF depth_end GT nz-1 THEN depth_end = nz-1
+
 FOR i = 0, nx-2 DO BEGIN
     FOR j = 0, ny-1 DO BEGIN
         ; Sum high gradients in depth window around fault
-        depth_start = 40 / dz
-        depth_end = 90 / dz
-        fault_prob[i,j] = TOTAL(gradient_x[i, j, depth_start:depth_end])
+        sum_val = 0.0
+        FOR k = depth_start, depth_end DO BEGIN
+            sum_val = sum_val + gradient_x[i, j, k]
+        ENDFOR
+        fault_prob[i,j] = sum_val
     ENDFOR
 ENDFOR
 
-PRINT, '  ✓ Fault probability map computed'
-PRINT, '    Max fault probability:', MAX(fault_prob)
-PRINT, ''
-
-; Visualize fault map
-WINDOW, 3, XSIZE=800, YSIZE=800, TITLE='Fault Detection Map'
-x_axis_fault = FINDGEN(nx-1) * dx
-CONTOUR, fault_prob, x_axis_fault, y_axis, NLEVELS=20, /FILL, $
-         XTITLE='Inline Distance (m)', YTITLE='Crossline Distance (m)', $
-         TITLE='Fault Probability (High Gradient Zones)'
-
-PRINT, '  ✓ Fault map displayed'
+PRINT, '  Fault probability map computed'
+PRINT, '    Max fault probability: ', MAX(fault_prob)
 PRINT, ''
 
 ; ================================================================
-; STEP 10: Horizon Tracking (Auto-picking)
+; STEP 9: Horizon Tracking (Auto-picking)
 ; ================================================================
-PRINT, '▶ Step 10: Automatic horizon tracking...'
+PRINT, '> Step 9: Automatic horizon tracking...'
 PRINT, ''
 
 ; Track anticline horizon (interface 2)
 horizon_picks = FLTARR(nx, ny)
 
+search_start = 20 / dz
+search_end = 60 / dz
+IF search_end GT nz-1 THEN search_end = nz-1
+
 FOR i = 0, nx-1 DO BEGIN
     FOR j = 0, ny-1 DO BEGIN
         ; Search for maximum amplitude in window around expected depth
-        search_start = 20 / dz
-        search_end = 60 / dz
-
         max_amp = -1e10
         max_idx = search_start
 
         FOR k = search_start, search_end DO BEGIN
-            IF ABS(seismic[i,j,k]) GT max_amp THEN BEGIN
-                max_amp = ABS(seismic[i,j,k])
+            val = seismic[i,j,k]
+            IF val LT 0.0 THEN val = -val
+            IF val GT max_amp THEN BEGIN
+                max_amp = val
                 max_idx = k
             ENDIF
         ENDFOR
@@ -308,88 +328,89 @@ FOR i = 0, nx-1 DO BEGIN
     ENDFOR
 ENDFOR
 
-PRINT, '  ✓ Horizon auto-picked'
-PRINT, '    Horizon depth range: [', MIN(horizon_picks), ',', MAX(horizon_picks), '] ms'
-PRINT, ''
-
-; Visualize picked horizon
-WINDOW, 4, XSIZE=800, YSIZE=800, TITLE='Auto-Picked Horizon'
-SURFACE, horizon_picks, x_axis, y_axis, $
-         XTITLE='Inline (m)', YTITLE='Crossline (m)', ZTITLE='Time (ms)', $
-         TITLE='Anticline Horizon Surface'
-
-PRINT, '  ✓ Horizon surface displayed'
+PRINT, '  Horizon auto-picked'
+PRINT, '    Horizon depth range: [', MIN(horizon_picks), ', ', MAX(horizon_picks), '] ms'
 PRINT, ''
 
 ; ================================================================
-; STEP 11: 3D Volume Rendering
+; STEP 10: Structural Interpretation Summary
 ; ================================================================
-PRINT, '▶ Step 11: 3D volume rendering of seismic cube...'
+PRINT, '> Step 10: Structural interpretation summary...'
 PRINT, ''
 
-; Normalize amplitude for visualization
-seismic_norm = (seismic - MIN(seismic)) / (MAX(seismic) - MIN(seismic))
+; Compute anticline statistics
+sum_depth = 0.0
+count_depth = 0.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        sum_depth = sum_depth + horizon_picks[i,j]
+        count_depth = count_depth + 1.0
+    ENDFOR
+ENDFOR
+mean_depth = sum_depth / count_depth
 
-VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='3D Seismic Volume'
-VIZ3D_COLORMAP, 'VIRIDIS'
-VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
-VIZ3D_VOLUME, seismic_norm, DIMENSIONS=[nx, ny, nz]
-
-PRINT, '  Launching 3D seismic visualization...'
-VIZ3D_RENDER, /INTERACTIVE, TITLE='3D Seismic Cube - Fault and Anticline'
-PRINT, '  ✓ 3D seismic volume displayed'
-PRINT, ''
-
-; ================================================================
-; STEP 12: Structural Interpretation Summary
-; ================================================================
-PRINT, '▶ Step 12: Structural interpretation summary...'
-PRINT, ''
-
-; Compute anticline closure (area where horizon is elevated)
-mean_depth = MEAN(horizon_picks)
-closure_mask = horizon_picks LT mean_depth
-closure_area = TOTAL(closure_mask) * dx * dy / 1e6  ; km²
+; Compute closure area
+closure_count = 0.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        IF horizon_picks[i,j] LT mean_depth THEN BEGIN
+            closure_count = closure_count + 1.0
+        ENDIF
+    ENDFOR
+ENDFOR
+closure_area = closure_count * dx * dy / 1e6  ; km²
 
 PRINT, '  Anticline Structure:'
-PRINT, '    Mean horizon depth:', mean_depth, 'ms'
-PRINT, '    Peak depth:', MIN(horizon_picks), 'ms'
-PRINT, '    Structural relief:', mean_depth - MIN(horizon_picks), 'ms'
-PRINT, '    Closure area:', closure_area, 'km²'
+PRINT, '    Mean horizon depth: ', mean_depth, ' ms'
+PRINT, '    Peak depth: ', MIN(horizon_picks), ' ms'
+PRINT, '    Structural relief: ', mean_depth - MIN(horizon_picks), ' ms'
+PRINT, '    Closure area: ', closure_area, ' km²'
 PRINT, ''
 
 ; Fault characterization
-fault_location = WHERE(fault_prob EQ MAX(fault_prob))
-fault_i = fault_location[0] MOD (nx-1)
-fault_j = fault_location[0] / (nx-1)
+max_fault = MAX(fault_prob)
+fault_i = 0
+fault_j = 0
+FOR i = 0, nx-2 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        IF fault_prob[i,j] EQ max_fault THEN BEGIN
+            fault_i = i
+            fault_j = j
+        ENDIF
+    ENDFOR
+ENDFOR
 
 PRINT, '  Fault Characteristics:'
-PRINT, '    Fault location: Inline ~', fault_i * dx, 'm'
+PRINT, '    Fault location: Inline ~ ', fault_i * dx, ' m'
 PRINT, '    Fault strike: approximately N-S'
 PRINT, '    Throw: ~20ms vertical offset'
 PRINT, '    Type: Normal fault (extensional)'
 PRINT, ''
 
 ; ================================================================
-; STEP 13: Amplitude vs Offset (AVO) Analysis
+; STEP 11: Amplitude Analysis
 ; ================================================================
-PRINT, '▶ Step 13: Simplified AVO analysis...'
+PRINT, '> Step 11: Simplified amplitude analysis...'
 PRINT, ''
 
 ; Extract amplitude along anticline crest
 crest_i = nx / 2
 crest_j = ny / 2
-crest_trace = seismic[crest_i, crest_j, *]
 
 ; Find reservoir reflection
 reservoir_sample = 40 / dz
-reservoir_amp = crest_trace[reservoir_sample]
+IF reservoir_sample GT nz-1 THEN reservoir_sample = nz-1
+reservoir_amp = seismic[crest_i, crest_j, reservoir_sample]
 
 PRINT, '  Reservoir Reflection:'
-PRINT, '    Location: (', crest_i * dx, ',', crest_j * dy, ') m'
-PRINT, '    Time:', reservoir_sample * dz, 'ms'
-PRINT, '    Amplitude:', reservoir_amp
-IF ABS(reservoir_amp) GT 0.5 THEN BEGIN
+PRINT, '    Location: (', crest_i * dx, ', ', crest_j * dy, ') m'
+PRINT, '    Time: ', reservoir_sample * dz, ' ms'
+PRINT, '    Amplitude: ', reservoir_amp
+
+abs_amp = reservoir_amp
+IF abs_amp LT 0.0 THEN abs_amp = -abs_amp
+
+IF abs_amp GT 0.5 THEN BEGIN
     PRINT, '    Interpretation: Strong reflection - possible hydrocarbon indicator'
 ENDIF ELSE BEGIN
     PRINT, '    Interpretation: Moderate reflection - brine-filled'
@@ -397,56 +418,95 @@ ENDELSE
 PRINT, ''
 
 ; ================================================================
-; STEP 14: Statistics and Data Quality
+; STEP 12: Statistics and Data Quality
 ; ================================================================
-PRINT, '▶ Step 14: Data quality assessment...'
+PRINT, '> Step 12: Data quality assessment...'
 PRINT, ''
 
+; Calculate statistics
+sum_amp = 0.0
+count_amp = 0.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            sum_amp = sum_amp + seismic[i,j,k]
+            count_amp = count_amp + 1.0
+        ENDFOR
+    ENDFOR
+ENDFOR
+mean_amp = sum_amp / count_amp
+
+; Calculate standard deviation
+sum_sq_diff = 0.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            diff = seismic[i,j,k] - mean_amp
+            sum_sq_diff = sum_sq_diff + diff * diff
+        ENDFOR
+    ENDFOR
+ENDFOR
+stddev_amp = SQRT(sum_sq_diff / count_amp)
+
+; Calculate RMS
+sum_sq = 0.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            val = seismic[i,j,k]
+            sum_sq = sum_sq + val * val
+        ENDFOR
+    ENDFOR
+ENDFOR
+rms_amp = SQRT(sum_sq / count_amp)
+
+max_abs = MAX(seismic)
+IF max_abs LT 0.0 THEN max_abs = -max_abs
+snr = max_abs / stddev_amp
+
 PRINT, '  Seismic Data Statistics:'
-PRINT, '    Mean amplitude:', MEAN(seismic)
-PRINT, '    Std deviation:', STDDEV(seismic)
-PRINT, '    Signal-to-noise ratio:', MAX(ABS(seismic)) / STDDEV(seismic)
-PRINT, '    RMS amplitude:', SQRT(MEAN(seismic^2))
+PRINT, '    Mean amplitude: ', mean_amp
+PRINT, '    Std deviation: ', stddev_amp
+PRINT, '    Signal-to-noise ratio: ', snr
+PRINT, '    RMS amplitude: ', rms_amp
 PRINT, ''
 
 ; Frequency content (simplified)
 PRINT, '  Estimated Frequency Content:'
 PRINT, '    Dominant period: ~12ms (based on wavelet width)'
 PRINT, '    Dominant frequency: ~80 Hz'
-PRINT, '    Vertical resolution: ~15-20m (λ/4)'
+PRINT, '    Vertical resolution: ~15-20m (lambda/4)'
 PRINT, ''
 
 ; ================================================================
 ; Summary
 ; ================================================================
-PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-PRINT, '✓ Geophysical Workflow Complete!'
-PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '=================================================='
+PRINT, 'Geophysical Workflow Complete!'
+PRINT, '=================================================='
 PRINT, ''
 PRINT, 'Demonstrated:'
-PRINT, '  ✓ Synthetic 3D seismic cube generation'
-PRINT, '  ✓ Geological layer modeling with structure'
-PRINT, '  ✓ Anticline (dome) feature creation'
-PRINT, '  ✓ Normal fault with vertical offset'
-PRINT, '  ✓ Inline and crossline section extraction'
-PRINT, '  ✓ Time slice (horizon) visualization'
-PRINT, '  ✓ Seismic attribute computation'
-PRINT, '  ✓ Automated fault detection'
-PRINT, '  ✓ Horizon auto-picking and tracking'
-PRINT, '  ✓ 3D volume rendering'
-PRINT, '  ✓ Structural interpretation'
+PRINT, '  - Synthetic 3D seismic cube generation'
+PRINT, '  - Geological layer modeling with structure'
+PRINT, '  - Anticline (dome) feature creation'
+PRINT, '  - Normal fault with vertical offset'
+PRINT, '  - Inline and crossline section extraction'
+PRINT, '  - Time slice (horizon) visualization'
+PRINT, '  - Seismic attribute computation'
+PRINT, '  - Automated fault detection'
+PRINT, '  - Horizon auto-picking and tracking'
+PRINT, '  - Structural interpretation'
 PRINT, ''
 PRINT, 'Key Features Identified:'
-PRINT, '  • Anticline closure area:', closure_area, 'km²'
-PRINT, '  • Structural relief:', mean_depth - MIN(horizon_picks), 'ms'
+PRINT, '  • Anticline closure area: ', closure_area, ' km²'
+PRINT, '  • Structural relief: ', mean_depth - MIN(horizon_picks), ' ms'
 PRINT, '  • Normal fault with ~20ms throw'
-PRINT, '  • Strong reservoir reflection'
+PRINT, '  • Reservoir reflection amplitude: ', reservoir_amp
 PRINT, ''
 PRINT, 'Next Steps:'
 PRINT, '  - Import real SEG-Y seismic data'
 PRINT, '  - Add migration and processing workflows'
-PRINT, '  - Implement advanced attribute analysis (coherence, curvature)'
-PRINT, '  - Add well log correlation and calibration'
+PRINT, '  - Implement advanced attribute analysis'
+PRINT, '  - Add well log correlation'
 PRINT, '  - Perform reservoir characterization'
-PRINT, '  - Generate structural maps and cross-sections'
 PRINT, ''
