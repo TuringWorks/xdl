@@ -1,7 +1,6 @@
 # XDL - Extended Data Language (Rust Implementation)
 
-[![CI](https://github.com/gnudatalanguage/gdl/workflows/CI/badge.svg)](https://github.com/gnudatalanguage/gdl/actions)
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A modern Rust implementation of the Extended Data Language (XDL), providing IDL-compatible data analysis and visualization capabilities.
 
@@ -223,7 +222,7 @@ Contributions are welcome! Please:
 
 ## License
 
-This project is licensed under the GNU General Public License v2.0 - see the [COPYING](../COPYING) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 

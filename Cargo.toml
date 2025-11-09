@@ -23,10 +23,10 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 authors = ["XDL Rust Team"]
-license = "GPL-2.0"
+license = "MIT"
 description = "Extended Data Language (XDL) - Rust implementation"
-homepage = "https://github.com/gnudatalanguage/gdl"
-repository = "https://github.com/gnudatalanguage/gdl"
+homepage = "https://github.com/TuringWorks/xdl"
+repository = "https://github.com/TuringWorks/xdl"
 
 [workspace.dependencies]
 # Core dependencies
