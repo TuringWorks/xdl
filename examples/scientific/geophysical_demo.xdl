@@ -93,18 +93,16 @@ FOR i = 0, nx-1 DO BEGIN
         fault_center = nx / 2.0
         fault_width = 10.0
         dist_from_fault = i - fault_center
-        IF dist_from_fault LT 0.0 THEN BEGIN
-            dist_from_fault = -dist_from_fault
-        ENDIF
+        IF dist_from_fault LT 0.0 THEN dist_from_fault = -dist_from_fault
 
+        ; Footwall (upthrown side) - default
+        interface3_depth[i,j] = base_depth
+
+        ; Hanging wall (downthrown side) - add fault offset
         IF i GT fault_center THEN BEGIN
-            ; Hanging wall (downthrown side)
             fault_offset = 20.0 * EXP(-dist_from_fault / fault_width)
             interface3_depth[i,j] = base_depth + fault_offset
-        ENDIF ELSE BEGIN
-            ; Footwall (upthrown side)
-            interface3_depth[i,j] = base_depth
-        ENDELSE
+        ENDIF
     ENDFOR
 ENDFOR
 PRINT, '    Layer 3: Faulted shale cap (50-70ms with fault)'
@@ -412,9 +410,10 @@ IF abs_amp LT 0.0 THEN abs_amp = -abs_amp
 
 IF abs_amp GT 0.5 THEN BEGIN
     PRINT, '    Interpretation: Strong reflection - possible hydrocarbon indicator'
-ENDIF ELSE BEGIN
+ENDIF
+IF abs_amp LE 0.5 THEN BEGIN
     PRINT, '    Interpretation: Moderate reflection - brine-filled'
-ENDELSE
+ENDIF
 PRINT, ''
 
 ; ================================================================
