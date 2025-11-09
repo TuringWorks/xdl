@@ -56,8 +56,8 @@ The project is structured as a Cargo workspace with the following crates:
 ### Building from Source
 
 ```bash
-git clone https://github.com/gnudatalanguage/gdl-rust
-cd gdl-rust
+git clone https://github.com/TuringWorks/xdl
+cd xdl
 cargo build --release
 ```
 
@@ -100,7 +100,7 @@ XDL> .quit     ; Exit REPL
 
 ### Python Integration
 
-XDL provides seamless integration with Python 3.13.0. See [PYTHON_INTEGRATION.md](PYTHON_INTEGRATION.md) for detailed documentation.
+XDL provides seamless integration with Python 3.13.0. See [PYTHON_INTEGRATION.md](docs/PYTHON_INTEGRATION.md) for detailed documentation.
 
 ```xdl
 ; Import and use Python modules
@@ -114,7 +114,7 @@ print, "sqrt(16) =", result
 ### Project Structure
 
 ```
-xdl-rust/
+xdl/
 ├── xdl-core/          # Core data types and operations
 ├── xdl-parser/        # Language parser and AST
 ├── xdl-interpreter/   # Execution engine
