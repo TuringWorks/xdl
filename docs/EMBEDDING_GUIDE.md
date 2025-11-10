@@ -72,6 +72,168 @@ lib.xdl_cleanup(context)
 
 ## Language-Specific Guides
 
+### .NET/C#
+
+#### Setup
+
+1. Build the XDL FFI library as shown above
+2. Add the library to your project directory or system PATH
+3. Use the provided `XdlWrapper.cs` class or create your own P/Invoke declarations
+
+#### Basic Usage
+
+```csharp
+using XdlSharp;
+
+// Static methods (shared context)
+double result = XdlMath.Sin(Math.PI / 2);
+Console.WriteLine($"sin(π/2) = {result:F4}");
+
+// Instance methods
+using (var ctx = new XdlContext())
+{
+    result = ctx.CallFunction("sqrt", 16.0);
+    Console.WriteLine($"sqrt(16) = {result:F4}");
+}
+```
+
+#### Advanced Usage
+
+```csharp
+using XdlSharp;
+
+var ctx = new XdlContext();
+
+// Trigonometric functions
+double[] angles = { 0, Math.PI/6, Math.PI/4, Math.PI/3, Math.PI/2 };
+foreach (double angle in angles)
+{
+    double sinVal = ctx.CallFunction("sin", angle);
+    double cosVal = ctx.CallFunction("cos", angle);
+    Console.WriteLine($"{angle:F4}: sin={sinVal:F4}, cos={cosVal:F4}");
+}
+
+// Performance comparison
+var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+// ... XDL computations ...
+stopwatch.Stop();
+Console.WriteLine($"XDL time: {stopwatch.ElapsedMilliseconds}ms");
+```
+
+### Java
+
+#### Setup
+
+1. Build the XDL FFI library as shown above
+2. Set `java.library.path` to include the library directory:
+   ```bash
+   java -Djava.library.path=/path/to/xdl/library YourApp
+   ```
+3. Use the provided `XdlWrapper.java` class
+
+#### Basic Usage
+
+```java
+// Static methods (shared context)
+double result = XdlWrapper.Sin(Math.PI / 2);
+System.out.printf("sin(π/2) = %.4f%n", result);
+
+// Instance methods
+XdlWrapper xdl = new XdlWrapper();
+try {
+    result = xdl.callFunction("sqrt", 16.0);
+    System.out.printf("sqrt(16) = %.4f%n", result);
+} finally {
+    xdl.close();
+}
+```
+
+#### Advanced Usage
+
+```java
+XdlWrapper xdl = new XdlWrapper();
+try {
+    // Generate test data
+    double[] data = new double[1000];
+    Random random = new Random(42);
+    for (int i = 0; i < data.length; i++) {
+        data[i] = random.nextDouble() * Math.PI * 2;
+    }
+
+    // Statistical computations
+    double mean = xdl.callFunction("mean", data);
+    double stddev = xdl.callFunction("stddev", data);
+
+    System.out.printf("Mean: %.4f%n", mean);
+    System.out.printf("StdDev: %.4f%n", stddev);
+} finally {
+    xdl.close();
+}
+```
+
+### Go
+
+#### Setup
+
+1. Build the XDL FFI library as shown above
+2. Ensure the library is in the system library path or current directory
+3. Use the provided `xdl.go` package with cgo
+
+#### Basic Usage
+
+```go
+package main
+
+import (
+    "fmt"
+    "math"
+    "./xdl"
+)
+
+func main() {
+    // Global functions (shared context)
+    result := xdl.Sin(math.Pi / 2)
+    fmt.Printf("sin(π/2) = %.4f\n", result)
+
+    // Context-based usage
+    ctx, err := xdl.NewContext()
+    if err != nil {
+        panic(err)
+    }
+    defer ctx.Close()
+
+    result = ctx.CallFunction("sqrt", 16.0)
+    fmt.Printf("sqrt(16) = %.4f\n", result)
+}
+```
+
+#### Advanced Usage
+
+```go
+ctx, _ := xdl.NewContext()
+defer ctx.Close()
+
+// Generate test data
+rand.Seed(42)
+data := make([]float64, 1000)
+for i := range data {
+    data[i] = rand.Float64() * math.Pi * 2
+}
+
+// Statistical computations
+mean := ctx.CallFunction("mean", data...)
+stddev := ctx.CallFunction("stddev", data...)
+
+fmt.Printf("Mean: %.4f\n", mean)
+fmt.Printf("StdDev: %.4f\n", stddev)
+
+// Performance comparison
+start := time.Now()
+// ... XDL computations ...
+elapsed := time.Since(start)
+fmt.Printf("XDL time: %v\n", elapsed)
+```
+
 ### Python
 
 #### Installation
@@ -232,6 +394,8 @@ ccall(xdl_cleanup, Cvoid, (Ptr{Cvoid},), context)
 ```
 
 ## Available Functions
+
+All functions listed below are available through the FFI interface and work across all supported languages (Python, JavaScript, .NET/C#, Java, Go, C/C++).
 
 ### Mathematical Functions
 - `sin(x)` - Sine function
