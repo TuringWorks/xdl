@@ -5,6 +5,7 @@
 pub mod array;
 mod charting_procs; // ECharts charting procedures
 pub mod complex;
+pub mod gpu_array; // GPU-accelerated array operations
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
 pub mod image; // Image processing

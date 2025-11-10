@@ -120,8 +120,8 @@ xdl/
 ├── xdl-interpreter/   # Execution engine
 ├── xdl-runtime/       # Memory and runtime management
 ├── xdl-stdlib/        # Standard library functions
-├── xdl-ffi/          # External library interfaces
-└── xdl-cli/          # Command-line interface
+├── xdl-ffi/           # External library interfaces
+└── xdl-cli/           # Command-line interface
 ```
 
 ### Building and Testing

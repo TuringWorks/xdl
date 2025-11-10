@@ -1,0 +1,59 @@
+; XDL GPU Acceleration Test
+; Tests that large arrays (>= 100K elements) use GPU automatically
+
+PRINT, '=== XDL GPU Acceleration Test ==='
+PRINT, ''
+
+; Initialize random seed
+seed = 12345
+
+; Test 1: Small array (CPU)
+PRINT, '> Test 1: Small array (1,000 elements) - should use CPU'
+small_arr = RANDOMN(seed, 1000)
+small_min = MIN(small_arr)
+small_max = MAX(small_arr)
+small_mean = MEAN(small_arr)
+small_total = TOTAL(small_arr)
+PRINT, 'Small array MIN:', small_min
+PRINT, 'Small array MAX:', small_max
+PRINT, 'Small array MEAN:', small_mean
+PRINT, 'Small array TOTAL:', small_total
+PRINT, ''
+
+; Test 2: Medium array (just below threshold)
+PRINT, '> Test 2: Medium array (99,999 elements) - should use CPU'
+medium_arr = RANDOMN(seed, 99999)
+medium_min = MIN(medium_arr)
+medium_max = MAX(medium_arr)
+PRINT, 'Medium array MIN:', medium_min
+PRINT, 'Medium array MAX:', medium_max
+PRINT, ''
+
+; Test 3: Large array (GPU)
+PRINT, '> Test 3: Large array (100,000 elements) - should use GPU'
+large_arr = RANDOMN(seed, 100000)
+large_min = MIN(large_arr)
+large_max = MAX(large_arr)
+large_mean = MEAN(large_arr)
+large_total = TOTAL(large_arr)
+PRINT, 'Large array MIN:', large_min
+PRINT, 'Large array MAX:', large_max
+PRINT, 'Large array MEAN:', large_mean
+PRINT, 'Large array TOTAL:', large_total
+PRINT, ''
+
+; Test 4: Very large 1D array (GPU)
+PRINT, '> Test 4: Very large array (4,000,000 elements) - should use GPU'
+huge_arr = RANDOMN(seed, 4000000)
+huge_min = MIN(huge_arr)
+huge_max = MAX(huge_arr)
+huge_mean = MEAN(huge_arr)
+huge_total = TOTAL(huge_arr)
+PRINT, 'Huge array MIN:', huge_min
+PRINT, 'Huge array MAX:', huge_max
+PRINT, 'Huge array MEAN:', huge_mean
+PRINT, 'Huge array TOTAL:', huge_total
+PRINT, ''
+
+PRINT, '=== GPU Acceleration Test Complete ==='
+PRINT, 'Note: Run with RUST_LOG=xdl_stdlib=debug to see GPU debug messages'

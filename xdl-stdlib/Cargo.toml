@@ -12,10 +12,12 @@ xdl-viz3d = { path = "../xdl-viz3d" }
 xdl-viz3d-web = { path = "../xdl-viz3d-web" }
 xdl-viz3d-threejs = { path = "../xdl-viz3d-threejs" }
 xdl-charts = { path = "../xdl-charts" }
+xdl-amp = { path = "../xdl-amp" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 num-complex = { workspace = true }
+ndarray = { workspace = true }
 plotters = { version = "0.3", features = ["all_series", "chrono", "bitmap_backend", "svg_backend"] }
 eframe = { workspace = true }
 egui = { workspace = true }

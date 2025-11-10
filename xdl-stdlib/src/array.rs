@@ -274,7 +274,7 @@ pub fn where_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
-/// MIN - Find minimum value in array
+/// MIN - Find minimum value in array (GPU-accelerated for large arrays)
 pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 1 {
         return Err(XdlError::InvalidArgument(format!(
@@ -288,6 +288,13 @@ pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
+
+            // Try GPU first for large arrays
+            if let Some(gpu_result) = crate::gpu_array::gpu_min(arr) {
+                return Ok(XdlValue::Double(gpu_result));
+            }
+
+            // CPU fallback
             let min_val = arr.iter().fold(f64::INFINITY, |a, &b| a.min(b));
             Ok(XdlValue::Double(min_val))
         }
@@ -295,6 +302,13 @@ pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if data.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
+
+            // Try GPU first for large arrays
+            if let Some(gpu_result) = crate::gpu_array::gpu_min(data) {
+                return Ok(XdlValue::Double(gpu_result));
+            }
+
+            // CPU fallback
             let min_val = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
             Ok(XdlValue::Double(min_val))
         }
@@ -302,7 +316,7 @@ pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
-/// MAX - Find maximum value in array
+/// MAX - Find maximum value in array (GPU-accelerated for large arrays)
 pub fn max_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 1 {
         return Err(XdlError::InvalidArgument(format!(
@@ -316,6 +330,13 @@ pub fn max_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
+
+            // Try GPU first for large arrays
+            if let Some(gpu_result) = crate::gpu_array::gpu_max(arr) {
+                return Ok(XdlValue::Double(gpu_result));
+            }
+
+            // CPU fallback
             let max_val = arr.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
             Ok(XdlValue::Double(max_val))
         }
@@ -323,6 +344,13 @@ pub fn max_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if data.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
+
+            // Try GPU first for large arrays
+            if let Some(gpu_result) = crate::gpu_array::gpu_max(data) {
+                return Ok(XdlValue::Double(gpu_result));
+            }
+
+            // CPU fallback
             let max_val = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
             Ok(XdlValue::Double(max_val))
         }
@@ -330,7 +358,7 @@ pub fn max_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
-/// MEAN - Calculate mean of array
+/// MEAN - Calculate mean of array (GPU-accelerated for large arrays)
 pub fn mean_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 1 {
         return Err(XdlError::InvalidArgument(format!(
@@ -344,6 +372,13 @@ pub fn mean_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
+
+            // Try GPU first for large arrays
+            if let Some(gpu_sum_result) = crate::gpu_array::gpu_sum(arr) {
+                return Ok(XdlValue::Double(gpu_sum_result / arr.len() as f64));
+            }
+
+            // CPU fallback
             let sum: f64 = arr.iter().sum();
             let mean_val = sum / (arr.len() as f64);
             Ok(XdlValue::Double(mean_val))
@@ -352,6 +387,13 @@ pub fn mean_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if data.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
+
+            // Try GPU first for large arrays
+            if let Some(gpu_sum_result) = crate::gpu_array::gpu_sum(data) {
+                return Ok(XdlValue::Double(gpu_sum_result / data.len() as f64));
+            }
+
+            // CPU fallback
             let sum: f64 = data.iter().sum();
             let mean_val = sum / (data.len() as f64);
             Ok(XdlValue::Double(mean_val))
@@ -363,7 +405,7 @@ pub fn mean_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
-/// TOTAL - Sum all elements in array
+/// TOTAL - Sum all elements in array (GPU-accelerated for large arrays)
 pub fn total_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 1 {
         return Err(XdlError::InvalidArgument(format!(
@@ -374,10 +416,22 @@ pub fn total_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     match &args[0] {
         XdlValue::Array(arr) => {
+            // Try GPU first for large arrays
+            if let Some(gpu_sum_result) = crate::gpu_array::gpu_sum(arr) {
+                return Ok(XdlValue::Double(gpu_sum_result));
+            }
+
+            // CPU fallback
             let sum: f64 = arr.iter().sum();
             Ok(XdlValue::Double(sum))
         }
         XdlValue::MultiDimArray { data, .. } => {
+            // Try GPU first for large arrays
+            if let Some(gpu_sum_result) = crate::gpu_array::gpu_sum(data) {
+                return Ok(XdlValue::Double(gpu_sum_result));
+            }
+
+            // CPU fallback
             let sum: f64 = data.iter().sum();
             Ok(XdlValue::Double(sum))
         }
