@@ -8,3 +8,4 @@ description = "Foreign Function Interface for XDL external libraries"
 
 [dependencies]
 xdl-core = { path = "../xdl-core" }
+xdl-stdlib = { path = "../xdl-stdlib" }

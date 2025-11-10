@@ -1,7 +1,8 @@
 //! # XDL FFI
 //!
-//! Foreign Function Interface for integrating with external libraries
+//! Foreign Function Interface for integrating with external libraries and embedding XDL
 
+pub mod embedding; // C API for embedding XDL in other applications
 pub mod gsl;
 pub mod hdf5;
 pub mod netcdf;
