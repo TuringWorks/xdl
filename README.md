@@ -1,6 +1,5 @@
 # XDL - Extended Data Language (Rust Implementation)
 
-[![CI](https://github.com/TuringWorks/xdl/workflows/CI/badge.svg)](https://github.com/TuringWorks/xdl/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A modern Rust implementation of the Extended Data Language (XDL), providing IDL-compatible data analysis and visualization capabilities.
