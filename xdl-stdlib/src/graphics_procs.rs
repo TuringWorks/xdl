@@ -291,7 +291,7 @@ fn extract_numeric_array(value: &XdlValue) -> XdlResult<Vec<f64>> {
     }
 }
 
-/// Helper function to extract 2D array from nested array
+/// Helper function to extract 2D array from nested array or multi-dimensional array
 fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
     match value {
         XdlValue::NestedArray(rows) => {
@@ -313,8 +313,67 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
             }
             Ok(result)
         }
+        XdlValue::MultiDimArray { data, shape } => {
+            // Convert MultiDimArray to 2D nested array
+            if shape.len() != 2 {
+                return Err(XdlError::RuntimeError(format!(
+                    "Expected 2D array, got {}D array",
+                    shape.len()
+                )));
+            }
+
+            let rows = shape[0];
+            let cols = shape[1];
+
+            if data.len() != rows * cols {
+                return Err(XdlError::RuntimeError(format!(
+                    "Data size {} does not match shape {:?} (expected {})",
+                    data.len(),
+                    shape,
+                    rows * cols
+                )));
+            }
+
+            // Convert from column-major (IDL/GDL style) to row-major for display
+            let mut result = Vec::with_capacity(rows);
+            for i in 0..rows {
+                let mut row = Vec::with_capacity(cols);
+                for j in 0..cols {
+                    // Column-major indexing: element at [i,j] is at position i + j*rows
+                    let idx = i + j * rows;
+                    row.push(data[idx]);
+                }
+                result.push(row);
+            }
+
+            Ok(result)
+        }
+        XdlValue::Array(data) => {
+            // Try to infer shape from array length (assume square array)
+            let len = data.len();
+            let size = (len as f64).sqrt() as usize;
+
+            if size * size == len {
+                // Perfect square - treat as square 2D array
+                let mut result = Vec::with_capacity(size);
+                for i in 0..size {
+                    let mut row = Vec::with_capacity(size);
+                    for j in 0..size {
+                        row.push(data[i * size + j]);
+                    }
+                    result.push(row);
+                }
+                Ok(result)
+            } else {
+                Err(XdlError::RuntimeError(format!(
+                    "Array length {} is not a perfect square - cannot infer 2D shape. Use REFORM to specify dimensions.",
+                    len
+                )))
+            }
+        }
         _ => Err(XdlError::RuntimeError(
-            "Expected a 2D nested array".to_string(),
+            "Expected a 2D nested array, MultiDimArray, or 1D array with perfect square length"
+                .to_string(),
         )),
     }
 }

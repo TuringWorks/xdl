@@ -114,7 +114,7 @@ impl Transpiler {
                         self.advance();
                     }
                 }
-                TokenKind::Identifier(_) => {
+                TokenKind::Identifier(_) | TokenKind::LeftBracket => {
                     self.transpile_statement()?;
                 }
                 TokenKind::Newline | TokenKind::Semicolon => {
@@ -604,6 +604,83 @@ impl Transpiler {
                     self.emit_line("; (hold command ignored - XDL doesn't support hold on/off)");
                     return Ok(());
                 }
+                "surf" | "mesh" | "surfc" | "meshc" => {
+                    // Convert MATLAB 3D surface plots to XDL SURFACE/CONTOUR
+                    let func_name = name.clone();
+                    self.advance(); // skip function name
+
+                    if matches!(self.current_token().kind, TokenKind::LeftParen) {
+                        self.advance(); // skip '('
+
+                        // Collect arguments: surf(X, Y, Z) or surf(Z)
+                        let mut args = Vec::new();
+                        let mut current_arg = String::new();
+                        let mut paren_depth = 0;
+
+                        while !matches!(self.current_token().kind, TokenKind::EOF) {
+                            if matches!(self.current_token().kind, TokenKind::LeftParen) {
+                                paren_depth += 1;
+                                current_arg.push_str(&self.current_token().lexeme);
+                            } else if matches!(self.current_token().kind, TokenKind::RightParen) {
+                                if paren_depth > 0 {
+                                    paren_depth -= 1;
+                                    current_arg.push_str(&self.current_token().lexeme);
+                                } else {
+                                    // End of function call
+                                    if !current_arg.trim().is_empty() {
+                                        args.push(current_arg.trim().to_string());
+                                    }
+                                    break;
+                                }
+                            } else if matches!(self.current_token().kind, TokenKind::Comma)
+                                && paren_depth == 0
+                            {
+                                if !current_arg.trim().is_empty() {
+                                    args.push(current_arg.trim().to_string());
+                                }
+                                current_arg.clear();
+                            } else {
+                                current_arg.push_str(&self.current_token().lexeme);
+                            }
+                            self.advance();
+                        }
+
+                        // Convert to XDL SURFACE command
+                        // surf(X, Y, Z) -> SURFACE, Z
+                        // surf(Z) -> SURFACE, Z
+                        let z_data = if args.len() >= 3 {
+                            &args[2] // surf(X, Y, Z) - use Z
+                        } else if args.len() == 1 {
+                            &args[0] // surf(Z) - use Z
+                        } else {
+                            // Fallback
+                            "data"
+                        };
+
+                        self.emit_line(&format!("; {} - 3D surface plotting", func_name));
+                        self.emit_line(&format!("SURFACE, {}", z_data));
+
+                        // Skip to end of statement
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::Newline | TokenKind::Semicolon | TokenKind::EOF
+                        ) {
+                            self.advance();
+                        }
+                        if matches!(
+                            self.current_token().kind,
+                            TokenKind::Newline | TokenKind::Semicolon
+                        ) {
+                            self.advance();
+                        }
+
+                        return Ok(());
+                    }
+
+                    // If we couldn't parse it, emit comment
+                    self.emit_line(&format!("; {} - Could not convert to XDL", func_name));
+                    return Ok(());
+                }
                 "tiledlayout" => {
                     // tiledlayout(rows, cols) - set up subplot grid
                     self.advance(); // skip 'tiledlayout'
@@ -836,6 +913,107 @@ impl Transpiler {
             }
         }
 
+        // Check for meshgrid pattern: [X, Y] = meshgrid(...)
+        if matches!(self.current_token().kind, TokenKind::LeftBracket) {
+            // Look ahead to see if this is [id, id] = meshgrid(...)
+            let saved_pos = self.position;
+            let mut is_meshgrid = false;
+            let mut output_vars = Vec::new();
+
+            self.advance(); // skip '['
+                            // Collect output variable names
+            while !matches!(
+                self.current_token().kind,
+                TokenKind::RightBracket | TokenKind::EOF
+            ) {
+                if let TokenKind::Identifier(name) = &self.current_token().kind {
+                    output_vars.push(name.clone());
+                }
+                self.advance();
+            }
+            if matches!(self.current_token().kind, TokenKind::RightBracket) {
+                self.advance(); // skip ']'
+            }
+            if matches!(self.current_token().kind, TokenKind::Assign) {
+                self.advance(); // skip '='
+                if let TokenKind::Identifier(fname) = &self.current_token().kind {
+                    if fname == "meshgrid" {
+                        is_meshgrid = true;
+                    }
+                }
+            }
+
+            if is_meshgrid && output_vars.len() == 2 {
+                // Generate loop-based meshgrid code
+                self.advance(); // skip 'meshgrid'
+                if matches!(self.current_token().kind, TokenKind::LeftParen) {
+                    self.advance(); // skip '('
+
+                    // Collect the argument
+                    let mut arg = String::new();
+                    let mut paren_depth = 0;
+                    while !matches!(self.current_token().kind, TokenKind::EOF) {
+                        if matches!(self.current_token().kind, TokenKind::LeftParen) {
+                            paren_depth += 1;
+                            arg.push('(');
+                        } else if matches!(self.current_token().kind, TokenKind::RightParen) {
+                            if paren_depth > 0 {
+                                paren_depth -= 1;
+                                arg.push(')');
+                            } else {
+                                break;
+                            }
+                        } else {
+                            arg.push_str(&self.current_token().lexeme);
+                        }
+                        self.advance();
+                    }
+
+                    // Skip to end of statement
+                    while !matches!(
+                        self.current_token().kind,
+                        TokenKind::Newline | TokenKind::Semicolon | TokenKind::EOF
+                    ) {
+                        self.advance();
+                    }
+
+                    // Generate XDL code
+                    let x_var = &output_vars[0];
+                    let y_var = &output_vars[1];
+
+                    // Convert range expression to FINDGEN if it contains ':'
+                    let converted_arg = if arg.trim().contains(':') {
+                        self.convert_range_to_findgen(arg.trim())
+                    } else {
+                        arg.trim().to_string()
+                    };
+
+                    self.emit_line("; meshgrid converted to XDL loops");
+                    self.emit_line(&format!("x_vec = {}", converted_arg));
+                    self.emit_line(&format!("y_vec = {}", converted_arg));
+                    self.emit_line("nx = N_ELEMENTS(x_vec)");
+                    self.emit_line("ny = N_ELEMENTS(y_vec)");
+                    self.emit_line(&format!("{} = FLTARR(nx, ny)", x_var));
+                    self.emit_line(&format!("{} = FLTARR(nx, ny)", y_var));
+                    self.emit_line("for i = 0, nx - 1 do begin");
+                    self.indent_level += 1;
+                    self.emit_line("for j = 0, ny - 1 do begin");
+                    self.indent_level += 1;
+                    self.emit_line(&format!("{}[i, j] = x_vec[i]", x_var));
+                    self.emit_line(&format!("{}[i, j] = y_vec[j]", y_var));
+                    self.indent_level -= 1;
+                    self.emit_line("endfor");
+                    self.indent_level -= 1;
+                    self.emit_line("endfor");
+
+                    return Ok(());
+                }
+            }
+
+            // Not meshgrid, restore position and process normally
+            self.position = saved_pos;
+        }
+
         let expr = self.collect_expression_until_newline();
         if !expr.trim().is_empty() {
             self.emit_line(&expr);
@@ -857,6 +1035,46 @@ impl Transpiler {
 
             match &token.kind {
                 TokenKind::LeftBracket => {
+                    // Check if this is a multiple output assignment: [X, Y] = func(...)
+                    // by looking ahead for identifiers followed by ] =
+                    let is_multiple_output = if expr.trim().is_empty() {
+                        let mut check_pos = self.position + 1;
+                        let mut found_ids = false;
+                        let mut found_bracket = false;
+                        let mut found_assign = false;
+
+                        // Look ahead to check pattern: [ id , id ... ] =
+                        while check_pos < self.tokens.len() && check_pos < self.position + 20 {
+                            match &self.tokens[check_pos].kind {
+                                TokenKind::Identifier(_) => found_ids = true,
+                                TokenKind::RightBracket if found_ids => found_bracket = true,
+                                TokenKind::Assign if found_bracket => {
+                                    found_assign = true;
+                                    break;
+                                }
+                                TokenKind::Comma => {} // Continue checking
+                                _ if !found_bracket => {}
+                                _ => break, // Stop if unexpected token after ]
+                            }
+                            check_pos += 1;
+                        }
+                        eprintln!("DEBUG: LeftBracket at expr.is_empty()={}, found_ids={}, found_bracket={}, found_assign={}",
+                            expr.trim().is_empty(), found_ids, found_bracket, found_assign);
+                        found_assign
+                    } else {
+                        eprintln!("DEBUG: LeftBracket but expr not empty: '{}'", expr.trim());
+                        false
+                    };
+
+                    if is_multiple_output {
+                        // Handle multiple output assignment: [X, Y] = func(...)
+                        // Just output the bracket and let normal processing continue
+                        eprintln!("DEBUG: Adding opening bracket for multiple output");
+                        expr.push('[');
+                        self.advance();
+                        continue;
+                    }
+
                     // Check if this is an array literal or array indexing
                     // Array literal: appears at start of expression or after = or ,
                     // Array indexing: appears after an identifier
@@ -1308,6 +1526,11 @@ impl Transpiler {
                         continue;
                     }
 
+                    // Special handling for meshgrid - DISABLED
+                    // XDL doesn't support multiple output assignment [X, Y] = ...
+                    // So we handle this at the statement level instead
+                    // (see transpile_statement for meshgrid handling)
+
                     // Special handling for PLOT command with line styles
                     if is_procedure_call && func_name == "PLOT" {
                         // Add tile comment if we're in a subplot
@@ -1504,17 +1727,15 @@ impl Transpiler {
                 let lhs = parts[0].trim();
                 let rhs = parts[1].trim();
 
-                // Check if RHS is primarily a colon expression (not complex)
-                // Simple heuristic: count colons vs other operators
+                // Check if RHS contains colon - indicating a range expression
+                // The convert_range_to_findgen function handles both simple and complex ranges
                 let colon_count = rhs.matches(" : ").count();
-                let has_other_ops = rhs.contains(" + ")
-                    || rhs.contains(" * ")
-                    || rhs.contains(" / ")
-                    || rhs.contains("(")
-                    || rhs.contains("[");
 
-                if colon_count > 0 && !has_other_ops {
-                    // This looks like a simple range: convert it
+                // Don't convert if it looks like array indexing or cell arrays
+                let is_array_op = rhs.contains("[") || rhs.contains("{");
+
+                if colon_count > 0 && !is_array_op {
+                    // This looks like a range expression: convert it
                     let converted = self.convert_range_to_findgen(rhs);
                     return format!("{} = {}", lhs, converted);
                 }

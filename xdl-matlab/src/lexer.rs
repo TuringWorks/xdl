@@ -136,9 +136,12 @@ impl Lexer {
 
         let ch = self.current_char();
 
-        // Comments
+        // Comments (% for MATLAB, // for C-style)
         if ch == '%' {
-            return Ok(self.read_comment(start_line, start_column));
+            return Ok(self.read_comment('%', start_line, start_column));
+        }
+        if ch == '/' && self.peek_char() == '/' {
+            return Ok(self.read_comment('/', start_line, start_column));
         }
 
         // Newline
@@ -275,18 +278,24 @@ impl Lexer {
         })
     }
 
-    fn read_comment(&mut self, line: usize, column: usize) -> Token {
+    fn read_comment(&mut self, comment_char: char, line: usize, column: usize) -> Token {
         let mut comment = String::new();
-        self.advance(); // skip '%'
+        self.advance(); // skip first character ('%' or '/')
+
+        // For '//' comments, skip the second '/'
+        if comment_char == '/' {
+            self.advance();
+        }
 
         while !self.is_at_end() && self.current_char() != '\n' && self.current_char() != '\r' {
             comment.push(self.current_char());
             self.advance();
         }
 
+        let prefix = if comment_char == '/' { "//" } else { "%" };
         Token {
             kind: TokenKind::Comment(comment.trim().to_string()),
-            lexeme: format!("%{}", comment),
+            lexeme: format!("{}{}", prefix, comment),
             line,
             column,
         }

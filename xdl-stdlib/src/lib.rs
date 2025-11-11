@@ -12,6 +12,7 @@ pub mod image; // Image processing
 pub mod io;
 pub mod linalg; // Linear algebra
 pub mod math;
+pub mod matlab_compat; // MATLAB compatibility functions
 pub mod ml;
 pub mod python;
 pub mod signal; // Signal processing
@@ -229,6 +230,14 @@ impl StandardLibrary {
             "RANDOMU" => math::randomu(args),
             "RANDOMN" => math::randomn(args),
             "MESHGRID" => math::meshgrid(args),
+
+            // MATLAB compatibility functions
+            "LINSPACE" => matlab_compat::linspace(args),
+            "LOGSPACE" => matlab_compat::logspace(args),
+            "REPMAT" => matlab_compat::repmat(args),
+            "SQUEEZE" => matlab_compat::squeeze(args),
+            "NDGRID" => matlab_compat::ndgrid(args),
+            "INTERP1" => matlab_compat::interp1(args),
 
             // Signal processing
             "FFT" => math::fft(args),

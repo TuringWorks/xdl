@@ -48,6 +48,15 @@ pub fn sin(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let input = &_args[0];
 
+    // Handle MultiDimArray - preserve shape
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.sin()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
     // Handle arrays
     if let XdlValue::Array(arr) = input {
         let result: Vec<f64> = arr.iter().map(|&x| x.sin()).collect();
@@ -70,6 +79,15 @@ pub fn cos(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let input = &_args[0];
+
+    // Handle MultiDimArray - preserve shape
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.cos()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
 
     // Handle arrays
     if let XdlValue::Array(arr) = input {
@@ -94,6 +112,15 @@ pub fn exp(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let input = &_args[0];
 
+    // Handle MultiDimArray - preserve shape
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.exp()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
     // Handle arrays
     if let XdlValue::Array(arr) = input {
         let result: Vec<f64> = arr.iter().map(|&x| x.exp()).collect();
@@ -116,6 +143,24 @@ pub fn sqrt(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let input = &_args[0];
+
+    // Handle MultiDimArray - preserve shape
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| {
+                if x < 0.0 {
+                    f64::NAN // Return NaN for negative values in arrays
+                } else {
+                    x.sqrt()
+                }
+            })
+            .collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
 
     // Handle arrays
     if let XdlValue::Array(arr) = input {
@@ -332,9 +377,11 @@ pub fn findgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Long(v) => *v as usize,
         XdlValue::Int(v) => *v as usize,
         XdlValue::Byte(v) => *v as usize,
+        XdlValue::Float(v) => (*v as i64).max(0) as usize, // Convert float to int, ensure non-negative
+        XdlValue::Double(v) => (*v as i64).max(0) as usize, // Convert double to int, ensure non-negative
         _ => {
             return Err(XdlError::TypeMismatch {
-                expected: "integer".to_string(),
+                expected: "numeric".to_string(),
                 actual: format!("{:?}", _args[0].gdl_type()),
             })
         }
@@ -454,9 +501,11 @@ pub fn indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Long(v) => *v as usize,
         XdlValue::Int(v) => *v as usize,
         XdlValue::Byte(v) => *v as usize,
+        XdlValue::Float(v) => (*v as i64).max(0) as usize, // Convert float to int, ensure non-negative
+        XdlValue::Double(v) => (*v as i64).max(0) as usize, // Convert double to int, ensure non-negative
         _ => {
             return Err(XdlError::TypeMismatch {
-                expected: "integer".to_string(),
+                expected: "numeric".to_string(),
                 actual: format!("{:?}", _args[0].gdl_type()),
             })
         }

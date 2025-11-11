@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 use tracing::{error, info};
 use xdl_core::XdlValue;
 use xdl_interpreter::Interpreter;
+use xdl_matlab::transpile_matlab_to_xdl;
 
 mod repl;
 
@@ -216,7 +217,16 @@ fn execute_file(file: &Path) -> Result<()> {
     let content = fs::read_to_string(file)
         .with_context(|| format!("Failed to read file: {}", file.display()))?;
 
-    let program = xdl_parser::parse_xdl(&content).with_context(|| "Failed to parse XDL code")?;
+    // Check if file is a MATLAB file and transpile it
+    let xdl_code = if file.extension().and_then(|s| s.to_str()) == Some("m") {
+        info!("Detected MATLAB file, transpiling...");
+        transpile_matlab_to_xdl(&content)
+            .map_err(|e| anyhow::anyhow!("Failed to transpile MATLAB code: {}", e))?
+    } else {
+        content
+    };
+
+    let program = xdl_parser::parse_xdl(&xdl_code).with_context(|| "Failed to parse XDL code")?;
 
     let mut interpreter = Interpreter::new();
     interpreter
