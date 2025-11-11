@@ -1,226 +1,27 @@
 //! Main GUI implementation using FLTK
 
 use anyhow::Result;
-use fltk::draw;
 use fltk::{
     app,
+    browser::Browser,
     button::Button,
     dialog,
-    enums::{Color, Font, FrameType},
+    enums::{Color, FrameType},
     group::{Flex, FlexType, Pack},
     menu::{MenuBar, MenuFlag},
     prelude::*,
-    table::{Table, TableContext},
     text::{TextBuffer, TextDisplay, TextEditor},
     window::Window,
 };
-use once_cell::sync::Lazy;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::thread;
 use tracing::{error, info};
 
 use crate::image_window::ImageWindow;
 use crate::plot_window::PlotWindow;
-
-// Global queue for pending plot windows to show after execution
-static PENDING_PLOT_WINDOWS: Lazy<Mutex<Vec<PlotWindow>>> = Lazy::new(|| Mutex::new(Vec::new()));
-
-// Structure to hold execution results from worker thread
-struct ExecutionResult {
-    output_text: String,
-    variables: HashMap<String, String>,
-}
 use xdl_interpreter::Interpreter;
 use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
-
-// Variable data structure for table display
-#[derive(Clone)]
-struct VarData {
-    name: String,
-    value: String,
-    var_type: String,
-    size: String,
-}
-
-// Custom table widget for variables
-struct VariableTable {
-    table: Table,
-    data: Rc<RefCell<Vec<VarData>>>,
-}
-
-impl VariableTable {
-    fn new(x: i32, y: i32, w: i32, h: i32) -> Self {
-        let mut table = Table::default().with_pos(x, y).with_size(w, h);
-        table.set_rows(0);
-        table.set_row_height_all(22);
-        table.set_row_header(false);
-        table.set_cols(4);
-        table.set_col_header(true);
-        table.set_col_header_height(25);
-
-        // Set individual column widths for better layout
-        table.set_col_width(0, w / 5); // Name column
-        table.set_col_width(1, (w * 2) / 5); // Value column (wider)
-        table.set_col_width(2, w / 6); // Type column
-        table.set_col_width(3, w / 6); // Size column
-
-        table.set_col_resize(true);
-        table.end();
-
-        let data: Rc<RefCell<Vec<VarData>>> = Rc::new(RefCell::new(Vec::new()));
-        let data_clone = data.clone();
-
-        table.draw_cell(move |_t, ctx, row, col, x, y, w, h| {
-            match ctx {
-                TableContext::StartPage => {
-                    draw::set_font(Font::Helvetica, 10);
-                }
-                TableContext::ColHeader => {
-                    draw::push_clip(x, y, w, h);
-                    draw::draw_box(
-                        FrameType::ThinUpBox,
-                        x,
-                        y,
-                        w,
-                        h,
-                        Color::from_rgb(230, 230, 230),
-                    );
-                    draw::set_draw_color(Color::Black);
-                    draw::set_font(Font::HelveticaBold, 11);
-                    let label = match col {
-                        0 => "Name",
-                        1 => "Value",
-                        2 => "Type",
-                        3 => "Size",
-                        _ => "",
-                    };
-                    draw::draw_text2(label, x, y, w, h, fltk::enums::Align::Center);
-                    draw::pop_clip();
-                }
-                TableContext::Cell => {
-                    if let Ok(data) = data_clone.try_borrow() {
-                        if row >= 0 && (row as usize) < data.len() {
-                            draw::push_clip(x, y, w, h);
-
-                            // Alternating row colors
-                            let bg_color = if row % 2 == 0 {
-                                Color::White
-                            } else {
-                                Color::from_rgb(248, 248, 252)
-                            };
-                            draw::draw_box(FrameType::FlatBox, x, y, w, h, bg_color);
-
-                            // Draw text
-                            draw::set_draw_color(Color::Black);
-                            draw::set_font(Font::Courier, 10);
-
-                            let var = &data[row as usize];
-                            let text = match col {
-                                0 => &var.name,
-                                1 => &var.value,
-                                2 => &var.var_type,
-                                3 => &var.size,
-                                _ => "",
-                            };
-
-                            // Draw text with padding
-                            draw::draw_text2(
-                                text,
-                                x + 4,
-                                y,
-                                w - 8,
-                                h,
-                                fltk::enums::Align::Left | fltk::enums::Align::Inside,
-                            );
-
-                            // Draw cell border
-                            draw::set_draw_color(Color::from_rgb(220, 220, 220));
-                            draw::draw_rect(x, y, w, h);
-
-                            draw::pop_clip();
-                        }
-                    }
-                }
-                _ => {}
-            }
-        });
-
-        Self { table, data }
-    }
-
-    fn update_data(&mut self, vars: &HashMap<String, String>) {
-        let mut data = Vec::new();
-
-        // Sort variable names for consistent display
-        let mut sorted_vars: Vec<(&String, &String)> = vars.iter().collect();
-        sorted_vars.sort_by_key(|(name, _)| name.as_str());
-
-        for (name, value) in sorted_vars {
-            let var_type = if value.contains("array") {
-                "Double Array".to_string()
-            } else if value.parse::<f64>().is_ok() {
-                "Double".to_string()
-            } else {
-                "Computed".to_string()
-            };
-
-            let display_value = if value.contains("array[1x") {
-                if let Some(start) = value.find("[1x") {
-                    if let Some(end) = value[start..].find(']') {
-                        format!("<{}>", &value[start + 1..start + end])
-                    } else {
-                        "<array>".to_string()
-                    }
-                } else {
-                    "<array>".to_string()
-                }
-            } else if value.len() > 20 {
-                format!("{:.17}...", value)
-            } else {
-                value.clone()
-            };
-
-            let size = if value.contains("1x") {
-                if let Some(start) = value.find("1x") {
-                    if let Some(end) = value[start..].find(']') {
-                        value[start..start + end].to_string()
-                    } else {
-                        "1x?".to_string()
-                    }
-                } else {
-                    "1x1".to_string()
-                }
-            } else {
-                "1x1".to_string()
-            };
-
-            data.push(VarData {
-                name: name.clone(),
-                value: display_value,
-                var_type,
-                size,
-            });
-        }
-
-        if let Ok(mut d) = self.data.try_borrow_mut() {
-            *d = data;
-        }
-
-        let new_rows = vars.len() as i32;
-        if new_rows != self.table.rows() {
-            self.table.set_rows(new_rows);
-        }
-
-        // Force complete redraw
-        self.table.redraw();
-    }
-}
 
 pub struct XdlGui {
     window: Window,
@@ -233,16 +34,11 @@ pub struct XdlGui {
     #[allow(dead_code)]
     variables: Rc<RefCell<HashMap<String, String>>>, // variable name -> value representation
     #[allow(dead_code)]
-    variable_table: Rc<RefCell<VariableTable>>,
-    #[allow(dead_code)]
-    executing: Rc<RefCell<bool>>, // Guard to prevent concurrent executions
+    variable_browser: Rc<RefCell<Browser>>,
 }
 
 impl XdlGui {
     pub fn new() -> Result<Self> {
-        // Set environment variable to indicate GUI mode (prevents blocking 3D windows)
-        std::env::set_var("XDL_GUI_MODE", "1");
-
         // Create main window with proportions suitable for a scientific computing environment
         let mut window = Window::new(
             100,
@@ -289,9 +85,7 @@ impl XdlGui {
             fltk::enums::Shortcut::Ctrl | 'o',
             MenuFlag::Normal,
             move |_| {
-                if let Some(path) =
-                    dialog::file_chooser("Open XDL or MATLAB File", "*.{xdl,m}", ".", false)
-                {
+                if let Some(path) = dialog::file_chooser("Open XDL File", "*.xdl", ".", false) {
                     info!("Menu: Opening file: {}", path);
 
                     match std::fs::read_to_string(&path) {
@@ -301,30 +95,9 @@ impl XdlGui {
                                 .unwrap_or_default()
                                 .to_string_lossy();
 
-                            // Check if this is a MATLAB .m file
-                            let file_path = std::path::Path::new(&path);
-                            let display_content =
-                                if file_path.extension().and_then(|s| s.to_str()) == Some("m") {
-                                    info!("Detected MATLAB .m file, transpiling to XDL");
-                                    match xdl_matlab::transpile_matlab_to_xdl(&content) {
-                                        Ok(xdl_code) => xdl_code,
-                                        Err(e) => {
-                                            let error_msg = format!(
-                                                "Error transpiling MATLAB file {}: {}",
-                                                path, e
-                                            );
-                                            out_buffer_for_menu.set_text(&error_msg);
-                                            error!("Failed to transpile MATLAB file: {}", e);
-                                            return;
-                                        }
-                                    }
-                                } else {
-                                    content
-                                };
-
                             cmd_buffer_for_menu.set_text(&format!(
                                 "// File: {}\n{}\n\n// Click Execute to run this code",
-                                filename, display_content
+                                filename, content
                             ));
                             out_buffer_for_menu.set_text(&format!(
                                 "Loaded file: {}\nClick Execute button to run the code.\n",
@@ -651,14 +424,13 @@ impl XdlGui {
             |_| {
                 let help_text = "XDL GUI Help Topics:\n\n\
                     Getting Started:\n\
-                    • Use File > Open to load .xdl or .m (MATLAB) files\n\
+                    • Use File > Open to load .xdl script files\n\
                     • Type commands directly in the command window\n\
                     • Click Execute to run your scripts\n\n\
                     Features:\n\
                     • Variable tracking in the right panel\n\
                     • Automatic plot window generation\n\
-                    • Script editing with syntax awareness\n\
-                    • MATLAB .m file support (auto-transpiles to XDL)\n\n\
+                    • Script editing with syntax awareness\n\n\
                     Keyboard Shortcuts:\n\
                     • Ctrl+N: New script\n\
                     • Ctrl+O: Open file\n\
@@ -755,11 +527,6 @@ impl XdlGui {
         execute_btn.set_color(Color::from_rgb(70, 130, 180));
         execute_btn.set_label_color(Color::White);
 
-        let mut cancel_btn = Button::default().with_size(70, 25).with_label("Cancel");
-        cancel_btn.set_color(Color::from_rgb(220, 80, 80));
-        cancel_btn.set_label_color(Color::White);
-        cancel_btn.deactivate(); // Initially disabled
-
         let mut clear_btn = Button::default().with_size(60, 25).with_label("Clear");
         clear_btn.set_color(Color::from_rgb(160, 160, 160));
 
@@ -781,29 +548,26 @@ impl XdlGui {
         // Set equal sizes for command and output windows
         center_flex.end();
 
-        // Right panel - Variable Table (dynamic)
-        let mut var_table = VariableTable::new(0, 0, 300, 775);
-        var_table.table.set_label("Variable Browser");
-        var_table.table.set_frame(FrameType::DownBox);
+        // Right panel - Variable Browser (dynamic)
+        let mut var_browser = Browser::default();
+        var_browser.set_label("Variable Browser");
+        var_browser.set_frame(FrameType::DownBox);
+        var_browser.set_color(Color::White);
+        var_browser.add("Name             Value          Type           Size");
+        var_browser.add("(no variables yet)");
 
         // Create variable storage
         let variables = Rc::new(RefCell::new(HashMap::new()));
 
-        // Create execution guard to prevent concurrent/repeated executions
-        let executing = Rc::new(RefCell::new(false));
-
-        // Create cancellation flag shared between main thread and worker thread
-        let cancel_flag = Arc::new(AtomicBool::new(false));
-
         // Set panel sizes for two-panel layout
-        main_flex.fixed(&var_table.table, 300); // Give space to variable table
+        main_flex.fixed(&var_browser, 250); // Give more space to variable browser
 
         // Store references for callbacks after layout is done
-        let var_table_ref = Rc::new(RefCell::new(var_table));
+        let var_browser_ref = Rc::new(RefCell::new(var_browser));
 
         // Add Clear Variables menu item now that variables are available
         let vars_clone_menu = Rc::clone(&variables);
-        let var_table_clone_menu = Rc::clone(&var_table_ref);
+        let var_browser_clone_menu = Rc::clone(&var_browser_ref);
         menu.add(
             "&View/Clear &Variables",
             fltk::enums::Shortcut::None,
@@ -811,61 +575,23 @@ impl XdlGui {
             move |_| {
                 if let Ok(mut vars) = vars_clone_menu.try_borrow_mut() {
                     vars.clear();
-                    Self::update_variable_table(&var_table_clone_menu, &vars_clone_menu);
+                    Self::update_variable_browser(&var_browser_clone_menu, &vars_clone_menu);
                     info!("Variables cleared");
                 }
             },
         );
 
         window.end();
+        window.end();
 
-        // Set up execute button callback with async execution
+        // Set up execute button callback
+        let interp_clone = Rc::clone(&interpreter);
         let cmd_buffer_clone_exec = command_buffer.clone();
         let mut out_buffer_clone_exec = output_buffer.clone();
         let vars_clone = Rc::clone(&variables);
-        let var_table_clone = Rc::clone(&var_table_ref);
-        let executing_clone = Rc::clone(&executing);
-        let execute_btn_clone = execute_btn.clone();
-        let mut cancel_btn_for_exec = cancel_btn.clone();
-        let cancel_flag_for_exec = Arc::clone(&cancel_flag);
+        let var_browser_clone = Rc::clone(&var_browser_ref);
 
-        execute_btn.set_callback(move |btn| {
-            info!("=== EXECUTE BUTTON CLICKED ===");
-
-            // Clear any pending plot windows from previous executions
-            if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
-                let old_count = plots.len();
-                plots.clear();
-                if old_count > 0 {
-                    info!(
-                        "Cleared {} old plot windows from previous execution",
-                        old_count
-                    );
-                }
-            }
-
-            // Check if already executing - prevent concurrent executions
-            if let Ok(mut exec_guard) = executing_clone.try_borrow_mut() {
-                if *exec_guard {
-                    info!("Already executing - ignoring duplicate execution request");
-                    return;
-                }
-                *exec_guard = true;
-            } else {
-                info!("Cannot acquire execution lock - skipping execution");
-                return;
-            }
-
-            // Reset cancel flag
-            cancel_flag_for_exec.store(false, Ordering::Relaxed);
-
-            // Update UI to show execution in progress
-            btn.set_label("Executing...");
-            btn.deactivate();
-            cancel_btn_for_exec.activate(); // Enable cancel button
-            out_buffer_clone_exec.set_text("Executing script...\n");
-            app::awake();
-
+        execute_btn.set_callback(move |_| {
             let code = cmd_buffer_clone_exec.text();
             let filtered_code = code
                 .lines()
@@ -874,134 +600,15 @@ impl XdlGui {
                 .join("\n");
 
             if !filtered_code.trim().is_empty() {
-                // Simple strategy: try to execute as XDL first
-                // If it has MATLAB patterns, try transpiling
-                let code_to_execute = if Self::looks_like_matlab(&filtered_code) {
-                    // Try MATLAB transpilation
-                    match xdl_matlab::transpile_matlab_to_xdl(&filtered_code) {
-                        Ok(xdl_code) => {
-                            info!("Transpiled MATLAB code to XDL");
-                            xdl_code
-                        }
-                        Err(_) => {
-                            // Transpilation failed, might already be XDL
-                            info!("MATLAB transpilation failed, trying as XDL");
-                            filtered_code.clone()
-                        }
-                    }
-                } else {
-                    // Doesn't look like MATLAB, use as-is
-                    filtered_code.clone()
-                };
-
-                // Create channel for receiving results from worker thread
-                let (tx, rx) = mpsc::channel();
-                let mut out_buffer_for_thread = out_buffer_clone_exec.clone();
-                let vars_for_thread = Rc::clone(&vars_clone);
-                let var_table_for_thread = Rc::clone(&var_table_clone);
-                let executing_for_thread = Rc::clone(&executing_clone);
-                let mut btn_for_thread = execute_btn_clone.clone();
-                let mut cancel_btn_for_result = cancel_btn_for_exec.clone();
-                let cancel_flag_for_thread = Arc::clone(&cancel_flag_for_exec);
-                let cancel_flag_for_timeout = Arc::clone(&cancel_flag_for_exec);
-
-                // Spawn worker thread to execute XDL code
-                thread::spawn(move || {
-                    let result = Self::execute_xdl_code_async(
-                        &code_to_execute,
-                        "Editor",
-                        cancel_flag_for_thread,
-                    );
-                    tx.send(result).ok();
-                    // Wake up the main thread to check for results
-                    app::awake();
-                });
-
-                // Set up periodic check for results using timeout
-                app::add_timeout3(0.1, move |handle| {
-                    if let Ok(result) = rx.try_recv() {
-                        // Check if cancellation happened - if so, don't update UI
-                        if cancel_flag_for_timeout.load(Ordering::Relaxed) {
-                            info!("Thread completed after cancellation - ignoring results");
-                            return; // Don't update UI, user already saw cancellation message
-                        }
-
-                        // Update output buffer
-                        out_buffer_for_thread.set_text(&result.output_text);
-
-                        // Update variables
-                        if let Ok(mut vars) = vars_for_thread.try_borrow_mut() {
-                            *vars = result.variables;
-                        }
-
-                        // Update variable table
-                        Self::update_variable_table(&var_table_for_thread, &vars_for_thread);
-
-                        // Release execution lock (may already be released by cancel)
-                        if let Ok(mut exec_guard) = executing_for_thread.try_borrow_mut() {
-                            if *exec_guard {
-                                *exec_guard = false;
-                                info!("=== EXECUTION COMPLETED ===");
-                            }
-                        }
-
-                        // Restore button state
-                        btn_for_thread.set_label("Execute");
-                        btn_for_thread.activate();
-                        cancel_btn_for_result.deactivate();
-
-                        // Show all queued plot windows
-                        if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
-                            info!("Showing {} queued plot windows...", plots.len());
-                            for mut plot_win in plots.drain(..) {
-                                plot_win.show();
-                            }
-                            info!("All plot windows shown");
-                        }
-                        // Callback completes - no need to repeat
-                    } else {
-                        // Keep polling - schedule next check
-                        app::repeat_timeout3(0.1, handle);
-                    }
-                });
-            } else {
-                // No code to execute, release lock and restore button
-                if let Ok(mut exec_guard) = executing_clone.try_borrow_mut() {
-                    *exec_guard = false;
-                }
-                btn.set_label("Execute");
-                btn.activate();
-                cancel_btn_for_exec.deactivate();
+                Self::execute_xdl_code(
+                    &filtered_code,
+                    &interp_clone,
+                    &mut out_buffer_clone_exec,
+                    "Editor",
+                    &vars_clone,
+                    &var_browser_clone,
+                );
             }
-        });
-
-        // Set up cancel button callback
-        let mut out_buffer_for_cancel = output_buffer.clone();
-        let cancel_flag_for_cancel = Arc::clone(&cancel_flag);
-        let executing_for_cancel = Rc::clone(&executing);
-        let mut execute_btn_for_cancel = execute_btn.clone();
-
-        cancel_btn.set_callback(move |btn| {
-            info!("=== CANCEL BUTTON CLICKED ===");
-
-            // Set the cancellation flag (thread will check this and stop early)
-            cancel_flag_for_cancel.store(true, Ordering::Relaxed);
-
-            // Immediately reset UI state - don't wait for thread to finish
-            out_buffer_for_cancel.set_text("✗ Execution cancelled by user\n");
-
-            // Restore button states immediately
-            execute_btn_for_cancel.set_label("Execute");
-            execute_btn_for_cancel.activate();
-            btn.deactivate();
-
-            // Release execution lock immediately
-            if let Ok(mut exec_guard) = executing_for_cancel.try_borrow_mut() {
-                *exec_guard = false;
-                info!("Execution lock released after cancellation");
-            }
-
-            info!("=== CANCELLATION COMPLETE (UI restored) ===");
         });
 
         // Set up clear button callback
@@ -1013,22 +620,13 @@ impl XdlGui {
             out_buffer_clone_clear.set_text("Output cleared.\n");
         });
 
-        // Register plot callback (done once per GUI instance)
-        // IMPORTANT: Don't show windows immediately - queue them to show after execution
-        register_gui_plot_callback(move |x_data, y_data, title, xtitle, ytitle| {
-            info!("Plot callback: Creating plot window for '{}'", title);
-
-            match PlotWindow::with_labels(x_data, y_data, &title, &xtitle, &ytitle, "") {
-                Ok(plot_win) => {
-                    // Queue the window to be shown later using global queue
-                    if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
-                        plots.push(plot_win);
-                        info!("Plot window queued (total queued: {})", plots.len());
-                    }
-                }
+        // Register plot callback
+        register_gui_plot_callback(
+            move |x_data, y_data| match PlotWindow::new(x_data, y_data) {
+                Ok(mut plot_win) => plot_win.show(),
                 Err(e) => eprintln!("Plot error: {}", e),
-            }
-        });
+            },
+        );
 
         // Register image display callback for 3D plots
         register_gui_image_callback(move |image_path, title| {
@@ -1044,8 +642,7 @@ impl XdlGui {
             command_buffer,
             output_buffer,
             variables,
-            variable_table: var_table_ref,
-            executing,
+            variable_browser: var_browser_ref,
         };
 
         Ok(gui)
@@ -1138,74 +735,14 @@ impl XdlGui {
         }
     }
 
-    fn looks_like_matlab(code: &str) -> bool {
-        // Check for explicit MATLAB hint in comments
-        // Supports: % MATLAB, // MATLAB, % matlab, // matlab
-        if code.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed.starts_with("% MATLAB")
-                || trimmed.starts_with("// MATLAB")
-                || trimmed.starts_with("%MATLAB")
-                || trimmed.starts_with("//MATLAB")
-                || trimmed.to_uppercase().starts_with("% MATLAB")
-                || trimmed.to_uppercase().starts_with("// MATLAB")
-        }) {
-            return true;
-        }
-
-        // If code has XDL-style comments (starting with ;), it's already XDL
-        if code.lines().any(|line| {
-            let trimmed = line.trim_start();
-            trimmed.starts_with(';') && !trimmed.starts_with(";;") // ; is XDL comment
-        }) {
-            return false;
-        }
-
-        // If code contains XDL keywords like FINDGEN, PLOT3D, it's XDL
-        if code.contains("FINDGEN")
-            || code.contains("PLOT3D")
-            || code.contains("RANDOMU")
-            || code.contains("N_ELEMENTS")
-        {
-            return false;
-        }
-
-        // Heuristic to detect MATLAB code
-        // Look for common MATLAB patterns:
-        // - MATLAB-specific functions
-        // - Element-wise operators
-        // - MATLAB-style comments starting with %
-        code.contains("linspace")
-            || code.contains("complex")
-            || code.contains("axis")
-            || code.contains("tiledlayout")
-            || code.contains("nexttile")
-            || code.contains("comet3")
-            || code.contains("meshgrid")
-            || code.contains("surf")
-            || code.contains(" .*")
-            || code.contains(".* ")
-            || code.contains(" ./")
-            || code.contains("./ ")
-            || code.contains(" .^")
-            || code.contains(".^ ")
-            || code.lines().any(|line| line.trim_start().starts_with('%'))
-    }
-
-    fn execute_xdl_code_async(
+    fn execute_xdl_code(
         xdl_code: &str,
+        _interpreter: &Rc<RefCell<Interpreter>>,
+        output_buffer: &mut TextBuffer,
         filename: &str,
-        cancel_flag: Arc<AtomicBool>,
-    ) -> ExecutionResult {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        static EXEC_COUNT: AtomicUsize = AtomicUsize::new(0);
-        let exec_num = EXEC_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
-
-        info!(
-            ">>> execute_xdl_code_async called (execution #{})",
-            exec_num
-        );
-
+        variables: &Rc<RefCell<HashMap<String, String>>>,
+        var_browser: &Rc<RefCell<Browser>>,
+    ) {
         let mut results = Vec::new();
         results.push(format!("=== Executing {} ===", filename));
 
@@ -1225,44 +762,13 @@ impl XdlGui {
         // Create interpreter with custom output
         let mut custom_interp = xdl_interpreter::Interpreter::with_output(buffer_clone);
 
-        let mut variables = HashMap::new();
-
         // Parse and execute
-        info!("Tokenizing XDL code...");
-
-        // Check for cancellation before starting
-        if cancel_flag.load(Ordering::Relaxed) {
-            results.push("✗ Execution cancelled by user".to_string());
-            results.push("=== Execution cancelled ===".to_string());
-            return ExecutionResult {
-                output_text: results.join("\n"),
-                variables: HashMap::new(),
-            };
-        }
-
         match tokenize(xdl_code) {
             Ok(tokens) => {
-                info!("Parsing {} tokens...", tokens.len());
                 match parse_program(&tokens) {
                     Ok(program) => {
-                        info!(
-                            "Executing program with {} statements...",
-                            program.statements.len()
-                        );
-
-                        // Check cancellation before execution
-                        if cancel_flag.load(Ordering::Relaxed) {
-                            results.push("✗ Execution cancelled by user".to_string());
-                            results.push("=== Execution cancelled ===".to_string());
-                            return ExecutionResult {
-                                output_text: results.join("\n"),
-                                variables: HashMap::new(),
-                            };
-                        }
-
                         match custom_interp.execute_program(&program) {
                             Ok(_) => {
-                                info!("Program execution completed successfully");
                                 // Get captured output
                                 if let Ok(buf) = capture_buffer.try_borrow() {
                                     let output_str = String::from_utf8_lossy(&buf);
@@ -1275,10 +781,13 @@ impl XdlGui {
                                     }
                                 }
 
-                                // Extract variables from interpreter
-                                let interp_vars = custom_interp.get_variables();
-                                for (name, value) in interp_vars {
-                                    variables.insert(name, value.to_string_repr());
+                                // Extract variables from interpreter and update GUI variables
+                                if let Ok(mut vars) = variables.try_borrow_mut() {
+                                    vars.clear();
+                                    let interp_vars = custom_interp.get_variables();
+                                    for (name, value) in interp_vars {
+                                        vars.insert(name, value.to_string_repr());
+                                    }
                                 }
 
                                 results.push("✓ Execution completed successfully".to_string());
@@ -1301,19 +810,14 @@ impl XdlGui {
             }
         }
 
+        // Update variable browser after execution
+        Self::update_variable_browser(var_browser, variables);
+
         results.push("=== Execution completed ===".to_string());
         let output_text = results.join("\n");
+        output_buffer.set_text(&output_text);
 
-        info!(
-            "<<< execute_xdl_code_async completed (execution #{})",
-            exec_num
-        );
         info!("Executed XDL file: {}", filename);
-
-        ExecutionResult {
-            output_text,
-            variables,
-        }
     }
 
     #[allow(dead_code)]
@@ -1561,16 +1065,76 @@ impl XdlGui {
         result
     }
 
-    fn update_variable_table(
-        var_table: &Rc<RefCell<VariableTable>>,
+    fn update_variable_browser(
+        var_browser: &Rc<RefCell<Browser>>,
         variables: &Rc<RefCell<HashMap<String, String>>>,
     ) {
-        if let (Ok(mut table), Ok(vars)) = (var_table.try_borrow_mut(), variables.try_borrow()) {
-            table.update_data(&vars);
+        if let (Ok(mut browser), Ok(vars)) = (var_browser.try_borrow_mut(), variables.try_borrow())
+        {
+            browser.clear();
+            browser.add("Name             Value          Type           Size");
+
+            if vars.is_empty() {
+                browser.add("(no variables yet)");
+            } else {
+                for (name, value) in vars.iter() {
+                    let var_type = if value.contains("array") {
+                        "Double Array"
+                    } else if value.parse::<f64>().is_ok() {
+                        "Double"
+                    } else {
+                        "Computed"
+                    };
+
+                    let display_value = if value.contains("array[1x") {
+                        // Extract just the size info for arrays
+                        if let Some(start) = value.find("[1x") {
+                            if let Some(end) = value[start..].find(']') {
+                                format!("<{}>", &value[start + 1..start + end])
+                            } else {
+                                "<array>".to_string()
+                            }
+                        } else {
+                            "<array>".to_string()
+                        }
+                    } else {
+                        // Truncate long values for display
+                        if value.len() > 12 {
+                            format!("{:.9}...", value)
+                        } else {
+                            value.clone()
+                        }
+                    };
+
+                    let size = if value.contains("1x") {
+                        if let Some(start) = value.find("1x") {
+                            if let Some(end) = value[start..].find(']') {
+                                value[start..start + end].to_string()
+                            } else {
+                                "1x?".to_string()
+                            }
+                        } else {
+                            "1x1".to_string()
+                        }
+                    } else {
+                        "1x1".to_string()
+                    };
+
+                    // Format with fixed-width columns for alignment
+                    let formatted_line = format!(
+                        "{:<15} {:<14} {:<14} {}",
+                        Self::truncate_string(name, 15),
+                        Self::truncate_string(&display_value, 14),
+                        Self::truncate_string(var_type, 14),
+                        size
+                    );
+
+                    browser.add(&formatted_line);
+                }
+            }
         }
     }
 
-    #[allow(dead_code)]
     fn truncate_string(s: &str, max_len: usize) -> String {
         if s.len() > max_len {
             format!("{:.width$}...", s, width = max_len.saturating_sub(3))

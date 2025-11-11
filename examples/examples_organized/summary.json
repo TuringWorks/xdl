@@ -1,0 +1,16 @@
+{
+  "total_files": 152,
+  "categories": {
+    "basics": 10,
+    "plotting": 12,
+    "visualization_3d": 7,
+    "machine_learning": 1,
+    "scientific": 13,
+    "matlab": 7,
+    "tests_working": 24,
+    "tests_failing": 78
+  },
+  "working_examples": 44,
+  "failing_examples": 31,
+  "visual_examples": 22
+}

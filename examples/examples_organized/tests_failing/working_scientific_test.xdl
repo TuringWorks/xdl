@@ -1,0 +1,85 @@
+; Working NumPy and Pandas integration test
+print, "=== Working Scientific Python Integration Test ==="
+
+; Test 1: NumPy scalar operations (these work well)
+print, "1. NumPy Scalar Mathematics..."
+numpy_mod = python_import("numpy")
+
+; Test individual mathematical functions
+sqrt_16 = python_call(numpy_mod, "sqrt", 16.0)
+print, "numpy.sqrt(16):", sqrt_16
+
+exp_2 = python_call(numpy_mod, "exp", 2.0)
+print, "numpy.exp(2):", exp_2
+
+log_10 = python_call(numpy_mod, "log10", 100.0)
+print, "numpy.log10(100):", log_10
+
+sin_pi_2 = python_call(numpy_mod, "sin", 1.5708)
+print, "numpy.sin(π/2):", sin_pi_2
+
+cos_0 = python_call(numpy_mod, "cos", 0.0)
+print, "numpy.cos(0):", cos_0
+
+; Test 2: NumPy array creation (display only, no operations)
+print, ""
+print, "2. NumPy Array Creation..."
+
+arange_5 = python_call(numpy_mod, "arange", 5)
+print, "numpy.arange(5):", arange_5
+
+zeros_3 = python_call(numpy_mod, "zeros", 3)
+print, "numpy.zeros(3):", zeros_3
+
+ones_4 = python_call(numpy_mod, "ones", 4)
+print, "numpy.ones(4):", ones_4
+
+linspace_result = python_call(numpy_mod, "linspace", 0.0, 1.0, 5)
+print, "numpy.linspace(0,1,5):", linspace_result
+
+; Test 3: NumPy type conversions
+print, ""
+print, "3. NumPy Type Conversions..."
+
+int32_val = python_call(numpy_mod, "int32", 42.7)
+print, "numpy.int32(42.7):", int32_val
+
+float64_val = python_call(numpy_mod, "float64", 42)
+print, "numpy.float64(42):", float64_val
+
+; Test 4: Pandas time and date operations
+print, ""
+print, "4. Pandas Date/Time Operations..."
+pandas_mod = python_import("pandas")
+
+timestamp = python_call(pandas_mod, "Timestamp", "2025-01-15 10:30:00")
+print, "Pandas Timestamp:", timestamp
+
+period_month = python_call(pandas_mod, "Period", "2025-01")
+print, "Monthly Period:", period_month
+
+period_quarter = python_call(pandas_mod, "Period", "2025Q1")
+print, "Quarterly Period:", period_quarter
+
+; Test some date utilities
+to_datetime = python_call(pandas_mod, "to_datetime", "2025-01-01")
+print, "to_datetime result:", to_datetime
+
+; Test 5: Built-in Python scientific functions for comparison
+print, ""
+print, "5. Python Built-in Math Comparison..."
+math_mod = python_import("math")
+
+py_sqrt = python_call(math_mod, "sqrt", 16.0)
+np_sqrt = python_call(numpy_mod, "sqrt", 16.0)
+print, "Python sqrt(16):", py_sqrt, "vs NumPy:", np_sqrt
+
+py_sin = python_call(math_mod, "sin", 0.0)
+np_sin = python_call(numpy_mod, "sin", 0.0)
+print, "Python sin(0):", py_sin, "vs NumPy:", np_sin
+
+print, ""
+print, "=== Working scientific Python integration test complete ==="
+print, "NumPy and Pandas are successfully integrated with XDL!"
+print, "Note: Array operations work for creation and display,"
+print, "but mathematical operations on arrays need enhanced type conversion."

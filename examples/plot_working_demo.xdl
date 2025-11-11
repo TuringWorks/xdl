@@ -1,0 +1,92 @@
+; XDL Working Graphics Demo
+; Demonstrates the currently implemented graphics features
+; Run with: cargo run --release --bin xdl-gui examples/plot_working_demo.xdl
+
+PRINT, '=== XDL Working Graphics Demo ==='
+PRINT, ''
+
+; ========================================
+; 1. Simple Line Plot
+; ========================================
+PRINT, '--- Test 1: Simple Line Plot ---'
+PRINT, 'Creating sine wave plot...'
+
+x = FINDGEN(50) / 5.0
+y = SIN(x)
+
+PLOT, y, x
+PRINT, 'Plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 2. Cosine Wave Plot
+; ========================================
+PRINT, '--- Test 2: Cosine Wave ---'
+PRINT, 'Creating cosine wave plot...'
+
+x2 = FINDGEN(100) / 10.0
+y2 = COS(x2)
+
+PLOT, y2, x2
+PRINT, 'Cosine plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 3. Combined Sine and Cosine
+; ========================================
+PRINT, '--- Test 3: Sine + Cosine ---'
+PRINT, 'Creating combined wave plot...'
+
+x3 = FINDGEN(80) / 8.0
+y3 = SIN(x3) + COS(x3 * 2.0)
+
+PLOT, y3, x3
+PRINT, 'Combined wave plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 4. Exponential Decay
+; ========================================
+PRINT, '--- Test 4: Exponential Decay ---'
+PRINT, 'Creating decay plot...'
+
+x4 = FINDGEN(50) / 10.0
+y4 = EXP(-x4)
+
+PLOT, y4, x4
+PRINT, 'Decay plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 5. Parabola
+; ========================================
+PRINT, '--- Test 5: Parabola ---'
+PRINT, 'Creating parabola plot...'
+
+x5 = FINDGEN(40) - 20.0
+y5 = x5 * x5 / 50.0
+
+PLOT, y5, x5
+PRINT, 'Parabola plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; Summary
+; ========================================
+PRINT, '=== Graphics Demo Complete ==='
+PRINT, ''
+PRINT, 'Successfully demonstrated:'
+PRINT, '  - PLOT: 2D line plotting with FINDGEN arrays'
+PRINT, '  - Mathematical functions: SIN, COS, EXP'
+PRINT, '  - Interactive GUI plotting windows'
+PRINT, ''
+PRINT, 'Note: 3D procedures (SURFACE, CONTOUR, SHADE_SURF, PLOT3D)'
+PRINT, '      are registered but not yet fully implemented.'
+PRINT, ''
+PRINT, 'To test in CLI mode: cargo run --release --bin xdl examples/plot_working_demo.xdl'
+PRINT, 'To test with GUI: cargo run --release --bin xdl-gui examples/plot_working_demo.xdl'

@@ -1,0 +1,63 @@
+[2m2025-11-11T00:51:43.365129Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/ml_regularization_test.xdl
+=========================================
+Regularization Layers Test
+=========================================
+
+--- TEST 1: Batch Normalization (Training) ---
+Input activations: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000, 9.000000, 10.000000]
+Normalized (training): [-1.566698, -1.218543, -0.870388, -0.522233, -0.174078, 0.174078, 0.522233, 0.870388, 1.218543, 1.566698]
+Original mean: 5.500000000000000
+Original stddev: 3.027650354097492
+Normalized mean: -0.000000000000000
+Normalized stddev: 1.054091914546069
+Batch Normalization (training): PASS ✓
+
+--- TEST 2: Batch Normalization (Inference) ---
+Test input: [6.000000, 7.000000, 8.000000]
+Running mean: 5.000000000000000 , Running var: 4.000000000000000
+Normalized (inference): [0.499999, 0.999999, 1.499998]
+Batch Normalization (inference): PASS ✓
+
+--- TEST 3: Batch Norm with Gamma/Beta ---
+Input: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000, 9.000000, 10.000000]
+Gamma: 2.000000000000000 , Beta: 1.000000000000000
+Scaled & shifted: [-2.133396, -1.437086, -0.740776, -0.044465, 0.651845, 1.348155, 2.044465, 2.740776, 3.437086, 4.133396]
+Output mean: 1.000000000000000  (expected ~ 1.000000000000000 )
+Output stddev: 2.108183829092138  (expected ~ 2.000000000000000 )
+Batch Norm with parameters: PASS ✓
+
+--- TEST 4: Dropout (Training) ---
+Input: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000, 9.000000, 10.000000]
+Dropout rate: 0.500000000000000
+Output (training): [2.000000, 4.000000, 0.000000, 0.000000, 0.000000, 12.000000, 0.000000, 16.000000, 18.000000, 20.000000]
+Dropped units: 4 / 10
+Dropout training mode: PASS ✓
+
+--- TEST 5: Dropout (Inference) ---
+Input: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000, 9.000000, 10.000000]
+Output (inference): [1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000, 9.000000, 10.000000]
+Dropout inference mode: PASS ✓
+
+--- TEST 6: Dropout Rate Variations ---
+20% dropout:  1  units dropped
+80% dropout:  6  units dropped
+Dropout rate variations: PASS ✓
+
+--- TEST 7: Inverted Dropout Scaling ---
+Original sum: 55.000000000000000
+Dropped sum: 72.000000000000000
+Sum ratio (dropped/original): 1.309090909090909
+Inverted dropout scaling: FAIL ✗
+
+=========================================
+Regularization Tests Complete!
+=========================================
+✓ Batch Normalization: Training mode
+✓ Batch Normalization: Inference mode
+✓ Batch Normalization: Learned parameters
+✓ Dropout: Training mode with random dropping
+✓ Dropout: Inference mode (no dropping)
+✓ Dropout: Rate variations
+✓ Dropout: Inverted dropout scaling
+
+All regularization layers working correctly!

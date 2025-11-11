@@ -1,0 +1,28 @@
+[2m2025-11-11T00:51:34.755703Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/test_arrays.xdl
+=== Testing Array Operations ===
+
+1. Array Literals:
+arr1 = [1.000000, 2.000000, 3.000000, 4.000000, 5.000000]
+arr2 = [10.000000, 20.000000, 30.000000]
+empty = []
+
+2. Array Indexing:
+arr1[0] = 1.000000000000000
+arr1[2] = 3.000000000000000
+arr1[4] = 5.000000000000000
+arr1[-1] (last) = 5.000000000000000
+arr1[-2] = 4.000000000000000
+
+3. Array Slicing:
+arr1[0:3] = [1.000000, 2.000000, 3.000000]
+arr1[1:4] = [2.000000, 3.000000, 4.000000]
+arr1[2:5] = [3.000000, 4.000000, 5.000000]
+arr1[-3:] (last 3) = []
+
+4. Array Arithmetic:
+arr3 + arr4 = [11.000000, 12.000000, 13.000000, 14.000000, 15.000000]
+arr1 * 2 = [2.000000, 4.000000, 6.000000, 8.000000, 10.000000]
+
+5. Nested Arrays:
+matrix = Array[2x2]: [1.000, 2.000, 3.000, 4.000]
+[2m2025-11-11T00:51:34.756553Z[0m [31mERROR[0m [2mxdl[0m[2m:[0m Error: Failed to execute program: Runtime error: Cannot index non-array value

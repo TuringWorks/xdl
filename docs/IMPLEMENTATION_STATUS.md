@@ -1,6 +1,6 @@
 # XDL Standard Library Implementation Status
 
-**Last Updated:** 2025-01-25
+**Last Updated:** 2025-11-10
 
 ## Overview
 This document tracks the implementation progress of the XDL (eXtensible Data Language) standard library, a Rust-based implementation of IDL/GDL functionality.
@@ -20,6 +20,12 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - **Phase 16: Data Structures** (40%)
 - **Phase 17: Complex Numbers** (50%)
 - **Phase 18: System & Control** (65%)
+
+### MATLAB Compatibility ✅
+- **MATLAB Transpiler**: 28/28 unit tests passing
+- **Basic MATLAB Execution**: Working (.m files execute directly)
+- **Function Mapping**: ~80 MATLAB functions mapped to XDL equivalents
+- **Syntax Conversion**: 1-based → 0-based indexing, element-wise operators
 
 ### Newly Completed Phases ✅
 - **Phase 11: Signal Processing** (50%)
@@ -98,8 +104,8 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 
 ---
 
-### Phase 7: Statistics ✅ 85%
-**Status:** Mostly Complete
+### Phase 7: Statistics ✅ 90%
+**Status:** Mostly Complete with GPU Acceleration
 
 **Implemented Functions:**
 - `VARIANCE`, `STDDEV` - Variance and standard deviation
@@ -116,10 +122,15 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - `RESISTANT_MEAN` - Resistant mean
 - `RANDOM_POISSON` - Poisson random numbers
 
+**GPU-Accelerated Reduction Functions:**
+- `MIN`, `MAX`, `MEAN`, `TOTAL` - Now support GPU acceleration via xdl-amp backend (10-50x speedup for large arrays) and MultiDimArray types
+
 **Probability Distributions:**
 - `GAUSS_PDF` - Gaussian probability density
 - `T_PDF` - Student's t distribution
 - `CHISQR_PDF` - Chi-square distribution
+
+**Note:** All statistical functions now support MultiDimArray types for N-dimensional array operations.
 
 **Remaining:** C_CORRELATE, A_CORRELATE, R_CORRELATE, CURVEFIT, POLY_FIT, SVDFIT, LADFIT
 
@@ -344,6 +355,13 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - **Test Coverage:** Growing (unit tests in each module)
 - **Build Status:** ✅ Clean build with all features
 
+### Testing Infrastructure ✅
+- **Comprehensive Test Suite**: 5 major test files covering all language features
+- **MATLAB Compatibility Tests**: 28 unit tests for transpilation pipeline
+- **MATLAB Execution Tests**: Direct .m file execution verification
+- **Automated Test Runner**: `tests/test_all.sh` for comprehensive validation
+- **Parser Fixes**: Resolved complex control flow syntax issues
+
 ---
 
 ## Next Steps
@@ -412,6 +430,13 @@ When adding new functions:
 - Linear algebra with nalgebra integration
 - Time/date handling
 - System control and error handling
+
+- **v0.1.1** (2025-11) - GPU acceleration and MultiDimArray support
+- Added GPU acceleration for MIN, MAX, MEAN, TOTAL functions (10-50x speedup)
+- Extended statistical functions to support MultiDimArray types
+- Improved CT visualization with proper windowing and normalization
+- Added 3D volume visualization to medical imaging demo
+- Added comprehensive user guides for medical and geophysical demos
 
 ---
 

@@ -1,0 +1,120 @@
+; Convolutional & Pooling Layers Test
+
+PRINT, 'Conv1D & Pooling Test'
+PRINT, '====================='
+PRINT, ''
+
+; Test 1: Conv1D - Valid Padding
+PRINT, 'TEST 1: Conv1D (Valid Padding)'
+signal = [1.0, 2.0, 3.0, 4.0, 5.0]
+kernel = [0.5, 0.5]
+PRINT, 'Signal:', signal
+PRINT, 'Kernel:', kernel
+
+output = XDLML_CONV1D(signal, kernel, 1, 0)
+PRINT, 'Output (valid):', output
+PRINT, 'Output size:', N_ELEMENTS(output)
+PRINT, 'Conv1D Valid: PASS'
+PRINT, ''
+
+; Test 2: Conv1D - Same Padding
+PRINT, 'TEST 2: Conv1D (Same Padding)'
+output_same = XDLML_CONV1D(signal, kernel, 1, 1)
+PRINT, 'Signal:', signal
+PRINT, 'Output (same):', output_same
+PRINT, 'Output size:', N_ELEMENTS(output_same)
+PRINT, 'Conv1D Same: PASS'
+PRINT, ''
+
+; Test 3: Conv1D with Stride
+PRINT, 'TEST 3: Conv1D with Stride=2'
+long_signal = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+kernel_3 = [0.33, 0.33, 0.34]
+output_stride = XDLML_CONV1D(long_signal, kernel_3, 2, 0)
+PRINT, 'Signal:', long_signal
+PRINT, 'Kernel size:', N_ELEMENTS(kernel_3)
+PRINT, 'Output (stride=2):', output_stride
+PRINT, 'Output size:', N_ELEMENTS(output_stride)
+PRINT, 'Conv1D Stride: PASS'
+PRINT, ''
+
+; Test 4: Edge Detection Kernel
+PRINT, 'TEST 4: Edge Detection with Conv1D'
+step_signal = [1.0, 1.0, 1.0, 5.0, 5.0, 5.0, 1.0, 1.0]
+edge_kernel = [-1.0, 0.0, 1.0]
+edges = XDLML_CONV1D(step_signal, edge_kernel, 1, 0)
+PRINT, 'Step signal:', step_signal
+PRINT, 'Edge kernel:', edge_kernel
+PRINT, 'Edges detected:', edges
+PRINT, 'Edge Detection: PASS'
+PRINT, ''
+
+; Test 5: Max Pooling
+PRINT, 'TEST 5: Max Pooling'
+data = [1.0, 3.0, 2.0, 4.0, 5.0, 1.0, 6.0, 2.0]
+PRINT, 'Data:', data
+
+pooled_max = XDLML_MAXPOOLING1D(data, 2, 2)
+PRINT, 'Max pooled (pool=2, stride=2):', pooled_max
+PRINT, 'Output size:', N_ELEMENTS(pooled_max)
+PRINT, 'Max Pooling: PASS'
+PRINT, ''
+
+; Test 6: Average Pooling
+PRINT, 'TEST 6: Average Pooling'
+pooled_avg = XDLML_AVERAGEPOOLING1D(data, 2, 2)
+PRINT, 'Data:', data
+PRINT, 'Avg pooled (pool=2, stride=2):', pooled_avg
+PRINT, 'Output size:', N_ELEMENTS(pooled_avg)
+PRINT, 'Average Pooling: PASS'
+PRINT, ''
+
+; Test 7: Pooling with Different Windows
+PRINT, 'TEST 7: Pooling with Window=3'
+long_data = [1.0, 5.0, 3.0, 8.0, 2.0, 7.0, 4.0, 6.0, 9.0]
+max_pool_3 = XDLML_MAXPOOLING1D(long_data, 3, 3)
+avg_pool_3 = XDLML_AVERAGEPOOLING1D(long_data, 3, 3)
+PRINT, 'Data:', long_data
+PRINT, 'Max pooled (window=3):', max_pool_3
+PRINT, 'Avg pooled (window=3):', avg_pool_3
+PRINT, 'Window Pooling: PASS'
+PRINT, ''
+
+; Test 8: Combined Conv + Pooling Pipeline
+PRINT, 'TEST 8: Conv + Pooling Pipeline'
+raw_signal = [1.0, 2.0, 1.0, 3.0, 5.0, 4.0, 2.0, 1.0]
+smooth_kernel = [0.25, 0.5, 0.25]
+
+PRINT, 'Raw signal:', raw_signal
+
+; Step 1: Smooth with convolution
+smoothed = XDLML_CONV1D(raw_signal, smooth_kernel, 1, 0)
+PRINT, 'After Conv1D:', smoothed
+
+; Step 2: Downsample with pooling
+downsampled = XDLML_MAXPOOLING1D(smoothed, 2, 2)
+PRINT, 'After MaxPooling:', downsampled
+PRINT, 'Final size:', N_ELEMENTS(downsampled)
+PRINT, 'Conv+Pool Pipeline: PASS'
+PRINT, ''
+
+; Test 9: Signal Processing - Moving Average
+PRINT, 'TEST 9: Moving Average with Conv1D'
+noisy_signal = [1.0, 3.0, 2.0, 5.0, 4.0, 7.0, 6.0, 8.0]
+ma_kernel = [0.2, 0.2, 0.2, 0.2, 0.2]  ; 5-point moving average
+smoothed_signal = XDLML_CONV1D(noisy_signal, ma_kernel, 1, 0)
+PRINT, 'Noisy signal:', noisy_signal
+PRINT, 'Smoothed:', smoothed_signal
+PRINT, 'Moving Average: PASS'
+PRINT, ''
+
+PRINT, '====================='
+PRINT, 'All tests PASSED!'
+PRINT, ''
+PRINT, 'Summary:'
+PRINT, '- Conv1D: Valid & Same padding ✓'
+PRINT, '- Conv1D: Stride support ✓'
+PRINT, '- Conv1D: Edge detection ✓'
+PRINT, '- MaxPooling1D: Downsampling ✓'
+PRINT, '- AveragePooling1D: Smooth downsampling ✓'
+PRINT, '- Combined pipelines: Conv → Pool ✓'

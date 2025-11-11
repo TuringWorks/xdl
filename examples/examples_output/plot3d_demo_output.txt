@@ -1,0 +1,57 @@
+[2m2025-11-11T00:51:42.346514Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/plot3d_demo.xdl
+=== XDL 3D Plot Demo ===
+
+--- Test 1: Simple Surface Plot ---
+Creating small 3D surface...
+SURFACE: Rendering 5x5 surface plot to xdl_surface.png
+  Surface plot saved to 'xdl_surface.png'
+Surface plot complete!
+Close the plot window to continue.
+
+--- Test 2: Contour Plot ---
+Creating contour plot...
+CONTOUR: Rendering 5x5 contour plot to xdl_contour.png
+  Contour plot saved to 'xdl_contour.png'
+Contour plot complete!
+Close the plot window to continue.
+
+--- Test 3: Shaded Surface Plot ---
+Creating shaded surface...
+SHADE_SURF: Rendering 5x5 shaded surface to xdl_shade_surf.png
+  Shaded surface saved to 'xdl_shade_surf.png'
+Shaded surface complete!
+Close the plot window to continue.
+
+--- Test 4: 3D Line Plot ---
+Creating 3D parametric spiral...
+PLOT3D: Rendering 3D line with 20 points to xdl_plot3d.png
+  3D line plot saved to 'xdl_plot3d.png'
+3D line plot complete!
+Close the plot window to continue.
+
+--- Test 5: Wavy Surface ---
+Creating wavy pattern...
+SURFACE: Rendering 5x5 surface plot to xdl_surface.png
+  Surface plot saved to 'xdl_surface.png'
+Wavy surface complete!
+Close the plot window to continue.
+
+=== 3D Plot Demo Complete ===
+
+3D plotting capabilities demonstrated:
+  - SURFACE: 3D wireframe surfaces
+  - CONTOUR: 2D contour plots
+  - SHADE_SURF: 3D shaded surfaces
+  - PLOT3D: 3D parametric line plots
+
+Note: All surface data created using nested array literals
+Example: z = [[1,2,3], [4,5,6], [7,8,9]]
+
+Additional 3D procedures available:
+  - SHADE_SURF_IRR: Irregular surface grids
+  - SURFR: Rectangular surfaces
+  - ISOCONTOUR: 3D isosurface contours
+  - ISOSURFACE: 3D isosurface rendering
+  - T3D, SCALE3, SHOW3: 3D transformations
+
+Try modifying the nested arrays to create your own 3D visualizations!

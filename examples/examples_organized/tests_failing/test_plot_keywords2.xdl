@@ -1,0 +1,11 @@
+; Test script for plotting with keyword arguments
+; This tests different data and titles
+
+; Generate exponential data
+x = findgen(50) / 5.0
+y = exp(-x) * sin(x * 3.0)
+
+; Plot with descriptive titles
+plot, y, x, title='Damped Oscillation', xtitle='Time (seconds)', ytitle='Amplitude'
+
+print, 'Second plot created successfully!'

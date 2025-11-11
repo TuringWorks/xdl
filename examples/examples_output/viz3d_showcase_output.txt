@@ -1,0 +1,11 @@
+[2m2025-11-11T00:51:24.912786Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/demo/viz3d_showcase.xdl
+╔═══════════════════════════════════════════════════════════╗
+║         XDL WebGPU Showcase Demo                         ║
+║         High-Performance Volume Rendering                ║
+╚═══════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Demo 1: Gaussian Blob (Rainbow Colormap)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Creating 64 x 64 x 64 volume...

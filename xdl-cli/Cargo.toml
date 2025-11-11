@@ -15,7 +15,6 @@ xdl-core = { path = "../xdl-core" }
 xdl-parser = { path = "../xdl-parser" }
 xdl-interpreter = { path = "../xdl-interpreter" }
 xdl-stdlib = { path = "../xdl-stdlib" }
-xdl-matlab = { path = "../xdl-matlab" }
 
 clap = { workspace = true }
 anyhow = { workspace = true }

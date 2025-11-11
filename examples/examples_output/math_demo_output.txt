@@ -1,0 +1,13 @@
+[2m2025-11-11T00:51:24.828798Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/demo/math_demo.xdl
+Basic arithmetic:
+a = 10
+b = 20
+sum = 30
+product = 200
+quotient = 2
+Array statistics:
+Mean: 4.950000000000000
+Standard deviation: 2.901149197588202
+PLOT: Rendering 100 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Plotting complete!

@@ -1,0 +1,24 @@
+; ============================================
+; XDL Example 1: Hello World
+; ============================================
+; This demonstrates basic variable assignment
+; and the PRINT statement
+
+message = 'Hello, XDL World!'
+PRINT, message
+
+; Basic arithmetic
+x = 10
+y = 20
+sum = x + y
+PRINT, 'The sum of', x, 'and', y, 'is', sum
+
+; More arithmetic operations
+product = x * y
+PRINT, 'Product:', product
+
+difference = y - x
+PRINT, 'Difference:', difference
+
+quotient = y / x
+PRINT, 'Quotient:', quotient

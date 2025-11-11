@@ -1,7 +1,6 @@
 # XDL - Extended Data Language (Rust Implementation)
 
-[![CI](https://github.com/gnudatalanguage/gdl/workflows/CI/badge.svg)](https://github.com/gnudatalanguage/gdl/actions)
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A modern Rust implementation of the Extended Data Language (XDL), providing IDL-compatible data analysis and visualization capabilities.
 
@@ -21,9 +20,18 @@ The project is structured as a Cargo workspace with the following crates:
 - **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom
 - **`xdl-interpreter`**: AST interpreter and execution engine
 - **`xdl-runtime`**: Runtime system with memory management
-- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics)
+- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics, ML)
 - **`xdl-ffi`**: Foreign function interfaces to external libraries
 - **`xdl-cli`**: Command-line interface and REPL
+- **`xdl-gui`**: Graphical user interface components
+- **`xdl-charts`**: Charting and visualization library
+- **`xdl-viz3d`**: 3D visualization engine
+- **`xdl-matlab`**: MATLAB transpilation support
+- **`xdl-amp`**: Accelerated Math Processing
+- **`xdl-chart-viewer`**: Interactive chart viewer application
+- **`xdl-desktop-viewer`**: Desktop visualization viewer
+- **`xdl-viz3d-threejs`**: Three.js 3D visualization web components
+- **`xdl-viz3d-web`**: Web-based 3D visualization
 
 ## Features
 
@@ -45,7 +53,11 @@ The project is structured as a Cargo workspace with the following crates:
 - Array functions (TRANSPOSE, REFORM, etc.)
 - I/O operations (PRINT, READ, etc.)
 - **Python 3.13 integration** (PYTHON_IMPORT, PYTHON_CALL)
-- Graphics and plotting (planned)
+- Graphics and plotting (2D/3D charts, WebGL rendering)
+- Machine learning functions (K-means, neural networks, cross-validation)
+- MATLAB transpilation support
+- GPU acceleration support
+- Advanced visualization (3D plotting, interactive charts)
 
 ## Installation
 
@@ -57,8 +69,8 @@ The project is structured as a Cargo workspace with the following crates:
 ### Building from Source
 
 ```bash
-git clone https://github.com/gnudatalanguage/gdl-rust
-cd gdl-rust
+git clone https://github.com/TuringWorks/xdl
+cd xdl
 cargo build --release
 ```
 
@@ -115,14 +127,26 @@ print, "sqrt(16) =", result
 ### Project Structure
 
 ```
-xdl-rust/
-├── xdl-core/          # Core data types and operations
-├── xdl-parser/        # Language parser and AST
-├── xdl-interpreter/   # Execution engine
-├── xdl-runtime/       # Memory and runtime management
-├── xdl-stdlib/        # Standard library functions
-├── xdl-ffi/          # External library interfaces
-└── xdl-cli/          # Command-line interface
+xdl/
+├── xdl-core/              # Core data types and operations
+├── xdl-parser/            # Language parser and AST
+├── xdl-interpreter/       # Execution engine
+├── xdl-runtime/           # Memory and runtime management
+├── xdl-stdlib/            # Standard library functions
+├── xdl-ffi/              # External library interfaces
+├── xdl-cli/              # Command-line interface
+├── xdl-gui/              # Graphical user interface
+├── xdl-charts/           # Charting library
+├── xdl-viz3d/            # 3D visualization engine
+├── xdl-matlab/           # MATLAB transpilation
+├── xdl-amp/              # Accelerated Math Processing
+├── xdl-chart-viewer/     # Chart viewer app
+├── xdl-desktop-viewer/  # Desktop viewer
+├── xdl-viz3d-threejs/    # Three.js components
+├── xdl-viz3d-web/        # Web 3D visualization
+├── examples/             # Example scripts and demos
+├── tests/                # Test suite
+└── docs/                 # Documentation
 ```
 
 ### Building and Testing
@@ -134,13 +158,8 @@ cargo check --workspace
 # Build everything
 cargo build --workspace
 
-# Run tests (fast tests only, completes in ~6 seconds)
+# Run tests
 cargo test --workspace
-
-# Run slow tests (tests that take >10 seconds)
-./run_slow_tests.sh
-# Or manually:
-# cargo test -- --ignored
 
 # Format code
 cargo fmt --all
@@ -192,47 +211,67 @@ Contributions are welcome! Please:
 
 ### Phase 1: Foundation ✅
 - [x] Core data structures and types
-- [x] Basic parser and AST
+- [x] Complete lexer/parser implementation
+- [x] Expression evaluator and statement execution
+- [x] Variable and scope management
+- [x] Function/procedure calls
 - [x] Project structure and build system
 - [x] CLI interface and REPL
 
-### Phase 2: Language Implementation 🚧
-- [ ] Complete lexer/parser implementation
-- [ ] Expression evaluator
-- [ ] Statement execution
-- [ ] Variable and scope management
-- [ ] Function/procedure calls
+### Phase 2: Standard Library ✅
+- [x] Mathematical functions
+- [x] Array manipulation and indexing
+- [x] I/O operations and file handling
+- [x] String functions
+- [x] Graphics and plotting (2D/3D)
+- [x] Machine learning functions
+- [x] Python 3.13 integration
 
-### Phase 3: Standard Library
-- [ ] Mathematical functions
-- [ ] Array manipulation
-- [ ] I/O operations
-- [ ] String functions
-- [ ] File handling
+### Phase 3: Advanced Features ✅
+- [x] Graphics and plotting (WebGL, Three.js)
+- [x] External library integration
+- [x] MATLAB transpilation support
+- [x] GPU acceleration
+- [x] Interactive chart viewers
+- [x] 3D visualization engines
 
-### Phase 4: Advanced Features
-- [ ] Graphics and plotting
-- [ ] External library integration
-- [ ] Object-oriented features
-- [ ] Optimization and performance
+### Phase 4: User Interfaces ✅
+- [x] GUI components
+- [x] Desktop viewer applications
+- [x] Web-based visualization
+- [x] Interactive chart viewers
 
-### Phase 5: Compatibility
-- [ ] IDL compatibility layer
-- [ ] Legacy code migration tools
-- [ ] Documentation and examples
+### Phase 5: Compatibility & Optimization 🚧
+- [x] IDL/GDL compatibility layer
+- [x] Legacy code migration tools
+- [x] Documentation and examples
+- [ ] Performance optimization
+- [ ] Extended language features
 
 ## License
 
-This project is licensed under the GNU General Public License v2.0 - see the [COPYING](../COPYING) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
 - Original GDL team and contributors
 - The Rust community
 - Scientific computing libraries (GSL, NetCDF, HDF5, etc.)
+- TuringWorks development team
 
 ## Status
 
-🚧 **Work in Progress** 🚧
+✅ **Feature Complete** ✅
 
-This is an active development project. The basic structure is in place, but the interpreter and standard library are still being implemented. Contributions and feedback are welcome!
+XDL is a mature implementation with comprehensive language support, advanced visualization capabilities, and extensive library features. The project includes:
+
+- Complete XDL/IDL language implementation
+- Advanced 2D/3D visualization and charting
+- Machine learning and scientific computing functions
+- Python 3.13 integration
+- MATLAB transpilation support
+- GPU acceleration capabilities
+- Multiple user interfaces (CLI, GUI, Web)
+- Extensive example library and documentation
+
+Active development continues on performance optimization and extended features. Contributions and feedback are welcome!

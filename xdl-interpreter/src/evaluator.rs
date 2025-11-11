@@ -1,7 +1,6 @@
 //! Expression and statement evaluator
 
 use crate::context::Context;
-use std::collections::HashMap;
 use xdl_core::{XdlError, XdlResult, XdlValue};
 use xdl_parser::{ArrayIndex, BinaryOp, Expression, UnaryOp};
 use xdl_stdlib::StandardLibrary;
@@ -60,18 +59,13 @@ impl Evaluator {
                     arg_values.push(self.evaluate(arg, context)?);
                 }
 
-                // Evaluate keyword arguments
-                let mut keyword_values = HashMap::new();
-                for keyword in keywords {
-                    if let Some(ref value_expr) = keyword.value {
-                        let value = self.evaluate(value_expr, context)?;
-                        keyword_values.insert(keyword.name.clone(), value);
-                    }
+                // TODO: Handle keywords
+                if !keywords.is_empty() {
+                    return Err(XdlError::NotImplemented("Function keywords".to_string()));
                 }
 
-                // Call standard library function with keywords
-                self.stdlib
-                    .call_function_with_keywords(name, &arg_values, &keyword_values)
+                // Call standard library function
+                self.stdlib.call_function(name, &arg_values)
             }
 
             Expression::ArrayDef { elements, .. } => {
@@ -86,27 +80,8 @@ impl Evaluator {
                 let all_arrays = values.iter().all(|v| matches!(v, XdlValue::Array(_)));
 
                 if all_arrays && !values.is_empty() {
-                    // This is a 2D array - convert to MultiDimArray
-                    let mut rows = Vec::new();
-                    let mut row_len = 0;
-
-                    for (i, val) in values.iter().enumerate() {
-                        if let XdlValue::Array(row) = val {
-                            if i == 0 {
-                                row_len = row.len();
-                            } else if row.len() != row_len {
-                                return Err(XdlError::RuntimeError(
-                                    "All rows must have same length in 2D array".to_string(),
-                                ));
-                            }
-                            rows.extend(row.iter());
-                        }
-                    }
-
-                    Ok(XdlValue::MultiDimArray {
-                        data: rows,
-                        shape: vec![values.len(), row_len],
-                    })
+                    // This is a nested array (matrix)
+                    Ok(XdlValue::NestedArray(values))
                 } else {
                     // Regular array - convert all to floats
                     let mut float_values = Vec::new();
@@ -159,17 +134,6 @@ impl Evaluator {
     /// Call a procedure from the standard library
     pub fn call_procedure(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
         self.stdlib.call_procedure(name, args)
-    }
-
-    /// Call a procedure from the standard library with keyword arguments
-    pub fn call_procedure_with_keywords(
-        &self,
-        name: &str,
-        args: &[XdlValue],
-        keywords: &HashMap<String, XdlValue>,
-    ) -> XdlResult<XdlValue> {
-        self.stdlib
-            .call_procedure_with_keywords(name, args, keywords)
     }
 
     /// Evaluate binary operations
@@ -377,59 +341,6 @@ impl Evaluator {
                     }
                 };
                 return Ok(Array(result));
-            }
-            // Handle MultiDimArray operations
-            (MultiDimArray { data, shape }, scalar) => {
-                let s = self.to_double(scalar)?;
-                let result: Vec<f64> = match op {
-                    Add => data.iter().map(|x| x + s).collect(),
-                    Subtract => data.iter().map(|x| x - s).collect(),
-                    Multiply => data.iter().map(|x| x * s).collect(),
-                    Divide => data
-                        .iter()
-                        .map(|x| if s == 0.0 { f64::NAN } else { x / s })
-                        .collect(),
-                    Power => data.iter().map(|x| x.powf(s)).collect(),
-                    Modulo => data
-                        .iter()
-                        .map(|x| if s == 0.0 { f64::NAN } else { x % s })
-                        .collect(),
-                    _ => {
-                        return Err(XdlError::NotImplemented(
-                            "MultiDimArray operation not implemented".to_string(),
-                        ))
-                    }
-                };
-                return Ok(MultiDimArray {
-                    data: result,
-                    shape: shape.clone(),
-                });
-            }
-            (scalar, MultiDimArray { data, shape }) => {
-                let s = self.to_double(scalar)?;
-                let result: Vec<f64> = match op {
-                    Add => data.iter().map(|x| s + x).collect(),
-                    Subtract => data.iter().map(|x| s - x).collect(),
-                    Multiply => data.iter().map(|x| s * x).collect(),
-                    Divide => data
-                        .iter()
-                        .map(|x| if *x == 0.0 { f64::NAN } else { s / x })
-                        .collect(),
-                    Power => data.iter().map(|x| s.powf(*x)).collect(),
-                    Modulo => data
-                        .iter()
-                        .map(|x| if *x == 0.0 { f64::NAN } else { s % x })
-                        .collect(),
-                    _ => {
-                        return Err(XdlError::NotImplemented(
-                            "Scalar-MultiDimArray operation not implemented".to_string(),
-                        ))
-                    }
-                };
-                return Ok(MultiDimArray {
-                    data: result,
-                    shape: shape.clone(),
-                });
             }
             _ => {} // Continue with scalar operations
         }
@@ -700,108 +611,13 @@ impl Evaluator {
         indices: &[ArrayIndex],
         context: &mut Context,
     ) -> XdlResult<XdlValue> {
-        // Special case: Multi-dimensional array with comma-separated indices (arr[i, j])
-        if indices.len() > 1 {
-            return self.evaluate_multidim_index(array_val, indices, context);
-        }
-
-        // Single index or sequential indexing (arr[i][j])
+        // Handle multi-dimensional indexing by applying indices one at a time
         let mut current_val = array_val.clone();
 
         for index in indices {
             current_val = self.evaluate_single_index(&current_val, index, context)?;
         }
 
-        Ok(current_val)
-    }
-
-    /// Evaluate multi-dimensional array indexing with comma-separated indices
-    fn evaluate_multidim_index(
-        &self,
-        array_val: &XdlValue,
-        indices: &[ArrayIndex],
-        context: &mut Context,
-    ) -> XdlResult<XdlValue> {
-        // Get the shape and data from MultiDimArray
-        let (data, shape) = match array_val {
-            XdlValue::MultiDimArray { data, shape } => (data, shape),
-            XdlValue::Array(data) => {
-                // Treat 1D array as single row if accessed with 2D indices
-                if indices.len() == 2 {
-                    return Err(XdlError::RuntimeError(
-                        "Multi-dimensional indexing requires nested array".to_string(),
-                    ));
-                }
-                (data, &vec![data.len()])
-            }
-            _ => {
-                return Err(XdlError::RuntimeError(
-                    "Cannot use multi-dimensional indexing on non-array value".to_string(),
-                ))
-            }
-        };
-
-        // Handle N-dimensional indexing: arr[i, j, k, ...]
-        if indices.len() == shape.len() {
-            // Extract all indices
-            let mut index_values = Vec::new();
-            for index in indices {
-                match index {
-                    ArrayIndex::Single(expr) => {
-                        let val = self.evaluate(expr, context)?;
-                        index_values.push(val.to_long()? as usize);
-                    }
-                    ArrayIndex::All => {
-                        return Err(XdlError::NotImplemented(
-                            "Wildcard array reading not yet supported - use in assignment context"
-                                .to_string(),
-                        ));
-                    }
-                    _ => {
-                        return Err(XdlError::NotImplemented(
-                            "Range indexing not yet supported for multi-dimensional arrays"
-                                .to_string(),
-                        ));
-                    }
-                }
-            }
-
-            // Check bounds and calculate flat index (row-major order)
-            let mut flat_index = 0;
-            let mut multiplier = 1;
-
-            // Calculate in reverse order (rightmost dimension varies fastest)
-            for i in (0..shape.len()).rev() {
-                let idx = index_values[i];
-                let dim_size = shape[i];
-
-                if idx >= dim_size {
-                    return Err(XdlError::RuntimeError(format!(
-                        "Index {} out of bounds for dimension {} (size {})",
-                        idx, i, dim_size
-                    )));
-                }
-
-                flat_index += idx * multiplier;
-                multiplier *= dim_size;
-            }
-
-            if flat_index >= data.len() {
-                return Err(XdlError::RuntimeError(format!(
-                    "Computed index {} out of bounds for array with {} elements",
-                    flat_index,
-                    data.len()
-                )));
-            }
-
-            return Ok(XdlValue::Double(data[flat_index]));
-        }
-
-        // For other cases, fall back to sequential indexing
-        let mut current_val = array_val.clone();
-        for index in indices {
-            current_val = self.evaluate_single_index(&current_val, index, context)?;
-        }
         Ok(current_val)
     }
 
@@ -1033,7 +849,7 @@ mod tests {
         let evaluator = Evaluator::new();
         let mut context = Context::new();
 
-        context.set_variable("x".to_string(), XdlValue::Double(std::f64::consts::PI));
+        context.set_variable("x".to_string(), XdlValue::Double(3.14));
 
         let expr = Expression::Variable {
             name: "x".to_string(),
@@ -1041,7 +857,7 @@ mod tests {
         };
 
         let result = evaluator.evaluate(&expr, &mut context).unwrap();
-        assert_eq!(result, XdlValue::Double(std::f64::consts::PI));
+        assert_eq!(result, XdlValue::Double(3.14));
     }
 
     #[test]

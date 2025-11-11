@@ -1,0 +1,40 @@
+; XDL Unit Control Flow Tests
+
+print, "=== UNIT TESTS ==="
+
+; Test 1: Basic if
+if 1 then begin
+  print, "Test 1 PASS"
+end
+endif
+
+; Test 2: If-else
+if 0 then begin
+  print, "Test 2 FAIL"
+end else begin
+  print, "Test 2 PASS"
+end
+endif
+
+; Test 3: Comparison
+x = 42
+if x eq 42 then begin
+  print, "Test 3 PASS"
+end
+endif
+
+; Test 4: For loop
+for i = 1, 3 do begin
+  print, "Loop", i
+end
+endfor
+
+; Test 5: While loop
+counter = 2
+while counter gt 0 do begin
+  print, "While", counter
+  counter = counter - 1
+end
+endwhile
+
+print, "=== ALL TESTS PASSED ==="

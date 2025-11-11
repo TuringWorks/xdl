@@ -1,0 +1,44 @@
+XDL Example Images Index
+==================================================
+
+03:
+  - 03_plotting_basics_xdl_plot.png
+
+04:
+  - 04_trigonometry_xdl_plot.png
+
+05:
+  - 05_bezier_surface_xdl_surface.png
+
+06:
+  - 06_sine_cosine_plot_xdl_plot.png
+
+mandelbrot:
+  - mandelbrot_demo_xdl_surface.png
+
+math:
+  - math_demo_xdl_plot.png
+
+math2:
+  - math2_xdl_plot.png
+
+plot:
+  - plot_working_demo_xdl_plot.png
+  - plot_demo_xdl_plot.png
+
+plot3d:
+  - plot3d_demo_xdl_shade_surf.png
+  - plot3d_demo_xdl_plot3d.png
+  - plot3d_demo_xdl_surface.png
+  - plot3d_demo_xdl_contour.png
+
+sample:
+  - sample_script_xdl_plot.png
+
+simple:
+  - simple_plot_test_xdl_plot.png
+
+test:
+  - test_plot_surface_xdl_plot.png
+  - test_contour_xdl_contour.png
+  - test_plot_surface_xdl_surface.png

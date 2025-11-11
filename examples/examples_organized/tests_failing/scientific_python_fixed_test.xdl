@@ -1,0 +1,80 @@
+; Fixed scientific Python integration test
+print, "=== Scientific Python Integration Test (Fixed) ==="
+
+; Test 1: Basic NumPy operations
+print, "1. NumPy Basic Operations..."
+numpy_mod = python_import("numpy")
+
+; Test array creation and basic stats
+sequence = python_call(numpy_mod, "arange", 1.0, 11.0)
+print, "Sequence 1-10:", sequence
+
+; Test statistical functions
+mean_val = python_call(numpy_mod, "mean", sequence)
+print, "Mean:", mean_val
+
+sum_val = python_call(numpy_mod, "sum", sequence)
+print, "Sum:", sum_val
+
+std_val = python_call(numpy_mod, "std", sequence)
+print, "Standard deviation:", std_val
+
+; Test 2: Mathematical functions
+print, ""
+print, "2. Mathematical Functions..."
+
+; Test mathematical operations
+sqrt_vals = python_call(numpy_mod, "sqrt", sequence)
+print, "Square roots:", sqrt_vals
+
+; Test trigonometric functions with array
+sin_vals = python_call(numpy_mod, "sin", sequence)
+print, "Sine values:", sin_vals
+
+; Test 3: Array creation and manipulation
+print, ""
+print, "3. Array Operations..."
+
+; Test linspace
+x_values = python_call(numpy_mod, "linspace", 0.0, 10.0, 11)
+print, "Linspace 0-10:", x_values
+
+; Test zeros and ones
+zeros_arr = python_call(numpy_mod, "zeros", 5)
+print, "Zeros array:", zeros_arr
+
+ones_arr = python_call(numpy_mod, "ones", 5)
+print, "Ones array:", ones_arr
+
+; Test 4: Data analysis operations
+print, ""
+print, "4. Data Analysis..."
+
+; Test cumulative functions
+cumsum_result = python_call(numpy_mod, "cumsum", sequence)
+print, "Cumulative sum:", cumsum_result
+
+; Test min and max
+min_val = python_call(numpy_mod, "min", sequence)
+max_val = python_call(numpy_mod, "max", sequence)
+print, "Min:", min_val, "Max:", max_val
+
+; Test 5: Pandas time operations
+print, ""
+print, "5. Pandas Time Operations..."
+pandas_mod = python_import("pandas")
+
+; Create timestamps
+timestamp1 = python_call(pandas_mod, "Timestamp", "2025-01-01")
+print, "Timestamp:", timestamp1
+
+timestamp2 = python_call(pandas_mod, "Timestamp", "2025-12-31")
+print, "End of year:", timestamp2
+
+; Create period
+period = python_call(pandas_mod, "Period", "2025-Q1")
+print, "Quarter period:", period
+
+print, ""
+print, "=== Scientific Python integration test complete ==="
+print, "Successfully demonstrated NumPy array operations and Pandas basics!"

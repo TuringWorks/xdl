@@ -11,24 +11,28 @@ This integration brings advanced scientific visualization features from Rust imp
 Four new procedures are now available in XDL scripts:
 
 ### 1. RENDER_COLORMAP
+
 - **Purpose**: Renders 2D data with scientific colormaps
 - **Implementation**: `graphics_procs.rs` lines 772-848
 - **Default colormap**: Viridis (perceptually uniform)
 - **Registry**: `lib.rs` line 109
 
 ### 2. DEM_RENDER
+
 - **Purpose**: Renders digital elevation models
 - **Implementation**: `graphics_procs.rs` lines 850-883
 - **Colormap**: Terrain-specific (blue→green→brown→white)
 - **Registry**: `lib.rs` line 110
 
 ### 3. HILLSHADE
+
 - **Purpose**: Generates hillshade relief from elevation data
 - **Implementation**: `graphics_procs.rs` lines 885-920
 - **Sun position**: Azimuth=315°, Altitude=45° (default)
 - **Registry**: `lib.rs` line 111
 
 ### 4. QUIVER
+
 - **Purpose**: Creates vector field quiver plots
 - **Implementation**: `graphics_procs.rs` lines 922-956
 - **Colormap**: Plasma (magnitude-coded)
@@ -39,6 +43,7 @@ Four new procedures are now available in XDL scripts:
 ## Files Modified
 
 ### 1. `xdl-stdlib/src/lib.rs`
+
 **Lines**: 108-112 (new procedure registrations)
 
 ```rust
@@ -50,9 +55,11 @@ Four new procedures are now available in XDL scripts:
 ```
 
 ### 2. `xdl-stdlib/src/graphics_procs.rs`
+
 **Lines**: 768-956 (4 new procedure implementations)
 
 Each procedure:
+
 - Validates arguments
 - Extracts 2D array data using `extract_2d_array()`
 - Calls underlying Rust visualization functions
@@ -66,9 +73,11 @@ Each procedure:
 ## Files Created
 
 ### 1. `examples/advanced_viz_demo.xdl`
+
 **165 lines** - Comprehensive demonstration script
 
 Demonstrates:
+
 - RENDER_COLORMAP with mathematical functions
 - DEM_RENDER with synthetic terrain
 - HILLSHADE for relief visualization
@@ -76,9 +85,11 @@ Demonstrates:
 - Combined fluid dynamics simulation
 
 ### 2. `examples/ADVANCED_VIZ_REFERENCE.md`
+
 **343 lines** - Complete quick reference guide
 
 Contains:
+
 - Syntax and parameters for each procedure
 - Usage examples
 - Tips and best practices
@@ -86,6 +97,7 @@ Contains:
 - Common use cases (climate, topography, fluid dynamics, etc.)
 
 ### 3. `examples/ADVANCED_VIZ_INTEGRATION.md` (this file)
+
 Summary of integration work
 
 ---
@@ -95,6 +107,7 @@ Summary of integration work
 These procedures leverage existing Rust modules (implemented earlier):
 
 ### Core Modules (`xdl-stdlib/src/graphics/`)
+
 1. **colormap.rs** (327 lines)
    - 25+ scientific color schemes
    - Perceptually uniform colormaps (Viridis, Plasma, etc.)
@@ -117,6 +130,7 @@ These procedures leverage existing Rust modules (implemented earlier):
    - Interactive HTML generation
 
 ### Dependencies (`xdl-stdlib/Cargo.toml`)
+
 - **plotters**: 2D/3D plotting backend
 - **palette**: Color science and conversions
 - **colorous**: Scientific colormap schemes
@@ -127,7 +141,7 @@ These procedures leverage existing Rust modules (implemented earlier):
 
 ## Integration Architecture
 
-```
+```text
 XDL Script (.xdl)
     ↓
 XDL Parser/Interpreter (xdl-interpreter)
@@ -146,6 +160,7 @@ PNG Output + GUI Display (via GUI_IMAGE_CALLBACK)
 ## Testing the Integration
 
 ### Quick Test
+
 ```bash
 cd /Users/ravindraboddipalli/sources/xdl
 cargo build --release
@@ -153,7 +168,9 @@ cargo build --release
 ```
 
 ### Expected Output
+
 5 PNG files should be generated:
+
 1. `colormap_demo.png` - 2D mathematical function
 2. `elevation_map.png` - Digital elevation model
 3. `hillshade_demo.png` - Terrain hillshade
@@ -167,6 +184,7 @@ Each image should automatically display in xdl-gui.
 ## Usage Examples
 
 ### Simple Colormap Rendering
+
 ```idl
 data = FLTARR(50, 50)
 FOR i=0, 49 DO FOR j=0, 49 DO $
@@ -175,6 +193,7 @@ RENDER_COLORMAP, data, 'output.png'
 ```
 
 ### Terrain Visualization
+
 ```idl
 elevation = FLTARR(100, 100)
 ; ... populate elevation data ...
@@ -183,6 +202,7 @@ HILLSHADE, elevation, 'relief.png'
 ```
 
 ### Vector Field Analysis
+
 ```idl
 u = FLTARR(20, 20)
 v = FLTARR(20, 20)
@@ -195,6 +215,7 @@ QUIVER, u, v, 'vectors.png'
 ## Future Enhancements
 
 ### Short Term
+
 1. Add keyword parameter support:
    - `COLORMAP='plasma'` for RENDER_COLORMAP
    - `AZIMUTH=315, ALTITUDE=45` for HILLSHADE
@@ -207,6 +228,7 @@ QUIVER, u, v, 'vectors.png'
    - `ISOSURFACE` - Isosurface extraction
 
 ### Long Term
+
 1. Interactive features:
    - Rotate 3D visualizations
    - Pan/zoom on maps
@@ -227,6 +249,7 @@ QUIVER, u, v, 'vectors.png'
 ## Performance Characteristics
 
 ### Benchmarks (approximate, M1 Mac)
+
 - **RENDER_COLORMAP**: 50x50 array → ~10ms
 - **DEM_RENDER**: 100x100 array → ~50ms
 - **HILLSHADE**: 100x100 array → ~30ms
@@ -235,10 +258,12 @@ QUIVER, u, v, 'vectors.png'
 All procedures scale roughly O(n²) with array size.
 
 ### Memory Usage
+
 - Typical: 2-10 MB per visualization
 - Large arrays (1000x1000): 50-100 MB
 
 ### Recommendations
+
 - Arrays up to 500x500: Excellent performance
 - Arrays 500-1000: Good performance
 - Arrays >1000: Consider downsampling
@@ -289,17 +314,20 @@ All procedures scale roughly O(n²) with array size.
 ## Build Requirements
 
 ### Standard Build (no GIS)
+
 ```bash
 cargo build --release
 ```
 
 ### With GIS Features
+
 ```bash
 # Requires PROJ library installed
 cargo build --release --features gis
 ```
 
 ### Optional Scientific I/O
+
 ```bash
 cargo build --release --features scientific-io
 ```
@@ -329,6 +357,7 @@ cargo build --release --features scientific-io
 **Documentation**: ~900 lines
 
 **Technology Stack**:
+
 - Rust 1.70+
 - plotters (plotting backend)
 - palette (color science)
@@ -339,16 +368,21 @@ cargo build --release --features scientific-io
 ## Getting Help
 
 ### Troubleshooting
+
 See `ADVANCED_VIZ_REFERENCE.md` troubleshooting section
 
 ### Bug Reports
+
 Check existing issues or create new issue with:
+
 - XDL script that reproduces problem
 - Error message
 - Expected vs. actual output
 
 ### Feature Requests
+
 Priority areas:
+
 1. Keyword parameter support
 2. Additional colormaps
 3. Interactive visualization

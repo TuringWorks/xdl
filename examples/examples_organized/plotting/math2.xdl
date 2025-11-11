@@ -1,0 +1,38 @@
+; File: math_demo.xdl
+; Mathematical demonstration script
+; Shows basic math operations in XDL
+
+; Basic arithmetic
+a = 10
+b = 20
+sum = a + b
+product = a * b
+quotient = b / a
+
+print, "Basic arithmetic:"
+print, "a =", a
+print, "b =", b
+print, "sum =", sum
+print, "product =", product
+print, "quotient =", quotient
+
+; Array operations
+data = findgen(1000)
+scaled_data = data * 0.1
+shifted_data = scaled_data + 5.0
+
+; Statistical operations
+mean_val = mean(scaled_data)
+std_val = stddev(scaled_data)
+
+print, "Array statistics:"
+print, "Mean:", mean_val
+print, "Standard deviation:", std_val
+
+; Function application
+func_data = sin(scaled_data)
+plot, scaled_data, func_data
+
+print, "Plotting complete!"
+
+; Click Execute to run this code

@@ -1,0 +1,67 @@
+; Test array operations
+print, "=== Testing Array Operations ==="
+print, ""
+
+; Test 1: Array literals
+print, "1. Array Literals:"
+arr1 = [1, 2, 3, 4, 5]
+print, "arr1 =", arr1
+
+arr2 = [10, 20, 30]
+print, "arr2 =", arr2
+
+empty = []
+print, "empty =", empty
+
+print, ""
+
+; Test 2: Array indexing
+print, "2. Array Indexing:"
+print, "arr1[0] =", arr1[0]
+print, "arr1[2] =", arr1[2]
+print, "arr1[4] =", arr1[4]
+print, "arr1[-1] (last) =", arr1[-1]
+print, "arr1[-2] =", arr1[-2]
+
+print, ""
+
+; Test 3: Array slicing
+print, "3. Array Slicing:"
+print, "arr1[0:3] =", arr1[0:3]
+print, "arr1[1:4] =", arr1[1:4]
+print, "arr1[2:5] =", arr1[2:5]
+print, "arr1[-3:] (last 3) =", arr1[-3:]
+
+print, ""
+
+; Test 4: Array arithmetic
+print, "4. Array Arithmetic:"
+arr3 = [1, 2, 3, 4, 5]
+arr4 = [10, 10, 10, 10, 10]
+sum_arr = arr3 + arr4
+print, "arr3 + arr4 =", sum_arr
+
+scaled = arr1 * 2
+print, "arr1 * 2 =", scaled
+
+print, ""
+
+; Test 5: Nested arrays (matrices)
+print, "5. Nested Arrays:"
+matrix = [[1, 2], [3, 4]]
+print, "matrix =", matrix
+print, "matrix[0] =", matrix[0]
+print, "matrix[1, 1] =", matrix[1, 1]
+print, "matrix[-1, -1] =", matrix[-1, -1]
+
+print, ""
+
+; Test 6: Array element assignment
+print, "6. Array Element Assignment:"
+modify = [1, 2, 3]
+print, "Original:", modify
+modify[1] = 99
+print, "After modify[1] = 99:", modify
+
+print, ""
+print, "=== Array Tests Complete ==="

@@ -1,0 +1,12 @@
+; Test minimal
+
+print, "Testing"
+nx = 128
+ny = 128
+nz = 64
+print, "  Grid size:", nx, "x", ny, "x", nz
+
+x = FINDGEN(nx) * (2.0 * !PI / nx)
+u = FLTARR(nx, ny, nz)
+v = FLTARR(nx, ny, nz)
+w = FLTARR(nx, ny, nz)

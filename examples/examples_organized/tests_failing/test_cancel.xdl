@@ -1,0 +1,29 @@
+; Test script for Cancel button
+; This script runs for a long time to test cancellation
+
+; Create large array
+n = 10000
+print, "Starting computation with n =", n
+
+; Long computation loop
+x = findgen(n)
+y = x * 2.0
+
+; Intensive nested loop to simulate long computation
+print, "Starting intensive computation..."
+sum_val = 0.0
+for i = 0, n-1 do begin
+  for j = 0, 100 do begin
+    sum_val = sum_val + sin(x[i] / 100.0) * cos(y[i] / 200.0)
+  endfor
+
+  ; Progress reporting every 1000 iterations
+  if (i mod 1000) eq 0 then begin
+    print, "Progress:", i, "/", n
+  endif
+endfor
+
+print, "Computation complete! Sum:", sum_val
+
+; Plot result
+plot, x, y

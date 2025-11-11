@@ -1,0 +1,128 @@
+; =============================================================================
+; Machine Learning Data Utilities Examples
+; =============================================================================
+; Demonstrates XDLmlPartition and XDLmlShuffle functions
+; =============================================================================
+
+PRO test_ml_data_utils
+
+    PRINT, '============================================='
+    PRINT, 'ML Data Utilities Test'
+    PRINT, '============================================='
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 1: XDLmlPartition - Create train/test split
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 1: XDLmlPartition - 80/20 split'
+    n_samples = 100
+    partition = XDLmlPartition(n_samples, 0.8)
+
+    ; Count training and test samples
+    n_train = TOTAL(partition)
+    n_test = n_samples - n_train
+
+    PRINT, 'Total samples:', n_samples
+    PRINT, 'Training samples:', n_train
+    PRINT, 'Test samples:', n_test
+    PRINT, 'Train fraction:', n_train / n_samples
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 2: XDLmlPartition - Different split ratios
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 2: Different split ratios'
+
+    part_60_40 = XDLmlPartition(100, 0.6)
+    part_70_30 = XDLmlPartition(100, 0.7)
+    part_90_10 = XDLmlPartition(100, 0.9)
+
+    PRINT, '60/40 split: ', TOTAL(part_60_40), ' train,', 100 - TOTAL(part_60_40), ' test'
+    PRINT, '70/30 split: ', TOTAL(part_70_30), ' train,', 100 - TOTAL(part_70_30), ' test'
+    PRINT, '90/10 split: ', TOTAL(part_90_10), ' train,', 100 - TOTAL(part_90_10), ' test'
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 3: XDLmlShuffle - Random shuffling
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 3: XDLmlShuffle with fixed seed'
+
+    ; Shuffle with seed for reproducibility
+    indices1 = XDLmlShuffle(10, 42)
+    indices2 = XDLmlShuffle(10, 42)
+
+    PRINT, 'First shuffle:  ', indices1[0], indices1[1], indices1[2], indices1[3], indices1[4]
+    PRINT, 'Second shuffle: ', indices2[0], indices2[1], indices2[2], indices2[3], indices2[4]
+    PRINT, 'Same results (reproducible):', (indices1[0] eq indices2[0]) AND (indices1[1] eq indices2[1])
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 4: XDLmlShuffle - Different seeds give different results
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 4: Different seeds'
+
+    shuf_a = XDLmlShuffle(10, 123)
+    shuf_b = XDLmlShuffle(10, 456)
+
+    PRINT, 'Seed 123:', shuf_a[0], shuf_a[1], shuf_a[2], shuf_a[3], shuf_a[4]
+    PRINT, 'Seed 456:', shuf_b[0], shuf_b[1], shuf_b[2], shuf_b[3], shuf_b[4]
+    PRINT, 'Different results:', shuf_a[0] ne shuf_b[0]
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 5: Practical example - Shuffle and partition data
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 5: Practical workflow - shuffle then partition'
+
+    ; Create sample dataset
+    n = 20
+    data = FINDGEN(n)  ; Data: 0, 1, 2, ..., 19
+    PRINT, 'Original data (first 5):', data[0], data[1], data[2], data[3], data[4]
+
+    ; Step 1: Shuffle the data
+    shuffled_idx = XDLmlShuffle(n, 999)
+    PRINT, 'Shuffled indices (first 5):', shuffled_idx[0], shuffled_idx[1], shuffled_idx[2], shuffled_idx[3], shuffled_idx[4]
+
+    ; Step 2: Create train/test partition
+    partition = XDLmlPartition(n, 0.75)
+
+    ; Step 3: Extract indices
+    train_indices = WHERE(partition gt 0.5)
+    test_indices = WHERE(partition lt 0.5)
+
+if train_indices ne -1 then BEGIN
+        n_train = N_ELEMENTS(train_indices)
+        PRINT, 'Training set size:', n_train
+    END
+    endif
+
+if test_indices ne -1 then BEGIN
+        n_test = N_ELEMENTS(test_indices)
+        PRINT, 'Test set size:', n_test
+    END
+    endif
+    PRINT, ''
+
+    ; -------------------------------------------------------------------------
+    ; Test 6: Large dataset
+    ; -------------------------------------------------------------------------
+    PRINT, 'Test 6: Large dataset (1000 samples)'
+
+    large_partition = XDLmlPartition(1000, 0.8)
+    large_shuffle = XDLmlShuffle(1000, 777)
+
+    PRINT, 'Partition created:', N_ELEMENTS(large_partition), ' elements'
+    PRINT, 'Training samples:', TOTAL(large_partition)
+    PRINT, 'Shuffle created:', N_ELEMENTS(large_shuffle), ' indices'
+    PRINT, 'First shuffled index:', large_shuffle[0]
+    PRINT, 'Last shuffled index:', large_shuffle[999]
+    PRINT, ''
+
+    PRINT, '============================================='
+    PRINT, 'All ML Data Utilities Tests Complete!'
+    PRINT, '============================================='
+
+end
+
+; Run the tests
+test_ml_data_utils

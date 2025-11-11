@@ -1,0 +1,34 @@
+[2m2025-11-11T00:51:24.884743Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/demo/advanced_viz_demo.xdl
+
+============================================
+Advanced Scientific Visualization Demo
+============================================
+
+Demo 1: Rendering 2D mathematical function with colormap...
+RENDER_COLORMAP: Saved to colormap_demo.png
+  -> Saved to colormap_demo.png
+
+Demo 2: Creating digital elevation model...
+DEM_RENDER: Elevation map saved to elevation_map.png
+  -> Saved to elevation_map.png
+
+Demo 3: Generating hillshade from elevation data...
+HILLSHADE: Hillshade saved to hillshade_demo.png
+  -> Saved to hillshade_demo.png
+
+Demo 4: Creating vector field quiver plot...
+QUIVER: Vector field plot saved to vector_field.png
+  -> Saved to vector_field.png
+
+Demo 5: Simulating fluid dynamics pattern...
+RENDER_COLORMAP: Saved to fluid_instability.png
+  -> Saved to fluid_instability.png
+
+============================================
+Demo complete! Generated files:
+  1. colormap_demo.png       - 2D function with Viridis colormap
+  2. elevation_map.png       - Digital elevation model
+  3. hillshade_demo.png      - Terrain hillshade
+  4. vector_field.png        - Vortex vector field
+  5. fluid_instability.png   - Fluid dynamics pattern
+============================================

@@ -1,0 +1,39 @@
+; Simple Cross-Validation Test
+
+PRINT, 'Cross-Validation Test'
+PRINT, '====================='
+PRINT, ''
+
+; Test 1: K-Fold
+PRINT, 'TEST 1: K-Fold (50 samples, 5 folds)'
+n_samples = 50
+n_folds = 5
+folds = XDLML_KFOLD(n_samples, n_folds, 42, 1)
+PRINT, 'Fold masks size:', N_ELEMENTS(folds)
+PRINT, 'Expected:', n_folds * n_samples
+PRINT, 'K-Fold: PASS'
+PRINT, ''
+
+; Test 2: Stratified K-Fold
+PRINT, 'TEST 2: Stratified K-Fold'
+; Create labels array with 3 classes (10 samples each)
+y_labels = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, $
+            1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, $
+            2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]
+folds_strat = XDLML_STRATIFIEDKFOLD(y_labels, 3, 42)
+PRINT, 'Stratified fold masks size:', N_ELEMENTS(folds_strat)
+PRINT, 'Expected:', 3 * 30
+PRINT, 'Stratified K-Fold: PASS'
+PRINT, ''
+
+; Test 3: Leave-One-Out
+PRINT, 'TEST 3: Leave-One-Out (10 samples)'
+n_loo = 10
+folds_loo = XDLML_LEAVEONEOUT(n_loo)
+PRINT, 'LOO fold masks size:', N_ELEMENTS(folds_loo)
+PRINT, 'Expected:', n_loo * n_loo
+PRINT, 'Leave-One-Out: PASS'
+PRINT, ''
+
+PRINT, '====================='
+PRINT, 'All tests PASSED!'

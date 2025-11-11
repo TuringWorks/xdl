@@ -1,0 +1,200 @@
+; ================================================================
+; Fluid Dynamics Visualization Workflow
+; ================================================================
+; Demonstrates:
+; - Vorticity field computation
+; - Velocity vector field visualization
+; - Streamline generation and tracing
+; - Time-series animation of flow evolution
+; - Taylor-Green vortex simulation
+; - Turbulent flow structures
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Fluid Dynamics Visualization Workflow'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+; ================================================================
+; STEP 1: Generate Taylor-Green Vortex Flow Field
+; ================================================================
+PRINT, '▶ Step 1: Generating Taylor-Green vortex flow field...'
+PRINT, ''
+
+; Grid dimensions
+nx = 128
+ny = 128
+nz = 64
+PRINT, '  Grid size:', nx, 'x', ny, 'x', nz
+
+; Create coordinate grids
+x = FINDGEN(nx) * (2.0 * !PI / nx)
+y = FINDGEN(ny) * (2.0 * !PI / ny)
+z = FINDGEN(nz) * (2.0 * !PI / nz)
+
+; Initialize velocity field components
+u = FLTARR(nx, ny, nz)  ; x-velocity
+v = FLTARR(nx, ny, nz)  ; y-velocity
+w = FLTARR(nx, ny, nz)  ; z-velocity
+
+; Time parameter for evolution
+t = 0.0
+nu = 0.01  ; Kinematic viscosity
+PRINT, '  Viscosity (nu):', nu
+
+; Taylor-Green vortex velocity field
+; u(x,y,z,t) =  sin(x)cos(y)cos(z) exp(-3νt)
+; v(x,y,z,t) = -cos(x)sin(y)cos(z) exp(-3νt)
+; w(x,y,z,t) = 0
+
+decay = EXP(-3.0 * nu * t)
+PRINT, '  Time t =', t, ', decay factor =', decay
+
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            u[i,j,k] =  SIN(x[i]) * COS(y[j]) * COS(z[k]) * decay
+            v[i,j,k] = -COS(x[i]) * SIN(y[j]) * COS(z[k]) * decay
+            w[i,j,k] = 0.0
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  ✓ Velocity field computed'
+PRINT, '    u range: [', MIN(u), ',', MAX(u), ']'
+PRINT, '    v range: [', MIN(v), ',', MAX(v), ']'
+PRINT, '    w range: [', MIN(w), ',', MAX(w), ']'
+PRINT, ''
+
+; ================================================================
+; STEP 2: Compute Vorticity Field
+; ================================================================
+PRINT, '▶ Step 2: Computing vorticity field...'
+PRINT, ''
+
+; Vorticity omega = curl(u) = ∇ × u
+; ω_x = ∂w/∂y - ∂v/∂z
+; ω_y = ∂u/∂z - ∂w/∂x
+; ω_z = ∂v/∂x - ∂u/∂y
+
+omega_x = FLTARR(nx, ny, nz)
+omega_y = FLTARR(nx, ny, nz)
+omega_z = FLTARR(nx, ny, nz)
+
+dx = 2.0 * !PI / nx
+dy = 2.0 * !PI / ny
+dz = 2.0 * !PI / nz
+
+; Central differences for interior points
+FOR i = 1, nx-2 DO BEGIN
+    FOR j = 1, ny-2 DO BEGIN
+        FOR k = 1, nz-2 DO BEGIN
+            ; ω_x = ∂w/∂y - ∂v/∂z
+            dw_dy = (w[i,j+1,k] - w[i,j-1,k]) / (2.0 * dy)
+            dv_dz = (v[i,j,k+1] - v[i,j,k-1]) / (2.0 * dz)
+            omega_x[i,j,k] = dw_dy - dv_dz
+
+            ; ω_y = ∂u/∂z - ∂w/∂x
+            du_dz = (u[i,j,k+1] - u[i,j,k-1]) / (2.0 * dz)
+            dw_dx = (w[i+1,j,k] - w[i-1,j,k]) / (2.0 * dx)
+            omega_y[i,j,k] = du_dz - dw_dx
+
+            ; ω_z = ∂v/∂x - ∂u/∂y
+            dv_dx = (v[i+1,j,k] - v[i-1,j,k]) / (2.0 * dx)
+            du_dy = (u[i,j+1,k] - u[i,j-1,k]) / (2.0 * dy)
+            omega_z[i,j,k] = dv_dx - du_dy
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Compute vorticity magnitude
+omega_mag = SQRT(omega_x^2 + omega_y^2 + omega_z^2)
+
+PRINT, '  ✓ Vorticity computed'
+PRINT, '    ω_x range: [', MIN(omega_x), ',', MAX(omega_x), ']'
+PRINT, '    ω_y range: [', MIN(omega_y), ',', MAX(omega_y), ']'
+PRINT, '    ω_z range: [', MIN(omega_z), ',', MAX(omega_z), ']'
+PRINT, '    |ω| range: [', MIN(omega_mag), ',', MAX(omega_mag), ']'
+PRINT, ''
+
+; ================================================================
+; STEP 3: Compute Flow Quantities
+; ================================================================
+PRINT, '▶ Step 3: Computing derived flow quantities...'
+PRINT, ''
+
+; Velocity magnitude
+vel_mag = SQRT(u^2 + v^2 + w^2)
+PRINT, '  ✓ Velocity magnitude computed'
+PRINT, '    |u| range: [', MIN(vel_mag), ',', MAX(vel_mag), ']'
+
+; Kinetic energy density (per unit volume)
+ke = 0.5 * (u^2 + v^2 + w^2)
+total_ke = TOTAL(ke) * dx * dy * dz
+PRINT, '  ✓ Kinetic energy: ', total_ke
+
+; Enstrophy (integral of vorticity squared)
+enstrophy = 0.5 * omega_mag^2
+total_enstrophy = TOTAL(enstrophy) * dx * dy * dz
+PRINT, '  ✓ Enstrophy: ', total_enstrophy
+
+PRINT, ''
+
+; ================================================================
+; STEP 4: Extract 2D Slice for Visualization
+; ================================================================
+PRINT, '▶ Step 4: Extracting 2D midplane slice...'
+PRINT, ''
+
+; Extract slice at z = nz/2
+z_slice = nz / 2
+u_slice = u[*, *, z_slice]
+v_slice = v[*, *, z_slice]
+omega_z_slice = omega_z[*, *, z_slice]
+vel_mag_slice = vel_mag[*, *, z_slice]
+
+PRINT, '  ✓ Slice extracted at z =', z_slice
+PRINT, ''
+
+; ================================================================
+; STEP 5: Visualize Vorticity Field
+; ================================================================
+PRINT, '▶ Step 5: Visualizing vorticity field...'
+PRINT, ''
+
+WINDOW, 0, XSIZE=800, YSIZE=800, TITLE='Z-Vorticity Field (Taylor-Green)'
+CONTOUR, omega_z_slice, x, y, NLEVELS=20, /FILL, $
+         XTITLE='X', YTITLE='Y', TITLE='Vorticity ω_z'
+PRINT, '  ✓ Vorticity contour plot displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 6: Vector Field Visualization
+; ================================================================
+PRINT, '▶ Step 6: Creating velocity vector field plot...'
+PRINT, ''
+
+; Subsample for vector plotting
+skip = 8
+x_sub = x[0:nx-1:skip]
+y_sub = y[0:ny-1:skip]
+u_sub = u_slice[0:nx-1:skip, 0:ny-1:skip]
+v_sub = v_slice[0:nx-1:skip, 0:ny-1:skip]
+
+WINDOW, 1, XSIZE=800, YSIZE=800, TITLE='Velocity Vectors'
+; Background: velocity magnitude
+CONTOUR, vel_mag_slice, x, y, NLEVELS=15, /FILL, $
+         XTITLE='X', YTITLE='Y', TITLE='Velocity Field with Vectors'
+; Overlay vectors
+VELOVECT, u_sub, v_sub, x_sub, y_sub, LENGTH=0.05, /OVERPLOT
+
+PRINT, '  ✓ Vector field displayed (', N_ELEMENTS(u_sub), 'vectors)'
+PRINT, ''
+
+; ================================================================
+; STEP 7: Compute Streamlines
+; ================================================================
+PRINT, '▶ Step 7: Computing streamlines...'
+PRINT, ''
+
+; Simplified streamline tracing (Euler method)

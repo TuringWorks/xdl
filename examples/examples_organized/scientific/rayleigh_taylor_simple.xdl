@@ -1,0 +1,67 @@
+; Simplified Rayleigh-Taylor Instability Demo
+; Works with current XDL parser
+
+PRINT, '=== Rayleigh-Taylor Instability Demo ==='
+PRINT, ''
+
+; Simulation parameters
+grid_size = 32
+PRINT, 'Grid size: ', grid_size, 'x', grid_size, 'x', grid_size
+
+; Create 3D density field
+; Using FLTARR which creates zeros - we'll set it up with simple assignments
+density = FLTARR(grid_size, grid_size, grid_size)
+
+PRINT, 'Created ', grid_size, 'x', grid_size, 'x', grid_size, ' volume'
+PRINT, 'Total voxels: ', grid_size * grid_size * grid_size
+
+; Initialize with two-layer density structure
+; Heavy fluid on top (z > center), light fluid on bottom
+; This is the unstable configuration that creates RT instability
+
+PRINT, ''
+PRINT, 'Note: Full RT simulation with time evolution requires'
+PRINT, 'FOR loop support in the parser. This demo shows the'
+PRINT, 'framework working with static data.'
+PRINT, ''
+
+; For now, density is all zeros - in full version would be:
+; - Heavy fluid (density = 1.5) for z > grid_size/2
+; - Light fluid (density = 0.5) for z < grid_size/2
+; - Sinusoidal perturbation at interface
+
+; Initialize 3D visualization
+PRINT, 'Initializing 3D visualization...'
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Rayleigh-Taylor Instability'
+
+; Configure colormap
+PRINT, 'Setting colormap to RAINBOW'
+VIZ3D_COLORMAP, 'RAINBOW'
+
+; Configure camera
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+
+; Load volume data
+PRINT, 'Loading volume to GPU...'
+VIZ3D_VOLUME, density, DIMENSIONS=[grid_size, grid_size, grid_size]
+
+; Render the volume
+PRINT, 'Rendering volume...'
+PRINT, ''
+PRINT, 'Controls:'
+PRINT, '  - Left mouse: Rotate camera'
+PRINT, '  - Mouse wheel: Zoom in/out'
+PRINT, '  - ESC: Close window'
+PRINT, ''
+
+VIZ3D_RENDER, ''
+
+PRINT, ''
+PRINT, '=== Demo Complete ==='
+PRINT, ''
+PRINT, 'To see full RT instability with time evolution:'
+PRINT, '1. Parser needs to support nested FOR loops'
+PRINT, '2. Parser needs to support IF/THEN/ELSE/ENDIF blocks'
+PRINT, '3. Then use examples/demo/rayleigh_taylor.xdl'
+PRINT, ''
+PRINT, 'VIZ3D framework is ready and working!'

@@ -1,0 +1,57 @@
+[2m2025-11-11T00:51:34.820352Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/viz3d/threejs_advanced_demo.xdl
+🚀 VIZ3D Three.js Advanced Demo
+================================================
+
+Creating 32x32x32 volume with radial gradient...
+This may take a moment...
+
+Volume created!
+  Grid:  32 x 32 x 32
+  Total voxels:  32768
+  Value range: [ 0.000000000000000 ,  1.000000000000000 ]
+
+Initializing visualization...
+VIZ3D: Initialized (1400x900)
+VIZ3D: Set colormap to PLASMA
+VIZ3D: Camera configured
+VIZ3D: Loaded volume 32x32x32 (32768 voxels)
+
+🎨 Launching advanced Three.js visualization...
+
+Features enabled:
+  ✓ Gradient-based normal calculation
+  ✓ Phong lighting model (ambient + diffuse + specular)
+  ✓ Edge enhancement via gradient magnitude
+  ✓ Adjustable rendering quality
+  ✓ Interactive parameter controls
+
+Controls:
+  • Left mouse drag: Rotate volume
+  • Mouse wheel: Zoom in/out
+  • GUI panel (right): Adjust all parameters
+
+GUI Parameters:
+  Rendering:
+    - Threshold: Filter low-density voxels
+    - Opacity: Overall transparency
+    - Step Size: Ray marching quality (lower = better)
+    - Max Steps: Maximum ray samples (higher = better)
+  Lighting:
+    - Enable Lighting: Toggle Phong shading
+    - Ambient: Base illumination level
+    - Diffuse: Surface angle-dependent lighting
+    - Specular: Highlights strength
+    - Shininess: Highlight focus
+
+VIZ3D: Rendering volume (interactive=true)
+  Volume: 32x32x32
+  Colormap: PLASMA
+  Backend: ThreeJS
+
+🚀 Launching Three.js volume visualization...
+Controls:
+  - Left mouse: Rotate camera
+  - Mouse wheel: Zoom in/out
+  - GUI sliders: Adjust threshold and opacity
+
+[2m2025-11-11T00:51:35.269143Z[0m [31mERROR[0m [2mxdl[0m[2m:[0m Error: Failed to execute program: Runtime error: Failed to launch Three.js visualization: Runtime error: Failed to launch viewer: No such file or directory (os error 2)

@@ -1,0 +1,13 @@
+; Test array negation
+
+PRINT, 'Testing array negation'
+PRINT, ''
+
+x = FINDGEN(5)
+PRINT, 'x = ', x
+
+neg_x = -x
+PRINT, 'neg_x = ', neg_x
+
+PRINT, ''
+PRINT, 'Test complete'

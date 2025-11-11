@@ -1,0 +1,16 @@
+; Test MESHGRID function
+
+print, 'Testing MESHGRID...'
+
+; Create coordinate vectors
+x = [1.0, 2.0, 3.0]
+y = [10.0, 20.0]
+
+print, 'x =', x
+print, 'y =', y
+
+; Create coordinate grids
+grids = meshgrid(x, y)
+
+print, 'Meshgrid result:', grids
+print, 'Test complete!'

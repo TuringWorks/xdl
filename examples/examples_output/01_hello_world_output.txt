@@ -1,0 +1,6 @@
+[2m2025-11-11T00:51:28.836748Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/01_hello_world.xdl
+Hello, XDL World!
+The sum of 10 and 20 is 30
+Product: 200
+Difference: 10
+Quotient: 2

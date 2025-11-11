@@ -1,0 +1,182 @@
+; ============================================================================
+; Advanced Visualization Demo for XDL
+; ============================================================================
+; This script demonstrates the new advanced visualization procedures:
+; - RENDER_COLORMAP: Scientific colormaps for 2D data
+; - DEM_RENDER: Digital elevation model rendering
+; - HILLSHADE: Terrain hillshade generation
+; - QUIVER: Vector field visualization
+; ============================================================================
+
+print, ''
+print, '============================================'
+print, 'Advanced Scientific Visualization Demo'
+print, '============================================'
+print, ''
+
+; ============================================================================
+; Demo 1: RENDER_COLORMAP - Visualize 2D mathematical function
+; ============================================================================
+print, 'Demo 1: Rendering 2D mathematical function with colormap...'
+
+; Create 2D array with interesting pattern
+nx = 50
+ny = 50
+total = nx * ny
+data = fltarr(total)
+
+for idx=0, total-1 do begin
+  i = idx / ny
+  j = idx - (i * ny)
+  x = (i - nx/2.0) / 5.0
+  y = (j - ny/2.0) / 5.0
+  r = sqrt(x*x + y*y)
+  data[idx] = sin(r) * cos(x) * sin(y) + 0.5*cos(2*x*y)
+end
+endfor
+
+; Reshape to 2D
+data = reform(data, nx, ny)
+
+; Render with scientific colormap (Viridis by default)
+RENDER_COLORMAP, data, 'colormap_demo.png'
+print, '  -> Saved to colormap_demo.png'
+print, ''
+
+; ============================================================================
+; Demo 2: DEM_RENDER - Digital Elevation Model
+; ============================================================================
+print, 'Demo 2: Creating digital elevation model...'
+
+; Create synthetic terrain data (mountain-like features)
+nx = 60
+ny = 60
+total = nx * ny
+elevation = fltarr(total)
+
+for idx=0, total-1 do begin
+  i = idx / ny
+  j = idx - (i * ny)
+  x = (i - 30.0) / 8.0
+  y = (j - 30.0) / 8.0
+
+  ; Multiple peaks
+  peak1 = 100.0 * exp(-(x*x + y*y) / 4.0)
+  peak2 = 80.0 * exp(-((x-2)^2 + (y+1)^2) / 3.0)
+  peak3 = 60.0 * exp(-((x+1.5)^2 + (y-2)^2) / 2.5)
+
+  ; Add some noise
+  seed = i * 100 + j
+  noise = 5.0 * (randomu(seed) - 0.5)
+
+  elevation[idx] = peak1 + peak2 + peak3 + noise + 50.0
+end
+endfor
+
+; Reshape to 2D
+elevation = reform(elevation, nx, ny)
+
+; Render elevation map with terrain colormap
+DEM_RENDER, elevation, 'elevation_map.png'
+print, '  -> Saved to elevation_map.png'
+print, ''
+
+; ============================================================================
+; Demo 3: HILLSHADE - Terrain relief shading
+; ============================================================================
+print, 'Demo 3: Generating hillshade from elevation data...'
+
+; Use same elevation data from Demo 2
+; Hillshade simulates sun illumination (azimuth=315°, altitude=45°)
+HILLSHADE, elevation, 'hillshade_demo.png'
+print, '  -> Saved to hillshade_demo.png'
+print, ''
+
+; ============================================================================
+; Demo 4: QUIVER - Vector field visualization
+; ============================================================================
+print, 'Demo 4: Creating vector field quiver plot...'
+
+; Create a rotating vortex field
+grid_size = 20
+total = grid_size * grid_size
+u_field = fltarr(total)
+v_field = fltarr(total)
+
+for idx=0, total-1 do begin
+  i = idx / grid_size
+  j = idx - (i * grid_size)
+
+  ; Center the coordinates
+  x = (i - grid_size/2.0) / (grid_size/4.0)
+  y = (j - grid_size/2.0) / (grid_size/4.0)
+
+  ; Create vortex: velocity perpendicular to radius
+  r = sqrt(x*x + y*y) + 0.1
+  u_field[idx] = -y / r
+  v_field[idx] = x / r
+
+  ; Add some radial decay
+  decay = exp(-r*r / 4.0)
+  u_field[idx] = u_field[idx] * decay
+  v_field[idx] = v_field[idx] * decay
+end
+endfor
+
+; Reshape to 2D
+u_field = reform(u_field, grid_size, grid_size)
+v_field = reform(v_field, grid_size, grid_size)
+
+; Create quiver plot with Plasma colormap
+QUIVER, u_field, v_field, 'vector_field.png'
+print, '  -> Saved to vector_field.png'
+print, ''
+
+; ============================================================================
+; Demo 5: Combined visualization - Rayleigh-Taylor instability style
+; ============================================================================
+print, 'Demo 5: Simulating fluid dynamics pattern...'
+
+; Create data that looks like fluid instability
+size = 64
+total = size * size
+fluid_data = fltarr(total)
+
+for idx=0, total-1 do begin
+  i = idx / size
+  j = idx - (i * size)
+  x = (i - size/2.0) / 10.0
+  y = (j - size/2.0) / 10.0
+
+  ; Sinusoidal perturbations (simulating instability modes)
+  mode1 = sin(3*x) * exp(-y*y/8.0)
+  mode2 = 0.7 * sin(5*x + 1.5) * exp(-y*y/8.0)
+  mode3 = 0.5 * cos(7*x - 0.5) * exp(-y*y/8.0)
+
+  ; Vertical gradient (heavy fluid on top)
+  gradient = y / 6.0
+
+  fluid_data[idx] = gradient + mode1 + mode2 + mode3
+end
+endfor
+
+; Reshape to 2D
+fluid_data = reform(fluid_data, size, size)
+
+; Render with colormap
+RENDER_COLORMAP, fluid_data, 'fluid_instability.png'
+print, '  -> Saved to fluid_instability.png'
+print, ''
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, '============================================'
+print, 'Demo complete! Generated files:'
+print, '  1. colormap_demo.png       - 2D function with Viridis colormap'
+print, '  2. elevation_map.png       - Digital elevation model'
+print, '  3. hillshade_demo.png      - Terrain hillshade'
+print, '  4. vector_field.png        - Vortex vector field'
+print, '  5. fluid_instability.png   - Fluid dynamics pattern'
+print, '============================================'
+print, ''

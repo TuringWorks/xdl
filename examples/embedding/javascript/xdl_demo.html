@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XDL WebAssembly Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>XDL WebAssembly Demo</h1>
+    <p>This demo shows how to use XDL scientific computing functions from JavaScript via WebAssembly.</p>
+
+    <div class="demo-section">
+        <h2>Mathematical Functions</h2>
+        <p>Test basic mathematical functions:</p>
+
+        <label>Input value: <input type="number" id="mathInput" value="1.57" step="0.01"></label>
+        <button onclick="testSin()">sin(x)</button>
+        <button onclick="testCos()">cos(x)</button>
+        <button onclick="testSqrt()">sqrt(x)</button>
+
+        <div id="mathResult" class="result">Results will appear here...</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Array Operations</h2>
+        <p>Create and manipulate arrays:</p>
+
+        <button onclick="createArray()">Create Array [1,2,3,4,5]</button>
+        <button onclick="testArraySum()">Sum Array</button>
+        <button onclick="testArrayMean()">Mean of Array</button>
+
+        <div id="arrayResult" class="result">Array results will appear here...</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Performance Comparison</h2>
+        <p>Compare XDL performance with native JavaScript:</p>
+
+        <button onclick="runPerformanceTest()">Run Performance Test (10M operations)</button>
+
+        <div id="perfResult" class="result">Performance results will appear here...</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Status</h2>
+        <div id="status" class="result">Loading XDL WebAssembly module...</div>
+    </div>
+
+    <script>
+        // XDL WebAssembly module will be loaded here
+        let xdlModule = null;
+        let xdlContext = null;
+
+        // Load XDL WebAssembly module
+        async function loadXDL() {
+            try {
+                // In a real implementation, this would load the compiled WebAssembly module
+                // For now, we'll simulate the interface
+                console.log("Loading XDL WebAssembly module...");
+
+                // Simulate module loading
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Mock XDL module interface
+                xdlModule = {
+                    // Context management
+                    xdl_init: function() {
+                        console.log("XDL context initialized");
+                        return 1; // Mock context handle
+                    },
+
+                    xdl_cleanup: function(ctx) {
+                        console.log("XDL context cleaned up:", ctx);
+                    },
+
+                    // Function calls (mock implementations)
+                    xdl_call_function: function(ctx, funcName, args, nargs) {
+                        const func = funcName; // In real implementation, this would be a C string
+
+                        if (func === "sin" && nargs === 1) {
+                            return Math.sin(args[0]);
+                        } else if (func === "cos" && nargs === 1) {
+                            return Math.cos(args[0]);
+                        } else if (func === "sqrt" && nargs === 1) {
+                            return Math.sqrt(args[0]);
+                        }
+
+                        return 0.0;
+                    }
+                };
+
+                xdlContext = xdlModule.xdl_init();
+
+                document.getElementById('status').innerHTML =
+                    '<span style="color: green;">✓ XDL WebAssembly module loaded successfully</span>';
+
+            } catch (error) {
+                document.getElementById('status').innerHTML =
+                    '<span style="color: red;">✗ Failed to load XDL module: ' + error.message + '</span>';
+            }
+        }
+
+        // Initialize when page loads
+        window.onload = loadXDL;
+
+        // Mathematical function tests
+        function testSin() {
+            const input = parseFloat(document.getElementById('mathInput').value);
+            const result = xdlModule.xdl_call_function(xdlContext, "sin", [input], 1);
+            document.getElementById('mathResult').innerHTML =
+                `sin(${input}) = ${result.toFixed(4)} (JavaScript: ${Math.sin(input).toFixed(4)})`;
+        }
+
+        function testCos() {
+            const input = parseFloat(document.getElementById('mathInput').value);
+            const result = xdlModule.xdl_call_function(xdlContext, "cos", [input], 1);
+            document.getElementById('mathResult').innerHTML =
+                `cos(${input}) = ${result.toFixed(4)} (JavaScript: ${Math.cos(input).toFixed(4)})`;
+        }
+
+        function testSqrt() {
+            const input = parseFloat(document.getElementById('mathInput').value);
+            if (input < 0) {
+                document.getElementById('mathResult').innerHTML = "Error: Cannot take square root of negative number";
+                return;
+            }
+            const result = xdlModule.xdl_call_function(xdlContext, "sqrt", [input], 1);
+            document.getElementById('mathResult').innerHTML =
+                `sqrt(${input}) = ${result.toFixed(4)} (JavaScript: ${Math.sqrt(input).toFixed(4)})`;
+        }
+
+        // Array operations
+        let testArray = [1, 2, 3, 4, 5];
+
+        function createArray() {
+            document.getElementById('arrayResult').innerHTML =
+                `Created array: [${testArray.join(', ')}]`;
+        }
+
+        function testArraySum() {
+            const sum = testArray.reduce((a, b) => a + b, 0);
+            document.getElementById('arrayResult').innerHTML =
+                `Sum of [${testArray.join(', ')}] = ${sum}`;
+        }
+
+        function testArrayMean() {
+            const sum = testArray.reduce((a, b) => a + b, 0);
+            const mean = sum / testArray.length;
+            document.getElementById('arrayResult').innerHTML =
+                `Mean of [${testArray.join(', ')}] = ${mean.toFixed(2)}`;
+        }
+
+        // Performance test
+        function runPerformanceTest() {
+            const iterations = 10000000; // 10 million
+
+            document.getElementById('perfResult').innerHTML = "Running performance test...";
+
+            // Test XDL (simulated)
+            const startXDL = performance.now();
+            let xdlResult = 0;
+            for (let i = 0; i < iterations; i++) {
+                xdlResult += xdlModule.xdl_call_function(xdlContext, "sin", [i * 0.000001], 1);
+            }
+            const endXDL = performance.now();
+            const xdlTime = endXDL - startXDL;
+
+            // Test JavaScript
+            const startJS = performance.now();
+            let jsResult = 0;
+            for (let i = 0; i < iterations; i++) {
+                jsResult += Math.sin(i * 0.000001);
+            }
+            const endJS = performance.now();
+            const jsTime = endJS - startJS;
+
+            const speedup = jsTime / xdlTime;
+
+            document.getElementById('perfResult').innerHTML = `
+                <strong>Performance Test Results (10M sin() calls):</strong><br>
+                XDL (WebAssembly): ${xdlTime.toFixed(2)}ms<br>
+                JavaScript (native): ${jsTime.toFixed(2)}ms<br>
+                <strong>Speedup: ${speedup.toFixed(2)}x</strong><br>
+                <em>Note: This is a simulated test. Real XDL would show GPU acceleration benefits.</em>
+            `;
+        }
+    </script>
+</body>
+</html>

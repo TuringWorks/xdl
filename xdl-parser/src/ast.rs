@@ -199,14 +199,13 @@ pub enum Expression {
 }
 
 /// Array indexing expressions
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArrayIndex {
-    Single(Expression),
+    Single(Box<Expression>),
     Range {
-        start: Option<Expression>,
-        end: Option<Expression>,
-        step: Option<Expression>,
+        start: Option<Box<Expression>>,
+        end: Option<Box<Expression>>,
+        step: Option<Box<Expression>>,
     },
     All, // *
 }

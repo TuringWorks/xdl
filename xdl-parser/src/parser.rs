@@ -55,22 +55,11 @@ impl<'a> Parser<'a> {
         matches!(self.peek(), Token::EOF)
     }
 
-    /// Skip over any Newline tokens
-    fn skip_newlines(&mut self) {
-        while matches!(self.peek(), Token::Newline) {
-            self.advance();
-        }
-    }
-
     /// Parse the entire program
     fn parse_program(&mut self) -> XdlResult<Program> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            self.skip_newlines();
-            if self.is_at_end() {
-                break;
-            }
             statements.push(self.parse_statement()?);
         }
 
@@ -87,10 +76,6 @@ impl<'a> Parser<'a> {
             self.advance(); // consume 'begin'
             let mut statements = Vec::new();
             while !self.check(&Token::End) && !self.is_at_end() {
-                self.skip_newlines();
-                if self.check(&Token::End) || self.is_at_end() {
-                    break;
-                }
                 statements.push(self.parse_statement()?);
             }
             self.consume(Token::End, "Expected 'end' to close begin block")?;
@@ -100,11 +85,10 @@ impl<'a> Parser<'a> {
             // The key insight: parse_statement() handles nested constructs recursively
             let mut statements = Vec::new();
             while !self.is_at_end() {
-                self.skip_newlines();
                 let is_terminator = terminators.iter().any(|term| {
                     std::mem::discriminant(self.peek()) == std::mem::discriminant(term)
                 });
-                if is_terminator || self.is_at_end() {
+                if is_terminator {
                     break;
                 }
                 statements.push(self.parse_statement()?);
@@ -136,18 +120,6 @@ impl<'a> Parser<'a> {
             }
             Token::Pro | Token::Procedure => self.parse_procedure_definition(),
             Token::Function => self.parse_function_definition(),
-            Token::End => {
-                // END can be a program terminator - just consume it
-                self.advance();
-                // Return a no-op statement
-                Ok(Statement::Expression {
-                    expr: Expression::Literal {
-                        value: xdl_core::XdlValue::Undefined,
-                        location: Location::unknown(),
-                    },
-                    location: Location::unknown(),
-                })
-            }
             _ => {
                 // Try to parse as procedure call, expression statement, or assignment
                 if let Token::Identifier(name) = self.peek() {
@@ -194,44 +166,19 @@ impl<'a> Parser<'a> {
         let condition = self.parse_expression()?;
         self.consume(Token::Then, "Expected 'then' after if condition")?;
 
-        // Check if then block uses begin...end
-        let then_has_begin_end = self.check(&Token::Begin);
+        // Parse then block - supports begin...end blocks or statements until else/endif
+        let then_block = self.parse_block_or_statement(&[Token::Else, Token::Endif])?;
 
-        // GDL/IDL supports: if cond then statement OR if cond then begin...end
-        let then_block = if then_has_begin_end {
-            // When using BEGIN...END, only ELSE can terminate the block
-            // (ENDIF should not terminate it - the END will close the BEGIN)
-            self.parse_block_or_statement(&[Token::Else])?
-        } else {
-            // Single statement
-            vec![self.parse_statement()?]
-        };
-
-        let (else_block, _else_has_begin_end) = if self.check(&Token::Else) {
+        let else_block = if self.check(&Token::Else) {
             self.advance(); // consume 'else'
-            let else_has_begin = self.check(&Token::Begin);
-            // Parse else block
-            let else_stmts = if else_has_begin {
-                // When using BEGIN...END in else, no terminator needed
-                // (the END will close the BEGIN)
-                self.parse_block_or_statement(&[])?
-            } else {
-                vec![self.parse_statement()?]
-            };
-            (Some(else_stmts), else_has_begin)
+                            // Parse else block - supports begin...end blocks or statements until endif
+            Some(self.parse_block_or_statement(&[Token::Endif])?)
         } else {
-            (None, false)
+            None
         };
 
-        // GDL/IDL syntax rules for ENDIF:
-        // - IF cond THEN statement         -> NO ENDIF needed (single-line)
-        // - IF cond THEN BEGIN...END       -> NO ENDIF needed (END closes it)
-        // - IF cond THEN BEGIN...END ENDIF -> ENDIF optional but accepted
-        // In practice, ENDIF is always optional in modern IDL/GDL
-        // We'll accept it if present but never require it
-        if self.check(&Token::Endif) {
-            self.advance();
-        }
+        // Consume endif - required for if statements
+        self.consume(Token::Endif, "Expected 'endif' to close if statement")?;
 
         Ok(Statement::If {
             condition,
@@ -273,46 +220,10 @@ impl<'a> Parser<'a> {
             self.advance(); // consume 'do'
         }
 
-        // Check if this is a begin...end block
-        let has_begin_end = self.check(&Token::Begin);
+        // Parse body - support both 'begin...end' and multiple statements until endfor
+        let body = self.parse_block_or_statement(&[Token::Endfor])?;
 
-        // GDL/IDL syntax supports multiple forms:
-        // 1. for i=0,9 do statement                  (single statement, no ENDFOR needed)
-        // 2. for i=0,9 do begin ... end              (BEGIN...END block, no ENDFOR needed)
-        // 3. for i=0,9 do begin ... end endfor      (BEGIN...END with explicit ENDFOR)
-        // 4. for i=0,9                               (multi-line with required ENDFOR)
-        //      statement1
-        //      statement2
-        //    endfor
-        let body = if has_begin_end {
-            // BEGIN...ENDFOR block (IDL/GDL allows ENDFOR to close BEGIN in FOR loops)
-            self.advance(); // consume 'BEGIN'
-            let mut statements = Vec::new();
-            while !self.check(&Token::Endfor) && !self.is_at_end() {
-                self.skip_newlines();
-                if self.check(&Token::Endfor) || self.is_at_end() {
-                    break;
-                }
-                statements.push(self.parse_statement()?);
-            }
-            // Consume the ENDFOR that closes both BEGIN and FOR
-            self.consume(
-                Token::Endfor,
-                "Expected 'ENDFOR' to close FOR loop with BEGIN",
-            )?;
-            statements
-        } else {
-            // Parse statements until we hit ENDFOR or EOF
-            // This supports both single-line and multi-line FOR loops
-            let stmts = self.parse_block_or_statement(&[Token::Endfor])?;
-
-            // If we found ENDFOR, consume it
-            if self.check(&Token::Endfor) {
-                self.advance();
-            }
-            // If no ENDFOR found, that's okay for single-line loops
-            stmts
-        };
+        self.consume(Token::Endfor, "Expected 'endfor' to close for loop")?;
 
         Ok(Statement::For {
             variable,
@@ -332,26 +243,6 @@ impl<'a> Parser<'a> {
         // Parse comma-separated arguments
         while self.check(&Token::Comma) {
             self.advance(); // consume comma
-
-            // Check for /KEYWORD syntax (slash followed by identifier)
-            if self.check(&Token::Divide) {
-                self.advance(); // consume '/'
-                if let Token::Identifier(kw_name) = self.advance() {
-                    // This is a boolean keyword flag (/INTERACTIVE, /VERBOSE, etc.)
-                    keywords.push(Keyword {
-                        name: kw_name.clone(),
-                        value: None, // Boolean flag, no value
-                        location: Location::unknown(),
-                    });
-                    continue;
-                } else {
-                    return Err(XdlError::ParseError {
-                        message: "Expected identifier after '/' in keyword".to_string(),
-                        line: 1,
-                        column: self.current,
-                    });
-                }
-            }
 
             // Check for keyword argument (identifier = expression)
             if let Token::Identifier(kw_name) = self.peek() {
@@ -450,21 +341,10 @@ impl<'a> Parser<'a> {
             self.advance(); // consume 'do'
         }
 
-        // Check if this is a begin...end block
-        let has_begin_end = self.check(&Token::Begin);
+        // Parse body - support both 'begin...end' and multiple statements
+        let body = self.parse_block_or_statement(&[Token::Endwhile])?;
 
-        // GDL/IDL supports: while cond do statement OR while cond do begin...end
-        let body = if has_begin_end {
-            let stmts = self.parse_block_or_statement(&[Token::Endwhile])?;
-            // ENDWHILE is optional with BEGIN...END
-            if self.check(&Token::Endwhile) {
-                self.advance();
-            }
-            stmts
-        } else {
-            // Single statement without ENDWHILE
-            vec![self.parse_statement()?]
-        };
+        self.consume(Token::Endwhile, "Expected 'endwhile' to close while loop")?;
 
         Ok(Statement::While {
             condition,
@@ -520,69 +400,17 @@ impl<'a> Parser<'a> {
             });
         };
 
-        // Parse parameters if present
-        let mut params = Vec::new();
-        let mut keywords = Vec::new();
-
-        // Check for parameter list: PRO name, param1, param2, ...
-        if self.check(&Token::Comma) {
-            while self.check(&Token::Comma) {
-                self.advance(); // consume comma
-
-                // Check for keyword parameter (/KEYWORD)
-                if self.check(&Token::Divide) {
-                    self.advance(); // consume '/'
-                    if let Token::Identifier(kw_name) = self.advance() {
-                        keywords.push(KeywordDecl {
-                            name: kw_name.clone(),
-                            by_reference: false,
-                            location: Location::unknown(),
-                        });
-                        continue;
-                    }
-                }
-
-                // Regular parameter
-                if let Token::Identifier(param_name) = self.advance() {
-                    params.push(Parameter {
-                        name: param_name.clone(),
-                        by_reference: false,
-                        optional: false,
-                        location: Location::unknown(),
-                    });
-                } else {
-                    return Err(XdlError::ParseError {
-                        message: "Expected parameter name".to_string(),
-                        line: 1,
-                        column: self.current,
-                    });
-                }
-            }
-        }
-
-        // Skip newlines before body
-        self.skip_newlines();
+        // Parse parameters (simplified)
+        let params = Vec::new(); // TODO: implement parameter parsing
+        let keywords = Vec::new(); // TODO: implement keyword parsing
 
         // Parse body
         let mut body = Vec::new();
-        while !matches!(self.peek(), Token::Endpro | Token::End | Token::EOF) {
-            self.skip_newlines();
-            if matches!(self.peek(), Token::Endpro | Token::End | Token::EOF) {
-                break;
-            }
+        while !matches!(self.peek(), Token::Endpro | Token::EOF) {
             body.push(self.parse_statement()?);
         }
 
-        // Accept either ENDPRO or END to close procedure
-        if self.check(&Token::Endpro) || self.check(&Token::End) {
-            self.advance();
-        } else {
-            return Err(XdlError::ParseError {
-                message: "Expected 'ENDPRO' or 'END' to close procedure".to_string(),
-                line: 1,
-                column: self.current,
-            });
-        }
+        self.consume(Token::Endpro, "Expected 'endpro' to close procedure")?;
 
         Ok(Statement::ProcedureDef {
             name,
@@ -607,69 +435,20 @@ impl<'a> Parser<'a> {
             });
         };
 
-        // Parse parameters if present
-        let mut params = Vec::new();
-        let mut keywords = Vec::new();
-
-        // Check for parameter list: FUNCTION name, param1, param2, ...
-        if self.check(&Token::Comma) {
-            while self.check(&Token::Comma) {
-                self.advance(); // consume comma
-
-                // Check for keyword parameter (/KEYWORD or keyword=)
-                if self.check(&Token::Divide) {
-                    self.advance(); // consume '/'
-                    if let Token::Identifier(kw_name) = self.advance() {
-                        keywords.push(KeywordDecl {
-                            name: kw_name.clone(),
-                            by_reference: false,
-                            location: Location::unknown(),
-                        });
-                        continue;
-                    }
-                }
-
-                // Regular parameter
-                if let Token::Identifier(param_name) = self.advance() {
-                    params.push(Parameter {
-                        name: param_name.clone(),
-                        by_reference: false,
-                        optional: false,
-                        location: Location::unknown(),
-                    });
-                } else {
-                    return Err(XdlError::ParseError {
-                        message: "Expected parameter name".to_string(),
-                        line: 1,
-                        column: self.current,
-                    });
-                }
-            }
-        }
-
-        // Skip newlines before body
-        self.skip_newlines();
+        // Parse parameters (simplified)
+        let params = Vec::new(); // TODO: implement parameter parsing
+        let keywords = Vec::new(); // TODO: implement keyword parsing
 
         // Parse body
         let mut body = Vec::new();
-        while !matches!(self.peek(), Token::Endfunction | Token::End | Token::EOF) {
-            self.skip_newlines();
-            if matches!(self.peek(), Token::Endfunction | Token::End | Token::EOF) {
-                break;
-            }
+        while !matches!(self.peek(), Token::Endfunction | Token::EOF) {
             body.push(self.parse_statement()?);
         }
 
-        // Accept either ENDFUNCTION or END to close function
-        if self.check(&Token::Endfunction) || self.check(&Token::End) {
-            self.advance();
-        } else {
-            return Err(XdlError::ParseError {
-                message: "Expected 'ENDFUNCTION' or 'END' to close function".to_string(),
-                line: 1,
-                column: self.current,
-            });
-        }
+        self.consume(
+            Token::Endfunction,
+            "Expected 'endfunction' to close function",
+        )?;
 
         Ok(Statement::FunctionDef {
             name,
@@ -902,13 +681,8 @@ impl<'a> Parser<'a> {
         let mut indices = Vec::new();
 
         loop {
-            // Check for wildcard (*) - IDL/GDL syntax for "all elements"
-            if self.check(&Token::Multiply) {
-                self.advance(); // consume '*'
-                indices.push(ArrayIndex::All);
-            }
             // Check for range with leading colon (e.g., [:5])
-            else if self.check(&Token::Colon) {
+            if self.check(&Token::Colon) {
                 self.advance(); // consume ':'
                 let end = if self.check(&Token::RightBracket) || self.check(&Token::Comma) {
                     None
@@ -918,7 +692,7 @@ impl<'a> Parser<'a> {
 
                 indices.push(ArrayIndex::Range {
                     start: None,
-                    end,
+                    end: end.map(Box::new),
                     step: None,
                 });
             } else {
@@ -944,13 +718,13 @@ impl<'a> Parser<'a> {
                     };
 
                     indices.push(ArrayIndex::Range {
-                        start: Some(first_expr),
-                        end,
-                        step,
+                        start: Some(Box::new(first_expr)),
+                        end: end.map(Box::new),
+                        step: step.map(Box::new),
                     });
                 } else {
                     // Single index
-                    indices.push(ArrayIndex::Single(first_expr));
+                    indices.push(ArrayIndex::Single(Box::new(first_expr)));
                 }
             }
 

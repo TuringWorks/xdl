@@ -1,0 +1,5 @@
+[2m2025-11-11T00:51:33.931089Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/03_plotting_basics.xdl
+PLOT: Rendering 101 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Plot window should appear showing a quadratic curve
+Close the plot window to continue...

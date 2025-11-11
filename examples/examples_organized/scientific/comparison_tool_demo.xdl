@@ -1,0 +1,410 @@
+; ================================================================
+; Interactive Volume Comparison Tool
+; ================================================================
+; Demonstrates:
+; - Side-by-side volume visualization
+; - Difference map computation
+; - Statistical comparison metrics
+; - Synchronized viewing controls
+; - Multi-modality comparison
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Interactive Volume Comparison Tool'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+; ================================================================
+; STEP 1: Create Two Volumes for Comparison
+; ================================================================
+PRINT, '▶ Step 1: Creating two volumes for comparison...'
+PRINT, ''
+
+; Volume dimensions
+nx = 128
+ny = 128
+nz = 64
+
+PRINT, '  Volume dimensions:', nx, 'x', ny, 'x', nz
+
+; Volume A: Baseline (Gaussian blob)
+volume_a = FLTARR(nx, ny, nz)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            dx = (i - nx/2.0) / (nx/6.0)
+            dy = (j - ny/2.0) / (ny/6.0)
+            dz = (k - nz/2.0) / (nz/6.0)
+            r2 = dx^2 + dy^2 + dz^2
+            volume_a[i,j,k] = EXP(-r2)
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  ✓ Volume A created (baseline)'
+PRINT, '    Range: [', MIN(volume_a), ',', MAX(volume_a), ']'
+
+; Volume B: Modified version (shifted and scaled)
+volume_b = FLTARR(nx, ny, nz)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            ; Shift center and change shape slightly
+            dx = (i - nx/2.0 - 5.0) / (nx/6.0)
+            dy = (j - ny/2.0 + 3.0) / (ny/6.0)
+            dz = (k - nz/2.0) / (nz/7.0)  ; Different scale in z
+            r2 = dx^2 + dy^2 + dz^2
+            volume_b[i,j,k] = 1.2 * EXP(-r2)  ; 20% intensity increase
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Add some noise to volume B
+volume_b = volume_b + RANDOMN(seed, nx, ny, nz) * 0.02
+
+PRINT, '  ✓ Volume B created (modified)'
+PRINT, '    Range: [', MIN(volume_b), ',', MAX(volume_b), ']'
+PRINT, '    Changes: shifted center, scaled intensity, added noise'
+PRINT, ''
+
+; ================================================================
+; STEP 2: Compute Difference Map
+; ================================================================
+PRINT, '▶ Step 2: Computing difference map...'
+PRINT, ''
+
+; Absolute difference
+diff_abs = ABS(volume_b - volume_a)
+PRINT, '  ✓ Absolute difference computed'
+PRINT, '    Max abs diff:', MAX(diff_abs)
+PRINT, '    Mean abs diff:', MEAN(diff_abs)
+
+; Signed difference
+diff_signed = volume_b - volume_a
+PRINT, '  ✓ Signed difference computed'
+PRINT, '    Range: [', MIN(diff_signed), ',', MAX(diff_signed), ']'
+
+; Relative difference (percent change)
+; Avoid division by zero
+epsilon = 1e-10
+diff_relative = 100.0 * (volume_b - volume_a) / (volume_a + epsilon)
+PRINT, '  ✓ Relative difference computed (%)'
+PRINT, '    Range: [', MIN(diff_relative), ',', MAX(diff_relative), ']%'
+PRINT, ''
+
+; ================================================================
+; STEP 3: Statistical Comparison Metrics
+; ================================================================
+PRINT, '▶ Step 3: Computing comparison metrics...'
+PRINT, ''
+
+; Mean Squared Error (MSE)
+mse = MEAN((volume_b - volume_a)^2)
+PRINT, '  Mean Squared Error (MSE):', mse
+
+; Root Mean Squared Error (RMSE)
+rmse = SQRT(mse)
+PRINT, '  Root Mean Squared Error (RMSE):', rmse
+
+; Peak Signal-to-Noise Ratio (PSNR)
+max_val = MAX([MAX(volume_a), MAX(volume_b)])
+IF mse GT 0 THEN BEGIN
+    psnr = 10.0 * ALOG10((max_val^2) / mse)
+    PRINT, '  Peak SNR (PSNR):', psnr, 'dB'
+ENDIF
+
+; Structural Similarity Index (simplified)
+mean_a = MEAN(volume_a)
+mean_b = MEAN(volume_b)
+var_a = VARIANCE(volume_a)
+var_b = VARIANCE(volume_b)
+cov_ab = MEAN((volume_a - mean_a) * (volume_b - mean_b))
+
+c1 = (0.01 * max_val)^2
+c2 = (0.03 * max_val)^2
+ssim = ((2.0*mean_a*mean_b + c1) * (2.0*cov_ab + c2)) / $
+       ((mean_a^2 + mean_b^2 + c1) * (var_a + var_b + c2))
+PRINT, '  SSIM (Structural Similarity):', ssim
+PRINT, '    (1.0 = perfect similarity, 0.0 = no similarity)'
+
+; Normalized Cross-Correlation
+ncc = cov_ab / SQRT(var_a * var_b)
+PRINT, '  Normalized Cross-Correlation:', ncc
+PRINT, ''
+
+; ================================================================
+; STEP 4: Extract Comparison Slices
+; ================================================================
+PRINT, '▶ Step 4: Extracting comparison slices...'
+PRINT, ''
+
+mid_z = nz / 2
+slice_a = volume_a[*, *, mid_z]
+slice_b = volume_b[*, *, mid_z]
+slice_diff = diff_abs[*, *, mid_z]
+slice_rel = diff_relative[*, *, mid_z]
+
+PRINT, '  ✓ Slices extracted at z =', mid_z
+PRINT, ''
+
+; ================================================================
+; STEP 5: Side-by-Side Slice Visualization
+; ================================================================
+PRINT, '▶ Step 5: Creating side-by-side visualizations...'
+PRINT, ''
+
+; Create comparison layout
+WINDOW, 0, XSIZE=1600, YSIZE=800, TITLE='Side-by-Side Comparison'
+
+; Split into 2x2 grid
+!P.MULTI = [0, 2, 2]
+
+; Top left: Volume A
+TVSCL, slice_a
+XYOUTS, 5, ny-10, 'Volume A (Baseline)', /DEVICE, COLOR=255, CHARSIZE=1.5
+
+; Top right: Volume B
+TVSCL, slice_b
+XYOUTS, nx+5, ny-10, 'Volume B (Modified)', /DEVICE, COLOR=255, CHARSIZE=1.5
+
+; Bottom left: Absolute difference
+TVSCL, slice_diff
+XYOUTS, 5, 2*ny-10, 'Absolute Difference', /DEVICE, COLOR=255, CHARSIZE=1.5
+
+; Bottom right: Relative difference
+diff_display = BYTSCL(slice_rel, MIN=-50, MAX=50)
+TV, diff_display
+XYOUTS, nx+5, 2*ny-10, 'Relative Diff (%)', /DEVICE, COLOR=255, CHARSIZE=1.5
+
+!P.MULTI = 0  ; Reset
+
+PRINT, '  ✓ Side-by-side comparison displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 6: Detailed Contour Comparison
+; ================================================================
+PRINT, '▶ Step 6: Creating contour overlay comparison...'
+PRINT, ''
+
+WINDOW, 1, XSIZE=900, YSIZE=900, TITLE='Contour Overlay Comparison'
+
+; Show Volume A as filled contours
+x_coord = FINDGEN(nx)
+y_coord = FINDGEN(ny)
+CONTOUR, slice_a, x_coord, y_coord, NLEVELS=15, /FILL, $
+         XTITLE='X', YTITLE='Y', TITLE='Overlay: A (filled) + B (contours)'
+
+; Overlay Volume B as line contours
+CONTOUR, slice_b, x_coord, y_coord, NLEVELS=10, /OVERPLOT, $
+         COLOR=255, THICK=2
+
+PRINT, '  ✓ Contour overlay displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 7: Difference Map with Color Scale
+; ================================================================
+PRINT, '▶ Step 7: Creating difference map with diverging colormap...'
+PRINT, ''
+
+WINDOW, 2, XSIZE=800, YSIZE=800, TITLE='Signed Difference Map'
+
+; Use diverging color scheme (blue=negative, red=positive)
+slice_signed = diff_signed[*, *, mid_z]
+CONTOUR, slice_signed, x_coord, y_coord, NLEVELS=20, /FILL, $
+         XTITLE='X', YTITLE='Y', TITLE='Signed Difference (B - A)', $
+         MIN=-0.3, MAX=0.3
+
+PRINT, '  ✓ Signed difference map displayed'
+PRINT, '    Blue regions: B < A'
+PRINT, '    Red regions: B > A'
+PRINT, ''
+
+; ================================================================
+; STEP 8: Histogram Comparison
+; ================================================================
+PRINT, '▶ Step 8: Comparing intensity histograms...'
+PRINT, ''
+
+nbins = 100
+hist_a = HISTOGRAM(volume_a, NBINS=nbins, MIN=0.0, MAX=1.2)
+hist_b = HISTOGRAM(volume_b, NBINS=nbins, MIN=0.0, MAX=1.2)
+bins = FINDGEN(nbins) * 1.2 / nbins
+
+WINDOW, 3, XSIZE=800, YSIZE=600, TITLE='Intensity Histogram Comparison'
+PLOT, bins, hist_a, XTITLE='Intensity', YTITLE='Voxel Count', $
+      TITLE='Intensity Distribution Comparison', $
+      LINESTYLE=0, THICK=2
+OPLOT, bins, hist_b, LINESTYLE=2, THICK=2, COLOR=200
+
+; Add legend
+XYOUTS, 0.7, MAX(hist_a)*0.9, 'Volume A', /DATA, CHARSIZE=1.2
+XYOUTS, 0.7, MAX(hist_a)*0.8, 'Volume B', /DATA, CHARSIZE=1.2, COLOR=200
+
+PRINT, '  ✓ Histogram comparison displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 9: 3D Volume Comparison (Side-by-Side)
+; ================================================================
+PRINT, '▶ Step 9: 3D volume visualization comparison...'
+PRINT, ''
+
+; Normalize both volumes for visualization
+volume_a_norm = volume_a / MAX(volume_a)
+volume_b_norm = volume_b / MAX(volume_b)
+
+PRINT, '  Rendering Volume A...'
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Volume A - Baseline'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume_a_norm, DIMENSIONS=[nx, ny, nz]
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Comparison: Volume A (Baseline)'
+PRINT, '  ✓ Volume A rendered'
+PRINT, ''
+
+PRINT, '  Rendering Volume B...'
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Volume B - Modified'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume_b_norm, DIMENSIONS=[nx, ny, nz]
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Comparison: Volume B (Modified)'
+PRINT, '  ✓ Volume B rendered'
+PRINT, ''
+
+PRINT, '  Rendering Difference Volume...'
+diff_abs_norm = diff_abs / MAX(diff_abs)
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Absolute Difference'
+VIZ3D_COLORMAP, 'PLASMA'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, diff_abs_norm, DIMENSIONS=[nx, ny, nz]
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Comparison: Absolute Difference'
+PRINT, '  ✓ Difference volume rendered'
+PRINT, ''
+
+; ================================================================
+; STEP 10: Regional Analysis
+; ================================================================
+PRINT, '▶ Step 10: Regional difference analysis...'
+PRINT, ''
+
+; Divide volume into octants and compute statistics per region
+PRINT, '  Computing statistics by octant:'
+FOR ix = 0, 1 DO BEGIN
+    FOR iy = 0, 1 DO BEGIN
+        FOR iz = 0, 1 DO BEGIN
+            x0 = ix * nx/2
+            x1 = (ix+1) * nx/2 - 1
+            y0 = iy * ny/2
+            y1 = (iy+1) * ny/2 - 1
+            z0 = iz * nz/2
+            z1 = (iz+1) * nz/2 - 1
+
+            region_a = volume_a[x0:x1, y0:y1, z0:z1]
+            region_b = volume_b[x0:x1, y0:y1, z0:z1]
+            region_diff = ABS(region_b - region_a)
+
+            octant_num = ix + 2*iy + 4*iz
+            PRINT, '    Octant', octant_num, ': Mean diff =', MEAN(region_diff), $
+                   ', Max diff =', MAX(region_diff)
+        ENDFOR
+    ENDFOR
+ENDFOR
+PRINT, ''
+
+; ================================================================
+; STEP 11: Change Detection Threshold Analysis
+; ================================================================
+PRINT, '▶ Step 11: Change detection and threshold analysis...'
+PRINT, ''
+
+; Define thresholds for significant change
+thresholds = [0.05, 0.10, 0.15, 0.20]
+
+PRINT, '  Voxels exceeding change thresholds:'
+FOR i = 0, N_ELEMENTS(thresholds)-1 DO BEGIN
+    thresh = thresholds[i]
+    changed = diff_abs GT thresh
+    n_changed = TOTAL(changed)
+    pct_changed = 100.0 * n_changed / N_ELEMENTS(diff_abs)
+
+    PRINT, '    Threshold', thresh, ':', n_changed, 'voxels (', pct_changed, '%)'
+ENDFOR
+PRINT, ''
+
+; ================================================================
+; STEP 12: Summary Report
+; ================================================================
+PRINT, '▶ Step 12: Generating comparison summary report...'
+PRINT, ''
+
+PRINT, '  ═══════════════════════════════════════════════'
+PRINT, '  VOLUME COMPARISON SUMMARY REPORT'
+PRINT, '  ═══════════════════════════════════════════════'
+PRINT, ''
+PRINT, '  Dataset Information:'
+PRINT, '    Dimensions:', nx, 'x', ny, 'x', nz
+PRINT, '    Total voxels:', nx*ny*nz
+PRINT, ''
+PRINT, '  Volume A (Baseline):'
+PRINT, '    Range: [', MIN(volume_a), ',', MAX(volume_a), ']'
+PRINT, '    Mean:', MEAN(volume_a)
+PRINT, '    Std Dev:', STDDEV(volume_a)
+PRINT, ''
+PRINT, '  Volume B (Comparison):'
+PRINT, '    Range: [', MIN(volume_b), ',', MAX(volume_b), ']'
+PRINT, '    Mean:', MEAN(volume_b)
+PRINT, '    Std Dev:', STDDEV(volume_b)
+PRINT, ''
+PRINT, '  Difference Statistics:'
+PRINT, '    Mean Absolute Error:', MEAN(diff_abs)
+PRINT, '    Root Mean Squared Error:', rmse
+PRINT, '    Peak SNR:', psnr, 'dB'
+PRINT, '    SSIM:', ssim
+PRINT, '    Normalized Cross-Correlation:', ncc
+PRINT, ''
+PRINT, '  Change Summary:'
+thresh_05 = TOTAL(diff_abs GT 0.05)
+PRINT, '    Voxels changed > 5%:', thresh_05, '(', 100.0*thresh_05/(nx*ny*nz), '%)'
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '✓ Volume Comparison Tool Demo Complete!'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+PRINT, 'Demonstrated:'
+PRINT, '  ✓ Side-by-side volume visualization'
+PRINT, '  ✓ Multiple difference metrics (absolute, relative, signed)'
+PRINT, '  ✓ Statistical comparison (MSE, RMSE, PSNR, SSIM, NCC)'
+PRINT, '  ✓ 2D slice comparisons with contours'
+PRINT, '  ✓ Histogram distribution comparison'
+PRINT, '  ✓ 3D volume rendering comparison'
+PRINT, '  ✓ Regional analysis by octants'
+PRINT, '  ✓ Change detection with thresholds'
+PRINT, '  ✓ Comprehensive summary report'
+PRINT, ''
+PRINT, 'Comparison Metrics Computed:'
+PRINT, '  • Mean Squared Error (MSE)'
+PRINT, '  • Root Mean Squared Error (RMSE)'
+PRINT, '  • Peak Signal-to-Noise Ratio (PSNR)'
+PRINT, '  • Structural Similarity Index (SSIM)'
+PRINT, '  • Normalized Cross-Correlation (NCC)'
+PRINT, ''
+PRINT, 'Use Cases:'
+PRINT, '  - Medical imaging: Pre/post treatment comparison'
+PRINT, '  - Fluid dynamics: Time-series evolution tracking'
+PRINT, '  - Seismic: 4D monitoring and reservoir changes'
+PRINT, '  - Quality control: Simulation vs measurement validation'
+PRINT, '  - Algorithm testing: Method comparison and benchmarking'
+PRINT, ''
+PRINT, 'Next Steps:'
+PRINT, '  - Add interactive GUI controls for threshold adjustment'
+PRINT, '  - Implement synchronized camera controls for 3D views'
+PRINT, '  - Add registration/alignment tools for misaligned volumes'
+PRINT, '  - Support multi-temporal comparison (>2 volumes)'
+PRINT, '  - Add quantitative ROI (region of interest) analysis'
+PRINT, ''

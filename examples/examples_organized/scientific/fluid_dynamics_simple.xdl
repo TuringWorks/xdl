@@ -1,0 +1,234 @@
+; ================================================================
+; Simplified Fluid Dynamics Demo for XDL
+; ================================================================
+; This version works with the XDL interpreter (not GDL/IDL)
+; Focuses on computation without advanced string formatting
+; ================================================================
+
+PRINT, '================================================'
+PRINT, 'Fluid Dynamics: Taylor-Green Vortex'
+PRINT, '================================================'
+PRINT, ''
+
+; ================================================================
+; STEP 1: Generate Taylor-Green Vortex Flow Field
+; ================================================================
+PRINT, 'Step 1: Generating Taylor-Green vortex...'
+
+; Grid dimensions (smaller for performance)
+nx = 64
+ny = 64
+nz = 32
+
+; Create coordinate grids
+x = FINDGEN(nx) * (2.0 * 3.14159 / nx)
+y = FINDGEN(ny) * (2.0 * 3.14159 / ny)
+z = FINDGEN(nz) * (2.0 * 3.14159 / nz)
+
+; Initialize velocity field components
+u = FLTARR(nx, ny, nz)  ; x-velocity
+v = FLTARR(nx, ny, nz)  ; y-velocity
+w = FLTARR(nx, ny, nz)  ; z-velocity
+
+; Time parameter
+t = 0.0
+nu = 0.01
+decay = EXP(-3.0 * nu * t)
+
+; Taylor-Green vortex velocity field
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            u[i,j,k] =  SIN(x[i]) * COS(y[j]) * COS(z[k]) * decay
+            v[i,j,k] = -COS(x[i]) * SIN(y[j]) * COS(z[k]) * decay
+            w[i,j,k] = 0.0
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, 'Velocity field computed'
+PRINT, 'u min/max:'
+PRINT, MIN(u)
+PRINT, MAX(u)
+PRINT, ''
+
+; ================================================================
+; STEP 2: Compute Vorticity Field
+; ================================================================
+PRINT, 'Step 2: Computing vorticity...'
+
+omega_x = FLTARR(nx, ny, nz)
+omega_y = FLTARR(nx, ny, nz)
+omega_z = FLTARR(nx, ny, nz)
+
+dx = 2.0 * 3.14159 / nx
+dy = 2.0 * 3.14159 / ny
+dz = 2.0 * 3.14159 / nz
+
+; Central differences for interior points
+FOR i = 1, nx-2 DO BEGIN
+    FOR j = 1, ny-2 DO BEGIN
+        FOR k = 1, nz-2 DO BEGIN
+            ; omega_x = dw/dy - dv/dz
+            dw_dy = (w[i,j+1,k] - w[i,j-1,k]) / (2.0 * dy)
+            dv_dz = (v[i,j,k+1] - v[i,j,k-1]) / (2.0 * dz)
+            omega_x[i,j,k] = dw_dy - dv_dz
+
+            ; omega_y = du/dz - dw/dx
+            du_dz = (u[i,j,k+1] - u[i,j,k-1]) / (2.0 * dz)
+            dw_dx = (w[i+1,j,k] - w[i-1,j,k]) / (2.0 * dx)
+            omega_y[i,j,k] = du_dz - dw_dx
+
+            ; omega_z = dv/dx - du/dy
+            dv_dx = (v[i+1,j,k] - v[i-1,j,k]) / (2.0 * dx)
+            du_dy = (u[i,j+1,k] - u[i,j-1,k]) / (2.0 * dy)
+            omega_z[i,j,k] = dv_dx - du_dy
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Compute vorticity magnitude
+omega_mag = SQRT(omega_x^2 + omega_y^2 + omega_z^2)
+
+PRINT, 'Vorticity computed'
+PRINT, 'omega_mag min/max:'
+PRINT, MIN(omega_mag)
+PRINT, MAX(omega_mag)
+PRINT, ''
+
+; ================================================================
+; STEP 3: Compute Flow Quantities
+; ================================================================
+PRINT, 'Step 3: Computing flow quantities...'
+
+; Velocity magnitude
+vel_mag = SQRT(u^2 + v^2 + w^2)
+
+; Kinetic energy density
+ke = 0.5 * (u^2 + v^2 + w^2)
+total_ke = TOTAL(ke) * dx * dy * dz
+
+; Enstrophy (integral of vorticity squared)
+enstrophy = 0.5 * omega_mag^2
+total_enstrophy = TOTAL(enstrophy) * dx * dy * dz
+
+PRINT, 'Velocity magnitude range:'
+PRINT, MIN(vel_mag)
+PRINT, MAX(vel_mag)
+PRINT, ''
+PRINT, 'Total kinetic energy:'
+PRINT, total_ke
+PRINT, ''
+PRINT, 'Total enstrophy:'
+PRINT, total_enstrophy
+PRINT, ''
+
+; ================================================================
+; STEP 4: Velocity Statistics
+; ================================================================
+PRINT, 'Step 4: Computing statistics...'
+
+PRINT, 'Velocity Statistics:'
+PRINT, 'Mean velocity magnitude:'
+PRINT, MEAN(vel_mag)
+PRINT, 'Std dev:'
+PRINT, STDDEV(vel_mag)
+PRINT, ''
+
+PRINT, 'Vorticity Statistics:'
+PRINT, 'Mean vorticity magnitude:'
+PRINT, MEAN(omega_mag)
+PRINT, 'Std dev:'
+PRINT, STDDEV(omega_mag)
+PRINT, ''
+
+; ================================================================
+; STEP 5: Divergence Check
+; ================================================================
+PRINT, 'Step 5: Checking incompressibility...'
+
+div = FLTARR(nx-2, ny-2, nz-2)
+FOR i = 1, nx-2 DO BEGIN
+    FOR j = 1, ny-2 DO BEGIN
+        FOR k = 1, nz-2 DO BEGIN
+            du_dx = (u[i+1,j,k] - u[i-1,j,k]) / (2.0 * dx)
+            dv_dy = (v[i,j+1,k] - v[i,j-1,k]) / (2.0 * dy)
+            dw_dz = (w[i,j,k+1] - w[i,j,k-1]) / (2.0 * dz)
+            div[i-1,j-1,k-1] = du_dx + dv_dy + dw_dz
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, 'Divergence (should be near 0):'
+PRINT, 'Mean divergence:'
+PRINT, MEAN(div)
+PRINT, 'Max abs divergence:'
+PRINT, MAX(ABS(div))
+PRINT, ''
+
+; ================================================================
+; STEP 6: Q-Criterion
+; ================================================================
+PRINT, 'Step 6: Computing Q-criterion...'
+
+; Simplified Q-criterion
+Q = 0.5 * omega_mag^2
+
+PRINT, 'Q-criterion computed'
+PRINT, 'Q range:'
+PRINT, MIN(Q)
+PRINT, MAX(Q)
+PRINT, ''
+
+; ================================================================
+; STEP 7: Time Evolution
+; ================================================================
+PRINT, 'Step 7: Time evolution analysis...'
+
+n_times = 5
+times = [0.0, 0.5, 1.0, 2.0, 5.0]
+
+PRINT, 'Time evolution of kinetic energy:'
+FOR it = 0, n_times-1 DO BEGIN
+    t_curr = times[it]
+    decay_curr = EXP(-3.0 * nu * t_curr)
+
+    ; Scale velocity by new decay factor
+    scale = decay_curr / EXP(-3.0 * nu * 0.0)
+    u_t = u * scale
+    v_t = v * scale
+
+    ; Compute kinetic energy at this time
+    ke_t = 0.5 * (u_t^2 + v_t^2)
+    total_ke_t = TOTAL(ke_t) * dx * dy * dz
+
+    ; Compute max velocity
+    vel_mag_t = SQRT(u_t^2 + v_t^2)
+    max_vel_t = MAX(vel_mag_t)
+
+    PRINT, 'Time:'
+    PRINT, t_curr
+    PRINT, 'Kinetic Energy:'
+    PRINT, total_ke_t
+    PRINT, 'Max velocity:'
+    PRINT, max_vel_t
+ENDFOR
+
+PRINT, ''
+PRINT, '================================================'
+PRINT, 'Fluid Dynamics Demo Complete'
+PRINT, '================================================'
+PRINT, ''
+PRINT, 'Summary:'
+PRINT, 'Grid size: 64 x 64 x 32'
+PRINT, 'Flow type: Incompressible Taylor-Green vortex'
+PRINT, 'Viscosity: 0.01'
+PRINT, 'Reynolds number ~100'
+PRINT, ''
+PRINT, 'Computed:'
+PRINT, '- Velocity field (u, v, w)'
+PRINT, '- Vorticity field (omega_x, omega_y, omega_z)'
+PRINT, '- Kinetic energy and enstrophy'
+PRINT, '- Divergence (incompressibility check)'
+PRINT, '- Q-criterion for vortex identification'
+PRINT, '- Time evolution'

@@ -1,0 +1,12 @@
+[2m2025-11-11T00:51:34.260393Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/test_python_arrays.xdl
+=== Testing Python Array Operations ===
+[2m2025-11-11T00:51:34.269725Z[0m [32m INFO[0m [2mxdl_stdlib::python[0m[2m:[0m Python version: 3.13.0
+Creating array...
+Array: <Python:pyobj_0>
+
+Testing array operations...
+Sum: 45
+Mean: 4.500000000000000
+Std dev: 2.872281323269014
+
+=== Test complete ===

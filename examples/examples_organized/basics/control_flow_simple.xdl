@@ -1,0 +1,233 @@
+; XDL Control Flow Test (Simplified)
+; Tests control flow without array literals
+
+print, "=== XDL CONTROL FLOW TESTS ==="
+print, ""
+
+; =============================================================================
+; CONDITIONAL LOGIC
+; =============================================================================
+
+print, "1. CONDITIONAL LOGIC:"
+print, "--------------------"
+
+; Simple if-then-else
+x = 42
+print, "Testing value:", x
+
+if x gt 40 then begin
+    print, "  x is greater than 40"
+end else begin
+    print, "  x is not greater than 40"
+end
+endif
+
+; Nested conditionals
+score = 85
+print, "Score:", score
+
+if score ge 90 then begin
+    print, "  Grade: A"
+end else begin
+    if score ge 80 then begin
+        print, "  Grade: B"
+    end else begin
+        if score ge 70 then begin
+            print, "  Grade: C"
+        end else begin
+            print, "  Grade: F"
+        end
+        endif
+    end
+    endif
+end
+endif
+
+print, ""
+
+; =============================================================================
+; LOOP CONSTRUCTS
+; =============================================================================
+
+print, "2. LOOP CONSTRUCTS:"
+print, "-------------------"
+
+; For loop
+print, "For loop (1 to 5):"
+for i = 1, 5 do begin
+    print, "  i =", i
+end
+endfor
+
+; While loop
+print, "While loop (countdown):"
+count = 5
+while count gt 0 do begin
+    print, "  count =", count
+    count = count - 1
+end
+endwhile
+
+; Repeat-until loop
+print, "Repeat-until loop:"
+n = 0
+repeat begin
+    n = n + 1
+    print, "  n =", n
+end until n ge 3
+
+print, ""
+
+; =============================================================================
+; MATHEMATICAL ALGORITHMS
+; =============================================================================
+
+print, "3. MATHEMATICAL ALGORITHMS:"
+print, "---------------------------"
+
+; Factorial calculation
+print, "Factorial of 6:"
+n = 6
+factorial = 1
+i = 1
+
+while i le n do begin
+    factorial = factorial * i
+    i = i + 1
+end
+endwhile
+
+print, "  6! =", factorial
+
+; GCD calculation
+print, "Greatest Common Divisor:"
+a = 48
+b = 18
+print, "  GCD of", a, "and", b
+
+while b ne 0 do begin
+    temp = b
+    b = a mod b
+    a = temp
+end
+endwhile
+
+print, "  GCD =", a
+
+; Fibonacci sequence
+print, "Fibonacci sequence (first 10 numbers):"
+fib_a = 0
+fib_b = 1
+print, "  ", fib_a, fib_b
+
+for i = 3, 10 do begin
+    fib_next = fib_a + fib_b
+    print, "  ", fib_next
+    fib_a = fib_b
+    fib_b = fib_next
+end
+endfor
+
+print, ""
+
+; =============================================================================
+; CONTROL FLOW WITH BREAK/CONTINUE
+; =============================================================================
+
+print, "4. BREAK AND CONTINUE:"
+print, "----------------------"
+
+; Find first number divisible by 7
+print, "Finding first multiple of 7 > 50:"
+for i = 51, 100 do begin
+    if i mod 7 eq 0 then begin
+        print, "  Found:", i
+        break
+    end
+    endif
+end
+endfor
+
+; Skip even numbers
+print, "Odd numbers from 1 to 10:"
+for i = 1, 10 do begin
+    if i mod 2 eq 0 then begin
+        continue
+    end
+    endif
+    print, "  ", i
+end
+endfor
+
+print, ""
+
+; =============================================================================
+; ERROR HANDLING PATTERNS
+; =============================================================================
+
+print, "5. ERROR HANDLING:"
+print, "------------------"
+
+; Safe division
+dividend = 10
+divisor = 0
+
+print, "Safe division example:"
+if divisor eq 0 then begin
+    print, "  Error: Division by zero"
+end else begin
+    result = dividend / divisor
+    print, "  Result:", result
+end
+endif
+
+; Range validation
+value = 150
+print, "Range validation (1-100):"
+print, "  Input value:", value
+
+if value lt 1 then begin
+    print, "  Error: Value too small"
+end else begin
+    if value gt 100 then begin
+        print, "  Error: Value too large"
+    end else begin
+        print, "  Valid value accepted"
+    end
+    endif
+end
+endif
+
+print, ""
+
+; =============================================================================
+; NESTED LOOPS
+; =============================================================================
+
+print, "6. NESTED LOOPS:"
+print, "----------------"
+
+; Multiplication table (5x5)
+print, "Multiplication table:"
+for i = 1, 5 do begin
+    for j = 1, 5 do begin
+        product = i * j
+        ; In a real implementation, we'd format this better
+        print, "  ", i, "×", j, "=", product
+    end
+    endfor
+end
+endfor
+
+; Pattern generation
+print, "Number pyramid:"
+for i = 1, 5 do begin
+    for j = 1, i do begin
+        print, "  *"
+    end
+    endfor
+end
+endfor
+
+print, ""
+print, "=== ALL TESTS COMPLETED ==="

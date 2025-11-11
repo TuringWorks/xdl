@@ -1,0 +1,45 @@
+; Test that PLOT and SURFACE now use xdl-charts/Tauri
+; These should open interactive Tauri windows instead of static images
+
+PRINT, '======================================='
+PRINT, 'Testing PLOT and SURFACE with xdl-charts'
+PRINT, '======================================='
+PRINT, ''
+
+; Test 1: Simple line PLOT
+PRINT, '1. Testing PLOT with sine wave...'
+x = FINDGEN(100) / 10.0
+y = SIN(x)
+PLOT, x, y
+WAIT, 2
+
+; Test 2: PLOT with just Y data (auto-generate X)
+PRINT, '2. Testing PLOT with cosine (auto X)...'
+y2 = COS(x)
+PLOT, y2
+WAIT, 2
+
+; Test 3: 3D SURFACE plot
+PRINT, '3. Testing SURFACE with 3D data...'
+nx = 40
+ny = 40
+z = FLTARR(nx, ny)
+
+FOR i=0, nx-1 DO BEGIN
+  FOR j=0, ny-1 DO BEGIN
+    x_val = (i - nx/2) / 5.0
+    y_val = (j - ny/2) / 5.0
+    z[i,j] = SIN(SQRT(x_val^2 + y_val^2))
+  ENDFOR
+ENDFOR
+
+SURFACE, z
+WAIT, 2
+
+PRINT, ''
+PRINT, '======================================='
+PRINT, 'Test complete!'
+PRINT, 'If you see Tauri windows, integration works!'
+PRINT, '======================================='
+
+END

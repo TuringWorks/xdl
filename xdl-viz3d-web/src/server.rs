@@ -68,3 +68,25 @@ impl VizServer {
         println!("Server thread exiting");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_server_creation() {
+        let server = VizServer::new();
+        assert!(server.is_ok());
+        if let Ok(server) = server {
+            assert!(server.port() > 0);
+        }
+    }
+
+    #[test]
+    fn test_server_port() {
+        let server = VizServer::new().unwrap();
+        let port = server.port();
+        // Port should be valid
+        assert!(port > 0);
+    }
+}

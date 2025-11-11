@@ -1,0 +1,3 @@
+[2m2025-11-11T00:51:35.579736Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/charting/simple_test.xdl
+Testing ECharts integration...
+[2m2025-11-11T00:51:35.585732Z[0m [31mERROR[0m [2mxdl[0m[2m:[0m Error: Failed to execute program: Runtime error: Failed to launch chart viewer: No such file or directory (os error 2)

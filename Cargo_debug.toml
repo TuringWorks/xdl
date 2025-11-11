@@ -1,0 +1,11 @@
+[package]
+name = "debug_transpile"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "debug_transpile"
+path = "debug_transpile.rs"
+
+[dependencies]
+xdl-matlab = { path = "xdl-matlab" }

@@ -1,0 +1,44 @@
+; Simple 3D Volume Rendering Demo
+; A minimal example to test WebGPU volume rendering
+
+PRINT, '=== Simple Volume Rendering Demo ===
+'
+
+; Create a small 3D volume with interesting features
+size = 64
+volume = FLTARR(size, size, size)
+
+PRINT, 'Creating 3D volume data (64x64x64)...'
+
+; Create a 3D Gaussian blob
+center = size / 2
+FOR i = 0, size - 1 DO BEGIN
+    FOR j = 0, size - 1 DO BEGIN
+        FOR k = 0, size - 1 DO BEGIN
+            dx = i - center
+            dy = j - center
+            dz = k - center
+            r = SQRT(dx*dx + dy*dy + dz*dz)
+            volume[i, j, k] = EXP(-r*r / (size/4.0)^2)
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, 'Volume data created'
+PRINT, 'Min: ', MIN(volume), ' Max: ', MAX(volume)
+PRINT, ''
+
+; Initialize 3D renderer
+PRINT, 'Initializing WebGPU renderer...'
+VIZ3D_INIT, WINDOW_SIZE=[800, 600]
+
+; Set colormap
+VIZ3D_COLORMAP, 'VIRIDIS'
+
+; Load volume and render
+PRINT, 'Rendering volume...'
+VIZ3D_VOLUME, volume, DIMENSIONS=[size, size, size]
+VIZ3D_RENDER, /INTERACTIVE
+
+PRINT, ''
+PRINT, 'Demo complete!'

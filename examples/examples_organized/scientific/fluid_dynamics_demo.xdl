@@ -1,0 +1,418 @@
+; ================================================================
+; Fluid Dynamics Visualization Workflow
+; ================================================================
+; Demonstrates:
+; - Vorticity field computation
+; - Velocity vector field visualization
+; - Streamline generation and tracing
+; - Time-series animation of flow evolution
+; - Taylor-Green vortex simulation
+; - Turbulent flow structures
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Fluid Dynamics Visualization Workflow'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+; ================================================================
+; STEP 1: Generate Taylor-Green Vortex Flow Field
+; ================================================================
+PRINT, '▶ Step 1: Generating Taylor-Green vortex flow field...'
+PRINT, ''
+
+; Grid dimensions
+nx = 128
+ny = 128
+nz = 64
+PRINT, '  Grid size: ' + STRTRIM(STRING(nx),2) + ' x ' + STRTRIM(STRING(ny),2) + ' x ' + STRTRIM(STRING(nz),2)
+
+; Create coordinate grids
+x = FINDGEN(nx) * (2.0 * !PI / nx)
+y = FINDGEN(ny) * (2.0 * !PI / ny)
+z = FINDGEN(nz) * (2.0 * !PI / nz)
+
+; Initialize velocity field components
+u = FLTARR(nx, ny, nz)  ; x-velocity
+v = FLTARR(nx, ny, nz)  ; y-velocity
+w = FLTARR(nx, ny, nz)  ; z-velocity
+
+; Time parameter for evolution
+t = 0.0
+nu = 0.01  ; Kinematic viscosity
+PRINT, '  Viscosity (nu): ' + STRTRIM(STRING(nu),2)
+
+; Taylor-Green vortex velocity field
+; u(x,y,z,t) =  sin(x)cos(y)cos(z) exp(-3νt)
+; v(x,y,z,t) = -cos(x)sin(y)cos(z) exp(-3νt)
+; w(x,y,z,t) = 0
+
+decay = EXP(-3.0 * nu * t)
+PRINT, '  Time t = ' + STRTRIM(STRING(t),2) + ', decay factor = ' + STRTRIM(STRING(decay),2)
+
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            u[i,j,k] =  SIN(x[i]) * COS(y[j]) * COS(z[k]) * decay
+            v[i,j,k] = -COS(x[i]) * SIN(y[j]) * COS(z[k]) * decay
+            w[i,j,k] = 0.0
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  ✓ Velocity field computed'
+PRINT, '    u range: [' + STRTRIM(STRING(MIN(u)),2) + ',' + STRTRIM(STRING(MAX(u)),2) + ']'
+PRINT, '    v range: [' + STRTRIM(STRING(MIN(v)),2) + ',' + STRTRIM(STRING(MAX(v)),2) + ']'
+PRINT, '    w range: [' + STRTRIM(STRING(MIN(w)),2) + ',' + STRTRIM(STRING(MAX(w)),2) + ']'
+PRINT, ''
+
+; ================================================================
+; STEP 2: Compute Vorticity Field
+; ================================================================
+PRINT, '▶ Step 2: Computing vorticity field...'
+PRINT, ''
+
+; Vorticity omega = curl(u) = ∇ × u
+; ω_x = ∂w/∂y - ∂v/∂z
+; ω_y = ∂u/∂z - ∂w/∂x
+; ω_z = ∂v/∂x - ∂u/∂y
+
+omega_x = FLTARR(nx, ny, nz)
+omega_y = FLTARR(nx, ny, nz)
+omega_z = FLTARR(nx, ny, nz)
+
+dx = 2.0 * !PI / nx
+dy = 2.0 * !PI / ny
+dz = 2.0 * !PI / nz
+
+; Central differences for interior points
+FOR i = 1, nx-2 DO BEGIN
+    FOR j = 1, ny-2 DO BEGIN
+        FOR k = 1, nz-2 DO BEGIN
+            ; ω_x = ∂w/∂y - ∂v/∂z
+            dw_dy = (w[i,j+1,k] - w[i,j-1,k]) / (2.0 * dy)
+            dv_dz = (v[i,j,k+1] - v[i,j,k-1]) / (2.0 * dz)
+            omega_x[i,j,k] = dw_dy - dv_dz
+
+            ; ω_y = ∂u/∂z - ∂w/∂x
+            du_dz = (u[i,j,k+1] - u[i,j,k-1]) / (2.0 * dz)
+            dw_dx = (w[i+1,j,k] - w[i-1,j,k]) / (2.0 * dx)
+            omega_y[i,j,k] = du_dz - dw_dx
+
+            ; ω_z = ∂v/∂x - ∂u/∂y
+            dv_dx = (v[i+1,j,k] - v[i-1,j,k]) / (2.0 * dx)
+            du_dy = (u[i,j+1,k] - u[i,j-1,k]) / (2.0 * dy)
+            omega_z[i,j,k] = dv_dx - du_dy
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Compute vorticity magnitude
+omega_mag = SQRT(omega_x^2 + omega_y^2 + omega_z^2)
+
+PRINT, '  ✓ Vorticity computed'
+PRINT, '    ω_x range: [' + STRTRIM(STRING(MIN(omega_x)),2) + ',' + STRTRIM(STRING(MAX(omega_x)),2) + ']'
+PRINT, '    ω_y range: [' + STRTRIM(STRING(MIN(omega_y)),2) + ',' + STRTRIM(STRING(MAX(omega_y)),2) + ']'
+PRINT, '    ω_z range: [' + STRTRIM(STRING(MIN(omega_z)),2) + ',' + STRTRIM(STRING(MAX(omega_z)),2) + ']'
+PRINT, '    |ω| range: [' + STRTRIM(STRING(MIN(omega_mag)),2) + ',' + STRTRIM(STRING(MAX(omega_mag)),2) + ']'
+PRINT, ''
+
+; ================================================================
+; STEP 3: Compute Flow Quantities
+; ================================================================
+PRINT, '▶ Step 3: Computing derived flow quantities...'
+PRINT, ''
+
+; Velocity magnitude
+vel_mag = SQRT(u^2 + v^2 + w^2)
+PRINT, '  ✓ Velocity magnitude computed'
+PRINT, '    |u| range: [' + STRTRIM(STRING(MIN(vel_mag)),2) + ',' + STRTRIM(STRING(MAX(vel_mag)),2) + ']'
+
+; Kinetic energy density (per unit volume)
+ke = 0.5 * (u^2 + v^2 + w^2)
+total_ke = TOTAL(ke) * dx * dy * dz
+PRINT, '  ✓ Kinetic energy: ' + STRTRIM(STRING(total_ke),2)
+
+; Enstrophy (integral of vorticity squared)
+enstrophy = 0.5 * omega_mag^2
+total_enstrophy = TOTAL(enstrophy) * dx * dy * dz
+PRINT, '  ✓ Enstrophy: ' + STRTRIM(STRING(total_enstrophy),2)
+
+PRINT, ''
+
+; ================================================================
+; STEP 4: Extract 2D Slice for Visualization
+; ================================================================
+PRINT, '▶ Step 4: Extracting 2D midplane slice...'
+PRINT, ''
+
+; Extract slice at z = nz/2
+z_slice = nz / 2
+u_slice = u[*, *, z_slice]
+v_slice = v[*, *, z_slice]
+omega_z_slice = omega_z[*, *, z_slice]
+vel_mag_slice = vel_mag[*, *, z_slice]
+
+PRINT, '  ✓ Slice extracted at z = ' + STRTRIM(STRING(z_slice),2)
+PRINT, ''
+
+; ================================================================
+; STEP 5: Visualize Vorticity Field
+; ================================================================
+PRINT, '▶ Step 5: Visualizing vorticity field...'
+PRINT, ''
+
+WINDOW, 0, XSIZE=800, YSIZE=800, TITLE='Z-Vorticity Field (Taylor-Green)'
+CONTOUR, omega_z_slice, x, y, NLEVELS=20, FILL=1, $
+         XTITLE='X', YTITLE='Y', TITLE='Vorticity ω_z'
+PRINT, '  ✓ Vorticity contour plot displayed'
+PRINT, ''
+
+; ================================================================
+; STEP 6: Vector Field Visualization
+; ================================================================
+PRINT, '▶ Step 6: Creating velocity vector field plot...'
+PRINT, ''
+
+; Subsample for vector plotting
+skip = 8
+x_sub = x[0:nx-1:skip]
+y_sub = y[0:ny-1:skip]
+u_sub = u_slice[0:nx-1:skip, 0:ny-1:skip]
+v_sub = v_slice[0:nx-1:skip, 0:ny-1:skip]
+
+WINDOW, 1, XSIZE=800, YSIZE=800, TITLE='Velocity Vectors'
+; Background: velocity magnitude
+CONTOUR, vel_mag_slice, x, y, NLEVELS=15, FILL=1, $
+         XTITLE='X', YTITLE='Y', TITLE='Velocity Field with Vectors'
+; Overlay vectors using arrows (VELOVECT may not be in GDL)
+; Simple arrow plotting
+FOR iv = 0, N_ELEMENTS(x_sub)-1 DO BEGIN
+    FOR jv = 0, N_ELEMENTS(y_sub)-1 DO BEGIN
+        x0 = x_sub[iv]
+        y0 = y_sub[jv]
+        dx = u_sub[iv, jv] * 0.3
+        dy = v_sub[iv, jv] * 0.3
+        ARROW, x0, y0, x0+dx, y0+dy, /DATA, THICK=1
+    ENDFOR
+ENDFOR
+
+PRINT, '  ✓ Vector field displayed: ' + STRTRIM(STRING(N_ELEMENTS(u_sub)),2) + ' vectors'
+PRINT, ''
+
+; ================================================================
+; STEP 7: Compute Streamlines
+; ================================================================
+PRINT, '▶ Step 7: Computing streamlines...'
+PRINT, ''
+
+; Simplified streamline tracing (Euler method)
+PRO TRACE_STREAMLINE, u, v, x0, y0, x_grid, y_grid, nsteps, sx, sy
+    ; Simple forward Euler integration
+    dt = 0.01
+    sx = FLTARR(nsteps)
+    sy = FLTARR(nsteps)
+    sx[0] = x0
+    sy[0] = y0
+
+    FOR i = 1, nsteps-1 DO BEGIN
+        ; Bilinear interpolation of velocity at current point
+        ix = (sx[i-1] / (2.0*!PI)) * N_ELEMENTS(x_grid)
+        iy = (sy[i-1] / (2.0*!PI)) * N_ELEMENTS(y_grid)
+        ix = ix MOD N_ELEMENTS(x_grid)
+        iy = iy MOD N_ELEMENTS(y_grid)
+
+        IF (ix LT 0) OR (ix GE N_ELEMENTS(x_grid)-1) OR $
+           (iy LT 0) OR (iy GE N_ELEMENTS(y_grid)-1) THEN BREAK
+
+        i0 = FLOOR(ix)
+        j0 = FLOOR(iy)
+        fx = ix - i0
+        fy = iy - j0
+
+        ; Bilinear interpolation
+        u_interp = (1-fx)*(1-fy)*u[i0,j0] + fx*(1-fy)*u[i0+1,j0] + $
+                   (1-fx)*fy*u[i0,j0+1] + fx*fy*u[i0+1,j0+1]
+        v_interp = (1-fx)*(1-fy)*v[i0,j0] + fx*(1-fy)*v[i0+1,j0] + $
+                   (1-fx)*fy*v[i0,j0+1] + fx*fy*v[i0+1,j0+1]
+
+        ; Update position
+        sx[i] = sx[i-1] + u_interp * dt
+        sy[i] = sy[i-1] + v_interp * dt
+
+        ; Periodic boundaries
+        sx[i] = sx[i] MOD (2.0*!PI)
+        sy[i] = sy[i] MOD (2.0*!PI)
+        IF sx[i] LT 0 THEN sx[i] = sx[i] + 2.0*!PI
+        IF sy[i] LT 0 THEN sy[i] = sy[i] + 2.0*!PI
+    ENDFOR
+    ; Return via output parameters
+END
+
+; Trace several streamlines from different seed points
+n_streamlines = 16
+nsteps = 500
+
+WINDOW, 2, XSIZE=800, YSIZE=800, TITLE='Streamlines'
+CONTOUR, vel_mag_slice, x, y, NLEVELS=15, FILL=1, $
+         XTITLE='X', YTITLE='Y', TITLE='Flow Streamlines'
+
+FOR i = 0, n_streamlines-1 DO BEGIN
+    ; Random seed points
+    x0 = RANDOMU(seed) * 2.0 * !PI
+    y0 = RANDOMU(seed) * 2.0 * !PI
+
+    sx_out = FLTARR(nsteps)
+    sy_out = FLTARR(nsteps)
+    TRACE_STREAMLINE, u_slice, v_slice, x0, y0, x, y, nsteps, sx_out, sy_out
+
+    ; Plot streamline
+    OPLOT, sx_out, sy_out, THICK=2
+ENDFOR
+
+PRINT, '  ✓ Traced ' + STRTRIM(STRING(n_streamlines),2) + ' streamlines'
+PRINT, ''
+
+; ================================================================
+; STEP 8: 3D Vorticity Volume Rendering
+; ================================================================
+PRINT, '▶ Step 8: 3D volume rendering of vorticity magnitude...'
+PRINT, ''
+
+; Normalize vorticity for visualization
+omega_norm = omega_mag / MAX(omega_mag)
+
+; 3D visualization using SURFACE (GDL built-in)
+; Show vorticity magnitude on mid-plane as 3D surface
+PRINT, '  Creating 3D surface plot of vorticity...'
+omega_surf = omega_mag[*, *, z_slice]
+WINDOW, 3, XSIZE=800, YSIZE=800, TITLE='3D Vorticity Surface'
+SURFACE, omega_surf, x, y, TITLE='Vorticity Magnitude at z=' + STRTRIM(STRING(z_slice),2), $
+         XTITLE='X', YTITLE='Y', ZTITLE='|ω|', SHADES=BYTSCL(omega_surf)
+
+PRINT, '  ✓ 3D vorticity surface displayed'
+PRINT, '  Note: VIZ3D volume rendering not available in GDL'
+PRINT, ''
+
+; ================================================================
+; STEP 9: Time Evolution (Multiple Timesteps)
+; ================================================================
+PRINT, '▶ Step 9: Computing flow evolution over time...'
+PRINT, ''
+
+; Compute flow at different times
+n_times = 5
+times = [0.0, 0.5, 1.0, 2.0, 5.0]
+
+PRINT, '  Time evolution analysis:'
+FOR it = 0, n_times-1 DO BEGIN
+    t = times[it]
+    decay = EXP(-3.0 * nu * t)
+
+    ; Recompute velocity at time t
+    u_t = u * (decay / EXP(-3.0 * nu * 0.0))
+    v_t = v * (decay / EXP(-3.0 * nu * 0.0))
+
+    ; Compute kinetic energy at time t
+    ke_t = 0.5 * (u_t^2 + v_t^2)
+    total_ke_t = TOTAL(ke_t) * dx * dy * dz
+
+    ; Compute max velocity
+    vel_mag_t = SQRT(u_t^2 + v_t^2)
+    max_vel_t = MAX(vel_mag_t)
+
+    PRINT, '    t = ' + STRTRIM(STRING(t),2) + ': KE = ' + STRTRIM(STRING(total_ke_t),2) + ', max|u| = ' + STRTRIM(STRING(max_vel_t),2)
+ENDFOR
+PRINT, ''
+
+; ================================================================
+; STEP 10: Flow Statistics and Invariants
+; ================================================================
+PRINT, '▶ Step 10: Computing flow statistics and invariants...'
+PRINT, ''
+
+; Velocity statistics
+PRINT, '  Velocity Statistics:'
+PRINT, '    Mean |u|:  ' + STRTRIM(STRING(MEAN(vel_mag)),2)
+PRINT, '    Std |u|:   ' + STRTRIM(STRING(STDDEV(vel_mag)),2)
+PRINT, '    Max |u|:   ' + STRTRIM(STRING(MAX(vel_mag)),2)
+PRINT, ''
+
+; Vorticity statistics
+PRINT, '  Vorticity Statistics:'
+PRINT, '    Mean |ω|:  ' + STRTRIM(STRING(MEAN(omega_mag)),2)
+PRINT, '    Std |ω|:   ' + STRTRIM(STRING(STDDEV(omega_mag)),2)
+PRINT, '    Max |ω|:   ' + STRTRIM(STRING(MAX(omega_mag)),2)
+PRINT, ''
+
+; Divergence check (should be zero for incompressible flow)
+div = FLTARR(nx-2, ny-2, nz-2)
+FOR i = 1, nx-2 DO BEGIN
+    FOR j = 1, ny-2 DO BEGIN
+        FOR k = 1, nz-2 DO BEGIN
+            du_dx = (u[i+1,j,k] - u[i-1,j,k]) / (2.0 * dx)
+            dv_dy = (v[i,j+1,k] - v[i,j-1,k]) / (2.0 * dy)
+            dw_dz = (w[i,j,k+1] - w[i,j,k-1]) / (2.0 * dz)
+            div[i-1,j-1,k-1] = du_dx + dv_dy + dw_dz
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  Divergence Check (incompressibility):'
+PRINT, '    Mean ∇·u:  ' + STRTRIM(STRING(MEAN(div)),2)
+PRINT, '    Max |∇·u|: ' + STRTRIM(STRING(MAX(ABS(div))),2)
+PRINT, '    (Should be ~0 for incompressible flow)'
+PRINT, ''
+
+; ================================================================
+; STEP 11: Q-Criterion for Vortex Identification
+; ================================================================
+PRINT, '▶ Step 11: Computing Q-criterion for vortex identification...'
+PRINT, ''
+
+; Q = 0.5(Ω²-S²) where Ω is vorticity tensor, S is strain rate tensor
+; Simplified: Q ≈ 0.5|ω|² - trace(S²)
+; For incompressible flow, positive Q indicates vortex cores
+
+; This is a simplified calculation
+Q = 0.5 * omega_mag^2  ; Simplified Q-criterion
+Q_slice = Q[*, *, z_slice]
+
+WINDOW, 4, XSIZE=800, YSIZE=800, TITLE='Q-Criterion (Vortex Cores)'
+CONTOUR, Q_slice, x, y, NLEVELS=20, FILL=1, $
+         XTITLE='X', YTITLE='Y', TITLE='Q-Criterion (Positive = Vortex Core)'
+PRINT, '  ✓ Q-criterion computed and displayed'
+PRINT, '    Q range: [' + STRTRIM(STRING(MIN(Q)),2) + ',' + STRTRIM(STRING(MAX(Q)),2) + ']'
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '✓ Fluid Dynamics Workflow Complete!'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+PRINT, 'Demonstrated:'
+PRINT, '  ✓ Taylor-Green vortex analytical flow field'
+PRINT, '  ✓ Vorticity computation (curl of velocity)'
+PRINT, '  ✓ Flow field quantities (KE, enstrophy, divergence)'
+PRINT, '  ✓ 2D contour plots of vorticity'
+PRINT, '  ✓ Vector field visualization'
+PRINT, '  ✓ Streamline integration and tracing'
+PRINT, '  ✓ 3D volume rendering of vorticity structures'
+PRINT, '  ✓ Time evolution and energy decay'
+PRINT, '  ✓ Q-criterion for vortex core identification'
+PRINT, ''
+PRINT, 'Flow Properties:'
+PRINT, '  • Type: Incompressible, viscous'
+PRINT, '  • Kinetic Energy: ' + STRTRIM(STRING(total_ke),2)
+PRINT, '  • Enstrophy: ' + STRTRIM(STRING(total_enstrophy),2)
+PRINT, '  • Reynolds number ~ 1/ν = ' + STRTRIM(STRING(1.0/nu),2)
+PRINT, ''
+PRINT, 'Next Steps:'
+PRINT, '  - Add particle tracing for Lagrangian analysis'
+PRINT, '  - Implement proper CFD solver (Navier-Stokes)'
+PRINT, '  - Add turbulence statistics (spectra, structure functions)'
+PRINT, '  - Integrate with real simulation data (OpenFOAM, etc.)'
+PRINT, '  - Add interactive parameter controls'
+PRINT, ''

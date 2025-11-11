@@ -1,0 +1,10 @@
+[2m2025-11-11T00:51:26.140158Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/plot_demo.xdl
+=== XDL Plot Demo ===
+
+Plotting sine wave...
+PLOT: Rendering 50 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Plot window should appear!
+Close the plot window to continue.
+
+Demo complete!
