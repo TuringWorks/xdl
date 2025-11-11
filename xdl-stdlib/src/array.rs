@@ -80,12 +80,21 @@ pub fn bytarr(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
-    let total_size = calculate_total_size(args)?;
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args {
+        shape.push(extract_dimension(arg)?);
+    }
 
-    // For 1D arrays, return XdlValue::Array with byte values as f64
-    // (XDL currently uses f64 arrays internally)
+    let total_size = calculate_total_size(args)?;
     let data = vec![0.0; total_size];
-    Ok(XdlValue::Array(data))
+
+    // If multi-dimensional, create MultiDimArray with shape
+    if shape.len() > 1 {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    } else {
+        Ok(XdlValue::Array(data))
+    }
 }
 
 /// Create integer array: INTARR(dimensions...)
@@ -97,9 +106,21 @@ pub fn intarr(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args {
+        shape.push(extract_dimension(arg)?);
+    }
+
     let total_size = calculate_total_size(args)?;
     let data = vec![0.0; total_size];
-    Ok(XdlValue::Array(data))
+
+    // If multi-dimensional, create MultiDimArray with shape
+    if shape.len() > 1 {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    } else {
+        Ok(XdlValue::Array(data))
+    }
 }
 
 /// Create long integer array: LONARR(dimensions...)
@@ -111,9 +132,21 @@ pub fn lonarr(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args {
+        shape.push(extract_dimension(arg)?);
+    }
+
     let total_size = calculate_total_size(args)?;
     let data = vec![0.0; total_size];
-    Ok(XdlValue::Array(data))
+
+    // If multi-dimensional, create MultiDimArray with shape
+    if shape.len() > 1 {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    } else {
+        Ok(XdlValue::Array(data))
+    }
 }
 
 /// Create floating-point array: FLTARR(dimensions...)
@@ -125,9 +158,21 @@ pub fn fltarr(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args {
+        shape.push(extract_dimension(arg)?);
+    }
+
     let total_size = calculate_total_size(args)?;
     let data = vec![0.0; total_size];
-    Ok(XdlValue::Array(data))
+
+    // If multi-dimensional, create MultiDimArray with shape
+    if shape.len() > 1 {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    } else {
+        Ok(XdlValue::Array(data))
+    }
 }
 
 /// Create double precision array: DBLARR(dimensions...)
@@ -139,9 +184,21 @@ pub fn dblarr(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args {
+        shape.push(extract_dimension(arg)?);
+    }
+
     let total_size = calculate_total_size(args)?;
     let data = vec![0.0; total_size];
-    Ok(XdlValue::Array(data))
+
+    // If multi-dimensional, create MultiDimArray with shape
+    if shape.len() > 1 {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    } else {
+        Ok(XdlValue::Array(data))
+    }
 }
 
 /// Create string array: STRARR(dimensions...)
@@ -565,14 +622,14 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let mut result = vec![0.0; n];
             let half_window = window_size / 2;
 
-            for i in 0..n {
+            for (i, item) in result.iter_mut().enumerate().take(n) {
                 let mut sum = 0.0;
                 for j in 0..window_size {
                     let offset = j as i32 - half_window as i32;
                     let idx = ((i as i32 + offset).rem_euclid(n as i32)) as usize;
                     sum += arr[idx];
                 }
-                result[i] = sum / window_size as f64;
+                *item = sum / window_size as f64;
             }
 
             Ok(XdlValue::Array(result))
@@ -625,7 +682,7 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let mut result = vec![0.0; n];
             let half_window = window_size / 2;
 
-            for i in 0..n {
+            for (i, item) in result.iter_mut().enumerate().take(n) {
                 let mut sum = 0.0;
                 for j in 0..window_size {
                     let offset = j as i32 - half_window as i32;
@@ -637,7 +694,7 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
                         sum += arr[idx as usize];
                     }
                 }
-                result[i] = sum / window_size as f64;
+                *item = sum / window_size as f64;
             }
 
             Ok(XdlValue::Array(result))
@@ -845,8 +902,8 @@ pub fn reform_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Extract new dimensions
     let mut new_dims = Vec::new();
-    for i in 1..args.len() {
-        let dim = extract_dimension(&args[i])?;
+    for arg in args.iter().skip(1) {
+        let dim = extract_dimension(arg)?;
         new_dims.push(dim);
     }
 

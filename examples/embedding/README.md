@@ -16,7 +16,7 @@ XDL provides C-compatible FFI (Foreign Function Interface) bindings that allow y
 
 ## Directory Structure
 
-```
+```text
 embedding/
 ├── README.md              # This file
 ├── python/

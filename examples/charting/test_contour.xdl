@@ -1,4 +1,7 @@
+// File: test_contour.xdl
 ; Test CONTOUR plot with heatmap visualization
+
+SET_PLOT_BACKEND, 'XDLPLOT'
 
 PRINT, 'Testing CONTOUR plot...'
 
@@ -9,4 +12,5 @@ CONTOUR, z
 
 PRINT, 'CONTOUR plot complete!'
 
-END
+
+// Click Execute to run this code

@@ -370,17 +370,14 @@ PRINT, '  Tissue-specific mean HU values:'
 IF count_bone GT 0.0 THEN BEGIN
     mean_bone = sum_bone / count_bone
     PRINT, '    Bone: ', mean_bone, ' HU (n=', count_bone, ')'
-END
 
 IF count_soft GT 0.0 THEN BEGIN
     mean_soft = sum_soft / count_soft
     PRINT, '    Soft tissue: ', mean_soft, ' HU (n=', count_soft, ')'
-END
 
 IF count_air GT 0.0 THEN BEGIN
     mean_air = sum_air / count_air
     PRINT, '    Air: ', mean_air, ' HU (n=', count_air, ')'
-END
 PRINT, ''
 
 ; ================================================================

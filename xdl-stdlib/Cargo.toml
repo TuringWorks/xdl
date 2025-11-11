@@ -8,15 +8,50 @@ description = "XDL standard library functions"
 
 [dependencies]
 xdl-core = { path = "../xdl-core" }
+xdl-viz3d = { path = "../xdl-viz3d" }
+xdl-viz3d-web = { path = "../xdl-viz3d-web" }
+xdl-viz3d-threejs = { path = "../xdl-viz3d-threejs" }
+xdl-charts = { path = "../xdl-charts" }
+xdl-amp = { path = "../xdl-amp" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 num-complex = { workspace = true }
-plotters = { workspace = true }
+ndarray = { workspace = true }
+plotters = { version = "0.3", features = ["all_series", "chrono", "bitmap_backend", "svg_backend"] }
 eframe = { workspace = true }
 egui = { workspace = true }
 egui_plot = { workspace = true }
 pyo3 = { workspace = true }
 lazy_static = "1.4"
 rustfft = "6.1"
+nalgebra = "0.32"
+
+# GIS and Geospatial (optional - requires PROJ system library)
+geo = { version = "0.28", optional = true }
+geo-types = { version = "0.7", optional = true }
+geojson = { version = "0.24", optional = true }
+proj = { version = "0.27", optional = true }
+wkt = { version = "0.10", optional = true }
+
+# Scientific Visualization
+colorous = "1.0"
+palette = "0.7"
+
+# Terrain and Geometry
+delaunator = "1.0"
+
+# Scientific Data Formats (optional, feature-gated)
+netcdf = { version = "0.9", optional = true }
+hdf5 = { version = "0.8", optional = true }
+
+# 3D Rendering
+three-d = "0.17"
+
 # GSL = { workspace = true }  # TODO: Install GSL system dependency
+
+[features]
+default = []
+gis = ["geo", "geo-types", "geojson", "proj", "wkt"]
+scientific-io = ["netcdf", "hdf5"]
+all-features = ["gis", "scientific-io"]

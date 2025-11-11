@@ -75,10 +75,27 @@ impl<'a> Parser<'a> {
         if self.check(&Token::Begin) {
             self.advance(); // consume 'begin'
             let mut statements = Vec::new();
-            while !self.check(&Token::End) && !self.is_at_end() {
+
+            // GDL/IDL allows both 'end' and specific terminators (endif, endfor, endwhile)
+            // to close a begin block. E.g., "for i=1,3 do begin ... endfor" is valid.
+            while !self.is_at_end() {
+                // Check if we hit 'end' or any of the terminators
+                if self.check(&Token::End) {
+                    self.advance(); // consume 'end'
+                    break;
+                }
+
+                // Check if we hit a terminator (like endif, endfor, endwhile)
+                let is_terminator = terminators.iter().any(|term| {
+                    std::mem::discriminant(self.peek()) == std::mem::discriminant(term)
+                });
+                if is_terminator {
+                    // Don't consume the terminator - let the caller handle it
+                    break;
+                }
+
                 statements.push(self.parse_statement()?);
             }
-            self.consume(Token::End, "Expected 'end' to close begin block")?;
             Ok(statements)
         } else {
             // Parse statements until we hit a terminator
@@ -681,19 +698,43 @@ impl<'a> Parser<'a> {
         let mut indices = Vec::new();
 
         loop {
-            // Check for range with leading colon (e.g., [:5])
-            if self.check(&Token::Colon) {
+            // Check for wildcard * (means all elements)
+            if self.check(&Token::Multiply) {
+                self.advance(); // consume '*'
+                indices.push(ArrayIndex::All);
+            } else if self.check(&Token::Colon) {
+                // Range with leading colon (e.g., [:5])
                 self.advance(); // consume ':'
-                let end = if self.check(&Token::RightBracket) || self.check(&Token::Comma) {
+
+                // Check for * wildcard as end
+                let end = if self.check(&Token::Multiply) {
+                    self.advance(); // consume '*'
+                    None // * means "to end"
+                } else if self.check(&Token::RightBracket)
+                    || self.check(&Token::Comma)
+                    || self.check(&Token::Colon)
+                {
                     None
                 } else {
                     Some(self.parse_expression()?)
                 };
 
+                // Check for step (e.g., [:*:2] or [:10:2])
+                let step = if self.check(&Token::Colon) {
+                    self.advance();
+                    if self.check(&Token::RightBracket) || self.check(&Token::Comma) {
+                        None
+                    } else {
+                        Some(self.parse_expression()?)
+                    }
+                } else {
+                    None
+                };
+
                 indices.push(ArrayIndex::Range {
                     start: None,
                     end: end.map(Box::new),
-                    step: None,
+                    step: step.map(Box::new),
                 });
             } else {
                 // Parse first expression
@@ -703,16 +744,27 @@ impl<'a> Parser<'a> {
                 if self.check(&Token::Colon) {
                     self.advance(); // consume ':'
 
-                    let end = if self.check(&Token::RightBracket) || self.check(&Token::Comma) {
+                    // Check for * wildcard as end
+                    let end = if self.check(&Token::Multiply) {
+                        self.advance(); // consume '*'
+                        None // * means "to end"
+                    } else if self.check(&Token::RightBracket)
+                        || self.check(&Token::Comma)
+                        || self.check(&Token::Colon)
+                    {
                         None
                     } else {
                         Some(self.parse_expression()?)
                     };
 
-                    // Check for step (e.g., 0:10:2)
+                    // Check for step (e.g., 0:*:2 or 0:10:2)
                     let step = if self.check(&Token::Colon) {
                         self.advance();
-                        Some(self.parse_expression()?)
+                        if self.check(&Token::RightBracket) || self.check(&Token::Comma) {
+                            None
+                        } else {
+                            Some(self.parse_expression()?)
+                        }
                     } else {
                         None
                     };

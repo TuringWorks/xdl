@@ -67,6 +67,11 @@ impl Interpreter {
                         self.context.set_variable(name.clone(), val);
                         Ok(())
                     }
+                    Expression::SystemVariable { name, .. } => {
+                        // Handle system variable assignment: !pi = 3.14
+                        self.context.set_system_variable(name.clone(), val);
+                        Ok(())
+                    }
                     Expression::ArrayRef { array, indices, .. } => {
                         // Handle array element assignment: arr[i] = value
                         self.execute_array_assignment(array, indices, val)
@@ -94,7 +99,12 @@ impl Interpreter {
                 Ok(())
             }
 
-            Statement::ProcedureCall { name, args, .. } => {
+            Statement::ProcedureCall {
+                name,
+                args,
+                keywords,
+                ..
+            } => {
                 // Handle built-in procedures like PRINT
                 match name.to_uppercase().as_str() {
                     "PRINT" => {
@@ -133,13 +143,21 @@ impl Interpreter {
                                 arg_values.push(self.evaluate_expression(arg)?);
                             }
 
-                            match self.evaluator.call_procedure(name, &arg_values) {
-                                Ok(_) => Ok(()),
-                                Err(_) => Err(XdlError::RuntimeError(format!(
-                                    "Unknown procedure: {}",
-                                    name
-                                ))),
+                            // Evaluate keyword arguments
+                            let mut keyword_map = HashMap::new();
+                            for keyword in keywords {
+                                if let Some(value_expr) = &keyword.value {
+                                    let value = self.evaluate_expression(value_expr)?;
+                                    keyword_map.insert(keyword.name.to_uppercase(), value);
+                                }
                             }
+
+                            self.evaluator.call_procedure_with_keywords(
+                                name,
+                                &arg_values,
+                                &keyword_map,
+                            )?;
+                            Ok(())
                         }
                     }
                 }
@@ -475,8 +493,76 @@ impl Interpreter {
                         )),
                     }
                 }
+                XdlValue::MultiDimArray { data, shape } => {
+                    // Handle multi-dimensional array indexing
+                    // Compute linear index from multi-dimensional indices
+                    match &indices[0] {
+                        ArrayIndex::Single(expr) => {
+                            let index_val = self.evaluate_expression(expr)?;
+                            let idx0 = index_val.to_long()? as usize;
+
+                            if indices.len() == 1 {
+                                // Single index on multi-dim array (treats as flat)
+                                if idx0 >= data.len() {
+                                    return Err(XdlError::RuntimeError(format!(
+                                        "Index {} out of bounds for array of size {}",
+                                        idx0,
+                                        data.len()
+                                    )));
+                                }
+                                data[idx0] = value.to_double()?;
+                                Ok(())
+                            } else {
+                                // Multi-dimensional indexing - compute linear index
+                                let mut linear_idx = idx0;
+                                let mut stride = 1;
+
+                                // Calculate strides (column-major order like IDL/GDL)
+                                for i in 1..indices.len() {
+                                    match &indices[i] {
+                                        ArrayIndex::Single(expr) => {
+                                            let index_val = self.evaluate_expression(expr)?;
+                                            let idx = index_val.to_long()? as usize;
+
+                                            if i >= shape.len() {
+                                                return Err(XdlError::RuntimeError(format!(
+                                                    "Too many indices: array has {} dimensions",
+                                                    shape.len()
+                                                )));
+                                            }
+
+                                            stride *= shape[i - 1];
+                                            linear_idx += idx * stride;
+                                        }
+                                        _ => {
+                                            return Err(XdlError::NotImplemented(
+                                                "Range indexing in multi-dimensional arrays"
+                                                    .to_string(),
+                                            ))
+                                        }
+                                    }
+                                }
+
+                                if linear_idx >= data.len() {
+                                    return Err(XdlError::RuntimeError(format!(
+                                        "Index out of bounds: computed linear index {} >= {}",
+                                        linear_idx,
+                                        data.len()
+                                    )));
+                                }
+
+                                data[linear_idx] = value.to_double()?;
+                                Ok(())
+                            }
+                        }
+                        _ => Err(XdlError::NotImplemented(
+                            "Range indexing in multi-dimensional assignment".to_string(),
+                        )),
+                    }
+                }
                 _ => Err(XdlError::RuntimeError(
-                    "Multi-dimensional indexing requires nested array".to_string(),
+                    "Multi-dimensional indexing requires nested array or multi-dimensional array"
+                        .to_string(),
                 )),
             }
         } else {

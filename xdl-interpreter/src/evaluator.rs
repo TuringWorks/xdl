@@ -136,6 +136,17 @@ impl Evaluator {
         self.stdlib.call_procedure(name, args)
     }
 
+    /// Call a procedure from the standard library with keyword arguments
+    pub fn call_procedure_with_keywords(
+        &self,
+        name: &str,
+        args: &[XdlValue],
+        keywords: &std::collections::HashMap<String, XdlValue>,
+    ) -> XdlResult<XdlValue> {
+        self.stdlib
+            .call_procedure_with_keywords(name, args, keywords)
+    }
+
     /// Evaluate binary operations
     pub fn evaluate_binary_op(
         &self,
@@ -148,6 +159,219 @@ impl Evaluator {
 
         // Handle array operations
         match (left, right) {
+            // Handle MultiDimArray × MultiDimArray
+            (
+                MultiDimArray {
+                    data: a,
+                    shape: shape_a,
+                },
+                MultiDimArray {
+                    data: b,
+                    shape: shape_b,
+                },
+            ) => {
+                if shape_a != shape_b {
+                    return Err(XdlError::RuntimeError(format!(
+                        "MultiDimArray dimensions must match for operations: {:?} vs {:?}",
+                        shape_a, shape_b
+                    )));
+                }
+                let result_data: Vec<f64> = match op {
+                    Add => a.iter().zip(b.iter()).map(|(x, y)| x + y).collect(),
+                    Subtract => a.iter().zip(b.iter()).map(|(x, y)| x - y).collect(),
+                    Multiply => a.iter().zip(b.iter()).map(|(x, y)| x * y).collect(),
+                    Divide => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if *y == 0.0 { f64::NAN } else { x / y })
+                        .collect(),
+                    Power => a.iter().zip(b.iter()).map(|(x, y)| x.powf(*y)).collect(),
+                    Modulo => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if *y == 0.0 { f64::NAN } else { x % y })
+                        .collect(),
+                    Equal => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| {
+                            if (x - y).abs() < f64::EPSILON {
+                                1.0
+                            } else {
+                                0.0
+                            }
+                        })
+                        .collect(),
+                    NotEqual => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| {
+                            if (x - y).abs() >= f64::EPSILON {
+                                1.0
+                            } else {
+                                0.0
+                            }
+                        })
+                        .collect(),
+                    Less => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if x < y { 1.0 } else { 0.0 })
+                        .collect(),
+                    Greater => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if x > y { 1.0 } else { 0.0 })
+                        .collect(),
+                    LessEqual => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if x <= y { 1.0 } else { 0.0 })
+                        .collect(),
+                    GreaterEqual => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if x >= y { 1.0 } else { 0.0 })
+                        .collect(),
+                    And => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if *x != 0.0 && *y != 0.0 { 1.0 } else { 0.0 })
+                        .collect(),
+                    Or => a
+                        .iter()
+                        .zip(b.iter())
+                        .map(|(x, y)| if *x != 0.0 || *y != 0.0 { 1.0 } else { 0.0 })
+                        .collect(),
+                    _ => {
+                        return Err(XdlError::NotImplemented(
+                            "MultiDimArray operation not implemented".to_string(),
+                        ))
+                    }
+                };
+                return Ok(MultiDimArray {
+                    data: result_data,
+                    shape: shape_a.clone(),
+                });
+            }
+            // Handle MultiDimArray × scalar
+            (MultiDimArray { data: a, shape }, scalar) => {
+                let s = self.to_double(scalar)?;
+                let result_data: Vec<f64> = match op {
+                    Add => a.iter().map(|x| x + s).collect(),
+                    Subtract => a.iter().map(|x| x - s).collect(),
+                    Multiply => a.iter().map(|x| x * s).collect(),
+                    Divide => a
+                        .iter()
+                        .map(|x| if s == 0.0 { f64::NAN } else { x / s })
+                        .collect(),
+                    Power => a.iter().map(|x| x.powf(s)).collect(),
+                    Modulo => a
+                        .iter()
+                        .map(|x| if s == 0.0 { f64::NAN } else { x % s })
+                        .collect(),
+                    Equal => a
+                        .iter()
+                        .map(|x| {
+                            if (x - s).abs() < f64::EPSILON {
+                                1.0
+                            } else {
+                                0.0
+                            }
+                        })
+                        .collect(),
+                    NotEqual => a
+                        .iter()
+                        .map(|x| {
+                            if (x - s).abs() >= f64::EPSILON {
+                                1.0
+                            } else {
+                                0.0
+                            }
+                        })
+                        .collect(),
+                    Less => a.iter().map(|x| if x < &s { 1.0 } else { 0.0 }).collect(),
+                    Greater => a.iter().map(|x| if x > &s { 1.0 } else { 0.0 }).collect(),
+                    LessEqual => a.iter().map(|x| if x <= &s { 1.0 } else { 0.0 }).collect(),
+                    GreaterEqual => a.iter().map(|x| if x >= &s { 1.0 } else { 0.0 }).collect(),
+                    And => a
+                        .iter()
+                        .map(|x| if *x != 0.0 && s != 0.0 { 1.0 } else { 0.0 })
+                        .collect(),
+                    Or => a
+                        .iter()
+                        .map(|x| if *x != 0.0 || s != 0.0 { 1.0 } else { 0.0 })
+                        .collect(),
+                    _ => {
+                        return Err(XdlError::NotImplemented(
+                            "MultiDimArray-scalar operation not implemented".to_string(),
+                        ))
+                    }
+                };
+                return Ok(MultiDimArray {
+                    data: result_data,
+                    shape: shape.clone(),
+                });
+            }
+            // Handle scalar × MultiDimArray
+            (scalar, MultiDimArray { data: a, shape }) => {
+                let s = self.to_double(scalar)?;
+                let result_data: Vec<f64> = match op {
+                    Add => a.iter().map(|x| s + x).collect(),
+                    Subtract => a.iter().map(|x| s - x).collect(),
+                    Multiply => a.iter().map(|x| s * x).collect(),
+                    Divide => a
+                        .iter()
+                        .map(|x| if *x == 0.0 { f64::NAN } else { s / x })
+                        .collect(),
+                    Power => a.iter().map(|x| s.powf(*x)).collect(),
+                    Modulo => a
+                        .iter()
+                        .map(|x| if *x == 0.0 { f64::NAN } else { s % x })
+                        .collect(),
+                    Equal => a
+                        .iter()
+                        .map(|x| {
+                            if (s - x).abs() < f64::EPSILON {
+                                1.0
+                            } else {
+                                0.0
+                            }
+                        })
+                        .collect(),
+                    NotEqual => a
+                        .iter()
+                        .map(|x| {
+                            if (s - x).abs() >= f64::EPSILON {
+                                1.0
+                            } else {
+                                0.0
+                            }
+                        })
+                        .collect(),
+                    Less => a.iter().map(|x| if &s < x { 1.0 } else { 0.0 }).collect(),
+                    Greater => a.iter().map(|x| if &s > x { 1.0 } else { 0.0 }).collect(),
+                    LessEqual => a.iter().map(|x| if &s <= x { 1.0 } else { 0.0 }).collect(),
+                    GreaterEqual => a.iter().map(|x| if &s >= x { 1.0 } else { 0.0 }).collect(),
+                    And => a
+                        .iter()
+                        .map(|x| if s != 0.0 && *x != 0.0 { 1.0 } else { 0.0 })
+                        .collect(),
+                    Or => a
+                        .iter()
+                        .map(|x| if s != 0.0 || *x != 0.0 { 1.0 } else { 0.0 })
+                        .collect(),
+                    _ => {
+                        return Err(XdlError::NotImplemented(
+                            "Scalar-MultiDimArray operation not implemented".to_string(),
+                        ))
+                    }
+                };
+                return Ok(MultiDimArray {
+                    data: result_data,
+                    shape: shape.clone(),
+                });
+            }
             (Array(a), Array(b)) => {
                 if a.len() != b.len() {
                     return Err(XdlError::RuntimeError(
@@ -849,7 +1073,7 @@ mod tests {
         let evaluator = Evaluator::new();
         let mut context = Context::new();
 
-        context.set_variable("x".to_string(), XdlValue::Double(3.14));
+        context.set_variable("x".to_string(), XdlValue::Double(3.5));
 
         let expr = Expression::Variable {
             name: "x".to_string(),
@@ -857,7 +1081,7 @@ mod tests {
         };
 
         let result = evaluator.evaluate(&expr, &mut context).unwrap();
-        assert_eq!(result, XdlValue::Double(3.14));
+        assert_eq!(result, XdlValue::Double(3.5));
     }
 
     #[test]

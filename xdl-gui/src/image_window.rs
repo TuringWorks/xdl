@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use fltk::{
-    app,
     enums::{Color, Event},
     image::PngImage,
     prelude::*,
@@ -67,16 +66,13 @@ impl ImageWindow {
         });
 
         window.end();
-        window.show();
+        // Don't show here - will be shown later on main thread
 
         Ok(Self { window })
     }
 
     pub fn show(&mut self) {
         self.window.show();
-        // Process events to ensure window is displayed
-        while self.window.shown() {
-            app::wait();
-        }
+        // Don't wait here - just show and return
     }
 }

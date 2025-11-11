@@ -41,5 +41,3 @@ PRINT, '======================================='
 PRINT, 'Test complete!'
 PRINT, 'If you see Tauri windows, integration works!'
 PRINT, '======================================='
-
-END

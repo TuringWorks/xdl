@@ -16,22 +16,24 @@ This is a complete rewrite of XDL in Rust, designed to provide:
 
 The project is structured as a Cargo workspace with the following crates:
 
-- **`xdl-core`**: Core data structures, types, and array operations
-- **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom
-- **`xdl-interpreter`**: AST interpreter and execution engine
+- **`xdl-core`**: Core data structures, types, and array operations (~1,353 lines)
+- **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom (~2,176 lines)
+- **`xdl-interpreter`**: AST interpreter and execution engine (~1,796 lines)
 - **`xdl-runtime`**: Runtime system with memory management
-- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics, ML)
+- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics, ML) (~13,199 lines)
 - **`xdl-ffi`**: Foreign function interfaces to external libraries
 - **`xdl-cli`**: Command-line interface and REPL
-- **`xdl-gui`**: Graphical user interface components
-- **`xdl-charts`**: Charting and visualization library
+- **`xdl-gui`**: Graphical user interface components (~1,963 lines)
+- **`xdl-charts`**: Charting and visualization library (~584 lines)
 - **`xdl-viz3d`**: 3D visualization engine
-- **`xdl-matlab`**: MATLAB transpilation support
-- **`xdl-amp`**: Accelerated Math Processing
-- **`xdl-chart-viewer`**: Interactive chart viewer application
-- **`xdl-desktop-viewer`**: Desktop visualization viewer
-- **`xdl-viz3d-threejs`**: Three.js 3D visualization web components
 - **`xdl-viz3d-web`**: Web-based 3D visualization
+- **`xdl-viz3d-threejs`**: Three.js 3D visualization web components
+- **`xdl-chart-viewer`**: Interactive chart viewer application
+- **`xdl-amp`**: Accelerated Math Processing
+
+**Additional Modules (not in workspace):**
+- **`xdl-matlab`**: MATLAB transpilation support (~83,000 line transpiler)
+- **`xdl-desktop-viewer`**: Desktop visualization viewer
 
 ## Features
 
@@ -43,21 +45,54 @@ The project is structured as a Cargo workspace with the following crates:
 
 ### Language Features
 - Variables and expressions
-- Control flow (IF/THEN/ELSE, FOR, WHILE, FOREACH)
-- Functions and procedures
-- Array operations and indexing
+- Control flow: IF/THEN/ELSE, FOR, WHILE, REPEAT, FOREACH, BREAK, CONTINUE, RETURN
+- Built-in function calls (100+ functions)
+- Array operations and indexing (multi-dimensional arrays)
 - Structure definitions
+- **Not yet supported**: User-defined procedures (PRO/ENDPRO), GOTO/labels
 
-### Built-in Functions
-- Mathematical functions (SIN, COS, EXP, etc.)
-- Array functions (TRANSPOSE, REFORM, etc.)
-- I/O operations (PRINT, READ, etc.)
-- **Python 3.13 integration** (PYTHON_IMPORT, PYTHON_CALL)
-- Graphics and plotting (2D/3D charts, WebGL rendering)
-- Machine learning functions (K-means, neural networks, cross-validation)
-- MATLAB transpilation support
-- GPU acceleration support
-- Advanced visualization (3D plotting, interactive charts)
+### Built-in Functions (100+ functions implemented)
+- **Mathematical functions**: SIN, COS, TAN, EXP, ALOG, SQRT, FFT, etc.
+- **Array functions**: TRANSPOSE, REFORM, REVERSE, SORT, WHERE, etc.
+- **Array creation**: FINDGEN, INDGEN, FLTARR, DBLARR, RANDOMU, etc.
+- **Statistics**: MEAN, VARIANCE, STDDEV, MEDIAN, MOMENT, KURTOSIS, etc.
+- **I/O operations**: PRINT, OPENR, OPENW, READF, WRITEF, etc.
+- **Python 3.13 integration**: PYTHON_IMPORT, PYTHON_CALL, PYTHON_CALL_KW (PyO3-based)
+- **Graphics and plotting**: 50+ procedures (PLOT, SURFACE, CONTOUR, CHART_*, SURFACE3D, etc.)
+- **Machine learning**: 50+ functions (neural networks, K-means, SVM, cross-validation, activation functions, optimizers)
+- **Linear algebra**: INVERT, DETERM, SVDC, LA_EIGENVAL, LUDC, etc.
+- **Image processing**: CONVOL, DILATE, ERODE, SOBEL, GAUSSIAN_FILTER, etc.
+- **Signal processing**: A_CORRELATE, C_CORRELATE, DIGITAL_FILTER, HILBERT, etc.
+- **String functions**: STRLEN, STRPOS, STRMID, STRUPCASE, STRING, etc.
+- **MATLAB transpilation**: Working transpiler for basic to moderate complexity .m files
+- **MATLAB compatibility**: LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
+- **GPU acceleration**: XDL-AMP module with multi-backend support
+
+## Known Limitations
+
+While XDL provides substantial functionality, the following features are not yet fully implemented:
+
+### Language Features
+- **User-defined procedures**: PRO/ENDPRO syntax is not yet supported (this is the most critical missing feature)
+- **GOTO statements**: Label-based control flow is not implemented
+- **Complex numbers**: Partial support with some type conversion issues
+- **Advanced array indexing**: Some edge cases in multi-dimensional array slicing
+
+### Compatibility
+- **IDL/GDL compatibility**: Approximately 60-70% compatible with core IDL features
+- **MATLAB transpilation**: Works for basic to moderate complexity but fragile with advanced features
+- **Example pass rate**: ~64% of test examples pass; 36% fail due to unsupported features or edge cases
+
+### Testing & Quality
+- **Test runner**: `xdl test` command is a stub (not yet implemented)
+- **Edge cases**: Various edge cases in control flow, type conversions, and array operations
+- **Error messages**: Could be more helpful in some scenarios
+
+### Performance
+- **Optimization**: Performance tuning is ongoing
+- **GPU acceleration**: Implementation depth varies by operation
+
+**Workaround**: For production use cases requiring missing features, consider using GDL or IDL, or contribute to implementing these features in XDL.
 
 ## Installation
 
@@ -230,23 +265,27 @@ Contributions are welcome! Please:
 ### Phase 3: Advanced Features ✅
 - [x] Graphics and plotting (WebGL, Three.js)
 - [x] External library integration
-- [x] MATLAB transpilation support
-- [x] GPU acceleration
+- [x] MATLAB transpilation support (basic to moderate)
+- [x] GPU acceleration (XDL-AMP)
 - [x] Interactive chart viewers
 - [x] 3D visualization engines
 
 ### Phase 4: User Interfaces ✅
-- [x] GUI components
+- [x] GUI components (egui-based)
 - [x] Desktop viewer applications
 - [x] Web-based visualization
 - [x] Interactive chart viewers
 
-### Phase 5: Compatibility & Optimization 🚧
-- [x] IDL/GDL compatibility layer
+### Phase 5: Compatibility & Optimization 🚧 **(Current Focus)**
+- [x] IDL/GDL compatibility layer (60-70% compatible)
 - [x] Legacy code migration tools
-- [x] Documentation and examples
+- [x] Documentation and examples (150+ examples)
+- [ ] User-defined procedures (PRO/ENDPRO) **critical missing feature**
+- [ ] Complete complex number support
+- [ ] GOTO and label support
 - [ ] Performance optimization
-- [ ] Extended language features
+- [ ] Extended edge case handling
+- [ ] Comprehensive test coverage
 
 ## License
 
@@ -259,19 +298,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Scientific computing libraries (GSL, NetCDF, HDF5, etc.)
 - TuringWorks development team
 
-## Status
+## Project Status
 
-✅ **Feature Complete** ✅
+🚧 **Active Development - Beta** 🚧
 
-XDL is a mature implementation with comprehensive language support, advanced visualization capabilities, and extensive library features. The project includes:
+XDL is a functional beta implementation with substantial language support and advanced features. The project totals **~196,000 lines of Rust code** across 145 source files and includes:
 
-- Complete XDL/IDL language implementation
-- Advanced 2D/3D visualization and charting
-- Machine learning and scientific computing functions
-- Python 3.13 integration
-- MATLAB transpilation support
-- GPU acceleration capabilities
-- Multiple user interfaces (CLI, GUI, Web)
-- Extensive example library and documentation
+- **Core language**: Variables, expressions, control flow (FOR, WHILE, FOREACH, IF/THEN/ELSE)
+- **100+ built-in functions**: Math, arrays, statistics, I/O, graphics
+- **50+ ML functions**: Neural networks, K-means, SVM, cross-validation, optimizers
+- **50+ graphics procedures**: 2D/3D plotting, charting, interactive visualization
+- **Python 3.13 integration**: Real PyO3-based integration with PYTHON_IMPORT/PYTHON_CALL
+- **MATLAB transpiler**: 83,000-line transpiler supporting basic to moderate .m files
+- **GPU acceleration**: XDL-AMP module with multi-backend support
+- **Multiple interfaces**: CLI/REPL, GUI (egui), web-based viewers
+- **150+ examples**: Demonstrating features across basics, ML, visualization, and scientific computing
 
-Active development continues on performance optimization and extended features. Contributions and feedback are welcome!
+**Compatibility**: Approximately **60-70% IDL/GDL compatible** with core features working well. See Known Limitations below for missing features.
+
+Active development continues on completing user-defined procedures, improving edge case handling, and performance optimization. Contributions and feedback are welcome!

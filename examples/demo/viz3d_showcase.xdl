@@ -20,8 +20,8 @@
 ; ================================================================
 
 PRINT, '╔═══════════════════════════════════════════════════════════╗'
-PRINT, '║         XDL WebGPU Showcase Demo                         ║'
-PRINT, '║         High-Performance Volume Rendering                ║'
+PRINT, '║         XDL WebGPU Showcase Demo                          ║'
+PRINT, '║         High-Performance Volume Rendering                 ║'
 PRINT, '╚═══════════════════════════════════════════════════════════╝'
 PRINT, ''
 
@@ -252,7 +252,7 @@ PRINT, ''
 ; ================================================================
 PRINT, ''
 PRINT, '╔═══════════════════════════════════════════════════════════╗'
-PRINT, '║              WebGPU Showcase Complete!                   ║'
+PRINT, '║              WebGPU Showcase Complete!                    ║'
 PRINT, '╚═══════════════════════════════════════════════════════════╝'
 PRINT, ''
 PRINT, 'Demonstrated capabilities:'

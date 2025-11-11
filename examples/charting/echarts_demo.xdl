@@ -114,5 +114,3 @@ PRINT, 'All 8 chart types have been displayed.'
 PRINT, 'Charts open in native Tauri windows.'
 PRINT, 'Close windows when done.'
 PRINT, '========================================='
-
-END

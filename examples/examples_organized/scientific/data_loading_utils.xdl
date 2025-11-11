@@ -73,7 +73,6 @@ FUNCTION WRITE_VOLUME_BINARY, data, filename, metadata
     PRINT, '    Size:', N_ELEMENTS(data) * 4, 'bytes'
 
     RETURN, 1
-END
 
 ; Function to read 3D volume from binary file
 FUNCTION READ_VOLUME_BINARY, filename, metadata
@@ -131,7 +130,6 @@ FUNCTION READ_VOLUME_BINARY, filename, metadata
     metadata = {version: version, nx: nx, ny: ny, nz: nz, datatype: datatype}
 
     RETURN, data
-END
 
 ; ================================================================
 ; PART 2: ASCII/CSV Data Functions
@@ -169,7 +167,6 @@ FUNCTION WRITE_CSV, data, filename, header
     PRINT, '    Rows:', dims[0], ', Columns:', dims[1]
 
     RETURN, 1
-END
 
 ; Function to read CSV data
 FUNCTION READ_CSV, filename, header, skip_lines
@@ -216,7 +213,6 @@ FUNCTION READ_CSV, filename, header, skip_lines
     PRINT, '    Rows:', n_rows, ', Columns:', n_cols
 
     RETURN, data
-END
 
 ; ================================================================
 ; PART 3: Demonstration - Save and Load Binary Volume

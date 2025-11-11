@@ -133,6 +133,11 @@ impl Context {
             .ok_or_else(|| XdlError::VariableNotFound(format!("!{}", name)))
     }
 
+    /// Set a system variable (IDL/GDL style variables starting with !)
+    pub fn set_system_variable(&mut self, name: String, value: XdlValue) {
+        self.system_variables.insert(name, value);
+    }
+
     /// Define a function
     pub fn define_function(&mut self, name: String, func: FunctionDef) {
         self.functions.insert(name, func);

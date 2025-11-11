@@ -1,3 +1,0 @@
-PLOT: xdl-charts unavailable (Runtime error: Failed to launch chart viewer: No such file or directory (os error 2)), using fallback renderer
-PLOT: xdl-charts unavailable (Runtime error: Failed to launch chart viewer: No such file or directory (os error 2)), using fallback renderer
-SURFACE: xdl-charts unavailable (Runtime error: Failed to launch chart viewer: No such file or directory (os error 2)), using fallback renderer

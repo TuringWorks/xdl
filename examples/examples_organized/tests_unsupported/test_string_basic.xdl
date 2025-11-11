@@ -1,0 +1,91 @@
+; Basic STRING conversion tests
+
+PRO test_string_basic
+
+    PRINT, 'STRING CONVERSION BASIC TESTS'
+    PRINT, ''
+
+    ; Test 1: String input
+    PRINT, 'Test 1: String input'
+    s = 'hello'
+    result = STRING(s)
+    PRINT, 'Input: ', s
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 2: Integer conversion
+    PRINT, 'Test 2: Integer conversion'
+    i = 42
+    result = STRING(i)
+    PRINT, 'Input: ', i
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 3: Negative integer
+    PRINT, 'Test 3: Negative integer'
+    i = -123
+    result = STRING(i)
+    PRINT, 'Input: ', i
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 4: Float conversion
+    PRINT, 'Test 4: Float conversion'
+    f = 3.14159
+    result = STRING(f)
+    PRINT, 'Input: ', f
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 5: Zero values
+    PRINT, 'Test 5: Zero values'
+    i = 0
+    f = 0.0
+    PRINT, 'Integer zero: ', STRING(i)
+    PRINT, 'Float zero: ', STRING(f)
+    PRINT, ''
+
+    ; Test 6: Array conversion - 1D byte array
+    PRINT, 'Test 6: 1D Byte array conversion'
+    arr = BYTARR(5)
+    result = STRING(arr)
+    PRINT, 'Input: BYTARR(5)'
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 7: Array conversion - 2D integer array
+    PRINT, 'Test 7: 2D Integer array conversion'
+    arr = INTARR(3, 4)
+    result = STRING(arr)
+    PRINT, 'Input: INTARR(3, 4)'
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 8: Array conversion - float array
+    PRINT, 'Test 8: Float array conversion'
+    arr = FLTARR(10)
+    result = STRING(arr)
+    PRINT, 'Input: FLTARR(10)'
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 9: Large number
+    PRINT, 'Test 9: Large number'
+    big = 10000000.0
+    result = STRING(big)
+    PRINT, 'Input: ', big
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    ; Test 10: Small number
+    PRINT, 'Test 10: Small number'
+    small = 0.00001
+    result = STRING(small)
+    PRINT, 'Input: ', small
+    PRINT, 'Result: ', result
+    PRINT, ''
+
+    PRINT, 'STRING CONVERSION BASIC TESTS COMPLETE'
+ENDPRO
+
+test_string_basic

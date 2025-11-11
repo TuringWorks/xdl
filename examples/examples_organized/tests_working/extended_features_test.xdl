@@ -1,0 +1,45 @@
+; XDL Extended Features Test
+; Tests additional working features beyond core functionality
+
+; Array operations
+nums = [5, 2, 8, 1, 9, 3]
+min_val = min(nums)
+max_val = max(nums)
+mean_val = mean(nums)
+size_val = n_elements(nums)
+
+; String operations
+test_str = "Hello World"
+str_len = strlen(test_str)
+
+; Statistical operations
+data = [1.0, 2.0, 3.0, 4.0, 5.0]
+data_mean = mean(data)
+data_std = stddev(data)
+
+; Type conversion
+int_val = 42.7
+int_converted = fix(int_val)
+
+; Complex numbers
+complex_val = complex(3, 4)
+real_part = real(complex_val)
+
+; Linear algebra
+identity = identity(3)
+
+; Time functions
+; current_time = systime()
+
+; Array indexing
+test_arr = [10, 20, 30, 40, 50]
+first_element = test_arr[0]
+
+; 2D arrays
+test_matrix = [[1, 2, 3], [4, 5, 6]]
+element = test_matrix[1, 2]
+
+; Sorting
+sorted_arr = sort(nums)
+
+; All extended features tested successfully
