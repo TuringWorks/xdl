@@ -692,7 +692,7 @@ impl<'a> Parser<'a> {
 
                 indices.push(ArrayIndex::Range {
                     start: None,
-                    end,
+                    end: end.map(Box::new),
                     step: None,
                 });
             } else {
@@ -718,13 +718,13 @@ impl<'a> Parser<'a> {
                     };
 
                     indices.push(ArrayIndex::Range {
-                        start: Some(first_expr),
-                        end,
-                        step,
+                        start: Some(Box::new(first_expr)),
+                        end: end.map(Box::new),
+                        step: step.map(Box::new),
                     });
                 } else {
                     // Single index
-                    indices.push(ArrayIndex::Single(first_expr));
+                    indices.push(ArrayIndex::Single(Box::new(first_expr)));
                 }
             }
 

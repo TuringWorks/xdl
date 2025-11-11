@@ -475,23 +475,23 @@ state.plot_style.thick = 2.0;
 
 ### Plot Window Doesn't Appear
 
-**Cause**: GUI not running  
+**Cause**: GUI not running
 **Solution**: Use `./target/release/xdl-gui` instead of CLI
 
 ### PNG Files Instead of Windows
 
-**Cause**: Running in CLI mode  
+**Cause**: Running in CLI mode
 **Solution**: Expected behavior - check `xdl_plot.png`
 
 ### Build Errors in plot2d/plot3d
 
-**Status**: Modules temporarily disabled  
-**Solution**: They're ready but need minor plotters API fixes  
+**Status**: Modules temporarily disabled
+**Solution**: They're ready but need minor plotters API fixes
 **Impact**: None - GUI plotting fully works!
 
 ### Missing Color Tables
 
-**Cause**: Color table not loaded  
+**Cause**: Color table not loaded
 **Solution**: Call `LOADCT, table_num` before plotting
 
 ---
@@ -516,15 +516,15 @@ state.plot_style.thick = 2.0;
 
 **From stubs to full implementation in one session!**
 
-✅ 44 procedures implemented  
-✅ Full GUI integration working  
-✅ Clean architecture ready for expansion  
-✅ Production-ready with fallbacks  
-✅ Comprehensive documentation  
+✅ 44 procedures implemented
+✅ Full GUI integration working
+✅ Clean architecture ready for expansion
+✅ Production-ready with fallbacks
+✅ Comprehensive documentation
 
-**Total Code**: ~1,500 lines of graphics infrastructure  
-**Build Time**: Clean in ~10s  
-**Test Status**: All working!  
+**Total Code**: ~1,500 lines of graphics infrastructure
+**Build Time**: Clean in ~10s
+**Test Status**: All working!
 
 ---
 

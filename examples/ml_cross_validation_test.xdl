@@ -28,19 +28,19 @@ for fold_idx = 0, n_folds-1 do begin
     ; Extract mask for this fold
     fold_start = fold_idx * n_samples
     fold_end = fold_start + n_samples - 1
-    
+
     ; Count training and validation samples
     n_train = 0
     n_val = 0
-    
+
     FOR i = fold_start, fold_end do begin
         IF folds[i] eq 1.0 then n_train = n_train + 1
         IF folds[i] eq 0.0 then n_val = n_val + 1
     END
 endfor
-    
+
     PRINT, 'Fold', fold_idx, ': Training=', n_train, ', Validation=', n_val
-    
+
     ; Validate split proportions
     IF n_val lt 9 OR n_val gt 11 then BEGIN
         PRINT, 'ERROR: Unexpected validation set size for fold', fold_idx
@@ -72,10 +72,10 @@ PRINT, 'Total elements:', N_ELEMENTS(folds_strat)
 for fold_idx = 0, n_folds_strat-1 do begin
     fold_start = fold_idx * 50
     fold_end = fold_start + 49
-    
+
     class_counts = FLTARR(3)
     n_val = 0
-    
+
     FOR i = fold_start, fold_end do begin
         IF folds_strat[i] eq 0.0 then BEGIN  ; Validation sample
             sample_idx = i - fold_start
@@ -85,7 +85,7 @@ for fold_idx = 0, n_folds_strat-1 do begin
         ENDIF
     END
 endfor
-    
+
     PRINT, 'Fold', fold_idx, ': Val samples=', n_val, $
            ', Class distribution: [', class_counts[0], ',', $
            class_counts[1], ',', class_counts[2], ']'
@@ -112,10 +112,10 @@ all_correct = 1
 for fold_idx = 0, n_samples_loo-1 do begin
     fold_start = fold_idx * n_samples_loo
     fold_end = fold_start + n_samples_loo - 1
-    
+
     n_val = 0
     val_idx = -1
-    
+
     FOR i = fold_start, fold_end do begin
         IF folds_loo[i] eq 0.0 then BEGIN
             n_val = n_val + 1
@@ -123,12 +123,12 @@ for fold_idx = 0, n_samples_loo-1 do begin
         ENDIF
     END
 endfor
-    
+
     IF n_val ne 1 then BEGIN
         PRINT, 'ERROR: Fold', fold_idx, 'has', n_val, 'validation samples (expected 1)'
         all_correct = 0
     ENDIF
-    
+
     IF val_idx ne fold_idx then BEGIN
         PRINT, 'ERROR: Fold', fold_idx, 'left out sample', val_idx, '(expected', fold_idx, ')'
         all_correct = 0
@@ -163,13 +163,13 @@ cv_scores = FLTARR(n_cv_folds)
 for fold_idx = 0, n_cv_folds-1 do begin
     fold_start = fold_idx * 100
     fold_end = fold_start + 99
-    
+
     ; Extract training and validation indices
     train_indices = LONARR(100)
     val_indices = LONARR(100)
     n_train = 0
     n_val = 0
-    
+
     FOR i = fold_start, fold_end do begin
         sample_idx = i - fold_start
         IF cv_folds[i] eq 1.0 then BEGIN
@@ -181,15 +181,15 @@ for fold_idx = 0, n_cv_folds-1 do begin
         ENDELSE
     END
 endfor
-    
+
     ; Trim arrays to actual size
     train_idx = train_indices[0:n_train-1]
     val_idx = val_indices[0:n_val-1]
-    
+
     ; Simulate accuracy (in practice, train model and evaluate)
     ; For this test, just use a random accuracy
     cv_scores[fold_idx] = 0.80 + RANDOMU(seed) * 0.15
-    
+
     PRINT, 'Fold', fold_idx, ': n_train=', n_train, ', n_val=', n_val, $
            ', accuracy=', cv_scores[fold_idx]
 end

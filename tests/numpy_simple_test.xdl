@@ -28,7 +28,7 @@ print, "3. Testing NumPy trig functions..."
 sin_result = python_call(numpy_mod, "sin", 0.0)
 print, "numpy.sin(0):", sin_result
 
-cos_result = python_call(numpy_mod, "cos", 0.0)  
+cos_result = python_call(numpy_mod, "cos", 0.0)
 print, "numpy.cos(0):", cos_result
 
 ; Test numpy constants and functions
@@ -39,7 +39,7 @@ print, "4. Testing NumPy array creation with simple methods..."
 zeros_result = python_call(numpy_mod, "zeros", 3)
 print, "numpy.zeros(3):", zeros_result
 
-; Test ones function  
+; Test ones function
 ones_result = python_call(numpy_mod, "ones", 3)
 print, "numpy.ones(3):", ones_result
 

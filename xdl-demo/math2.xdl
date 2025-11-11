@@ -11,7 +11,7 @@ quotient = b / a
 
 print, "Basic arithmetic:"
 print, "a =", a
-print, "b =", b  
+print, "b =", b
 print, "sum =", sum
 print, "product =", product
 print, "quotient =", quotient

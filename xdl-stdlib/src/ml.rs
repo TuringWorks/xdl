@@ -47,7 +47,7 @@ pub fn xdlml_partition(args: &[XdlValue]) -> XdlResult<XdlValue> {
         0.8
     };
 
-    if train_fraction < 0.0 || train_fraction > 1.0 {
+    if !(0.0..=1.0).contains(&train_fraction) {
         return Err(XdlError::InvalidArgument(
             "XDLmlPartition: train_fraction must be between 0 and 1".to_string(),
         ));
@@ -382,7 +382,7 @@ pub fn xdlml_unit_normalizer(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Example:
 ///   data = RANDOMU(seed, 100)  ; 100 data points
 ///   clusters = XDLML_KMeans(data, 3)  ; Cluster into 3 groups
-///   
+///
 /// Algorithm: Lloyd's algorithm (standard K-means)
 ///   1. Initialize k centroids randomly
 ///   2. Assign each point to nearest centroid
@@ -589,7 +589,7 @@ pub fn xdlmlaf_logistic(args: &[XdlValue]) -> XdlResult<XdlValue> {
             Ok(XdlValue::Array(result))
         }
         XdlValue::Double(x) => Ok(XdlValue::Double(1.0 / (1.0 + (-x).exp()))),
-        XdlValue::Float(x) => Ok(XdlValue::Float((1.0 / (1.0 + (-x).exp())) as f32)),
+        XdlValue::Float(x) => Ok(XdlValue::Float(1.0 / (1.0 + (-x).exp()))),
         _ => Err(XdlError::TypeMismatch {
             expected: "numeric".to_string(),
             actual: format!("{:?}", args[0].gdl_type()),
@@ -1931,7 +1931,7 @@ pub fn xdlml_svmpolynomialkernel(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let degree = if args.len() > 4 {
         match &args[4] {
-            XdlValue::Long(d) => *d as i32,
+            XdlValue::Long(d) => *d,
             XdlValue::Int(d) => *d as i32,
             _ => 3,
         }
@@ -2820,7 +2820,7 @@ pub fn xdlml_supportvectormachineclassification(args: &[XdlValue]) -> XdlResult<
 
     let degree = if args.len() > 7 {
         match &args[7] {
-            XdlValue::Long(d) => *d as i32,
+            XdlValue::Long(d) => *d,
             XdlValue::Int(d) => *d as i32,
             _ => 3,
         }
@@ -3227,7 +3227,7 @@ pub fn xdlml_batchnormalization(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let mode = if args.len() > 3 {
         match &args[3] {
-            XdlValue::Long(m) => *m as i32,
+            XdlValue::Long(m) => *m,
             XdlValue::Int(m) => *m as i32,
             _ => 0, // Default to training mode
         }
@@ -3354,7 +3354,7 @@ pub fn xdlml_dropout(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     // Validate dropout rate
-    if dropout_rate < 0.0 || dropout_rate >= 1.0 {
+    if !(0.0..1.0).contains(&dropout_rate) {
         return Err(XdlError::InvalidArgument(
             "XDLML_Dropout: dropout_rate must be in [0.0, 1.0)".to_string(),
         ));
@@ -4557,10 +4557,7 @@ pub fn xdlml_stratifiedkfold(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     for (i, &label) in y_labels.iter().enumerate() {
         let class_id = label.round() as i32;
-        class_indices
-            .entry(class_id)
-            .or_insert_with(Vec::new)
-            .push(i);
+        class_indices.entry(class_id).or_default().push(i);
     }
 
     // Shuffle indices within each class

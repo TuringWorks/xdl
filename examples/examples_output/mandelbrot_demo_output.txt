@@ -39,4 +39,3 @@ SURFACE: Rendering 200x200 surface plot to xdl_surface.png
 ║  - Bright regions: Points outside the set (fast divergence)   ║
 ║  - The iconic "bulb" shape is clearly visible                 ║
 ╚════════════════════════════════════════════════════════════════╝
-

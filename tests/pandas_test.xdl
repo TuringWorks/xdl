@@ -41,7 +41,7 @@ print, ""
 print, "5. Testing Pandas with simple operations..."
 
 ; Test period functionality
-period_test = python_call(pandas_mod, "Period", "2025-01")  
+period_test = python_call(pandas_mod, "Period", "2025-01")
 print, "Pandas Period:", period_test
 
 ; Test timestamp

@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "xdl-core",
-    "xdl-parser", 
+    "xdl-parser",
     "xdl-interpreter",
     "xdl-runtime",
     "xdl-stdlib",

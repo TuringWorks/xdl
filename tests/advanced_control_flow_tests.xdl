@@ -24,14 +24,14 @@ high = n_elements(arr) - 1
 
 while low le high and not found
   mid = (low + high) / 2
-  
+
   if arr[mid] eq target then
     found = 1
     found_index = mid
   else
     if arr[mid] lt target then
       low = mid + 1
-    else  
+    else
       high = mid - 1
     endif
   endif
@@ -171,12 +171,12 @@ signal = [1, 3, 2, 5, 4, 7, 6, 2, 8, 1]
 ; Check middle elements (indices 1-8 for 10-element array)
 for i = 1, 8
   is_max = 0
-  
+
   ; Check if current point is higher than neighbors
   if signal[i] gt signal[i-1] and signal[i] gt signal[i+1] then
     is_max = 1
   endif
-  
+
   if is_max then
     print, "  Local maximum at index", i, "value:", signal[i]
   endif
@@ -199,7 +199,7 @@ divisors = [2, 0, 4, 5]
 for i = 0, 3  ; 4 elements
   dividend = dividends[i]
   divisor = divisors[i]
-  
+
   if divisor eq 0 then
     print, "  Error: Division by zero for", dividend, "÷", divisor
   else
@@ -221,9 +221,9 @@ while not valid_input and attempts lt max_attempts
   ; Simulate reading input
   user_input = input_values[attempts]
   attempts = attempts + 1
-  
+
   print, "  Attempt", attempts, ": Input value =", user_input
-  
+
   ; Validate input (must be between 1 and 100)
   if user_input ge 1 and user_input le 100 then
     valid_input = 1
@@ -261,7 +261,7 @@ found_col = -1
 ; Search matrix with early termination
 for row = 0, 2
   if found then break endif  ; Early termination
-  
+
   for col = 0, 2
     if matrix[row, col] eq search_value then
       found = 1

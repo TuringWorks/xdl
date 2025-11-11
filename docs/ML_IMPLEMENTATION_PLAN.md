@@ -1,7 +1,7 @@
 # XDL Machine Learning Functions - Implementation Plan
 
-**Date**: 2025-01-21  
-**Source**: IDL Machine Learning Documentation  
+**Date**: 2025-01-21
+**Source**: IDL Machine Learning Documentation
 **Status**: Planning Phase
 
 ## Overview
@@ -153,7 +153,7 @@ Non-linear transformations for neural networks:
 36. **IDLmlafSoftSign** - `f(x) = x / (1 + |x|)`
 37. **IDLmlafSoftExponential** - Parametric exponential
 
-**Complexity**: Low (mathematical functions)  
+**Complexity**: Low (mathematical functions)
 **Implementation**: Can use Rust's `libm` or similar
 
 ---
@@ -167,7 +167,7 @@ Kernel functions for Support Vector Machines:
 40. **IDLmlSVMRadialKernel** - RBF: `K(x, y) = exp(-γ||x-y||²)`
 41. **IDLmlSVMSigmoidKernel** - `K(x, y) = tanh(γx·y + r)`
 
-**Complexity**: Low-Medium (dot products, distance calculations)  
+**Complexity**: Low-Medium (dot products, distance calculations)
 **Use**: Transform data into higher-dimensional spaces
 
 ---
@@ -208,7 +208,7 @@ Objective functions for training:
 1. **Data Utilities** (Priority: Critical)
    - ✅ IDLmlPartition - train/test split
    - ✅ IDLmlShuffle - data shuffling
-   
+
 2. **Normalizers** (Priority: High)
    - ✅ IDLmlLinearNormalizer
    - ✅ IDLmlRangeNormalizer
@@ -230,7 +230,7 @@ Objective functions for training:
 1. **Basic Activations** (Priority: High)
    - ✅ IDLmlafIdentity, ReLU, Sigmoid, TanH
    - ✅ IDLmlafSoftmax, SoftPlus, SoftSign
-   
+
 2. **Advanced Activations** (Priority: Medium)
    - ✅ ELU, PReLU, ISRU, ISRLU
    - ✅ ArcTan, Gaussian, Sinc, etc.
@@ -249,7 +249,7 @@ Objective functions for training:
 1. **Basic Optimizers** (Priority: High)
    - ✅ IDLmloptGradientDescent
    - ✅ IDLmloptMomentum
-   
+
 2. **Advanced Optimizers** (Priority: High)
    - ✅ IDLmloptAdam (most popular)
    - ✅ IDLmloptRMSProp

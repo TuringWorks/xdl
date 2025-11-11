@@ -126,7 +126,7 @@ All test files pass:
 - `xdl-core/src/types.rs`: Added `NestedArray` variant
 - `xdl-parser/src/parser.rs`: Fixed if statement parsing
 - `xdl-interpreter/src/lib.rs`: Implemented multi-dimensional array assignment
-- `xdl-interpreter/src/evaluator.rs`: 
+- `xdl-interpreter/src/evaluator.rs`:
   - Added modulo operator
   - Enhanced array operations (indexing, slicing, arithmetic)
   - Support for negative indices

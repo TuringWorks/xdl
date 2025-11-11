@@ -32,4 +32,3 @@ Demo complete! Generated files:
   4. vector_field.png        - Vortex vector field
   5. fluid_instability.png   - Fluid dynamics pattern
 ============================================
-

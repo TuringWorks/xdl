@@ -21,7 +21,7 @@ use tracing::{error, info};
 use crate::image_window::ImageWindow;
 use crate::plot_window::PlotWindow;
 use xdl_interpreter::Interpreter;
-use xdl_stdlib::{register_gui_plot_callback, register_gui_image_callback};
+use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
 
 pub struct XdlGui {
     window: Window,
@@ -627,14 +627,14 @@ impl XdlGui {
                 Err(e) => eprintln!("Plot error: {}", e),
             },
         );
-        
+
         // Register image display callback for 3D plots
-        register_gui_image_callback(
-            move |image_path, title| match ImageWindow::new(&image_path, &title) {
+        register_gui_image_callback(move |image_path, title| {
+            match ImageWindow::new(&image_path, &title) {
                 Ok(mut img_win) => img_win.show(),
                 Err(e) => eprintln!("Image display error: {}", e),
-            },
-        );
+            }
+        });
 
         let gui = Self {
             window,
@@ -714,7 +714,6 @@ impl XdlGui {
     fn extract_filename_from_browser_text(browser_text: &str) -> String {
         // Remove emoji and extract filename
         browser_text
-            .trim()
             .split_whitespace()
             .skip(1) // Skip the emoji
             .collect::<Vec<&str>>()
@@ -814,7 +813,7 @@ impl XdlGui {
         // Update variable browser after execution
         Self::update_variable_browser(var_browser, variables);
 
-        results.push(format!("=== Execution completed ==="));
+        results.push("=== Execution completed ===".to_string());
         let output_text = results.join("\n");
         output_buffer.set_text(&output_text);
 
@@ -865,13 +864,11 @@ impl XdlGui {
             }
 
             // Show concise trace
-            if trimmed.starts_with("if ") {
-                results.push(format!("  [{}] {}", i + 1, trimmed));
-            } else if trimmed.starts_with("for ") {
-                results.push(format!("  [{}] {}", i + 1, trimmed));
-            } else if trimmed.starts_with("while ") {
-                results.push(format!("  [{}] {}", i + 1, trimmed));
-            } else if trimmed.starts_with("print") {
+            if trimmed.starts_with("if ")
+                || trimmed.starts_with("for ")
+                || trimmed.starts_with("while ")
+                || trimmed.starts_with("print")
+            {
                 results.push(format!("  [{}] {}", i + 1, trimmed));
             } else if trimmed.contains("=") {
                 let parts: Vec<&str> = trimmed.split('=').collect();

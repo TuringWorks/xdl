@@ -24,14 +24,14 @@ high = n_elements(arr) - 1
 
 while low le high and not found
   mid = (low + high) / 2
-  
+
   if arr[mid] eq target then
     found = 1
     found_index = mid
   else
     if arr[mid] lt target then
       low = mid + 1
-    else  
+    else
       high = mid - 1
     endif
   endif
@@ -137,24 +137,24 @@ rows = 5
 for i = 0, rows-1
   ; Create row with i+1 elements
   row = intarr(i+1)
-  
+
   ; First and last elements are always 1
   row[0] = 1
   if i gt 0 then row[i] = 1 endif
-  
+
   ; Fill middle elements
   for j = 1, i-1
     ; This would use previous row values in a full implementation
     ; For now, calculate using combination formula
     row[j] = 1  ; Simplified for parser testing
   endfor
-  
+
   ; Print the row with proper spacing
   spaces = ""
   for k = 0, rows-i-1
     spaces = spaces + " "
   endfor
-  
+
   print, "  " + spaces, row
 endfor
 
@@ -199,7 +199,7 @@ for i = 0, n_elements(data) - window
     sum = sum + data[i + j]
   endfor
   moving_avg[i] = sum / window
-  
+
   ; Print window data and average
   window_data = data[i:i+window-1]
   print, "  Window", window_data, "-> Average:", moving_avg[i]
@@ -211,12 +211,12 @@ signal = [1, 3, 2, 5, 4, 7, 6, 2, 8, 1]
 
 for i = 1, n_elements(signal)-2
   is_max = 0
-  
+
   ; Check if current point is higher than neighbors
   if signal[i] gt signal[i-1] and signal[i] gt signal[i+1] then
     is_max = 1
   endif
-  
+
   if is_max then
     print, "  Local maximum at index", i, "value:", signal[i]
   endif
@@ -239,7 +239,7 @@ divisors = [2, 0, 4, 5]
 for i = 0, n_elements(dividends)-1
   dividend = dividends[i]
   divisor = divisors[i]
-  
+
   if divisor eq 0 then
     print, "  Error: Division by zero for", dividend, "÷", divisor
   else
@@ -261,9 +261,9 @@ while not valid_input and attempts lt max_attempts
   ; Simulate reading input
   user_input = input_values[attempts]
   attempts = attempts + 1
-  
+
   print, "  Attempt", attempts, ": Input value =", user_input
-  
+
   ; Validate input (must be between 1 and 100)
   if user_input ge 1 and user_input le 100 then
     valid_input = 1
@@ -301,7 +301,7 @@ found_col = -1
 ; Search matrix with early termination
 for row = 0, 2
   if found then break endif  ; Early termination
-  
+
   for col = 0, 2
     if matrix[row, col] eq search_value then
       found = 1

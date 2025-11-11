@@ -148,7 +148,7 @@ for i = 1, 10
   print, "  Odd number:", i
 endfor
 
-; Break statement in for loop  
+; Break statement in for loop
 print, "For loop with BREAK (stop at first number > 15):"
 for i = 10, 25
   if i gt 15 then
@@ -171,7 +171,7 @@ print, "-------------------------------"
 print, "Finding prime numbers from 2 to 20:"
 for num = 2, 20
   is_prime = 1
-  
+
   ; Check if num is divisible by any number from 2 to sqrt(num)
   max_check = sqrt(num)
   for divisor = 2, max_check
@@ -180,7 +180,7 @@ for num = 2, 20
       break
     endif
   endfor
-  
+
   if is_prime then
     print, "  Prime:", num
   endif

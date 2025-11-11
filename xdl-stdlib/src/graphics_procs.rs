@@ -65,7 +65,7 @@ pub fn oplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// CONTOUR procedure - creates a contour plot
 pub fn contour(args: &[XdlValue]) -> XdlResult<XdlValue> {
     use crate::graphics::{contour_plot, ContourConfig};
-    
+
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "CONTOUR requires at least one argument".to_string(),
@@ -74,38 +74,45 @@ pub fn contour(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
-    
+
     // Generate default x and y coordinates
-    let width = if !z_data.is_empty() { z_data[0].len() } else { 0 };
+    let width = if !z_data.is_empty() {
+        z_data[0].len()
+    } else {
+        0
+    };
     let height = z_data.len();
     let x_coords: Vec<f64> = (0..width).map(|i| i as f64).collect();
     let y_coords: Vec<f64> = (0..height).map(|i| i as f64).collect();
-    
+
     // Create configuration
     let config = ContourConfig::default();
-    
+
     // Generate filename
     let filename = "xdl_contour.png";
-    
+
     // Call the plotting function
-    println!("CONTOUR: Rendering {}x{} contour plot to {}", height, width, filename);
+    println!(
+        "CONTOUR: Rendering {}x{} contour plot to {}",
+        height, width, filename
+    );
     contour_plot(z_data, Some(x_coords), Some(y_coords), config, filename)?;
     println!("  Contour plot saved to '{}'", filename);
-    
+
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL Contour Plot".to_string());
         }
     }
-    
+
     Ok(XdlValue::Undefined)
 }
 
 /// SURFACE procedure - creates a 3D surface plot
 pub fn surface(args: &[XdlValue]) -> XdlResult<XdlValue> {
     use crate::graphics::{surface_plot, SurfaceConfig};
-    
+
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "SURFACE requires at least one argument".to_string(),
@@ -114,31 +121,38 @@ pub fn surface(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
-    
+
     // Generate default x and y coordinates
-    let width = if !z_data.is_empty() { z_data[0].len() } else { 0 };
+    let width = if !z_data.is_empty() {
+        z_data[0].len()
+    } else {
+        0
+    };
     let height = z_data.len();
     let x_coords: Vec<f64> = (0..width).map(|i| i as f64).collect();
     let y_coords: Vec<f64> = (0..height).map(|i| i as f64).collect();
-    
+
     // Create configuration
     let config = SurfaceConfig::default();
-    
+
     // Generate filename
     let filename = "xdl_surface.png";
-    
+
     // Call the plotting function
-    println!("SURFACE: Rendering {}x{} surface plot to {}", height, width, filename);
+    println!(
+        "SURFACE: Rendering {}x{} surface plot to {}",
+        height, width, filename
+    );
     surface_plot(z_data, Some(x_coords), Some(y_coords), config, filename)?;
     println!("  Surface plot saved to '{}'", filename);
-    
+
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL Surface Plot".to_string());
         }
     }
-    
+
     Ok(XdlValue::Undefined)
 }
 
@@ -279,7 +293,7 @@ fn save_plot_to_file(x_data: &[f64], y_data: &[f64], filename: &str) -> XdlResul
             &BLUE,
         ))?
         .label("Data")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 10, y)], &BLUE));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 10, y)], BLUE));
 
     chart.configure_series_labels().draw()?;
     root.present()?;
@@ -403,41 +417,50 @@ pub fn arrow(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// SHADE_SURF procedure - creates a shaded surface plot
 pub fn shade_surf(args: &[XdlValue]) -> XdlResult<XdlValue> {
     use crate::graphics::{surface_plot, SurfaceConfig};
-    
+
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "SHADE_SURF requires at least one argument".to_string(),
         ));
     }
-    
+
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
-    
+
     // Generate default x and y coordinates
-    let width = if !z_data.is_empty() { z_data[0].len() } else { 0 };
+    let width = if !z_data.is_empty() {
+        z_data[0].len()
+    } else {
+        0
+    };
     let height = z_data.len();
     let x_coords: Vec<f64> = (0..width).map(|i| i as f64).collect();
     let y_coords: Vec<f64> = (0..height).map(|i| i as f64).collect();
-    
+
     // Create configuration with shading enabled
-    let mut config = SurfaceConfig::default();
-    config.shading = true;
-    
+    let config = SurfaceConfig {
+        shading: true,
+        ..Default::default()
+    };
+
     // Generate filename
     let filename = "xdl_shade_surf.png";
-    
+
     // Call the plotting function
-    println!("SHADE_SURF: Rendering {}x{} shaded surface to {}", height, width, filename);
+    println!(
+        "SHADE_SURF: Rendering {}x{} shaded surface to {}",
+        height, width, filename
+    );
     surface_plot(z_data, Some(x_coords), Some(y_coords), config, filename)?;
     println!("  Shaded surface saved to '{}'", filename);
-    
+
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL Shaded Surface".to_string());
         }
     }
-    
+
     Ok(XdlValue::Undefined)
 }
 
@@ -623,41 +646,45 @@ pub fn errplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// PLOT3D procedure - creates a 3D line plot
 pub fn plot3d(args: &[XdlValue]) -> XdlResult<XdlValue> {
     use crate::graphics::{plot_3d, SurfaceConfig};
-    
+
     if args.len() < 3 {
         return Err(XdlError::InvalidArgument(
             "PLOT3D: Expected at least 3 arguments (x, y, z)".to_string(),
         ));
     }
-    
+
     let x_data = extract_numeric_array(&args[0])?;
     let y_data = extract_numeric_array(&args[1])?;
     let z_data = extract_numeric_array(&args[2])?;
-    
+
     if x_data.len() != y_data.len() || y_data.len() != z_data.len() {
         return Err(XdlError::RuntimeError(
             "PLOT3D: X, Y, and Z arrays must have the same length".to_string(),
         ));
     }
-    
+
     // Create configuration
     let config = SurfaceConfig::default();
-    
+
     // Generate filename
     let filename = "xdl_plot3d.png";
-    
+
     // Call the plotting function
-    println!("PLOT3D: Rendering 3D line with {} points to {}", x_data.len(), filename);
+    println!(
+        "PLOT3D: Rendering 3D line with {} points to {}",
+        x_data.len(),
+        filename
+    );
     plot_3d(x_data, y_data, z_data, config, filename)?;
     println!("  3D line plot saved to '{}'", filename);
-    
+
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL 3D Line Plot".to_string());
         }
     }
-    
+
     Ok(XdlValue::Undefined)
 }
 

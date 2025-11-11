@@ -238,7 +238,7 @@ impl WindowInfo {
 }
 
 /// Device types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum DeviceType {
     X,    // X11 window
     Win,  // Windows
@@ -246,14 +246,9 @@ pub enum DeviceType {
     Ps,   // PostScript
     Null, // No output
     Z,    // Z-buffer
-    Png,  // PNG file
+    #[default]
+    Png, // PNG file
     Svg,  // SVG file
-}
-
-impl Default for DeviceType {
-    fn default() -> Self {
-        DeviceType::Png
-    }
 }
 
 /// Main graphics state

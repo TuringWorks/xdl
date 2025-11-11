@@ -237,6 +237,7 @@ pub fn openu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(false)
         .open(filename)
         .map_err(|e| {
             XdlError::RuntimeError(format!("OPENU: Failed to open {}: {}", filename, e))
@@ -292,7 +293,7 @@ pub fn close_file(args: &[XdlValue]) -> XdlResult<XdlValue> {
 pub fn readf(args: &[XdlValue]) -> XdlResult<XdlValue> {
     use std::io::BufRead;
 
-    if args.len() < 1 {
+    if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "READF: Expected at least LUN argument".to_string(),
         ));

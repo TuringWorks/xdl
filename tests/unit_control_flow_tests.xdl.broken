@@ -10,7 +10,7 @@ if 1 then
   print, "Test 1 PASS: Basic if-then"
 endif
 
-; Test 2: Basic if-then-else  
+; Test 2: Basic if-then-else
 if 0 then begin
   print, "Test 2 FAIL: Should not execute"
 end else begin
@@ -41,7 +41,7 @@ for i = 0, 6, 2
 endfor
 
 ; =============================================================================
-; SIMPLE WHILE LOOP TESTS  
+; SIMPLE WHILE LOOP TESTS
 ; =============================================================================
 
 ; Test 6: Basic while loop
@@ -113,7 +113,7 @@ val2 = 20
 ; EQ test
 if val1 eq 10 then print, "  EQ works: val1 == 10"
 
-; NE test  
+; NE test
 if val1 ne val2 then print, "  NE works: val1 != val2"
 
 ; LT test
@@ -139,7 +139,7 @@ false_val = 0
 ; AND test
 if true_val and true_val then print, "  AND works: true AND true"
 
-; OR test  
+; OR test
 if true_val or false_val then print, "  OR works: true OR false"
 
 ; NOT test
@@ -169,7 +169,7 @@ x = 5
 y = 3
 
 if x + y eq 8 then print, "  Addition in condition works"
-if x * y eq 15 then print, "  Multiplication in condition works"  
+if x * y eq 15 then print, "  Multiplication in condition works"
 if x - y eq 2 then print, "  Subtraction in condition works"
 if x / y gt 1 then print, "  Division in condition works"
 

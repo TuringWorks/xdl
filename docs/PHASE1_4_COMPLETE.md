@@ -69,7 +69,7 @@ arr2 = FINDGEN(24)
 reformed2 = REFORM(arr2, 2, 3, 4)  ; 2x3x4 = 24
 ; Result: Success
 
-; Test 3: Reshape back to 1D  
+; Test 3: Reshape back to 1D
 arr3 = FINDGEN(6)
 reformed3 = REFORM(arr3, 6)  ; Back to 1D
 ; Result: Success

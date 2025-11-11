@@ -47,7 +47,7 @@ Array(arr) => {
 ### 3. 3D Procedures Not Connected ✅
 **Problem:** SURFACE, CONTOUR, SHADE_SURF, PLOT3D returned "not yet implemented" errors even though data structures were ready.
 
-**Solution:** 
+**Solution:**
 1. Created helper function to extract 2D arrays from nested arrays:
 ```rust
 fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
@@ -81,7 +81,7 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
 - **Tests:** Simple sine wave plot
 - **Result:** ✅ PASS
 
-### ✅ `plot_working_demo.xdl` - Comprehensive 2D Tests  
+### ✅ `plot_working_demo.xdl` - Comprehensive 2D Tests
 - **Status:** All 5 tests now pass
 - **Tests:**
   1. Simple sine plot ✅
@@ -161,7 +161,7 @@ cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 - 3D data structure parsing and validation
 - Nested array support for 2D matrices
 
-### ⚠️ Partially Functional  
+### ⚠️ Partially Functional
 - 3D procedures (SURFACE, CONTOUR, SHADE_SURF, PLOT3D)
   - ✅ Data parsing and validation works
   - ❌ File rendering not yet implemented

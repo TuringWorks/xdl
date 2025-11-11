@@ -730,7 +730,7 @@ impl Evaluator {
 
                 let step_val = if let Some(s) = step {
                     let val = self.evaluate(s, context)?;
-                    val.to_long()? as i32
+                    val.to_long()?
                 } else {
                     1
                 };

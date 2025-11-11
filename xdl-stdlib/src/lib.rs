@@ -14,7 +14,7 @@ pub mod string;
 pub mod system;
 
 // Re-export graphics callback registration for GUI
-pub use graphics_procs::{register_gui_plot_callback, register_gui_image_callback};
+pub use graphics_procs::{register_gui_image_callback, register_gui_plot_callback};
 
 use xdl_core::{XdlResult, XdlValue};
 

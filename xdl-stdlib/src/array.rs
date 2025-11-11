@@ -392,7 +392,7 @@ pub fn sort_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// SMOOTH(array, window_size)
 /// Returns array of same length with edges handled by reflection
 pub fn smooth_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if args.len() < 1 || args.len() > 2 {
+    if args.is_empty() || args.len() > 2 {
         return Err(XdlError::InvalidArgument(format!(
             "SMOOTH: Expected 1-2 arguments (array, window_size), got {}",
             args.len()
@@ -531,7 +531,7 @@ pub fn moving_average_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Edge mode: 0=truncate, 1=wrap, 2=reflect (default), 3=pad_with_mean
     let edge_mode = if args.len() == 3 {
         match &args[2] {
-            XdlValue::Long(n) => *n as i32,
+            XdlValue::Long(n) => *n,
             XdlValue::Int(n) => *n as i32,
             _ => 2, // Default to reflect
         }
