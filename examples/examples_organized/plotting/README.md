@@ -8,6 +8,7 @@ Examples demonstrating 2D plotting capabilities:
 - Basic plotting functions
 
 ## Examples
+
 - [echarts_demo.xdl](echarts_demo.xdl)
 - [scatter_demo.xdl](scatter_demo.xdl)
 - [advanced_viz_demo.xdl](advanced_viz_demo.xdl)

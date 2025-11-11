@@ -117,6 +117,7 @@ These are special cases or intentionally slow:
 ## Priority for Fixes
 
 ### High Priority (Quick Wins - 6 scripts)
+
 - User-defined procedures (PRO/ENDPRO) → Would fix 2 scripts
 - ELSE parsing in control structures → Would fix 2 scripts
 - Complex number arithmetic → Would fix 1 script
@@ -125,6 +126,7 @@ These are special cases or intentionally slow:
 **Impact**: Fixing these would bring pass rate from 64% to 74%
 
 ### Medium Priority (7 scripts)
+
 - Label/goto syntax (colon operator)
 - Advanced FOR loop parsing
 - Dot notation support
@@ -134,6 +136,7 @@ These are special cases or intentionally slow:
 **Impact**: Would bring pass rate to 86%
 
 ### Low Priority (9 scripts)
+
 - MATLAB transpilation
 - Performance test optimizations
 - Special graphics edge cases

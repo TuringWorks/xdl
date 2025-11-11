@@ -1,4 +1,0 @@
-[2m2025-11-11T00:50:54.834294Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/demo/volume_render_simple.xdl
-=== Simple Volume Rendering Demo ===
-
-Creating 3D volume data (64x64x64)...

@@ -11,13 +11,16 @@ This directory contains all test scripts that currently pass successfully.
 ## Test Categories
 
 ### Control Flow & Core (4 tests)
+
 - `control_flow_tests.xdl` - Basic control flow structures
 - `core_features_test.xdl` - Core language features
 - `extended_features_test.xdl` - Extended functionality
 - `unit_control_flow_tests.xdl` - Unit tests for control flow
 
 ### Python Integration (10 tests)
+
 All Python interoperability tests pass successfully:
+
 - `numpy_simple_test.xdl` - NumPy basic integration
 - `pandas_test.xdl` - Pandas integration
 - `python_constants_test.xdl` - Python constants
@@ -30,6 +33,7 @@ All Python interoperability tests pass successfully:
 - `simple_python_test.xdl` - Simple Python test
 
 ### Array Operations (5 tests)
+
 - `test_advanced_arrays.xdl` - Advanced array operations
 - `test_arrays.xdl` - Basic array operations
 - `test_meshgrid.xdl` - MESHGRID function ⭐
@@ -37,6 +41,7 @@ All Python interoperability tests pass successfully:
 - `working_scientific_test.xdl` - Scientific computations
 
 ### Visualization & Graphics (7 tests)
+
 - `test_plot_keywords.xdl` - Plot with keywords
 - `test_plot_keywords2.xdl` - More plot keywords
 - `test_plot.xdl` - Basic plotting
@@ -46,10 +51,12 @@ All Python interoperability tests pass successfully:
 - `gui_test.xdl` - GUI functionality
 
 ### Machine Learning (2 tests)
+
 - `ml_kmeans_test1.xdl` - K-means clustering ⭐
 - `test_ml_advanced.xdl` - Advanced ML operations
 
 ### Language Features (9 tests)
+
 - `simple_test_1.xdl` - Simple test case 1
 - `simple_test.xdl` - Simple test case 2
 - `test_comment.xdl` - Comment handling

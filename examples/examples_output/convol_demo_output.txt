@@ -1,9 +1,0 @@
-[2m2025-11-11T00:51:24.860858Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/demo/convol_demo.xdl
-Original Array:
-Array[5x5]: [0.000, 1.000, ..., 24.000] (25)
-Convolved Result:
-Array[5x5]: [1.333, 2.333, ..., 9.333] (25)
-Edge Detection (X-direction):
-Array[5x5]: [8.000, 6.000, ..., -64.000] (25)
-Edge Detection (Y-direction):
-Array[5x5]: [16.000, 24.000, ..., -56.000] (25)

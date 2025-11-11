@@ -1,7 +1,0 @@
-[2m2025-11-11T00:51:43.552084Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/test_negation.xdl
-Testing array negation
-
-x =  [0.000000, 1.000000, 2.000000, 3.000000, 4.000000]
-neg_x =  [-0.000000, -1.000000, -2.000000, -3.000000, -4.000000]
-
-Test complete
