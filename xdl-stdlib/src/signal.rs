@@ -287,9 +287,9 @@ pub fn convol_1d(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// MEDIAN filter - Apply median filter to remove noise
 /// MEDIAN(array, width)
 pub fn median_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if args.len() < 2 {
+    if args.is_empty() {
         return Err(XdlError::InvalidArgument(
-            "MEDIAN: Expected array and width".to_string(),
+            "MEDIAN: Expected array and optional width".to_string(),
         ));
     }
 
@@ -303,10 +303,14 @@ pub fn median_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let width = match &args[1] {
-        XdlValue::Long(n) => *n as usize,
-        XdlValue::Int(n) => *n as usize,
-        _ => 3,
+    let width = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::Long(n) => *n as usize,
+            XdlValue::Int(n) => *n as usize,
+            _ => 3,
+        }
+    } else {
+        3
     };
 
     if width == 0 || width > data.len() {
@@ -329,4 +333,133 @@ pub fn median_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     Ok(XdlValue::Array(result))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_median_filter_basic() {
+        let data = vec![1.0, 3.0, 2.0, 5.0, 4.0];
+        let args = vec![XdlValue::Array(data.clone()), XdlValue::Long(3)];
+        let result = median_filter(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                // For window size 3, should smooth the data
+                assert_eq!(arr.len(), 5);
+                // Check that all values are from the original data (medians)
+                for &val in &arr {
+                    assert!(data.contains(&val));
+                }
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_median_filter_width_1() {
+        let data = vec![1.0, 2.0, 3.0];
+        let args = vec![XdlValue::Array(data.clone()), XdlValue::Long(1)];
+        let result = median_filter(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                // Width 1 should return original data
+                assert_eq!(arr, data);
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_median_filter_no_width() {
+        let data = vec![1.0, 3.0, 2.0];
+        let args = vec![XdlValue::Array(data.clone())];
+        let result = median_filter(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                // Default width 3 should work
+                assert_eq!(arr.len(), 3);
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_a_correlate_basic() {
+        let signal = vec![1.0, 2.0, 3.0];
+        let args = vec![XdlValue::Array(signal)];
+        let result = a_correlate(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                assert_eq!(arr.len(), 1); // Default lag = n/2 = 1
+                assert!(arr[0] >= -1.0 && arr[0] <= 1.0); // Correlation coefficient
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_c_correlate_basic() {
+        let signal1 = vec![1.0, 2.0, 3.0];
+        let signal2 = vec![1.0, 0.0, 0.0];
+        let args = vec![XdlValue::Array(signal1), XdlValue::Array(signal2)];
+        let result = c_correlate(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                assert_eq!(arr.len(), 1); // Default lag = min(n1,n2)/2 = 1
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_smooth_basic() {
+        let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let args = vec![XdlValue::Array(data), XdlValue::Long(3)];
+        let result = smooth(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                assert_eq!(arr.len(), 5);
+                // Check that smoothing occurred (edges should be different)
+                assert!(arr[0] != 1.0 || arr[4] != 5.0);
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_hilbert_transform() {
+        let data = vec![1.0, 0.0, -1.0, 0.0];
+        let args = vec![XdlValue::Array(data)];
+        let result = hilbert(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                assert_eq!(arr.len(), 4);
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_convol_1d_basic() {
+        let data = vec![1.0, 2.0, 3.0];
+        let kernel = vec![0.5, 0.5];
+        let args = vec![XdlValue::Array(data), XdlValue::Array(kernel)];
+        let result = convol_1d(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                assert_eq!(arr.len(), 3);
+            }
+            _ => panic!("Expected array"),
+        }
+    }
 }

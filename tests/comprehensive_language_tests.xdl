@@ -1,0 +1,42 @@
+; XDL Comprehensive Language Test Suite
+
+print, "=== XDL COMPREHENSIVE LANGUAGE TEST SUITE ==="
+
+; Basic variables and types
+x = 42
+y = 3.14159
+name = "XDL"
+
+; Arrays
+arr = [1, 2, 3, 4, 5]
+
+; Basic arithmetic
+a = 10
+b = 3
+result = a + b
+
+; Simple if
+if x gt 40 then begin
+  print, "x > 40"
+end
+endif
+
+; For loop
+for i = 1, 3 do begin
+  print, "loop iteration"
+endfor
+
+; While loop
+count = 2
+while count gt 0 do begin
+  print, "while iteration"
+  count = count - 1
+end
+endwhile
+
+; Array functions
+nums = [1, 2, 3]
+size = n_elements(nums)
+
+print, "=== TESTS COMPLETED ==="</content>
+</xai:function_call">Test a comprehensive test based on the working control flow test

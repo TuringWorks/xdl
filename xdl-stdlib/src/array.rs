@@ -2111,3 +2111,177 @@ pub fn n_tags(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Placeholder: structures not fully implemented yet
     Ok(XdlValue::Long(0))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use xdl_core::XdlValue;
+
+    #[test]
+    fn test_extract_dimension_long() {
+        let val = XdlValue::Long(5);
+        let result = extract_dimension(&val);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 5);
+    }
+
+    #[test]
+    fn test_extract_dimension_negative_long() {
+        let val = XdlValue::Long(-1);
+        let result = extract_dimension(&val);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extract_dimension_int() {
+        let val = XdlValue::Int(3);
+        let result = extract_dimension(&val);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 3);
+    }
+
+    #[test]
+    fn test_extract_dimension_byte() {
+        let val = XdlValue::Byte(10);
+        let result = extract_dimension(&val);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 10);
+    }
+
+    #[test]
+    fn test_extract_dimension_double() {
+        let val = XdlValue::Double(7.0);
+        let result = extract_dimension(&val);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 7);
+    }
+
+    #[test]
+    fn test_extract_dimension_negative_double() {
+        let val = XdlValue::Double(-2.5);
+        let result = extract_dimension(&val);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bytarr_single_dimension() {
+        let args = vec![XdlValue::Long(3)];
+        let result = bytarr(&args);
+        assert!(result.is_ok());
+        // Should return a byte array of size 3
+        match result.unwrap() {
+            XdlValue::Array(arr) => assert_eq!(arr.len(), 3),
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_intarr_single_dimension() {
+        let args = vec![XdlValue::Long(4)];
+        let result = intarr(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_lonarr_single_dimension() {
+        let args = vec![XdlValue::Long(2)];
+        let result = lonarr(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_fltarr_single_dimension() {
+        let args = vec![XdlValue::Long(5)];
+        let result = fltarr(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_dblarr_single_dimension() {
+        let args = vec![XdlValue::Long(6)];
+        let result = dblarr(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_strarr_single_dimension() {
+        let args = vec![XdlValue::Long(3)];
+        let result = strarr(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_n_elements_with_array() {
+        // Create a test array
+        let test_array = vec![1.0, 2.0, 3.0];
+        let args = vec![XdlValue::Array(test_array)];
+        let result = n_elements(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Long(n) => assert_eq!(n, 3),
+            _ => panic!("Expected long"),
+        }
+    }
+
+    #[test]
+    fn test_reverse_func_with_array() {
+        let test_array = vec![1.0, 2.0, 3.0, 4.0];
+        let args = vec![XdlValue::Array(test_array)];
+        let result = reverse_func(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => assert_eq!(arr, vec![4.0, 3.0, 2.0, 1.0]),
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_sort_func_with_array() {
+        let test_array = vec![3.0, 1.0, 4.0, 1.0, 5.0];
+        let args = vec![XdlValue::Array(test_array.clone())];
+        let result = sort_func(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Array(arr) => {
+                let mut sorted = test_array;
+                sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                assert_eq!(arr, sorted);
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_size_with_array() {
+        let test_array = vec![1.0, 2.0, 3.0];
+        let args = vec![XdlValue::Array(test_array)];
+        let result = size(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_array_equal_same_arrays() {
+        let arr1 = vec![1.0, 2.0, 3.0];
+        let arr2 = vec![1.0, 2.0, 3.0];
+        let args = vec![XdlValue::Array(arr1), XdlValue::Array(arr2)];
+        let result = array_equal(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Long(n) => assert_eq!(n, 1), // Should be true (1)
+            _ => panic!("Expected long"),
+        }
+    }
+
+    #[test]
+    fn test_array_equal_different_arrays() {
+        let arr1 = vec![1.0, 2.0, 3.0];
+        let arr2 = vec![1.0, 2.0, 4.0];
+        let args = vec![XdlValue::Array(arr1), XdlValue::Array(arr2)];
+        let result = array_equal(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Long(n) => assert_eq!(n, 0), // Should be false (0)
+            _ => panic!("Expected long"),
+        }
+    }
+}

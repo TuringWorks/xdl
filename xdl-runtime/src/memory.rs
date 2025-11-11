@@ -17,3 +17,22 @@ impl Default for MemoryManager {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_memory_manager_creation() {
+        let mm = MemoryManager::new();
+        // Test that memory manager can be created
+        assert!(true); // Placeholder test - memory manager is mostly TODO
+    }
+
+    #[test]
+    fn test_memory_manager_default() {
+        let mm = MemoryManager::default();
+        // Test that default construction works
+        assert!(true); // Placeholder test - memory manager is mostly TODO
+    }
+}

@@ -724,3 +724,154 @@ pub fn format_axis_values(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_strlen_with_string() {
+        let args = vec![XdlValue::String("hello".to_string())];
+        let result = strlen(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Long(len) => assert_eq!(len, 5),
+            _ => panic!("Expected long"),
+        }
+    }
+
+    #[test]
+    fn test_strupcase_with_string() {
+        let args = vec![XdlValue::String("hello".to_string())];
+        let result = strupcase(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "HELLO"),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_strlowcase_with_string() {
+        let args = vec![XdlValue::String("HELLO".to_string())];
+        let result = strlowcase(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "hello"),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_strtrim_with_string() {
+        let args = vec![XdlValue::String("  hello  ".to_string())];
+        let result = strtrim(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "hello"),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_strjoin_with_strings() {
+        let strings = vec![
+            XdlValue::String("hello".to_string()),
+            XdlValue::String("world".to_string()),
+        ];
+        let args = vec![XdlValue::NestedArray(strings)];
+        let result = strjoin(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "helloworld"),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_strjoin_with_delimiter() {
+        let strings = vec![
+            XdlValue::String("hello".to_string()),
+            XdlValue::String("world".to_string()),
+        ];
+        let args = vec![XdlValue::NestedArray(strings), XdlValue::String(" ".to_string())];
+        let result = strjoin(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "hello world"),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_strcmp_equal_strings() {
+        let args = vec![
+            XdlValue::String("hello".to_string()),
+            XdlValue::String("hello".to_string()),
+        ];
+        let result = strcmp(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Long(cmp) => assert_eq!(cmp, 1), // Equal = 1
+            _ => panic!("Expected long"),
+        }
+    }
+
+    #[test]
+    fn test_strcmp_different_strings() {
+        let args = vec![
+            XdlValue::String("apple".to_string()),
+            XdlValue::String("banana".to_string()),
+        ];
+        let result = strcmp(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::Long(cmp) => assert_eq!(cmp, 0), // Not equal = 0
+            _ => panic!("Expected long"),
+        }
+    }
+
+    #[test]
+    fn test_string_fn_with_long() {
+        let args = vec![XdlValue::Long(42)];
+        let result = string_fn(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "42"),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_string_fn_with_double() {
+        let args = vec![XdlValue::Double(3.14159)];
+        let result = string_fn(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert!(s.contains("3.14159")),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_format_axis_values_with_double() {
+        let args = vec![XdlValue::Double(3.14159)];
+        let result = format_axis_values(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "3.14"),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_format_axis_values_with_long() {
+        let args = vec![XdlValue::Long(42)];
+        let result = format_axis_values(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => assert_eq!(s, "42"),
+            _ => panic!("Expected string"),
+        }
+    }
+}

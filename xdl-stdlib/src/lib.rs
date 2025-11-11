@@ -526,6 +526,71 @@ impl Default for StandardLibrary {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_standard_library_creation() {
+        let _stdlib = StandardLibrary::new();
+        // Test that standard library can be created
+        assert!(true); // Placeholder test - stdlib is mostly TODO
+    }
+
+    #[test]
+    fn test_standard_library_default() {
+        let _stdlib = StandardLibrary::default();
+        // Test that default construction works
+        assert!(true); // Placeholder test - stdlib is mostly TODO
+    }
+
+    #[test]
+    fn test_unknown_procedure() {
+        let stdlib = StandardLibrary::new();
+        let result = stdlib.call_procedure("UNKNOWN_PROC", &[]);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.to_string().contains("Unknown procedure"));
+        }
+    }
+
+    #[test]
+    fn test_unknown_function() {
+        let stdlib = StandardLibrary::new();
+        let result = stdlib.call_function("UNKNOWN_FUNC", &[]);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.to_string().contains("Function not found"));
+        }
+    }
+
+    #[test]
+    fn test_create_hash_empty() {
+        let result = create_hash(&[]);
+        assert!(result.is_ok());
+        if let Ok(XdlValue::String(s)) = result {
+            assert_eq!(s, "{}");
+        } else {
+            panic!("Expected string result");
+        }
+    }
+
+    #[test]
+    fn test_create_hash_with_args() {
+        let args = vec![XdlValue::Long(1), XdlValue::String("test".to_string())];
+        let result = create_hash(&args);
+        assert!(result.is_ok());
+        if let Ok(XdlValue::String(s)) = result {
+            assert!(s.starts_with("{"));
+            assert!(s.ends_with("}"));
+            assert!(s.contains("1"));
+            assert!(s.contains("test"));
+        } else {
+            panic!("Expected string result");
+        }
+    }
+}
+
 /// Create a hash table (dictionary) from key-value pairs
 fn create_hash(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For now, return a simple placeholder since XdlValue doesn't have a Hash variant

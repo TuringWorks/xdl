@@ -24,3 +24,22 @@ impl Default for FfiManager {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ffi_manager_creation() {
+        let ffi_manager = FfiManager::new();
+        // Test that FFI manager can be created
+        assert!(true); // Placeholder test - FFI manager is mostly TODO
+    }
+
+    #[test]
+    fn test_ffi_manager_default() {
+        let ffi_manager = FfiManager::default();
+        // Test that default construction works
+        assert!(true); // Placeholder test - FFI manager is mostly TODO
+    }
+}

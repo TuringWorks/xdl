@@ -993,3 +993,149 @@ pub fn timegen(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::NestedArray(result))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_systime_basic() {
+        let args = vec![];
+        let result = systime(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => {
+                assert!(!s.is_empty());
+                // Should contain some date/time format
+                assert!(s.contains("-") || s.contains("/") || s.contains(":"));
+            }
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_memory_basic() {
+        let args = vec![];
+        let result = memory(&args);
+        assert!(result.is_ok());
+        // Memory function returns system memory info or undefined if not implemented
+        let value = result.unwrap();
+        match value {
+            XdlValue::String(_) | XdlValue::Long(_) | XdlValue::Double(_) | XdlValue::Undefined | XdlValue::NestedArray(_) => {
+                // Any of these types are acceptable
+            }
+            _ => panic!("Unexpected return type: {:?}", value),
+        }
+    }
+
+    #[test]
+    fn test_timegen_single_arg() {
+        let args = vec![XdlValue::Long(5)];
+        let result = timegen(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::NestedArray(arr) => {
+                assert_eq!(arr.len(), 5);
+                // Should be [0, 1, 2, 3, 4]
+                for (i, val) in arr.iter().enumerate() {
+                    match val {
+                        XdlValue::Double(v) => assert_eq!(*v as i64, i as i64),
+                        _ => panic!("Expected double"),
+                    }
+                }
+            }
+            _ => panic!("Expected nested array"),
+        }
+    }
+
+    #[test]
+    fn test_timegen_start_end() {
+        let args = vec![XdlValue::Double(1.0), XdlValue::Double(3.0)];
+        let result = timegen(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::NestedArray(arr) => {
+                assert_eq!(arr.len(), 3); // [1.0, 2.0, 3.0]
+                match &arr[0] {
+                    XdlValue::Double(v) => assert_eq!(*v, 1.0),
+                    _ => panic!("Expected double"),
+                }
+                match &arr[2] {
+                    XdlValue::Double(v) => assert_eq!(*v, 3.0),
+                    _ => panic!("Expected double"),
+                }
+            }
+            _ => panic!("Expected nested array"),
+        }
+    }
+
+    #[test]
+    fn test_timegen_with_step() {
+        let args = vec![XdlValue::Double(0.0), XdlValue::Double(2.0), XdlValue::Double(0.5)];
+        let result = timegen(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::NestedArray(arr) => {
+                assert_eq!(arr.len(), 5); // [0.0, 0.5, 1.0, 1.5, 2.0]
+                match &arr[0] {
+                    XdlValue::Double(v) => assert_eq!(*v, 0.0),
+                    _ => panic!("Expected double"),
+                }
+                match &arr[4] {
+                    XdlValue::Double(v) => assert_eq!(*v, 2.0),
+                    _ => panic!("Expected double"),
+                }
+            }
+            _ => panic!("Expected nested array"),
+        }
+    }
+
+    #[test]
+    fn test_timegen_zero_step() {
+        let args = vec![XdlValue::Double(0.0), XdlValue::Double(2.0), XdlValue::Double(0.0)];
+        let result = timegen(&args);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_timestamp_basic() {
+        let args = vec![];
+        let result = timestamp(&args);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            XdlValue::String(s) => {
+                assert!(!s.is_empty());
+            }
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_routine_info_basic() {
+        let args = vec![];
+        let result = routine_info(&args);
+        assert!(result.is_ok());
+        // Routine info returns system information about loaded routines or undefined
+        let value = result.unwrap();
+        match value {
+            XdlValue::String(_) | XdlValue::Long(_) | XdlValue::Undefined | XdlValue::NestedArray(_) => {
+                // Acceptable return types
+            }
+            _ => panic!("Unexpected return type: {:?}", value),
+        }
+    }
+
+    #[test]
+    fn test_help_basic() {
+        let args = vec![];
+        let result = help(&args);
+        assert!(result.is_ok());
+        // Help function prints to stdout and returns undefined
+        match result.unwrap() {
+            XdlValue::Undefined => {
+                // This is expected - help prints to stdout
+            }
+            _ => panic!("Expected undefined"),
+        }
+    }
+}

@@ -141,3 +141,49 @@ pub struct CameraUniform {
     pub view_proj: [f32; 16],
     pub view_pos: [f32; 4],
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use glam::Vec3;
+
+    #[test]
+    fn test_camera_creation() {
+        let camera = Camera::new(Vec3::new(0.0, 0.0, 3.0), Vec3::ZERO, 16.0 / 9.0);
+        assert_eq!(camera.position, Vec3::new(0.0, 0.0, 3.0));
+        assert_eq!(camera.target, Vec3::ZERO);
+        assert_eq!(camera.aspect, 16.0 / 9.0);
+    }
+
+    #[test]
+    fn test_camera_view_matrix() {
+        let camera = Camera::new(Vec3::new(0.0, 0.0, 3.0), Vec3::ZERO, 1.0);
+        let view = camera.view_matrix();
+        // View matrix should be valid (not NaN)
+        assert!(!view.to_cols_array().iter().any(|&x| x.is_nan()));
+    }
+
+    #[test]
+    fn test_camera_projection_matrix() {
+        let camera = Camera::new(Vec3::new(0.0, 0.0, 3.0), Vec3::ZERO, 1.0);
+        let proj = camera.projection_matrix();
+        // Projection matrix should be valid
+        assert!(!proj.to_cols_array().iter().any(|&x| x.is_nan()));
+    }
+
+    #[test]
+    fn test_camera_uniform_data() {
+        let camera = Camera::new(Vec3::new(0.0, 0.0, 3.0), Vec3::ZERO, 1.0);
+        let uniform = camera.uniform_data();
+        // Uniform data should have valid matrices
+        assert!(!uniform.view_proj.iter().any(|&x| x.is_nan()));
+        assert!(!uniform.view_pos.iter().any(|&x| x.is_nan()));
+    }
+
+    #[test]
+    fn test_camera_set_aspect() {
+        let mut camera = Camera::new(Vec3::new(0.0, 0.0, 3.0), Vec3::ZERO, 1.0);
+        camera.set_aspect(16.0 / 9.0);
+        assert_eq!(camera.aspect, 16.0 / 9.0);
+    }
+}
