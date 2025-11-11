@@ -5,33 +5,49 @@ print, "=== Scientific Python Integration Test ==="
 print, "1. NumPy Statistical Functions..."
 numpy_mod = python_import("numpy")
 
-; Create sample data points using numpy functions
-; Generate data using linspace instead of random for reproducibility
-data_points = python_call(numpy_mod, "linspace", 0.0, 10.0, 11)
-print, "Data points:", data_points
+; Create sample data points
+data1 = python_call(numpy_mod, "random")
+; Use random seed for reproducible results
+seed_result = python_call(data1, "seed", 42)
+
+; Generate random data
+random_data = python_call(data1, "normal", 0.0, 1.0, 10)
+print, "Random normal data:", random_data
 
 ; Test NumPy statistical functions
-mean_val = python_call(numpy_mod, "mean", data_points)
+mean_val = python_call(numpy_mod, "mean", random_data)
 print, "Mean:", mean_val
 
-std_val = python_call(numpy_mod, "std", data_points)
+std_val = python_call(numpy_mod, "std", random_data)
 print, "Standard deviation:", std_val
 
 ; Test 2: Mathematical operations
 print, ""
 print, "2. Advanced NumPy Mathematics..."
 
+; Test special functions
+pi_val = python_call(numpy_mod, "pi")
+print, "NumPy pi:", pi_val
+
+e_val = python_call(numpy_mod, "e")  
+print, "NumPy e:", e_val
+
 ; Test array operations with linspace
 x_values = python_call(numpy_mod, "linspace", 0.0, 6.28, 10)
 print, "X values (linspace):", x_values
 
-; Test 3: More NumPy operations
+; Test 3: Time series with Pandas
 print, ""
-print, "3. More NumPy Operations..."
+print, "3. Pandas Time Series Operations..."
+pandas_mod = python_import("pandas")
 
-; Test mathematical operations on arrays
-sin_values = python_call(numpy_mod, "sin", x_values)
-print, "Sin values computed successfully"
+; Create date range
+dates = python_call(pandas_mod, "date_range", "2025-01-01", 7)
+print, "Weekly dates:", dates
+
+; Test business day functionality
+bdays = python_call(pandas_mod, "bdate_range", "2025-01-01", 5)
+print, "Business days:", bdays
 
 ; Test 4: Data type conversions and utilities
 print, ""
@@ -56,7 +72,7 @@ print, "Sequence 1-10:", sequence
 cumsum_result = python_call(numpy_mod, "cumsum", sequence)
 print, "Cumulative sum:", cumsum_result
 
-; Test difference calculation
+; Test difference calculation  
 diff_result = python_call(numpy_mod, "diff", sequence)
 print, "Differences:", diff_result
 

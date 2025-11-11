@@ -5,7 +5,7 @@ This directory contains comprehensive tests for XDL's control flow constructs (l
 ## Test Files
 
 ### 1. `unit_control_flow_tests.xdl`
-**Purpose**: Basic unit tests for individual control flow constructs
+**Purpose**: Basic unit tests for individual control flow constructs  
 **Coverage**:
 - Simple IF/THEN/ELSE statements
 - Basic FOR and WHILE loops
@@ -21,7 +21,7 @@ xdl unit_control_flow_tests.xdl
 ```
 
 ### 2. `control_flow_tests.xdl`
-**Purpose**: Comprehensive integration tests for control flow features
+**Purpose**: Comprehensive integration tests for control flow features  
 **Coverage**:
 - Nested IF statements
 - Nested loops (FOR and WHILE)
@@ -37,7 +37,7 @@ xdl control_flow_tests.xdl
 ```
 
 ### 3. `advanced_control_flow_tests.xdl`
-**Purpose**: Real-world algorithms demonstrating advanced control flow patterns
+**Purpose**: Real-world algorithms demonstrating advanced control flow patterns  
 **Coverage**:
 - Search algorithms (binary search)
 - Sort algorithms (bubble sort)
@@ -104,7 +104,7 @@ These files test the XDL interpreter's ability to:
 # Run basic unit tests
 xdl unit_control_flow_tests.xdl
 
-# Run comprehensive tests
+# Run comprehensive tests  
 xdl control_flow_tests.xdl
 
 # Run advanced algorithm tests
@@ -135,7 +135,7 @@ These tests should be integrated into the XDL build pipeline:
 
 ### Adding New Control Flow Tests
 1. **Unit Tests**: Add simple, focused tests to `unit_control_flow_tests.xdl`
-2. **Integration Tests**: Add complex scenarios to `control_flow_tests.xdl`
+2. **Integration Tests**: Add complex scenarios to `control_flow_tests.xdl`  
 3. **Algorithm Tests**: Add real-world examples to `advanced_control_flow_tests.xdl`
 
 ### Test Naming Convention
@@ -147,7 +147,7 @@ These tests should be integrated into the XDL build pipeline:
 Each test should produce clear, verifiable output:
 ```
 Test 1 PASS: Basic if-then
-Test 2 PASS: Basic if-then-else
+Test 2 PASS: Basic if-then-else  
 Test 3 PASS: If with EQ comparison
 ```
 

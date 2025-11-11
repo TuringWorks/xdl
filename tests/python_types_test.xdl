@@ -27,7 +27,7 @@ math_mod = python_import("math")
 ceil_val = python_call(math_mod, "ceil", 3.14)
 print, "ceil(3.14) =", ceil_val
 
-floor_val = python_call(math_mod, "floor", 3.14)
+floor_val = python_call(math_mod, "floor", 3.14)  
 print, "floor(3.14) =", floor_val
 
 ; Test power function

@@ -18,11 +18,11 @@ examples_organized/
 
 ## 📊 Statistics
 
-- **Total Examples**: 152 files (.xdl, .pro, .m)
-- **Working Examples**: 44 (execute successfully)
-- **Failing Examples**: 31 (need fixes or dependencies)
+- **Total Examples**: 150 files (.xdl, .pro, .m)
+- **Working Examples**: 24 (execute successfully)
+- **Failing Examples**: 77 (need fixes or dependencies)
 - **Visual Examples**: 22 (generate plots/visualizations)
-- **Generated Images**: 18 images from 12 examples
+- **Generated Images**: 19 images from 12 examples
 
 ## 🚀 Running Examples
 
@@ -54,7 +54,7 @@ Fundamental XDL concepts including:
 - Control flow structures
 - Basic function calls
 
-### Plotting (12 examples)
+### Plotting (11 examples)
 2D visualization capabilities:
 - Line plots and scatter plots
 - Surface plots and contours
@@ -92,7 +92,7 @@ MATLAB/Octave compatibility:
 ### Tests Working (24 examples)
 Validated test examples that execute successfully.
 
-### Tests Failing (78 examples)
+### Tests Failing (77 examples)
 Examples that currently fail execution and may need:
 - Bug fixes
 - Additional dependencies

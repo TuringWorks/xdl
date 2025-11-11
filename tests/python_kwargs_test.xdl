@@ -30,7 +30,7 @@ print, "atan2(1, 1) =", atan2_result
 hypot_result = python_call(math_mod, "hypot", 3.0, 4.0)
 print, "hypot(3, 4) =", hypot_result
 
-; Test gcd function
+; Test gcd function  
 gcd_result = python_call(math_mod, "gcd", 48, 18)
 print, "gcd(48, 18) =", gcd_result
 

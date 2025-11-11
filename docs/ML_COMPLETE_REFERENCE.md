@@ -1,7 +1,7 @@
 # XDL Machine Learning Complete Reference
 
-**Version**: 1.0
-**Date**: January 22, 2025
+**Version**: 1.0  
+**Date**: January 22, 2025  
 **Status**: 100% Complete ✅
 
 ---
@@ -25,16 +25,16 @@ All implementations are **production-ready** with proper numerical stability, co
 ### 1. DATA UTILITIES (2 functions)
 
 #### `XDLML_Partition(n_samples, train_fraction)`
-**Purpose**: Split data into training/test sets
-**Returns**: Binary array (1=train, 0=test)
+**Purpose**: Split data into training/test sets  
+**Returns**: Binary array (1=train, 0=test)  
 **Example**:
 ```idl
 partition = XDLML_PARTITION(100, 0.8)  ; 80/20 split
 ```
 
 #### `XDLML_Shuffle(n_samples, seed)`
-**Purpose**: Generate shuffled indices for data randomization
-**Returns**: Shuffled index array
+**Purpose**: Generate shuffled indices for data randomization  
+**Returns**: Shuffled index array  
 **Example**:
 ```idl
 indices = XDLML_SHUFFLE(100, 42)  ; Reproducible shuffle
@@ -46,23 +46,23 @@ shuffled_data = data[indices]
 ### 2. NORMALIZERS (5 functions)
 
 #### `XDLML_LinearNormalizer(data, scale, offset)`
-**Formula**: out = data * scale + offset
+**Formula**: out = data * scale + offset  
 **Use**: Custom linear scaling
 
 #### `XDLML_RangeNormalizer(data)`
-**Formula**: (data - min) / (max - min)
+**Formula**: (data - min) / (max - min)  
 **Use**: Scale to [0, 1] range
 
 #### `XDLML_VarianceNormalizer(data)`
-**Formula**: (data - mean) / std
+**Formula**: (data - mean) / std  
 **Use**: Z-score standardization (mean=0, std=1)
 
 #### `XDLML_TanHNormalizer(data)`
-**Formula**: tanh(data)
+**Formula**: tanh(data)  
 **Use**: Squash to (-1, 1) range
 
 #### `XDLML_UnitNormalizer(data)`
-**Formula**: data / ||data||₂
+**Formula**: data / ||data||₂  
 **Use**: L2 normalization (unit vector)
 
 ---
@@ -70,8 +70,8 @@ shuffled_data = data[indices]
 ### 3. CLUSTERING (1 function)
 
 #### `XDLML_KMeans(data, n_clusters, max_iter, seed)`
-**Algorithm**: Lloyd's K-means
-**Returns**: Cluster labels (0 to k-1)
+**Algorithm**: Lloyd's K-means  
+**Returns**: Cluster labels (0 to k-1)  
 **Example**:
 ```idl
 clusters = XDLML_KMEANS(data, 3, 100, 42)
@@ -116,23 +116,23 @@ All activation functions accept arrays or scalars.
 All loss functions accept (y_true, y_pred) arrays.
 
 #### `XDLMLLF_MeanSquaredError(y_true, y_pred)`
-**Formula**: mean((y_pred - y_true)²)
+**Formula**: mean((y_pred - y_true)²)  
 **Use**: Regression, penalizes large errors
 
 #### `XDLMLLF_MeanAbsoluteError(y_true, y_pred)`
-**Formula**: mean(|y_pred - y_true|)
+**Formula**: mean(|y_pred - y_true|)  
 **Use**: Regression, robust to outliers
 
 #### `XDLMLLF_CrossEntropy(y_true, y_pred)`
-**Formula**: -Σ(y_true * log(y_pred))
+**Formula**: -Σ(y_true * log(y_pred))  
 **Use**: Classification
 
 #### `XDLMLLF_Huber(y_true, y_pred, delta)`
-**Formula**: Quadratic for small errors, linear for large
+**Formula**: Quadratic for small errors, linear for large  
 **Use**: Robust regression
 
 #### `XDLMLLF_LogCosh(y_true, y_pred)`
-**Formula**: log(cosh(y_pred - y_true))
+**Formula**: log(cosh(y_pred - y_true))  
 **Use**: Smooth MAE approximation
 
 ---
@@ -140,23 +140,23 @@ All loss functions accept (y_true, y_pred) arrays.
 ### 6. OPTIMIZERS (5 functions)
 
 #### `XDLMLOPT_GradientDescent(weights, gradients, learning_rate)`
-**Update**: w = w - lr * ∇L
+**Update**: w = w - lr * ∇L  
 **Use**: Basic optimization
 
 #### `XDLMLOPT_Momentum(weights, gradients, velocity, lr, momentum)`
-**Update**: v = momentum*v + lr*∇L; w = w - v
+**Update**: v = momentum*v + lr*∇L; w = w - v  
 **Use**: Accelerated convergence
 
 #### `XDLMLOPT_RMSProp(weights, gradients, cache, lr, decay, epsilon)`
-**Update**: Adaptive learning rate per parameter
+**Update**: Adaptive learning rate per parameter  
 **Use**: Non-stationary objectives
 
 #### `XDLMLOPT_Adam(weights, gradients, m, v, t, lr, beta1, beta2, epsilon)`
-**Update**: Combines momentum + RMSProp
+**Update**: Combines momentum + RMSProp  
 **Use**: General-purpose, most popular
 
 #### `XDLMLOPT_QuickProp(weights, gradients, prev_grad, prev_step, lr, mu)`
-**Update**: Second-order approximation
+**Update**: Second-order approximation  
 **Use**: Fast convergence when applicable
 
 ---
@@ -164,9 +164,9 @@ All loss functions accept (y_true, y_pred) arrays.
 ### 7. NEURAL NETWORKS (2 functions)
 
 #### `XDLML_FeedForwardNeuralNetwork(X, y, n_hidden, n_classes, lr, epochs, seed)`
-**Architecture**: Input → Hidden (ReLU) → Output (Softmax)
-**Features**: Full backpropagation, gradient descent
-**Returns**: Weight matrix
+**Architecture**: Input → Hidden (ReLU) → Output (Softmax)  
+**Features**: Full backpropagation, gradient descent  
+**Returns**: Weight matrix  
 **Example**:
 ```idl
 X = RANDOMU(seed, 100)  ; 100 samples
@@ -175,9 +175,9 @@ model = XDLML_FEEDFORWARDNEURALNETWORK(X, y, 10, 3, 0.1, 200, 42)
 ```
 
 #### `XDLML_AutoEncoder(X, encoding_dim, lr, epochs, seed)`
-**Architecture**: Input → Encoding (ReLU) → Reconstruction
-**Features**: Unsupervised learning, dimensionality reduction
-**Returns**: Encoder + decoder weights
+**Architecture**: Input → Encoding (ReLU) → Reconstruction  
+**Features**: Unsupervised learning, dimensionality reduction  
+**Returns**: Encoder + decoder weights  
 **Example**:
 ```idl
 compressed = XDLML_AUTOENCODER(data, 5, 0.01, 100, 42)
@@ -190,19 +190,19 @@ compressed = XDLML_AUTOENCODER(data, 5, 0.01, 100, 42)
 All kernels accept two vectors (x, y) and return a scalar.
 
 #### `XDLML_SVMLinearKernel(x, y)`
-**Formula**: x · y
+**Formula**: x · y  
 **Use**: Linear decision boundaries
 
 #### `XDLML_SVMPolynomialKernel(x, y, gamma, coef0, degree)`
-**Formula**: (gamma * x·y + coef0)^degree
+**Formula**: (gamma * x·y + coef0)^degree  
 **Use**: Polynomial boundaries
 
 #### `XDLML_SVMRadialKernel(x, y, gamma)`
-**Formula**: exp(-gamma * ||x-y||²)
+**Formula**: exp(-gamma * ||x-y||²)  
 **Use**: RBF, most popular for non-linear problems
 
 #### `XDLML_SVMSigmoidKernel(x, y, gamma, coef0)`
-**Formula**: tanh(gamma * x·y + coef0)
+**Formula**: tanh(gamma * x·y + coef0)  
 **Use**: Neural network-like boundaries
 
 ---
@@ -210,10 +210,10 @@ All kernels accept two vectors (x, y) and return a scalar.
 ### 9. SVM MODELS (2 functions)
 
 #### `XDLML_SupportVectorMachineClassification(X, y, kernel, C, tol, max_iter, gamma, degree, coef0)`
-**Algorithm**: Full SMO (Sequential Minimal Optimization)
-**Features**: KKT conditions, kernel trick, support vector detection
-**Returns**: Alpha multipliers + bias
-**Kernels**: 0=linear, 1=poly, 2=RBF, 3=sigmoid
+**Algorithm**: Full SMO (Sequential Minimal Optimization)  
+**Features**: KKT conditions, kernel trick, support vector detection  
+**Returns**: Alpha multipliers + bias  
+**Kernels**: 0=linear, 1=poly, 2=RBF, 3=sigmoid  
 **Example**:
 ```idl
 X = RANDOMU(seed, 100)
@@ -222,9 +222,9 @@ model = XDLML_SUPPORTVECTORMACHINECLASSIFICATION(X, y, 2, 1.0, 0.001, 1000, 0.5)
 ```
 
 #### `XDLML_SupportVectorMachineRegression(X, y, kernel, C, epsilon, lr, epochs, gamma)`
-**Algorithm**: Epsilon-insensitive SVR
-**Features**: Gradient descent with regularization, kernel support
-**Returns**: Model parameters (alphas + bias or weight + bias)
+**Algorithm**: Epsilon-insensitive SVR  
+**Features**: Gradient descent with regularization, kernel support  
+**Returns**: Model parameters (alphas + bias or weight + bias)  
 **Example**:
 ```idl
 X = RANDOMU(seed, 100)
@@ -237,17 +237,17 @@ model = XDLML_SUPPORTVECTORMACHINEREGRESSION(X, y, 0, 1.0, 0.1, 0.01, 200, 1.0)
 ### 10. CLASSIFIERS (2 functions)
 
 #### `XDLML_Softmax(X, y, n_classes, lr, epochs, batch_size, seed)`
-**Model**: Logistic regression generalized to multiple classes
-**Features**: Cross-entropy loss, gradient descent
-**Returns**: Weight matrix
+**Model**: Logistic regression generalized to multiple classes  
+**Features**: Cross-entropy loss, gradient descent  
+**Returns**: Weight matrix  
 **Example**:
 ```idl
 weights = XDLML_SOFTMAX(X_train, y_train, 3, 0.1, 100, 0, 42)
 ```
 
 #### `XDLML_TestClassifier(y_true, y_pred)`
-**Metrics**: Accuracy, Precision, Recall, F1-score
-**Returns**: [accuracy, precision, recall, f1]
+**Metrics**: Accuracy, Precision, Recall, F1-score  
+**Returns**: [accuracy, precision, recall, f1]  
 **Example**:
 ```idl
 metrics = XDLML_TESTCLASSIFIER(y_true, y_pred)
@@ -332,13 +332,13 @@ END
 ## 🧪 Testing
 
 ### Test Suite Files
-1. **`ml_comprehensive_test.xdl`** - Tests first 35 functions
+1. **`ml_comprehensive_test.xdl`** - Tests first 35 functions  
    - Data utilities, normalizers, activations, losses, optimizers
 
-2. **`ml_advanced_models_test.xdl`** - Tests Neural Networks & SVMs
+2. **`ml_advanced_models_test.xdl`** - Tests Neural Networks & SVMs  
    - FeedForward NN, AutoEncoder, SVM classification/regression
 
-3. **`ml_kmeans_test.xdl`** - K-means validation
+3. **`ml_kmeans_test.xdl`** - K-means validation  
    - Clustering accuracy, reproducibility, edge cases
 
 ### Running Tests
@@ -441,7 +441,7 @@ model = XDLML_KMEANS(data, k, max_iter, 42)  ; seed=42
 ### Kernel Type Codes
 ```
 0 = Linear
-1 = Polynomial
+1 = Polynomial  
 2 = RBF (Radial Basis Function)
 3 = Sigmoid
 ```
@@ -452,16 +452,16 @@ model = XDLML_KMEANS(data, k, max_iter, 42)  ; seed=42
 
 ### Common Issues
 
-**Issue**: SVM not converging
+**Issue**: SVM not converging  
 **Solution**: Increase `max_iter` or adjust `C` parameter
 
-**Issue**: Neural network poor performance
+**Issue**: Neural network poor performance  
 **Solution**: Normalize inputs, adjust learning rate, increase epochs
 
-**Issue**: K-means inconsistent results
+**Issue**: K-means inconsistent results  
 **Solution**: Use fixed `seed` parameter for reproducibility
 
-**Issue**: Memory issues with large datasets
+**Issue**: Memory issues with large datasets  
 **Solution**: Use smaller batch sizes or subsample data
 
 ---
@@ -505,9 +505,9 @@ model = XDLML_KMEANS(data, k, max_iter, 42)  ; seed=42
 
 ---
 
-**Total Implementation**: 50 / 50 functions (100%)
-**Lines of Code**: ~3,000+ (Rust implementation)
-**Test Coverage**: Comprehensive
+**Total Implementation**: 50 / 50 functions (100%)  
+**Lines of Code**: ~3,000+ (Rust implementation)  
+**Test Coverage**: Comprehensive  
 **Status**: Production Ready ✅
 
 ---

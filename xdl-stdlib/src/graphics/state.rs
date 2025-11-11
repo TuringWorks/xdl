@@ -58,7 +58,7 @@ impl From<i32> for LineStyle {
 }
 
 /// RGB Color
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -238,7 +238,7 @@ impl WindowInfo {
 }
 
 /// Device types
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DeviceType {
     X,    // X11 window
     Win,  // Windows
@@ -246,9 +246,14 @@ pub enum DeviceType {
     Ps,   // PostScript
     Null, // No output
     Z,    // Z-buffer
-    #[default]
-    Png, // PNG file
+    Png,  // PNG file
     Svg,  // SVG file
+}
+
+impl Default for DeviceType {
+    fn default() -> Self {
+        DeviceType::Png
+    }
 }
 
 /// Main graphics state

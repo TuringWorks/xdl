@@ -335,10 +335,7 @@ pub fn viz3d_render(
 
     println!("VIZ3D: Rendering volume (interactive={})", interactive);
     if let Some(dims) = state.volume_dims {
-        println!(
-            "  Volume: {}x{}x{}",
-            dims[0], dims[1], dims[2]
-        );
+        println!("  Volume: {}x{}x{}", dims[0], dims[1], dims[2]);
     } else {
         println!("  Volume: Not loaded");
     }
@@ -641,7 +638,7 @@ mod tests {
         assert!(result.is_ok());
         // Should return undefined for now (placeholder)
         match result.unwrap() {
-            XdlValue::Undefined => {},
+            XdlValue::Undefined => {}
             _ => panic!("Expected undefined"),
         }
     }
@@ -649,17 +646,22 @@ mod tests {
     #[test]
     fn test_viz3d_volume_basic() {
         // Initialize VIZ3D first
-        let init_result = viz3d_init(&vec![], &HashMap::new());
+        let init_result = viz3d_init(&[], &HashMap::new());
         assert!(init_result.is_ok());
 
-        let args = vec![XdlValue::Array(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])];
+        let args = vec![XdlValue::Array(vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
+        ])];
         let mut keywords = HashMap::new();
-        keywords.insert("DIMENSIONS".to_string(), XdlValue::Array(vec![2.0, 2.0, 2.0]));
+        keywords.insert(
+            "DIMENSIONS".to_string(),
+            XdlValue::Array(vec![2.0, 2.0, 2.0]),
+        );
         let result = viz3d_volume(&args, &keywords);
         assert!(result.is_ok());
         // Should return undefined for now (placeholder)
         match result.unwrap() {
-            XdlValue::Undefined => {},
+            XdlValue::Undefined => {}
             _ => panic!("Expected undefined"),
         }
     }
@@ -667,7 +669,7 @@ mod tests {
     #[test]
     fn test_viz3d_render_basic() {
         // Initialize VIZ3D first
-        let init_result = viz3d_init(&vec![], &HashMap::new());
+        let init_result = viz3d_init(&[], &HashMap::new());
         assert!(init_result.is_ok());
 
         let args = vec![];
@@ -676,7 +678,7 @@ mod tests {
         assert!(result.is_ok());
         // Should return undefined for now (placeholder)
         match result.unwrap() {
-            XdlValue::Undefined => {},
+            XdlValue::Undefined => {}
             _ => panic!("Expected undefined"),
         }
     }
@@ -684,7 +686,7 @@ mod tests {
     #[test]
     fn test_viz3d_camera_basic() {
         // Initialize VIZ3D first
-        let init_result = viz3d_init(&vec![], &HashMap::new());
+        let init_result = viz3d_init(&[], &HashMap::new());
         assert!(init_result.is_ok());
 
         let args = vec![];
@@ -693,7 +695,7 @@ mod tests {
         assert!(result.is_ok());
         // Should return undefined for now (placeholder)
         match result.unwrap() {
-            XdlValue::Undefined => {},
+            XdlValue::Undefined => {}
             _ => panic!("Expected undefined"),
         }
     }
@@ -701,7 +703,7 @@ mod tests {
     #[test]
     fn test_viz3d_colormap_basic() {
         // Initialize VIZ3D first
-        let init_result = viz3d_init(&vec![], &HashMap::new());
+        let init_result = viz3d_init(&[], &HashMap::new());
         assert!(init_result.is_ok());
 
         let args = vec![XdlValue::String("VIRIDIS".to_string())];
@@ -710,7 +712,7 @@ mod tests {
         assert!(result.is_ok());
         // Should return undefined for now (placeholder)
         match result.unwrap() {
-            XdlValue::Undefined => {},
+            XdlValue::Undefined => {}
             _ => panic!("Expected undefined"),
         }
     }

@@ -13,7 +13,7 @@ print, "Sequence 1-10:", sequence
 mean_val = python_call(numpy_mod, "mean", sequence)
 print, "Mean:", mean_val
 
-sum_val = python_call(numpy_mod, "sum", sequence)
+sum_val = python_call(numpy_mod, "sum", sequence)  
 print, "Sum:", sum_val
 
 std_val = python_call(numpy_mod, "std", sequence)
@@ -46,7 +46,7 @@ print, "Zeros array:", zeros_arr
 ones_arr = python_call(numpy_mod, "ones", 5)
 print, "Ones array:", ones_arr
 
-; Test 4: Data analysis operations
+; Test 4: Data analysis operations  
 print, ""
 print, "4. Data Analysis..."
 

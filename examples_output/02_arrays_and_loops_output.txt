@@ -1,4 +1,4 @@
-[2m2025-11-11T00:38:43.620280Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/02_arrays_and_loops.xdl
+[2m2025-11-11T00:51:28.743415Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/02_arrays_and_loops.xdl
 Array created with FINDGEN(10):
 [0.000000, 1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000, 9.000000]
 

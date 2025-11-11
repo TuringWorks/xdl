@@ -121,7 +121,7 @@ print, "Prime numbers from 2 to 20:"
 
 for num = 2, 20
   is_prime = 1
-
+  
   max_check = sqrt(num)
   for divisor = 2, max_check
     remainder = num - ((num / divisor) * divisor)
@@ -130,7 +130,7 @@ for num = 2, 20
       break
     endif
   endfor
-
+  
   if is_prime then
     print, "  Prime:", num
   endif
@@ -231,6 +231,6 @@ The integration is seamless, with automatic fallback to simulation mode if neede
 
 ---
 
-**Last Updated**: October 21, 2025
-**Status**: Production Ready
+**Last Updated**: October 21, 2025  
+**Status**: Production Ready  
 **Integration**: Complete

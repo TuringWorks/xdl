@@ -57,6 +57,7 @@ Essential resources to begin using XDL
 
 - [Quick Start Guide](getting-started) - Get up and running in minutes
 - [Quick Start](QUICK_START) - Detailed quick start guide
+- [Examples Gallery](examples-gallery) - Visual examples with generated plots
 - [GPU Acceleration Demo](QUICKSTART_GPU_DEMO) - GPU features walkthrough
 - [Graphics Quick Start](QUICKSTART_GRAPHICS) - 2D graphics basics
 - [3D Visualization Quick Start](QUICKSTART_VIZ3D) - 3D visualization basics

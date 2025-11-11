@@ -1,15 +1,14 @@
 //! Graphics and plotting functions
 
-use std::collections::HashMap;
+use plotters::prelude::*;
 use std::sync::{Arc, Mutex};
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
-type PlotCallbackFn = Arc<dyn Fn(Vec<f64>, Vec<f64>, String, String, String) + Send + Sync>;
-type ImageCallbackFn = Arc<dyn Fn(String, String) + Send + Sync>;
+static GUI_PLOT_CALLBACK: Mutex<Option<Arc<dyn Fn(Vec<f64>, Vec<f64>) + Send + Sync>>> =
+    Mutex::new(None);
 
-static GUI_PLOT_CALLBACK: Mutex<Option<PlotCallbackFn>> = Mutex::new(None);
-
-static GUI_IMAGE_CALLBACK: Mutex<Option<ImageCallbackFn>> = Mutex::new(None);
+static GUI_IMAGE_CALLBACK: Mutex<Option<Arc<dyn Fn(String, String) + Send + Sync>>> =
+    Mutex::new(None);
 
 // Unused legacy struct - can be removed in future cleanup
 #[allow(dead_code)]
@@ -30,14 +29,6 @@ impl Default for GraphicsFunctions {
 
 /// Plot procedure - creates an interactive line plot in a GUI window
 pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    plot_with_keywords(args, &HashMap::new())
-}
-
-/// Plot procedure with keyword arguments support
-pub fn plot_with_keywords(
-    args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "PLOT requires at least one argument".to_string(),
@@ -59,91 +50,10 @@ pub fn plot_with_keywords(
         ));
     }
 
-    // Extract title from keywords
-    let title = keywords
-        .get("title")
-        .or_else(|| keywords.get("TITLE"))
-        .and_then(|v| match v {
-            XdlValue::String(s) => Some(s.clone()),
-            _ => None,
-        })
-        .unwrap_or_else(|| "XDL Plot".to_string());
-
-    // Try to use xdl-charts (Tauri-based) first for better interactivity
-    match try_chart_plot(&x_data, &y_data, &title) {
-        Ok(_) => return Ok(XdlValue::Undefined),
-        Err(e) => {
-            // Log the error but continue with fallback
-            eprintln!(
-                "PLOT: xdl-charts unavailable ({}), using fallback renderer",
-                e
-            );
-        }
-    }
-
-    // Fallback to traditional graphics rendering
-    use crate::graphics::{plot_2d, Plot2DConfig};
-
-    // Extract axis titles from keywords
-    let xtitle = keywords
-        .get("xtitle")
-        .or_else(|| keywords.get("XTITLE"))
-        .and_then(|v| match v {
-            XdlValue::String(s) => Some(s.clone()),
-            _ => None,
-        });
-
-    let ytitle = keywords
-        .get("ytitle")
-        .or_else(|| keywords.get("YTITLE"))
-        .and_then(|v| match v {
-            XdlValue::String(s) => Some(s.clone()),
-            _ => None,
-        });
-
-    let config = Plot2DConfig {
-        title: Some(title.clone()),
-        xtitle: xtitle.clone(),
-        ytitle: ytitle.clone(),
-        ..Default::default()
-    };
-
-    let filename = "xdl_plot.png";
-    let xtitle_str = xtitle.unwrap_or_else(|| "X".to_string());
-    let ytitle_str = ytitle.unwrap_or_else(|| "Y".to_string());
-
-    println!("PLOT: Rendering {} points to {}", x_data.len(), filename);
-    plot_2d(x_data.clone(), y_data.clone(), config, filename)?;
-    println!("  Plot saved to '{}'", filename);
-
-    // Try to launch interactive plot window if callback is available
-    if let Ok(callback_guard) = GUI_PLOT_CALLBACK.lock() {
-        if let Some(ref callback) = *callback_guard {
-            callback(x_data, y_data, title, xtitle_str, ytitle_str);
-            return Ok(XdlValue::Undefined);
-        }
-    }
-
-    // Try to display image in GUI if callback is available
-    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
-        if let Some(ref callback) = *callback_guard {
-            callback(filename.to_string(), "XDL Plot".to_string());
-        }
-    }
+    // Launch interactive plot window
+    launch_plot_window(x_data, y_data)?;
 
     Ok(XdlValue::Undefined)
-}
-
-/// Try to use xdl-charts for plotting (returns error if unavailable)
-fn try_chart_plot(x_data: &[f64], y_data: &[f64], title: &str) -> XdlResult<()> {
-    // Convert to XdlValue arrays for charting_procs
-    let x_val = XdlValue::Array(x_data.to_vec());
-    let y_val = XdlValue::Array(y_data.to_vec());
-    let title_val = XdlValue::String(title.to_string());
-
-    // Call the charting procedure
-    crate::charting_procs::plot(&[x_val, y_val, title_val])?;
-    Ok(())
 }
 
 /// OPLOT procedure - overplot on existing plot
@@ -154,130 +64,82 @@ pub fn oplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// CONTOUR procedure - creates a contour plot
 pub fn contour(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::{contour_plot, ContourConfig};
+    
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "CONTOUR requires at least one argument".to_string(),
         ));
     }
 
-    // Try to use xdl-charts (Tauri-based) first for better interactivity
-    match crate::charting_procs::contour(args) {
-        Ok(v) => return Ok(v),
-        Err(e) => {
-            eprintln!(
-                "CONTOUR: xdl-charts unavailable ({}), using fallback renderer",
-                e
-            );
-        }
-    }
-
-    // Fallback to traditional graphics rendering
-    use crate::graphics::{contour_plot, ContourConfig};
-
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
-
+    
     // Generate default x and y coordinates
-    let width = if !z_data.is_empty() {
-        z_data[0].len()
-    } else {
-        0
-    };
+    let width = if !z_data.is_empty() { z_data[0].len() } else { 0 };
     let height = z_data.len();
     let x_coords: Vec<f64> = (0..width).map(|i| i as f64).collect();
     let y_coords: Vec<f64> = (0..height).map(|i| i as f64).collect();
-
+    
     // Create configuration
     let config = ContourConfig::default();
-
+    
     // Generate filename
     let filename = "xdl_contour.png";
-
+    
     // Call the plotting function
-    println!(
-        "CONTOUR: Rendering {}x{} contour plot to {}",
-        height, width, filename
-    );
+    println!("CONTOUR: Rendering {}x{} contour plot to {}", height, width, filename);
     contour_plot(z_data, Some(x_coords), Some(y_coords), config, filename)?;
     println!("  Contour plot saved to '{}'", filename);
-
+    
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL Contour Plot".to_string());
         }
     }
-
+    
     Ok(XdlValue::Undefined)
 }
 
 /// SURFACE procedure - creates a 3D surface plot
 pub fn surface(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::{surface_plot, SurfaceConfig};
+    
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "SURFACE requires at least one argument".to_string(),
         ));
     }
 
-    // Try to use xdl-charts (Tauri-based) first for better 3D interactivity
-    match try_surface3d(&args[0], "XDL Surface Plot") {
-        Ok(_) => return Ok(XdlValue::Undefined),
-        Err(e) => {
-            // Log the error but continue with fallback
-            eprintln!(
-                "SURFACE: xdl-charts unavailable ({}), using fallback renderer",
-                e
-            );
-        }
-    }
-
-    // Fallback to traditional graphics rendering
-    use crate::graphics::{surface_plot, SurfaceConfig};
-
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
-
+    
     // Generate default x and y coordinates
-    let width = if !z_data.is_empty() {
-        z_data[0].len()
-    } else {
-        0
-    };
+    let width = if !z_data.is_empty() { z_data[0].len() } else { 0 };
     let height = z_data.len();
     let x_coords: Vec<f64> = (0..width).map(|i| i as f64).collect();
     let y_coords: Vec<f64> = (0..height).map(|i| i as f64).collect();
-
+    
     // Create configuration
     let config = SurfaceConfig::default();
-
+    
     // Generate filename
     let filename = "xdl_surface.png";
-
+    
     // Call the plotting function
-    println!(
-        "SURFACE: Rendering {}x{} surface plot to {}",
-        height, width, filename
-    );
+    println!("SURFACE: Rendering {}x{} surface plot to {}", height, width, filename);
     surface_plot(z_data, Some(x_coords), Some(y_coords), config, filename)?;
     println!("  Surface plot saved to '{}'", filename);
-
+    
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL Surface Plot".to_string());
         }
     }
-
+    
     Ok(XdlValue::Undefined)
-}
-
-/// Try to use xdl-charts for 3D surface plotting (returns error if unavailable)
-fn try_surface3d(z_data: &XdlValue, title: &str) -> XdlResult<()> {
-    let title_val = XdlValue::String(title.to_string());
-
-    // Call the 3D surface charting procedure
-    crate::charting_procs::surface3d(&[z_data.clone(), title_val])?;
-    Ok(())
 }
 
 /// WINDOW procedure - creates or selects a graphics window
@@ -319,39 +181,9 @@ fn extract_numeric_array(value: &XdlValue) -> XdlResult<Vec<f64>> {
     }
 }
 
-/// Helper function to extract 2D array from nested array or MultiDimArray
+/// Helper function to extract 2D array from nested array
 fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
     match value {
-        XdlValue::MultiDimArray { data, shape } => {
-            // Handle MultiDimArray from REFORM
-            if shape.len() != 2 {
-                return Err(XdlError::RuntimeError(format!(
-                    "Expected 2D array, got {}D array",
-                    shape.len()
-                )));
-            }
-
-            let height = shape[0];
-            let width = shape[1];
-
-            if data.len() != height * width {
-                return Err(XdlError::RuntimeError(format!(
-                    "Array size {} doesn't match dimensions {}x{}",
-                    data.len(),
-                    height,
-                    width
-                )));
-            }
-
-            // Convert flat array to 2D Vec<Vec<f64>>
-            let mut result = Vec::with_capacity(height);
-            for i in 0..height {
-                let row_start = i * width;
-                let row_end = row_start + width;
-                result.push(data[row_start..row_end].to_vec());
-            }
-            Ok(result)
-        }
         XdlValue::NestedArray(rows) => {
             let mut result = Vec::new();
             for row in rows {
@@ -372,16 +204,40 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
             Ok(result)
         }
         _ => Err(XdlError::RuntimeError(
-            "Expected a 2D nested array or MultiDimArray".to_string(),
+            "Expected a 2D nested array".to_string(),
         )),
     }
+}
+
+/// Launch plot window - uses GUI callback if available, otherwise saves to PNG
+fn launch_plot_window(x_data: Vec<f64>, y_data: Vec<f64>) -> XdlResult<()> {
+    // Try to use GUI callback first
+    if let Ok(callback_guard) = GUI_PLOT_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            println!("Launching interactive plot window...");
+            callback(x_data, y_data);
+            return Ok(());
+        }
+    }
+
+    // Fallback to PNG file using basic plotter
+    let filename = "xdl_plot.png";
+    save_plot_to_file(&x_data, &y_data, filename)?;
+    println!("Plot data saved to '{}' (GUI not available)", filename);
+    println!(
+        "Data points: {} values from {:.2} to {:.2}",
+        y_data.len(),
+        y_data.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
+        y_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    );
+    Ok(())
 }
 
 /// Register GUI plot callback (called from GUI application)
 /// This is the main integration point between graphics procedures and the GUI
 pub fn register_gui_plot_callback<F>(callback: F)
 where
-    F: Fn(Vec<f64>, Vec<f64>, String, String, String) + Send + Sync + 'static,
+    F: Fn(Vec<f64>, Vec<f64>) + Send + Sync + 'static,
 {
     if let Ok(mut guard) = GUI_PLOT_CALLBACK.lock() {
         *guard = Some(Arc::new(callback));
@@ -396,6 +252,38 @@ where
     if let Ok(mut guard) = GUI_IMAGE_CALLBACK.lock() {
         *guard = Some(Arc::new(callback));
     }
+}
+
+/// Save plot to PNG file using plotters
+fn save_plot_to_file(x_data: &[f64], y_data: &[f64], filename: &str) -> XdlResult<()> {
+    let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let x_min = x_data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let x_max = x_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let y_min = y_data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let y_max = y_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("XDL Plot", ("Arial", 30).into_font())
+        .margin(20)
+        .x_label_area_size(40)
+        .y_label_area_size(40)
+        .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
+
+    chart.configure_mesh().draw()?;
+
+    chart
+        .draw_series(LineSeries::new(
+            x_data.iter().zip(y_data.iter()).map(|(&x, &y)| (x, y)),
+            &BLUE,
+        ))?
+        .label("Data")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 10, y)], &BLUE));
+
+    chart.configure_series_labels().draw()?;
+    root.present()?;
+    Ok(())
 }
 
 /// DEVICE procedure - sets or queries graphics device
@@ -514,63 +402,42 @@ pub fn arrow(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// SHADE_SURF procedure - creates a shaded surface plot
 pub fn shade_surf(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::{surface_plot, SurfaceConfig};
+    
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
             "SHADE_SURF requires at least one argument".to_string(),
         ));
     }
-
-    // Try to use xdl-charts (Tauri-based) first for better 3D interactivity
-    match crate::charting_procs::shade_surf(args) {
-        Ok(v) => return Ok(v),
-        Err(e) => {
-            eprintln!(
-                "SHADE_SURF: xdl-charts unavailable ({}), using fallback renderer",
-                e
-            );
-        }
-    }
-
-    // Fallback to traditional graphics rendering
-    use crate::graphics::{surface_plot, SurfaceConfig};
-
+    
     // Extract 2D data from nested array
     let z_data = extract_2d_array(&args[0])?;
-
+    
     // Generate default x and y coordinates
-    let width = if !z_data.is_empty() {
-        z_data[0].len()
-    } else {
-        0
-    };
+    let width = if !z_data.is_empty() { z_data[0].len() } else { 0 };
     let height = z_data.len();
     let x_coords: Vec<f64> = (0..width).map(|i| i as f64).collect();
     let y_coords: Vec<f64> = (0..height).map(|i| i as f64).collect();
-
+    
     // Create configuration with shading enabled
-    let config = SurfaceConfig {
-        shading: true,
-        ..Default::default()
-    };
-
+    let mut config = SurfaceConfig::default();
+    config.shading = true;
+    
     // Generate filename
     let filename = "xdl_shade_surf.png";
-
+    
     // Call the plotting function
-    println!(
-        "SHADE_SURF: Rendering {}x{} shaded surface to {}",
-        height, width, filename
-    );
+    println!("SHADE_SURF: Rendering {}x{} shaded surface to {}", height, width, filename);
     surface_plot(z_data, Some(x_coords), Some(y_coords), config, filename)?;
     println!("  Shaded surface saved to '{}'", filename);
-
+    
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL Shaded Surface".to_string());
         }
     }
-
+    
     Ok(XdlValue::Undefined)
 }
 
@@ -755,58 +622,42 @@ pub fn errplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// PLOT3D procedure - creates a 3D line plot
 pub fn plot3d(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use crate::graphics::{plot_3d, SurfaceConfig};
+    
     if args.len() < 3 {
         return Err(XdlError::InvalidArgument(
             "PLOT3D: Expected at least 3 arguments (x, y, z)".to_string(),
         ));
     }
-
-    // Try to use xdl-charts (Tauri-based) first for better 3D interactivity
-    match crate::charting_procs::plot3d(args) {
-        Ok(v) => return Ok(v),
-        Err(e) => {
-            eprintln!(
-                "PLOT3D: xdl-charts unavailable ({}), using fallback renderer",
-                e
-            );
-        }
-    }
-
-    // Fallback to traditional graphics rendering
-    use crate::graphics::{plot_3d, SurfaceConfig};
-
+    
     let x_data = extract_numeric_array(&args[0])?;
     let y_data = extract_numeric_array(&args[1])?;
     let z_data = extract_numeric_array(&args[2])?;
-
+    
     if x_data.len() != y_data.len() || y_data.len() != z_data.len() {
         return Err(XdlError::RuntimeError(
             "PLOT3D: X, Y, and Z arrays must have the same length".to_string(),
         ));
     }
-
+    
     // Create configuration
     let config = SurfaceConfig::default();
-
+    
     // Generate filename
     let filename = "xdl_plot3d.png";
-
+    
     // Call the plotting function
-    println!(
-        "PLOT3D: Rendering 3D line with {} points to {}",
-        x_data.len(),
-        filename
-    );
+    println!("PLOT3D: Rendering 3D line with {} points to {}", x_data.len(), filename);
     plot_3d(x_data, y_data, z_data, config, filename)?;
     println!("  3D line plot saved to '{}'", filename);
-
+    
     // Try to display in GUI if callback is available
     if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
             callback(filename.to_string(), "XDL 3D Line Plot".to_string());
         }
     }
-
+    
     Ok(XdlValue::Undefined)
 }
 
@@ -846,211 +697,5 @@ pub fn velovect(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
     println!("VELOVECT: Vector field plotting not yet implemented");
-    Ok(XdlValue::Undefined)
-}
-
-// ============================================================================
-// ADVANCED VISUALIZATION PROCEDURES
-// ============================================================================
-
-/// RENDER_COLORMAP procedure - renders data with specified colormap
-/// Usage: RENDER_COLORMAP, data, filename, COLORMAP='viridis'
-pub fn render_colormap(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::colormap::{ColorMap, ColorMapType};
-    use plotters::prelude::*;
-
-    if args.len() < 2 {
-        return Err(XdlError::InvalidArgument(
-            "RENDER_COLORMAP: Expected at least 2 arguments (data, filename)".to_string(),
-        ));
-    }
-
-    let data_2d = extract_2d_array(&args[0])?;
-    let filename = match &args[1] {
-        XdlValue::String(s) => s.clone(),
-        _ => {
-            return Err(XdlError::InvalidArgument(
-                "Filename must be a string".to_string(),
-            ))
-        }
-    };
-
-    // Default colormap
-    let colormap = ColorMap::new(ColorMapType::Viridis);
-
-    // Find min/max of data
-    let mut min_val = f64::INFINITY;
-    let mut max_val = f64::NEG_INFINITY;
-    for row in &data_2d {
-        for &val in row {
-            min_val = min_val.min(val);
-            max_val = max_val.max(val);
-        }
-    }
-
-    let height = data_2d.len();
-    let width = if height > 0 { data_2d[0].len() } else { 0 };
-
-    // Create drawing
-    let root = BitMapBackend::new(&filename, (800, 600)).into_drawing_area();
-    root.fill(&WHITE)?;
-
-    let mut chart = ChartBuilder::on(&root)
-        .caption("Colormap Visualization", ("sans-serif", 30))
-        .margin(20)
-        .build_cartesian_2d(0.0..width as f64, 0.0..height as f64)?;
-
-    chart.configure_mesh().draw()?;
-
-    // Draw colored rectangles
-    for (y, row) in data_2d.iter().enumerate() {
-        for (x, &val) in row.iter().enumerate() {
-            let normalized = if max_val > min_val {
-                (val - min_val) / (max_val - min_val)
-            } else {
-                0.5
-            };
-
-            let color = colormap.map(normalized);
-            let rgb = RGBColor(color.r, color.g, color.b);
-
-            chart.draw_series(std::iter::once(Rectangle::new(
-                [(x as f64, y as f64), (x as f64 + 1.0, y as f64 + 1.0)],
-                ShapeStyle::from(&rgb).filled(),
-            )))?;
-        }
-    }
-
-    root.present()?;
-
-    println!("RENDER_COLORMAP: Saved to {}", filename);
-
-    // Try to display in GUI
-    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
-        if let Some(ref callback) = *callback_guard {
-            callback(filename.clone(), "Colormap Visualization".to_string());
-        }
-    }
-
-    Ok(XdlValue::Undefined)
-}
-
-/// DEM_RENDER procedure - renders digital elevation model
-/// Usage: DEM_RENDER, elevation_data, filename
-pub fn dem_render(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::colormap::terrain;
-    use crate::graphics::terrain::{render_elevation_map, DigitalElevationModel};
-
-    if args.len() < 2 {
-        return Err(XdlError::InvalidArgument(
-            "DEM_RENDER: Expected at least 2 arguments (elevation_data, filename)".to_string(),
-        ));
-    }
-
-    let elevations = extract_2d_array(&args[0])?;
-    let filename = match &args[1] {
-        XdlValue::String(s) => s.clone(),
-        _ => {
-            return Err(XdlError::InvalidArgument(
-                "Filename must be a string".to_string(),
-            ))
-        }
-    };
-
-    let dem = DigitalElevationModel::new(elevations, 30.0)?;
-    let colormap = terrain();
-
-    render_elevation_map(&dem, &colormap, &filename)?;
-
-    println!("DEM_RENDER: Elevation map saved to {}", filename);
-
-    // Try to display in GUI
-    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
-        if let Some(ref callback) = *callback_guard {
-            callback(filename, "Digital Elevation Model".to_string());
-        }
-    }
-
-    Ok(XdlValue::Undefined)
-}
-
-/// HILLSHADE procedure - generates hillshade from elevation data
-/// Usage: HILLSHADE, elevation_data, filename, AZIMUTH=315, ALTITUDE=45
-pub fn hillshade_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::terrain::{render_hillshade, DigitalElevationModel};
-
-    if args.len() < 2 {
-        return Err(XdlError::InvalidArgument(
-            "HILLSHADE: Expected at least 2 arguments (elevation_data, filename)".to_string(),
-        ));
-    }
-
-    let elevations = extract_2d_array(&args[0])?;
-    let filename = match &args[1] {
-        XdlValue::String(s) => s.clone(),
-        _ => {
-            return Err(XdlError::InvalidArgument(
-                "Filename must be a string".to_string(),
-            ))
-        }
-    };
-
-    let dem = DigitalElevationModel::new(elevations, 30.0)?;
-
-    // Default sun position
-    let azimuth = 315.0; // NW
-    let altitude = 45.0; // 45 degrees above horizon
-
-    render_hillshade(&dem, azimuth, altitude, &filename)?;
-
-    println!("HILLSHADE: Hillshade saved to {}", filename);
-
-    // Try to display in GUI
-    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
-        if let Some(ref callback) = *callback_guard {
-            callback(filename, "Hillshade".to_string());
-        }
-    }
-
-    Ok(XdlValue::Undefined)
-}
-
-/// QUIVER procedure - creates quiver (arrow) plot from vector field
-/// Usage: QUIVER, u, v, filename
-pub fn quiver_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use crate::graphics::colormap::plasma;
-    use crate::graphics::sciviz::{render_quiver, VectorField2D};
-
-    if args.len() < 3 {
-        return Err(XdlError::InvalidArgument(
-            "QUIVER: Expected at least 3 arguments (u, v, filename)".to_string(),
-        ));
-    }
-
-    let u = extract_2d_array(&args[0])?;
-    let v = extract_2d_array(&args[1])?;
-    let filename = match &args[2] {
-        XdlValue::String(s) => s.clone(),
-        _ => {
-            return Err(XdlError::InvalidArgument(
-                "Filename must be a string".to_string(),
-            ))
-        }
-    };
-
-    let field = VectorField2D::new(u, v)?;
-    let colormap = plasma();
-
-    render_quiver(&field, 5, 2.0, Some(&colormap), &filename)?;
-
-    println!("QUIVER: Vector field plot saved to {}", filename);
-
-    // Try to display in GUI
-    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
-        if let Some(ref callback) = *callback_guard {
-            callback(filename, "Vector Field".to_string());
-        }
-    }
-
     Ok(XdlValue::Undefined)
 }

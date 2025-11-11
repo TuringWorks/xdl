@@ -471,6 +471,6 @@ EMA converges to recent values with decay factor `(1 - alpha)`:
 
 ## See Also
 
-- [XDL Array and Statistical Functions](ARRAY_STATS_FUNCTIONS.md)
-- [Implementation Status](IMPLEMENTATION_STATUS.md)
-- [GPU Acceleration](GPU_ACCELERATION_PERFORMANCE_IMPACT.md)
+- [XDL Array Functions](ARRAY_FUNCTIONS.md)
+- [XDL Statistics Functions](STATISTICS.md)
+- [XDL Math Functions](MATH_FUNCTIONS.md)

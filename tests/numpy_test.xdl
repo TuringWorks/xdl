@@ -39,7 +39,7 @@ simple_array = python_call(numpy_mod, "array", [1, 4, 9, 16])
 print, "Input array:", simple_array
 
 ; Test sqrt function
-sqrt_result = python_call(numpy_mod, "sqrt", simple_array)
+sqrt_result = python_call(numpy_mod, "sqrt", simple_array)  
 print, "numpy.sqrt(array):", sqrt_result
 
 ; Test sum function

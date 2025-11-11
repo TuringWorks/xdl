@@ -79,7 +79,6 @@ mod tests {
         assert!(server.is_ok());
         if let Ok(server) = server {
             assert!(server.port() > 0);
-            assert!(server.port() <= u16::MAX);
         }
     }
 
@@ -88,6 +87,6 @@ mod tests {
         let server = VizServer::new().unwrap();
         let port = server.port();
         // Port should be valid
-        assert!(port > 0 && port <= u16::MAX);
+        assert!(port > 0);
     }
 }

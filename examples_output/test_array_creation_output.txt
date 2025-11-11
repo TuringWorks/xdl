@@ -1,4 +1,4 @@
-[2m2025-11-11T00:38:46.163979Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/test_array_creation.xdl
+[2m2025-11-11T00:51:34.208302Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/test_array_creation.xdl
 ===================================================================
            ARRAY CREATION FUNCTIONS TEST SUITE
 ===================================================================

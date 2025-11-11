@@ -228,12 +228,12 @@ PRO test_string_conversion
     f2 = 0.00001 ; Should use scientific (< 1e-4)
     f3 = 9999999.0  ; Should NOT use scientific
     f4 = 10000000.0 ; Should use scientific (>= 1e7)
-
+    
     r1 = STRING(f1)
     r2 = STRING(f2)
     r3 = STRING(f3)
     r4 = STRING(f4)
-
+    
     PRINT, 'f1 (0.0001): ', r1
     PRINT, 'f2 (0.00001): ', r2, ' (scientific)'
     PRINT, 'f3 (9999999): ', r3

@@ -1,0 +1,315 @@
+; XDL Control Flow Test Suite
+; Comprehensive tests for loops, conditions, and control flow statements
+; This file tests all implemented and planned control flow features
+
+print, "=== XDL CONTROL FLOW TEST SUITE ==="
+print, ""
+
+; =============================================================================
+; IF/THEN/ELSE CONDITIONAL TESTS
+; =============================================================================
+
+print, "1. IF/THEN/ELSE CONDITIONAL TESTS:"
+print, "-----------------------------------"
+
+; Simple if statement
+x = 10
+if x gt 5 then
+  print, "x is greater than 5:", x
+endif
+
+; If-else statement
+score = 85
+if score ge 90 then begin
+  print, "Grade: A"
+end else begin
+  print, "Grade: B or lower"
+end
+endif
+
+; Nested if statements
+temperature = 75
+if temperature gt 80 then begin
+  print, "It's hot!"
+end else begin
+  if temperature gt 60 then begin
+    print, "It's warm"
+  end else begin
+    print, "It's cool"
+  end
+  endif
+end
+endif
+
+; Complex condition with logical operators
+age = 25
+income = 50000
+if age ge 18 and income gt 30000 then
+  print, "Eligible for loan"
+endif
+
+print, ""
+
+; =============================================================================
+; FOR LOOP TESTS
+; =============================================================================
+
+print, "2. FOR LOOP TESTS:"
+print, "------------------"
+
+; Basic for loop
+print, "Basic for loop (0 to 4):"
+for i = 0, 4
+  print, "  i =", i
+endfor
+
+; For loop with step
+print, "For loop with step=2 (0 to 10, step 2):"
+for i = 0, 10, 2
+  print, "  i =", i
+endfor
+
+; Nested for loops
+print, "Nested for loops (multiplication table):"
+for i = 1, 3
+  for j = 1, 3
+    print, "  ", i, "x", j, "=", i*j
+  endfor
+endfor
+
+; For loop with array processing
+print, "For loop processing array:"
+data = [1, 4, 9, 16, 25]
+total = 0
+size = 5
+for i = 0, size-1
+  total = total + data[i]
+  print, "  data[", i, "] =", data[i], ", running total =", total
+endfor
+print, "Final total:", total
+print, "  Last element (data[-1]):", data[-1]
+
+print, ""
+
+; =============================================================================
+; WHILE LOOP TESTS
+; =============================================================================
+
+print, "3. WHILE LOOP TESTS:"
+print, "-------------------"
+
+; Basic while loop
+print, "Basic while loop (countdown):"
+count = 5
+while count gt 0
+  print, "  Count:", count
+  count = count - 1
+endwhile
+print, "Done!"
+
+; While loop with condition
+print, "While loop finding first power of 2 > 100:"
+power = 1
+exp = 0
+while power le 100
+  exp = exp + 1
+  power = power * 2
+  print, "  2^", exp-1, "=", power/2
+endwhile
+print, "First power > 100: 2^", exp-1, "=", power
+
+; While loop with break condition
+print, "While loop with early termination:"
+n = 1
+while n le 20
+  if n eq 7 then
+    print, "  Breaking at n =", n
+    break
+  endif
+  print, "  n =", n
+  n = n + 2
+endwhile
+
+print, ""
+
+; =============================================================================
+; LOOP CONTROL TESTS (BREAK/CONTINUE)
+; =============================================================================
+
+print, "4. LOOP CONTROL TESTS:"
+print, "----------------------"
+
+; Continue statement in for loop
+print, "For loop with CONTINUE (skip even numbers):"
+for i = 1, 10
+  if i mod 2 eq 0 then
+    continue
+  endif
+  print, "  Odd number:", i
+endfor
+
+; Break statement in for loop  
+print, "For loop with BREAK (stop at first number > 15):"
+for i = 10, 25
+  if i gt 15 then
+    print, "  Breaking at i =", i
+    break
+  endif
+  print, "  i =", i
+endfor
+
+print, ""
+
+; =============================================================================
+; COMBINED CONTROL FLOW TESTS
+; =============================================================================
+
+print, "5. COMBINED CONTROL FLOW TESTS:"
+print, "-------------------------------"
+
+; Prime number finder using nested loops and conditions
+print, "Finding prime numbers from 2 to 20:"
+for num = 2, 20
+  is_prime = 1
+  
+  ; Check if num is divisible by any number from 2 to sqrt(num)
+  max_check = sqrt(num)
+  for divisor = 2, max_check
+    if num mod divisor eq 0 then
+      is_prime = 0
+      break
+    endif
+  endfor
+  
+  if is_prime then
+    print, "  Prime:", num
+  endif
+endfor
+
+; Fibonacci sequence using while loop
+print, "Fibonacci sequence (first 10 numbers):"
+fib1 = 0
+fib2 = 1
+count = 0
+print, "  F(0) =", fib1
+print, "  F(1) =", fib1
+
+while count lt 8
+  next_fib = fib1 + fib2
+  print, "  F(", count+2, ") =", next_fib
+  fib1 = fib2
+  fib2 = next_fib
+  count = count + 1
+endwhile
+
+print, ""
+
+; =============================================================================
+; ARRAY AND LOOP COMBINATION TESTS
+; =============================================================================
+
+print, "6. ARRAY AND LOOP COMBINATION TESTS:"
+print, "------------------------------------"
+
+; Initialize and process arrays with loops
+print, "Creating and processing arrays with loops:"
+
+; Create array with initial values
+size = 5
+arr1 = [0.0, 0.0, 0.0, 0.0, 0.0]
+arr2 = [0.0, 0.0, 0.0, 0.0, 0.0]
+
+; Fill arrays with computed values using element assignment
+for i = 0, size-1
+  arr1[i] = i * 2.5
+  arr2[i] = i * 0.5
+endfor
+
+; Display arrays
+print, "Array 1 (i * 2.5):"
+for i = 0, size-1
+  print, "  arr1[", i, "] =", arr1[i]
+endfor
+
+print, "Array 2 (i * 0.5):"
+for i = 0, size-1
+  print, "  arr2[", i, "] =", arr2[i]
+endfor
+
+; Find maximum value using loop
+max_val = arr1[0]
+max_index = 0
+for i = 1, size-1
+  if arr1[i] gt max_val then
+    max_val = arr1[i]
+    max_index = i
+  endif
+endfor
+print, "Maximum value in arr1:", max_val, "at index", max_index
+
+; Access using negative indices
+print, "First element (arr1[0]):", arr1[0]
+print, "Last element (arr1[-1]):", arr1[-1]
+
+print, ""
+
+; =============================================================================
+; CONDITIONAL EXPRESSIONS AND COMPARISONS
+; =============================================================================
+
+print, "7. CONDITIONAL EXPRESSIONS AND COMPARISONS:"
+print, "-------------------------------------------"
+
+; Test all comparison operators
+a = 10
+b = 20
+
+print, "Testing comparison operators (a=10, b=20):"
+if a eq 10 then print, "  a EQ 10: TRUE"
+if a ne b then print, "  a NE b: TRUE"
+if a lt b then print, "  a LT b: TRUE"
+if b gt a then print, "  b GT a: TRUE"
+if a le 10 then print, "  a LE 10: TRUE"
+if b ge 20 then print, "  b GE 20: TRUE"
+
+; Test logical operators
+x = 1
+y = 0
+z = 1
+
+print, "Testing logical operators:"
+if x and z then print, "  x AND z: TRUE"
+if x or y then print, "  x OR y: TRUE"
+if not y then print, "  NOT y: TRUE"
+
+print, ""
+
+; =============================================================================
+; ERROR HANDLING AND EDGE CASES
+; =============================================================================
+
+print, "8. EDGE CASES AND BOUNDARY TESTS:"
+print, "---------------------------------"
+
+; Empty loop (start > end)
+print, "Testing empty for loop (start > end):"
+for i = 5, 1
+  print, "  This should not execute"
+endfor
+print, "Empty loop completed"
+
+; Single iteration loop
+print, "Single iteration loop:"
+for i = 3, 3
+  print, "  Single iteration: i =", i
+endfor
+
+; Zero condition while loop
+print, "While loop with false condition:"
+while 0
+  print, "  This should not execute"
+endwhile
+print, "Zero condition while loop completed"
+
+print, ""
+print, "=== ALL CONTROL FLOW TESTS COMPLETED ==="

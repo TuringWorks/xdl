@@ -24,7 +24,7 @@ pub enum Token {
     Integer(i64),
     Float(f64),
     String(String),
-
+    
     // Keywords
     If, Then, Else, Endif,
     For, Endfor, Foreach,
@@ -39,7 +39,7 @@ pub enum Token {
     Begin, End,
     Case, Of, Endcase,
     Switch, Endswitch,
-
+    
     // Operators
     Plus,           // +
     Minus,          // -
@@ -48,14 +48,14 @@ pub enum Token {
     Modulo,         // MOD
     Power,          // ^
     MatrixMultiply, // #
-
+    
     // Assignment
     Assign,         // =
     PlusAssign,     // +=
     MinusAssign,    // -=
     MultiplyAssign, // *=
     DivideAssign,   // /=
-
+    
     // Comparison
     Equal,          // EQ
     NotEqual,       // NE
@@ -63,19 +63,19 @@ pub enum Token {
     Greater,        // GT
     LessEqual,      // LE
     GreaterEqual,   // GE
-
+    
     // Logical
     And,            // AND
     Or,             // OR
     Not,            // NOT
     Xor,            // XOR
-
+    
     // Bitwise (rarely used but part of IDL)
     BitwiseAnd,     // AND (bitwise)
     BitwiseOr,      // OR (bitwise)
     BitwiseXor,     // XOR (bitwise)
     BitwiseNot,     // NOT (bitwise)
-
+    
     // Delimiters
     LeftParen,      // (
     RightParen,     // )
@@ -88,7 +88,7 @@ pub enum Token {
     Colon,          // :
     Dot,            // .
     Arrow,          // ->
-
+    
     // Special
     Identifier(String),
     SystemVariable(String), // !PI, !X, etc.
@@ -160,7 +160,7 @@ fn parse_identifier_or_keyword(input: &str) -> ParseResult<Token> {
         take_while1(is_identifier_start),
         take_while(is_identifier_char)
     ))(input)?;
-
+    
     let token = match name.to_uppercase().as_str() {
         // Control flow keywords
         "IF" => Token::If,
@@ -176,14 +176,14 @@ fn parse_identifier_or_keyword(input: &str) -> ParseResult<Token> {
         "UNTIL" => Token::Until,
         "BREAK" => Token::Break,
         "CONTINUE" => Token::Continue,
-
+        
         // Function/procedure keywords
         "FUNCTION" => Token::Function,
         "ENDFUNCTION" => Token::Endfunction,
         "PROCEDURE" | "PRO" => Token::Pro,
         "ENDPRO" => Token::Endpro,
         "RETURN" => Token::Return,
-
+        
         // Other keywords
         "COMMON" => Token::Common,
         "COMPILE_OPT" => Token::CompileOpt,
@@ -194,7 +194,7 @@ fn parse_identifier_or_keyword(input: &str) -> ParseResult<Token> {
         "ENDCASE" => Token::Endcase,
         "SWITCH" => Token::Switch,
         "ENDSWITCH" => Token::Endswitch,
-
+        
         // Operators (word forms)
         "MOD" => Token::Modulo,
         "EQ" => Token::Equal,
@@ -207,11 +207,11 @@ fn parse_identifier_or_keyword(input: &str) -> ParseResult<Token> {
         "OR" => Token::Or,
         "NOT" => Token::Not,
         "XOR" => Token::Xor,
-
+        
         // Regular identifier
         _ => Token::Identifier(name.to_string()),
     };
-
+    
     Ok((input, token))
 }
 
@@ -292,7 +292,7 @@ fn parse_token(input: &str) -> ParseResult<Token> {
 pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
     let mut remaining = input;
     let mut tokens = Vec::new();
-
+    
     while !remaining.is_empty() {
         match parse_token(remaining) {
             Ok((rest, token)) => {
@@ -309,7 +309,7 @@ pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
             }
         }
     }
-
+    
     tokens.push(Token::EOF);
     Ok(tokens)
 }

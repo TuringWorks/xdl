@@ -42,25 +42,7 @@ impl Interpreter {
     }
 
     pub fn execute_program(&mut self, program: &Program) -> XdlResult<()> {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        static STMT_EXEC_COUNT: AtomicUsize = AtomicUsize::new(0);
-
         for statement in &program.statements {
-            let count = STMT_EXEC_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
-
-            // Log every 100th statement to track progress
-            if count.is_multiple_of(100) {
-                eprintln!("[INTERPRETER] Executed {} statements so far...", count);
-            }
-
-            // Emergency stop if we exceed reasonable limit
-            if count > 100000 {
-                return Err(XdlError::RuntimeError(format!(
-                    "Program exceeded maximum statement executions ({}). Possible infinite loop.",
-                    count
-                )));
-            }
-
             self.execute_statement(statement)?;
         }
         Ok(())
@@ -112,12 +94,7 @@ impl Interpreter {
                 Ok(())
             }
 
-            Statement::ProcedureCall {
-                name,
-                args,
-                keywords,
-                ..
-            } => {
+            Statement::ProcedureCall { name, args, .. } => {
                 // Handle built-in procedures like PRINT
                 match name.to_uppercase().as_str() {
                     "PRINT" => {
@@ -156,23 +133,13 @@ impl Interpreter {
                                 arg_values.push(self.evaluate_expression(arg)?);
                             }
 
-                            // Evaluate keyword arguments
-                            let mut keyword_values = HashMap::new();
-                            for keyword in keywords {
-                                if let Some(ref value_expr) = keyword.value {
-                                    // Keyword with value: TITLE='foo'
-                                    let value = self.evaluate_expression(value_expr)?;
-                                    keyword_values.insert(keyword.name.clone(), value);
-                                } else {
-                                    // Boolean flag keyword: /INTERACTIVE
-                                    // Insert with value Long(1) to indicate it's set
-                                    keyword_values.insert(keyword.name.clone(), XdlValue::Long(1));
-                                }
+                            match self.evaluator.call_procedure(name, &arg_values) {
+                                Ok(_) => Ok(()),
+                                Err(_) => Err(XdlError::RuntimeError(format!(
+                                    "Unknown procedure: {}",
+                                    name
+                                ))),
                             }
-
-                            self.evaluator
-                                .call_procedure_with_keywords(name, &arg_values, &keyword_values)
-                                .map(|_| ())
                         }
                     }
                 }
@@ -310,17 +277,8 @@ impl Interpreter {
         }
 
         let mut current = start_i;
-        let mut iteration_count = 0;
-        const MAX_ITERATIONS: usize = 1000000; // Safety limit
 
         while (step_i > 0 && current <= end_i) || (step_i < 0 && current >= end_i) {
-            iteration_count += 1;
-            if iteration_count > MAX_ITERATIONS {
-                return Err(XdlError::RuntimeError(format!(
-                    "For loop exceeded maximum iterations ({}). Loop variable '{}': {} to {} step {}",
-                    MAX_ITERATIONS, variable, start_i, end_i, step_i
-                )));
-            }
             // Set loop variable
             self.context
                 .set_variable(variable.to_string(), XdlValue::Long(current as i32));
@@ -473,80 +431,9 @@ impl Interpreter {
             ));
         }
 
-        // Handle multi-dimensional arrays with comma-separated indices
+        // Handle nested arrays (multi-dimensional)
         if indices.len() > 1 {
-            // Check if this is a MultiDimArray with proper shape
-            if let XdlValue::MultiDimArray { data, shape } = array_val {
-                // Check if all indices are wildcards: arr[*, *, *] = value
-                let all_wildcards = indices.iter().all(|idx| matches!(idx, ArrayIndex::All));
-
-                if all_wildcards {
-                    // Fill all elements with the value
-                    let fill_value = value.to_double()?;
-                    for elem in data.iter_mut() {
-                        *elem = fill_value;
-                    }
-                    return Ok(());
-                }
-
-                if indices.len() == shape.len() {
-                    // N-dimensional assignment: arr[i, j, k, ...] = value
-                    let mut index_values = Vec::new();
-                    for index in indices {
-                        match index {
-                            ArrayIndex::Single(expr) => {
-                                let val = self.evaluate_expression(expr)?;
-                                index_values.push(val.to_long()? as usize);
-                            }
-                            ArrayIndex::All => {
-                                return Err(XdlError::NotImplemented(
-                                    "Mixed wildcard and single index assignment not yet supported"
-                                        .to_string(),
-                                ));
-                            }
-                            _ => {
-                                return Err(XdlError::NotImplemented(
-                                    "Range assignment not supported for multi-dimensional arrays"
-                                        .to_string(),
-                                ));
-                            }
-                        }
-                    }
-
-                    // Check bounds and calculate flat index (row-major order)
-                    let mut flat_index = 0;
-                    let mut multiplier = 1;
-
-                    // Calculate in reverse order (rightmost dimension varies fastest)
-                    for i in (0..shape.len()).rev() {
-                        let idx = index_values[i];
-                        let dim_size = shape[i];
-
-                        if idx >= dim_size {
-                            return Err(XdlError::RuntimeError(format!(
-                                "Index {} out of bounds for dimension {} (size {})",
-                                idx, i, dim_size
-                            )));
-                        }
-
-                        flat_index += idx * multiplier;
-                        multiplier *= dim_size;
-                    }
-
-                    if flat_index >= data.len() {
-                        return Err(XdlError::RuntimeError(format!(
-                            "Computed index {} out of bounds for array with {} elements",
-                            flat_index,
-                            data.len()
-                        )));
-                    }
-
-                    data[flat_index] = value.to_double()?;
-                    return Ok(());
-                }
-            }
-
-            // For nested arrays, navigate through them
+            // For multi-dimensional access, we need to navigate through nested arrays
             match array_val {
                 XdlValue::NestedArray(rows) => {
                     // Get the first index
@@ -633,15 +520,9 @@ impl Interpreter {
                         ArrayIndex::Range { .. } => Err(XdlError::NotImplemented(
                             "Range assignment not supported".to_string(),
                         )),
-                        ArrayIndex::All => {
-                            // Wildcard assignment: arr[*] = value
-                            // Fill all elements with the value
-                            let fill_value = value.to_double()?;
-                            for elem in arr.iter_mut() {
-                                *elem = fill_value;
-                            }
-                            Ok(())
-                        }
+                        ArrayIndex::All => Err(XdlError::NotImplemented(
+                            "All-element assignment not supported".to_string(),
+                        )),
                     }
                 }
                 XdlValue::NestedArray(rows) => match &indices[0] {

@@ -46,7 +46,7 @@ Executing with XDL simulation (enhanced mode)...
 [1] > print, "=== Testing Control Flow in GUI ==="
     => 📄 === Testing Control Flow in GUI ===
 [2] > print, ""
-    =>
+    => 
 
 [3] > x = 10
     => x = 10
@@ -211,7 +211,7 @@ Use the simulation mode for now. It provides:
 The GUI now provides **immediate visual feedback** for control flow execution through enhanced simulation. While not showing the exact output from the real interpreter, it provides a good development experience with:
 
 - Structure visualization
-- Variable tracking
+- Variable tracking  
 - Syntax validation
 - Execution flow display
 
@@ -219,6 +219,6 @@ For production use with real output, implementing stdout redirection (Option 2 a
 
 ---
 
-**Status**: ✅ Working (Enhanced Simulation Mode)
-**Next Priority**: Stdout redirection for real output
+**Status**: ✅ Working (Enhanced Simulation Mode)  
+**Next Priority**: Stdout redirection for real output  
 **User Impact**: Good development experience, minor limitations on print output

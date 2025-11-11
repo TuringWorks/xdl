@@ -1,0 +1,98 @@
+; XDL 3D Plot Demo
+; Demonstrates 3D plotting capabilities
+; Run this in the XDL GUI to see interactive 3D visualizations!
+
+PRINT, '=== XDL 3D Plot Demo ==='
+PRINT, ''
+
+; ========================================
+; 1. Simple Surface Plot with Nested Arrays
+; ========================================
+PRINT, '--- Test 1: Simple Surface Plot ---'
+PRINT, 'Creating small 3D surface...'
+
+; Create a simple 5x5 grid with nested arrays
+z = [[1, 2, 3, 2, 1], [2, 4, 6, 4, 2], [3, 6, 9, 6, 3], [2, 4, 6, 4, 2], [1, 2, 3, 2, 1]]
+SURFACE, z
+PRINT, 'Surface plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 2. Contour Plot
+; ========================================
+PRINT, '--- Test 2: Contour Plot ---'
+PRINT, 'Creating contour plot...'
+
+; Create peak-like data
+z2 = [[1, 2, 3, 2, 1], [2, 5, 8, 5, 2], [3, 8, 10, 8, 3], [2, 5, 8, 5, 2], [1, 2, 3, 2, 1]]
+CONTOUR, z2
+PRINT, 'Contour plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 3. Shaded Surface Plot
+; ========================================
+PRINT, '--- Test 3: Shaded Surface Plot ---'
+PRINT, 'Creating shaded surface...'
+
+; Create saddle-like data
+z3 = [[5, 4, 3, 4, 5], [4, 2, 1, 2, 4], [3, 1, 0, 1, 3], [4, 2, 1, 2, 4], [5, 4, 3, 4, 5]]
+SHADE_SURF, z3
+PRINT, 'Shaded surface complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 4. 3D Line Plot (Spiral)
+; ========================================
+PRINT, '--- Test 4: 3D Line Plot ---'
+PRINT, 'Creating 3D parametric spiral...'
+
+; Create parametric spiral with 20 points
+t = FINDGEN(20) / 2.0
+x3d = COS(t)
+y3d = SIN(t)
+z3d = t / 3.0
+
+PLOT3D, x3d, y3d, z3d
+PRINT, '3D line plot complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; 5. Another Surface - Wavy Pattern
+; ========================================
+PRINT, '--- Test 5: Wavy Surface ---'
+PRINT, 'Creating wavy pattern...'
+
+; Create wave-like surface
+z4 = [[0, 1, 2, 1, 0], [1, 3, 5, 3, 1], [2, 5, 8, 5, 2], [1, 3, 5, 3, 1], [0, 1, 2, 1, 0]]
+SURFACE, z4
+PRINT, 'Wavy surface complete!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+
+; ========================================
+; Summary
+; ========================================
+PRINT, '=== 3D Plot Demo Complete ==='
+PRINT, ''
+PRINT, '3D plotting capabilities demonstrated:'
+PRINT, '  - SURFACE: 3D wireframe surfaces'
+PRINT, '  - CONTOUR: 2D contour plots'
+PRINT, '  - SHADE_SURF: 3D shaded surfaces'
+PRINT, '  - PLOT3D: 3D parametric line plots'
+PRINT, ''
+PRINT, 'Note: All surface data created using nested array literals'
+PRINT, 'Example: z = [[1,2,3], [4,5,6], [7,8,9]]'
+PRINT, ''
+PRINT, 'Additional 3D procedures available:'
+PRINT, '  - SHADE_SURF_IRR: Irregular surface grids'
+PRINT, '  - SURFR: Rectangular surfaces'
+PRINT, '  - ISOCONTOUR: 3D isosurface contours'
+PRINT, '  - ISOSURFACE: 3D isosurface rendering'
+PRINT, '  - T3D, SCALE3, SHOW3: 3D transformations'
+PRINT, ''
+PRINT, 'Try modifying the nested arrays to create your own 3D visualizations!'

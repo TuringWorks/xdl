@@ -81,8 +81,8 @@ cargo run --release --bin xdl examples/plot3d_demo.xdl
 
 ```xdl
 ; Create a surface plot
-z = [[1, 2, 3, 2, 1],
-     [2, 4, 6, 4, 2],
+z = [[1, 2, 3, 2, 1], 
+     [2, 4, 6, 4, 2], 
      [3, 6, 9, 6, 3]]
 SURFACE, z
 

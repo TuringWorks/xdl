@@ -96,7 +96,7 @@
 - Affected files: ml_comprehensive_test.xdl, ml_regularization_test.xdl
 
 ### 2. FOR Loop Syntax
-- Pattern: `for i=0, N do statement`
+- Pattern: `for i=0, N do statement` 
 - Fixed to: `for i=0, N do begin ... end\nendfor`
 - Affected files: ml_comprehensive_test.xdl, ml_kmeans_test.xdl, ml_regularization_test.xdl
 
@@ -114,7 +114,7 @@
 - Affected files: ml_advanced_models_test.xdl
 
 ### 6. Tilde Characters
-- Removed `~` from expected value comments
+- Removed `~` from expected value comments  
 - Affected files: ml_comprehensive_test.xdl
 
 ## Recommendations
@@ -139,7 +139,7 @@ Original broken files backed up with .broken extension:
 
 ## Temp Files Deleted
 - test_chunk.xdl
-- test_half.xdl
+- test_half.xdl  
 - test_partial.xdl
 - test_second_half.xdl
 - test_python_integration.xdl

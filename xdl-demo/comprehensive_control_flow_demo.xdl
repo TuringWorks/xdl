@@ -1,0 +1,217 @@
+; Comprehensive Control Flow Demonstration
+; This file demonstrates all implemented control flow features in XDL
+
+print, "==== XDL CONTROL FLOW DEMONSTRATION ===="
+print, ""
+
+; ========================================
+; 1. IF/THEN/ELSE Statements
+; ========================================
+print, "1. IF/THEN/ELSE STATEMENTS"
+print, "-------------------------"
+
+x = 15
+if x gt 10 then
+  print, "x is greater than 10:", x
+endif
+
+score = 75
+if score ge 80 then
+  print, "Grade: A or B"
+else
+  print, "Grade: C or lower"
+endif
+
+; Nested if
+temperature = 68
+if temperature gt 75 then
+  print, "It's warm"
+else
+  if temperature gt 60 then
+    print, "It's comfortable"
+  else
+    print, "It's cool"
+  endif
+endif
+
+print, ""
+
+; ========================================
+; 2. FOR Loops
+; ========================================
+print, "2. FOR LOOPS"
+print, "------------"
+
+; Basic for loop
+print, "Counting from 1 to 5:"
+for i = 1, 5
+  print, "  i =", i
+endfor
+
+; For loop with step
+print, "Even numbers from 0 to 10:"
+for i = 0, 10, 2
+  print, "  i =", i
+endfor
+
+; Nested for loops
+print, "2x2 multiplication table:"
+for i = 1, 2
+  for j = 1, 2
+    product = i * j
+    print, "  ", i, "x", j, "=", product
+  endfor
+endfor
+
+print, ""
+
+; ========================================
+; 3. WHILE Loops
+; ========================================
+print, "3. WHILE LOOPS"
+print, "--------------"
+
+; Simple while loop
+print, "Countdown from 5:"
+count = 5
+while count gt 0
+  print, "  Count:", count
+  count = count - 1
+endwhile
+
+; While loop with condition
+print, "Powers of 2 less than 100:"
+power = 1
+exp = 0
+while power lt 100
+  print, "  2^", exp, "=", power
+  power = power * 2
+  exp = exp + 1
+endwhile
+
+print, ""
+
+; ========================================
+; 4. BREAK and CONTINUE
+; ========================================
+print, "4. BREAK AND CONTINUE"
+print, "---------------------"
+
+; Break example
+print, "Loop with BREAK (stop at i=7):"
+for i = 1, 10
+  if i eq 7 then
+    print, "  Breaking at i =", i
+    break
+  endif
+  print, "  i =", i
+endfor
+
+; Continue example  
+print, "Loop with CONTINUE (skip even numbers):"
+for i = 1, 8
+  if i eq 2 then
+    continue
+  endif
+  if i eq 4 then
+    continue
+  endif
+  if i eq 6 then
+    continue
+  endif
+  if i eq 8 then
+    continue
+  endif
+  print, "  Odd number:", i
+endfor
+
+print, ""
+
+; ========================================
+; 5. Combined Control Flow
+; ========================================
+print, "5. COMBINED CONTROL FLOW"
+print, "------------------------"
+
+; Find numbers divisible by 3
+print, "Numbers from 1-20 divisible by 3:"
+for num = 1, 20
+  remainder = num - ((num / 3) * 3)
+  if remainder eq 0 then
+    print, "  ", num
+  endif
+endfor
+
+; Nested loops with conditions
+print, "Finding factors of 12:"
+target = 12
+for i = 1, target
+  if target eq ((target / i) * i) then
+    print, "  Factor:", i
+  endif
+endfor
+
+print, ""
+
+; ========================================
+; 6. Comparison and Logical Operators
+; ========================================
+print, "6. COMPARISON AND LOGICAL OPERATORS"
+print, "-----------------------------------"
+
+a = 10
+b = 20
+print, "a =", a, ", b =", b
+
+if a lt b then
+  print, "  a < b (TRUE)"
+endif
+if b gt a then
+  print, "  b > a (TRUE)"
+endif
+if a le 10 then
+  print, "  a <= 10 (TRUE)"
+endif
+if b ge 20 then
+  print, "  b >= 20 (TRUE)"
+endif
+if a ne b then
+  print, "  a != b (TRUE)"
+endif
+
+; Logical operators
+x = 1
+y = 0
+if x and x then
+  print, "  1 AND 1 = TRUE"
+endif
+if x or y then
+  print, "  1 OR 0 = TRUE"
+endif
+if not y then
+  print, "  NOT 0 = TRUE"
+endif
+
+print, ""
+
+; ========================================
+; 7. Real-World Example: Factorial
+; ========================================
+print, "7. REAL-WORLD EXAMPLE: FACTORIAL"
+print, "--------------------------------"
+
+n = 5
+factorial = 1
+i = 1
+
+print, "Computing", n, "factorial:"
+while i le n
+  factorial = factorial * i
+  print, "  Step", i, ":", factorial
+  i = i + 1
+endwhile
+
+print, "Final result:", n, "! =", factorial
+
+print, ""
+print, "==== DEMONSTRATION COMPLETE ===="

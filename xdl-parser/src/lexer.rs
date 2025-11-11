@@ -129,47 +129,6 @@ fn parse_integer(input: &str) -> ParseResult<'_, Token> {
     map_res(digit1, |s: &str| s.parse::<i64>().map(Token::Integer))(input)
 }
 
-// Parse double precision numbers with 'd' notation (e.g., 1.d0, 99d-1, 1d0)
-fn parse_double_precision(input: &str) -> ParseResult<'_, Token> {
-    use nom::character::complete::one_of;
-    use nom::combinator::{opt, recognize};
-    use nom::sequence::tuple;
-
-    map_res(
-        recognize(tuple((
-            digit1,
-            opt(pair(char('.'), opt(digit1))),
-            alt((char('d'), char('D'))),
-            opt(one_of("+-")),
-            opt(digit1),
-        ))),
-        |s: &str| {
-            // Convert IDL/GDL double precision notation to standard notation
-            // e.g., "1.d0" -> "1.0", "99d-1" -> "99e-1", "1d0" -> "1e0"
-            let converted = s.to_lowercase().replace('d', "e");
-            converted.parse::<f64>().map(Token::Float)
-        },
-    )(input)
-}
-
-// Parse scientific notation numbers (e.g., 1e10, 1.5e-3, 2.3e+5)
-fn parse_scientific(input: &str) -> ParseResult<'_, Token> {
-    use nom::character::complete::one_of;
-    use nom::combinator::{opt, recognize};
-    use nom::sequence::tuple;
-
-    map_res(
-        recognize(tuple((
-            digit1,
-            opt(pair(char('.'), opt(digit1))),
-            alt((char('e'), char('E'))),
-            opt(one_of("+-")),
-            digit1,
-        ))),
-        |s: &str| s.parse::<f64>().map(Token::Float),
-    )(input)
-}
-
 // Parse floating point numbers
 fn parse_float(input: &str) -> ParseResult<'_, Token> {
     map_res(
@@ -180,12 +139,7 @@ fn parse_float(input: &str) -> ParseResult<'_, Token> {
 
 // Parse numbers (float or integer)
 fn parse_number(input: &str) -> ParseResult<'_, Token> {
-    alt((
-        parse_double_precision,
-        parse_scientific,
-        parse_float,
-        parse_integer,
-    ))(input)
+    alt((parse_float, parse_integer))(input)
 }
 
 // Parse string literals
@@ -319,8 +273,7 @@ fn parse_delimiter(input: &str) -> ParseResult<'_, Token> {
         value(Token::LeftBrace, char('{')),
         value(Token::RightBrace, char('}')),
         value(Token::Comma, char(',')),
-        // NOTE: Semicolon (;) is NOT a delimiter in IDL/GDL - it starts comments only
-        // Comments are handled by parse_comment which is checked first in parse_token
+        value(Token::Semicolon, char(';')),
         value(Token::Colon, char(':')),
         value(Token::Dot, char('.')),
     ))(input)
@@ -343,41 +296,9 @@ fn parse_token(input: &str) -> ParseResult<'_, Token> {
     )(input)
 }
 
-/// Preprocess input to handle line continuations ($)
-/// Lines ending with $ are joined with the next line
-fn handle_line_continuation(input: &str) -> String {
-    let mut result = String::new();
-    let mut lines = input.lines().peekable();
-
-    while let Some(line) = lines.next() {
-        let trimmed = line.trim_end();
-
-        // Check if line ends with $ (line continuation marker)
-        if trimmed.ends_with('$') {
-            // Remove the $ and append without newline
-            result.push_str(trimmed.trim_end_matches('$').trim_end());
-            result.push(' '); // Add space to separate tokens
-        } else {
-            // Normal line - add with newline
-            result.push_str(line);
-            if lines.peek().is_some() {
-                result.push('\n');
-            }
-        }
-    }
-
-    result
-}
-
 // Main tokenizer function
 pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
-    // First, handle line continuations
-    let continued = handle_line_continuation(input);
-
-    // Normalize curly quotes to ASCII to avoid lexing issues
-    let normalized = continued.replace(['’', '‘'], "'").replace(['“', '”'], "\"");
-
-    let mut remaining: &str = &normalized;
+    let mut remaining = input;
     let mut tokens = Vec::new();
 
     while !remaining.is_empty() {
@@ -391,12 +312,8 @@ pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
                 remaining = rest;
             }
             Err(_) => {
-                // Skip unknown characters (respect UTF-8 character boundaries)
-                if let Some(c) = remaining.chars().next() {
-                    remaining = &remaining[c.len_utf8()..];
-                } else {
-                    break; // End of string
-                }
+                // Skip unknown characters
+                remaining = &remaining[1..];
             }
         }
     }

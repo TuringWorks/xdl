@@ -28,7 +28,7 @@ print, "2. NumPy Array Creation..."
 arange_5 = python_call(numpy_mod, "arange", 5)
 print, "numpy.arange(5):", arange_5
 
-zeros_3 = python_call(numpy_mod, "zeros", 3)
+zeros_3 = python_call(numpy_mod, "zeros", 3)  
 print, "numpy.zeros(3):", zeros_3
 
 ones_4 = python_call(numpy_mod, "ones", 4)
@@ -48,7 +48,7 @@ float64_val = python_call(numpy_mod, "float64", 42)
 print, "numpy.float64(42):", float64_val
 
 ; Test 4: Pandas time and date operations
-print, ""
+print, ""  
 print, "4. Pandas Date/Time Operations..."
 pandas_mod = python_import("pandas")
 
@@ -56,7 +56,7 @@ timestamp = python_call(pandas_mod, "Timestamp", "2025-01-15 10:30:00")
 print, "Pandas Timestamp:", timestamp
 
 period_month = python_call(pandas_mod, "Period", "2025-01")
-print, "Monthly Period:", period_month
+print, "Monthly Period:", period_month  
 
 period_quarter = python_call(pandas_mod, "Period", "2025Q1")
 print, "Quarterly Period:", period_quarter

@@ -47,7 +47,7 @@ pub fn xdlml_partition(args: &[XdlValue]) -> XdlResult<XdlValue> {
         0.8
     };
 
-    if !(0.0..=1.0).contains(&train_fraction) {
+    if train_fraction < 0.0 || train_fraction > 1.0 {
         return Err(XdlError::InvalidArgument(
             "XDLmlPartition: train_fraction must be between 0 and 1".to_string(),
         ));
@@ -57,8 +57,8 @@ pub fn xdlml_partition(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Create partition array: 1 for training, 0 for test
     let mut partition = vec![1.0; n_samples];
-    for item in partition.iter_mut().take(n_samples).skip(n_train) {
-        *item = 0.0;
+    for i in n_train..n_samples {
+        partition[i] = 0.0;
     }
 
     Ok(XdlValue::Array(partition))
@@ -382,7 +382,7 @@ pub fn xdlml_unit_normalizer(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Example:
 ///   data = RANDOMU(seed, 100)  ; 100 data points
 ///   clusters = XDLML_KMeans(data, 3)  ; Cluster into 3 groups
-///
+///   
 /// Algorithm: Lloyd's algorithm (standard K-means)
 ///   1. Initialize k centroids randomly
 ///   2. Assign each point to nearest centroid
@@ -472,10 +472,10 @@ pub fn xdlml_kmeans(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let mut rng_state = seed;
 
     // Select random data points as initial centroids
-    for centroid in centroids.iter_mut().take(n_clusters) {
+    for i in 0..n_clusters {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
         let idx = (rng_state % n_samples as u64) as usize;
-        *centroid = data[idx];
+        centroids[i] = data[idx];
     }
 
     // Cluster assignments for each sample
@@ -491,8 +491,8 @@ pub fn xdlml_kmeans(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let mut min_dist = f64::INFINITY;
             let mut best_cluster = 0;
 
-            for (k, &centroid) in centroids.iter().enumerate().take(n_clusters) {
-                let dist = (point - centroid).abs(); // Euclidean distance for 1D
+            for k in 0..n_clusters {
+                let dist = (point - centroids[k]).abs(); // Euclidean distance for 1D
                 if dist < min_dist {
                     min_dist = dist;
                     best_cluster = k;
@@ -589,7 +589,7 @@ pub fn xdlmlaf_logistic(args: &[XdlValue]) -> XdlResult<XdlValue> {
             Ok(XdlValue::Array(result))
         }
         XdlValue::Double(x) => Ok(XdlValue::Double(1.0 / (1.0 + (-x).exp()))),
-        XdlValue::Float(x) => Ok(XdlValue::Float(1.0 / (1.0 + (-x).exp()))),
+        XdlValue::Float(x) => Ok(XdlValue::Float((1.0 / (1.0 + (-x).exp())) as f32)),
         _ => Err(XdlError::TypeMismatch {
             expected: "numeric".to_string(),
             actual: format!("{:?}", args[0].gdl_type()),
@@ -1931,7 +1931,7 @@ pub fn xdlml_svmpolynomialkernel(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let degree = if args.len() > 4 {
         match &args[4] {
-            XdlValue::Long(d) => *d,
+            XdlValue::Long(d) => *d as i32,
             XdlValue::Int(d) => *d as i32,
             _ => 3,
         }
@@ -2326,10 +2326,10 @@ pub fn xdlml_softmax(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let mut rng_state = seed;
 
     // Xavier initialization: weights ~ N(0, 1/sqrt(n_features))
-    for weight in &mut weights {
+    for i in 0..weights.len() {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
         let uniform = (rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0;
-        *weight = uniform * (1.0 / (n_features as f64).sqrt());
+        weights[i] = uniform * (1.0 / (n_features as f64).sqrt());
     }
 
     // Training loop
@@ -2493,13 +2493,13 @@ pub fn xdlml_feedforwardneuralnetwork(args: &[XdlValue]) -> XdlResult<XdlValue> 
     let mut rng_state = seed;
 
     // Xavier initialization
-    for w in &mut w1 {
+    for i in 0..w1.len() {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        *w = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * (2.0 / n_inputs as f64).sqrt();
+        w1[i] = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * (2.0 / n_inputs as f64).sqrt();
     }
-    for w in &mut w2 {
+    for i in 0..w2.len() {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        *w = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * (2.0 / n_hidden as f64).sqrt();
+        w2[i] = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * (2.0 / n_hidden as f64).sqrt();
     }
 
     // Training loop
@@ -2655,19 +2655,22 @@ pub fn xdlml_autoencoder(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let mut rng_state = seed;
 
     // Xavier initialization
-    for enc in &mut encoder {
+    for i in 0..encoder.len() {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        *enc = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * (2.0 / input_dim as f64).sqrt();
+        encoder[i] =
+            ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * (2.0 / input_dim as f64).sqrt();
     }
-    for dec in &mut decoder {
+    for i in 0..decoder.len() {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        *dec =
+        decoder[i] =
             ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * (2.0 / encoding_dim as f64).sqrt();
     }
 
     // Training loop
     for _epoch in 0..n_epochs {
-        for &x in x_train.iter().take(n_samples) {
+        for i in 0..n_samples {
+            let x = x_train[i];
+
             // Forward pass
             // Encode (with ReLU)
             let mut encoded = vec![0.0; encoding_dim];
@@ -2817,7 +2820,7 @@ pub fn xdlml_supportvectormachineclassification(args: &[XdlValue]) -> XdlResult<
 
     let degree = if args.len() > 7 {
         match &args[7] {
-            XdlValue::Long(d) => *d,
+            XdlValue::Long(d) => *d as i32,
             XdlValue::Int(d) => *d as i32,
             _ => 3,
         }
@@ -3132,7 +3135,7 @@ pub fn xdlml_supportvectormachineregression(args: &[XdlValue]) -> XdlResult<XdlV
         let mut result = Vec::with_capacity(alphas.len() + 1);
         result.extend_from_slice(&alphas);
         result.push(bias);
-        Ok(XdlValue::Array(result))
+        return Ok(XdlValue::Array(result));
     } else {
         // Linear kernel: standard primal form
         for _epoch in 0..n_epochs {
@@ -3224,7 +3227,7 @@ pub fn xdlml_batchnormalization(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let mode = if args.len() > 3 {
         match &args[3] {
-            XdlValue::Long(m) => *m,
+            XdlValue::Long(m) => *m as i32,
             XdlValue::Int(m) => *m as i32,
             _ => 0, // Default to training mode
         }
@@ -3351,7 +3354,7 @@ pub fn xdlml_dropout(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     // Validate dropout rate
-    if !(0.0..1.0).contains(&dropout_rate) {
+    if dropout_rate < 0.0 || dropout_rate >= 1.0 {
         return Err(XdlError::InvalidArgument(
             "XDLML_Dropout: dropout_rate must be in [0.0, 1.0)".to_string(),
         ));
@@ -4259,14 +4262,14 @@ pub fn xdlml_simplernn(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let input_scale = (2.0 / input_dim as f64).sqrt();
     let hidden_scale = (2.0 / hidden_size as f64).sqrt();
 
-    for w in w_input.iter_mut().take(hidden_size) {
+    for i in 0..hidden_size {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        *w = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * input_scale;
+        w_input[i] = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * input_scale;
     }
 
-    for w in w_hidden.iter_mut().take(hidden_size * hidden_size) {
+    for i in 0..(hidden_size * hidden_size) {
         rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        *w = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * hidden_scale;
+        w_hidden[i] = ((rng_state as f64 / u64::MAX as f64) * 2.0 - 1.0) * hidden_scale;
     }
 
     // Process sequence (forward pass)
@@ -4470,7 +4473,8 @@ pub fn xdlml_kfold(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let fold_end = fold_start + fold_size + if fold_idx < remainder { 1 } else { 0 };
 
         // Create mask: 0 for validation (current fold), 1 for training
-        for &actual_idx in indices.iter().take(n_samples) {
+        for i in 0..n_samples {
+            let actual_idx = indices[i];
             if actual_idx >= fold_start && actual_idx < fold_end {
                 result.push(0.0); // Validation
             } else {
@@ -4553,7 +4557,10 @@ pub fn xdlml_stratifiedkfold(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     for (i, &label) in y_labels.iter().enumerate() {
         let class_id = label.round() as i32;
-        class_indices.entry(class_id).or_default().push(i);
+        class_indices
+            .entry(class_id)
+            .or_insert_with(Vec::new)
+            .push(i);
     }
 
     // Shuffle indices within each class
@@ -4575,11 +4582,11 @@ pub fn xdlml_stratifiedkfold(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let remainder = class_size % n_folds;
 
         let mut idx = 0;
-        for (fold, fold_vec) in fold_indices.iter_mut().enumerate().take(n_folds) {
+        for fold in 0..n_folds {
             let fold_size = base_fold_size + if fold < remainder { 1 } else { 0 };
             for _ in 0..fold_size {
                 if idx < indices.len() {
-                    fold_vec.push(indices[idx]);
+                    fold_indices[fold].push(indices[idx]);
                     idx += 1;
                 }
             }
@@ -4589,10 +4596,11 @@ pub fn xdlml_stratifiedkfold(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Create fold masks
     let mut result = Vec::with_capacity(n_folds * n_samples);
 
-    for fold_vec in fold_indices.iter().take(n_folds) {
+    for fold_idx in 0..n_folds {
+        let validation_indices = &fold_indices[fold_idx];
         let mut mask = vec![1.0; n_samples]; // Default: training
 
-        for &val_idx in fold_vec {
+        for &val_idx in validation_indices {
             mask[val_idx] = 0.0; // Validation
         }
 
@@ -4685,8 +4693,8 @@ mod tests {
             // Check all indices 0-9 are present
             let mut sorted = indices.clone();
             sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-            for (i, &val) in sorted.iter().enumerate().take(10) {
-                assert_eq!(val, i as f64);
+            for i in 0..10 {
+                assert_eq!(sorted[i], i as f64);
             }
         } else {
             panic!("Expected array");

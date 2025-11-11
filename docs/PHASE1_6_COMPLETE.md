@@ -78,7 +78,7 @@ inverse_fft = FFT(forward_fft, -1)
 
 ; Test 4: Various sizes
 FFT(FINDGEN(4))    ; Works
-FFT(FINDGEN(32))   ; Works
+FFT(FINDGEN(32))   ; Works  
 FFT(FINDGEN(100))  ; Works (not power of 2)
 ```
 
@@ -129,7 +129,7 @@ XDL uses interleaved format for compatibility:
 ## Performance
 
 - **Small arrays** (< 100): μs range
-- **Medium arrays** (1000): ms range
+- **Medium arrays** (1000): ms range  
 - **Large arrays** (10000+): Efficient with Cooley-Tukey or Bluestein
 - **Non-power-of-2**: Slightly slower but still fast (Bluestein's algorithm)
 
@@ -235,7 +235,7 @@ FFT satisfies key properties:
 Phase 1.6 is complete! All Phase 1 critical foundational tasks are now finished:
 
 ✅ Phase 1.1: Array Creation Functions
-✅ Phase 1.2: WHERE Function
+✅ Phase 1.2: WHERE Function  
 ✅ Phase 1.3: STRING Type Conversion
 ✅ Phase 1.4: REFORM and TRANSPOSE
 ✅ Phase 1.5: Basic File I/O

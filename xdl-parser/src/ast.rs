@@ -199,7 +199,6 @@ pub enum Expression {
 }
 
 /// Array indexing expressions
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArrayIndex {
     Single(Expression),

@@ -6,8 +6,8 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 
 ## Summary
 
-**Currently Implemented in XDL:** ~60 functions/procedures
-**Missing from GDL/IDL:** ~400+ functions/procedures
+**Currently Implemented in XDL:** ~60 functions/procedures  
+**Missing from GDL/IDL:** ~400+ functions/procedures  
 **Completion:** ~13% of full GDL/IDL functionality
 
 ---

@@ -1,4 +1,4 @@
-[2m2025-11-11T00:38:43.088796Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/test_gpu_accel.xdl
+[2m2025-11-11T00:51:26.371790Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/test_gpu_accel.xdl
 === XDL GPU Acceleration Test ===
 
 > Test 1: Small array (1,000 elements) - should use CPU

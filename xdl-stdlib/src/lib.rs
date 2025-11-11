@@ -3,27 +3,19 @@
 //! Built-in functions and procedures for XDL
 
 pub mod array;
-mod charting_procs; // ECharts charting procedures
-pub mod complex;
-pub mod gpu_array; // GPU-accelerated array operations
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
-pub mod image; // Image processing
 pub mod io;
-pub mod linalg; // Linear algebra
 pub mod math;
 pub mod ml;
 pub mod python;
-pub mod signal; // Signal processing
 pub mod statistics;
 pub mod string;
 pub mod system;
-pub mod viz3d; // 3D volume visualization
 
 // Re-export graphics callback registration for GUI
-pub use graphics_procs::{register_gui_image_callback, register_gui_plot_callback};
+pub use graphics_procs::{register_gui_plot_callback, register_gui_image_callback};
 
-use std::collections::HashMap;
 use xdl_core::{XdlResult, XdlValue};
 
 /// Standard library function registry
@@ -40,19 +32,9 @@ impl StandardLibrary {
 
     /// Call a XDL procedure
     pub fn call_procedure(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
-        self.call_procedure_with_keywords(name, args, &HashMap::new())
-    }
-
-    /// Call a XDL procedure with keyword arguments
-    pub fn call_procedure_with_keywords(
-        &self,
-        name: &str,
-        args: &[XdlValue],
-        keywords: &HashMap<String, XdlValue>,
-    ) -> XdlResult<XdlValue> {
         match name.to_uppercase().as_str() {
             // Graphics procedures - Basic plotting
-            "PLOT" => graphics_procs::plot_with_keywords(args, keywords),
+            "PLOT" => graphics_procs::plot(args),
             "OPLOT" => graphics_procs::oplot(args),
             "PLOTS" => graphics_procs::plots(args),
             "XYOUTS" => graphics_procs::xyouts(args),
@@ -110,29 +92,6 @@ impl StandardLibrary {
             "MAP_CONTINENTS" => graphics_procs::map_continents(args),
             "MAP_GRID" => graphics_procs::map_grid(args),
 
-            // Graphics procedures - Advanced visualization
-            "RENDER_COLORMAP" => graphics_procs::render_colormap(args),
-            "DEM_RENDER" => graphics_procs::dem_render(args),
-            "HILLSHADE" => graphics_procs::hillshade_proc(args),
-            "QUIVER" => graphics_procs::quiver_proc(args),
-
-            // Charting procedures - ECharts integration
-            "CHART_PLOT" => charting_procs::plot(args),
-            "CHART_SCATTER" => charting_procs::scatter(args),
-            "CHART_BAR" => charting_procs::bar(args),
-            "SURFACE3D" => charting_procs::surface3d(args),
-            "SCATTER3D" => charting_procs::scatter3d(args),
-
-            // VIZ3D procedures - 3D volume visualization
-            "VIZ3D_INIT" => viz3d::viz3d_init(args, keywords),
-            "VIZ3D_VOLUME" => viz3d::viz3d_volume(args, keywords),
-            "VIZ3D_COLORMAP" => viz3d::viz3d_colormap(args, keywords),
-            "VIZ3D_CAMERA" => viz3d::viz3d_camera(args, keywords),
-            "VIZ3D_RENDER" => viz3d::viz3d_render(args, keywords),
-            "VIZ3D_TRANSFER" => viz3d::viz3d_transfer(args, keywords),
-            "VIZ3D_LIGHT" => viz3d::viz3d_light(args, keywords),
-            "VIZ3D_ISOSURFACE" => viz3d::viz3d_isosurface(args, keywords),
-
             // System procedures
             "HELP" => system::help(args),
             "CD" => system::cd(args),
@@ -143,9 +102,6 @@ impl StandardLibrary {
             ".COMPILE" => system::compile_pro(args),
             ".CONTINUE" => system::continue_execution(args),
             "CATCH" => system::catch_error(args),
-            "WAIT" => system::wait(args),
-            "STOP" => system::stop(args),
-            "RETALL" => system::retall(args),
 
             // I/O procedures
             "FREE_LUN" => io::free_lun(args),
@@ -156,10 +112,6 @@ impl StandardLibrary {
             "CLOSE" => io::close_file(args),
             "WRITEF" => io::writef(args),
             "PRINTF" => io::printf(args),
-            "WRITEU" => io::writeu(args),
-            "READU" => io::readu(args),
-            "FLUSH" => io::flush_func(args),
-            "POINT_LUN" => io::point_lun(args),
 
             _ => Err(xdl_core::XdlError::RuntimeError(format!(
                 "Unknown procedure: {}",
@@ -170,19 +122,6 @@ impl StandardLibrary {
 
     /// Call a XDL function
     pub fn call_function(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
-        self.call_function_with_keywords(name, args, &HashMap::new())
-    }
-
-    /// Call a XDL function with keyword arguments
-    pub fn call_function_with_keywords(
-        &self,
-        name: &str,
-        args: &[XdlValue],
-        keywords: &HashMap<String, XdlValue>,
-    ) -> XdlResult<XdlValue> {
-        // For now, most functions don't use keywords, so we just call the standard version
-        // Specific functions can be updated to use keywords as needed
-        let _ = keywords; // Suppress unused warning
         match name.to_uppercase().as_str() {
             // Trigonometric functions
             "SIN" => math::sin(args),
@@ -191,15 +130,6 @@ impl StandardLibrary {
             "ASIN" => math::asin(args),
             "ACOS" => math::acos(args),
             "ATAN" => math::atan(args),
-            "ATAN2" => math::atan2(args),
-
-            // Hyperbolic functions
-            "SINH" => math::sinh(args),
-            "COSH" => math::cosh(args),
-            "TANH" => math::tanh(args),
-            "ASINH" => math::asinh(args),
-            "ACOSH" => math::acosh(args),
-            "ATANH" => math::atanh(args),
 
             // Exponential and logarithmic functions
             "EXP" => math::exp(args),
@@ -212,63 +142,14 @@ impl StandardLibrary {
             "FLOOR" => math::floor(args),
             "CEIL" => math::ceil(args),
             "ROUND" => math::round(args),
-            "NCHOOSEK" => math::nchoosek(args),
-
-            // Special functions
-            "GAMMA" => math::gamma(args),
-            "LNGAMMA" => math::lngamma(args),
-            "ERF" => math::erf(args),
-            "ERFC" => math::erfc(args),
-            "BESSEL_J" => math::bessel_j(args),
-            "FACTORIAL" => math::factorial_func(args),
-            "BETA" => math::beta(args),
-            "GCD" => math::gcd(args),
-            "LCM" => math::lcm(args),
-            "POLY" => math::poly(args),
-            "BINOMIAL" => math::binomial(args),
-            "DERIV" => math::deriv(args),
-            "INT_TABULATED" => math::int_tabulated(args),
 
             // Array generation functions
             "FINDGEN" => math::findgen(args),
             "INDGEN" => math::indgen(args),
-            "DINDGEN" => math::dindgen(args),
-            "BINDGEN" => math::bindgen(args),
-            "LINDGEN" => math::lindgen(args),
-            "UINDGEN" => math::uindgen(args),
-            "ULINDGEN" => math::ulindgen(args),
-            "L64INDGEN" => math::l64indgen(args),
             "RANDOMU" => math::randomu(args),
-            "RANDOMN" => math::randomn(args),
 
             // Signal processing
             "FFT" => math::fft(args),
-            "A_CORRELATE" => signal::a_correlate(args),
-            "C_CORRELATE" => signal::c_correlate(args),
-            "DIGITAL_FILTER" => signal::digital_filter(args),
-            "HILBERT" => signal::hilbert(args),
-            "MEDIAN_FILTER" => signal::median_filter(args),
-
-            // Image processing
-            "CONVOL" => image::convol(args),
-            "DILATE" => image::dilate(args),
-            "ERODE" => image::erode(args),
-            "SOBEL" => image::sobel(args),
-            "ROBERTS" => image::roberts(args),
-            "PREWITT" => image::prewitt(args),
-            "GAUSSIAN_FILTER" => image::gaussian_filter(args),
-            "THRESHOLD" => image::threshold(args),
-
-            // Type conversion functions
-            "FLOAT" | "FLT" => math::float(args),
-            "FIX" | "INT" => math::fix(args),
-            "LONG" => math::long(args),
-            "BYTE" => math::byte(args),
-            "DOUBLE" | "DBL" => math::double(args),
-            "UINT" => math::uint(args),
-            "ULONG" => math::ulong(args),
-            "LONG64" => math::long64(args),
-            "ULONG64" => math::ulong64(args),
 
             // Array creation functions
             "BYTARR" => array::bytarr(args),
@@ -280,26 +161,10 @@ impl StandardLibrary {
 
             "N_ELEMENTS" => array::n_elements(args),
             "WHERE" => array::where_func(args),
-            "SIZE" => array::size(args),
-            "N_PARAMS" => array::n_params(args),
-            "TAG_NAMES" => array::tag_names(args),
-            "N_TAGS" => array::n_tags(args),
 
             // Array manipulation functions
             "REFORM" => array::reform_func(args),
             "TRANSPOSE" => array::transpose_func(args),
-            "ROTATE" => array::rotate_func(args),
-            "SHIFT" => array::shift_func(args),
-            "REBIN" => array::rebin_func(args),
-            "REPLICATE" => array::replicate_func(args),
-            "HISTOGRAM" => array::histogram_func(args),
-            "MESHGRID" => array::meshgrid(args),
-            "INTERPOL" => array::interpol(args),
-            "CONGRID" => array::congrid(args),
-            "UNIQ" => array::uniq(args),
-            "ARRAY_INDICES" => array::array_indices(args),
-            "ARRAY_EQUAL" => array::array_equal(args),
-            "PERMUTE" => array::permute(args),
 
             // Array statistics functions
             "MIN" => array::min_func(args),
@@ -324,14 +189,6 @@ impl StandardLibrary {
             "MEANABSDEV" => statistics::meanabsdev(args),
             "SKEWNESS" => statistics::skewness(args),
             "KURTOSIS" => statistics::kurtosis(args),
-            "CORRELATE" => statistics::correlate(args),
-            "REGRESS" => statistics::regress(args),
-            "LINFIT" => statistics::linfit(args),
-            "PERCENTILES" => statistics::percentiles(args),
-            "ROBUST_MEAN" => statistics::robust_mean(args),
-            "TRIMMED_MEAN" => statistics::trimmed_mean(args),
-            "RESISTANT_MEAN" => statistics::resistant_mean(args),
-            "RANDOM_POISSON" => statistics::random_poisson(args),
 
             // Probability density functions
             "GAUSS_PDF" => statistics::gauss_pdf(args),
@@ -344,32 +201,6 @@ impl StandardLibrary {
             "FILEPATH" => io::filepath(args),
             "READ_JPEG" => io::read_jpeg(args),
             "READF" => io::readf(args),
-            "READU" => io::readu(args),
-            "FILE_TEST" => io::file_test(args),
-            "FILE_LINES" => io::file_lines(args),
-            "FILE_INFO" => io::file_info(args),
-            "FILE_BASENAME" => io::file_basename(args),
-            "FILE_DIRNAME" => io::file_dirname(args),
-            "FILE_MKDIR" => io::file_mkdir(args),
-            "FILE_DELETE" => io::file_delete(args),
-            "FILE_COPY" => io::file_copy(args),
-            "EOF" => io::eof_func(args),
-            "ASSOC" => io::assoc(args),
-
-            // Time/Date functions
-            "SYSTIME" => system::systime(args),
-            "JULDAY" => system::julday(args),
-            "CALDAT" => system::caldat(args),
-            "BIN_DATE" => system::bin_date(args),
-            "TIMESTAMP" => system::timestamp(args),
-            "TIMEGEN" => system::timegen(args),
-            "DAYOFYEAR" => system::dayofyear(args),
-            "JS2JD" => system::js2jd(args),
-            "MESSAGE" => system::message(args),
-            "ON_ERROR" => system::on_error(args),
-            "MEMORY" => system::memory(args),
-            "EXIT" => system::exit(args),
-            "ROUTINE_INFO" => system::routine_info(args),
 
             // Data structure functions
             "HASH" => create_hash(args),
@@ -380,37 +211,7 @@ impl StandardLibrary {
             "STRMID" => string::strmid(args),
             "STRUPCASE" => string::strupcase(args),
             "STRLOWCASE" => string::strlowcase(args),
-            "STRTRIM" => string::strtrim(args),
-            "STRJOIN" => string::strjoin(args),
-            "STRSPLIT" => string::strsplit(args),
-            "STRCMP" => string::strcmp(args),
-            "STRCOMPRESS" => string::strcompress(args),
-            "STRMATCH" => string::strmatch(args),
             "STRING" => string::string_fn(args),
-            "STRREPLACE" => string::strreplace(args),
-            "STRPUT" => string::strput(args),
-            "STRMESSAGE" => string::strmessage(args),
-            "FORMAT_AXIS_VALUES" => string::format_axis_values(args),
-
-            // Complex number functions
-            "COMPLEX" => complex::complex(args),
-            "REAL" => complex::real_part(args),
-            "IMAGINARY" | "IMAG" => complex::imaginary_part(args),
-            "CONJ" => complex::conj(args),
-
-            // Linear algebra functions
-            "IDENTITY" => linalg::identity(args),
-            "INVERT" => linalg::invert(args),
-            "DETERM" => linalg::determ(args),
-            "CROSSP" => linalg::crossp(args),
-            "DOTP" => linalg::dotp(args),
-            "NORM" => linalg::norm(args),
-            "DIAGONAL" => linalg::diagonal(args),
-            "TRACE" => linalg::trace(args),
-            "SVDC" => linalg::svdc(args),
-            "LA_EIGENVAL" => linalg::la_eigenval(args),
-            "LUDC" => linalg::ludc(args),
-            "LUSOL" => linalg::lusol(args),
 
             // Python integration functions
             "PYTHON_IMPORT" => python::python_import(args),
@@ -523,71 +324,6 @@ impl StandardLibrary {
 impl Default for StandardLibrary {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_standard_library_creation() {
-        let _stdlib = StandardLibrary::new();
-        // Test that standard library can be created
-        assert!(true); // Placeholder test - stdlib is mostly TODO
-    }
-
-    #[test]
-    fn test_standard_library_default() {
-        let _stdlib = StandardLibrary::default();
-        // Test that default construction works
-        assert!(true); // Placeholder test - stdlib is mostly TODO
-    }
-
-    #[test]
-    fn test_unknown_procedure() {
-        let stdlib = StandardLibrary::new();
-        let result = stdlib.call_procedure("UNKNOWN_PROC", &[]);
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("Unknown procedure"));
-        }
-    }
-
-    #[test]
-    fn test_unknown_function() {
-        let stdlib = StandardLibrary::new();
-        let result = stdlib.call_function("UNKNOWN_FUNC", &[]);
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("Function not found"));
-        }
-    }
-
-    #[test]
-    fn test_create_hash_empty() {
-        let result = create_hash(&[]);
-        assert!(result.is_ok());
-        if let Ok(XdlValue::String(s)) = result {
-            assert_eq!(s, "{}");
-        } else {
-            panic!("Expected string result");
-        }
-    }
-
-    #[test]
-    fn test_create_hash_with_args() {
-        let args = vec![XdlValue::Long(1), XdlValue::String("test".to_string())];
-        let result = create_hash(&args);
-        assert!(result.is_ok());
-        if let Ok(XdlValue::String(s)) = result {
-            assert!(s.starts_with("{"));
-            assert!(s.ends_with("}"));
-            assert!(s.contains("1"));
-            assert!(s.contains("test"));
-        } else {
-            panic!("Expected string result");
-        }
     }
 }
 

@@ -115,10 +115,10 @@ $ ls -lh xdl_*.png
 ### Surface Plot
 ```xdl
 ; Create a simple surface
-z = [[1, 2, 3, 2, 1],
-     [2, 4, 6, 4, 2],
-     [3, 6, 9, 6, 3],
-     [2, 4, 6, 4, 2],
+z = [[1, 2, 3, 2, 1], 
+     [2, 4, 6, 4, 2], 
+     [3, 6, 9, 6, 3], 
+     [2, 4, 6, 4, 2], 
      [1, 2, 3, 2, 1]]
 SURFACE, z
 ; Output: xdl_surface.png
@@ -127,10 +127,10 @@ SURFACE, z
 ### Contour Plot
 ```xdl
 ; Create a peak
-z = [[1, 2, 3, 2, 1],
-     [2, 5, 8, 5, 2],
-     [3, 8, 10, 8, 3],
-     [2, 5, 8, 5, 2],
+z = [[1, 2, 3, 2, 1], 
+     [2, 5, 8, 5, 2], 
+     [3, 8, 10, 8, 3], 
+     [2, 5, 8, 5, 2], 
      [1, 2, 3, 2, 1]]
 CONTOUR, z
 ; Output: xdl_contour.png
@@ -139,10 +139,10 @@ CONTOUR, z
 ### Shaded Surface
 ```xdl
 ; Create a saddle
-z = [[5, 4, 3, 4, 5],
-     [4, 2, 1, 2, 4],
-     [3, 1, 0, 1, 3],
-     [4, 2, 1, 2, 4],
+z = [[5, 4, 3, 4, 5], 
+     [4, 2, 1, 2, 4], 
+     [3, 1, 0, 1, 3], 
+     [4, 2, 1, 2, 4], 
      [5, 4, 3, 4, 5]]
 SHADE_SURF, z
 ; Output: xdl_shade_surf.png
@@ -188,7 +188,7 @@ PLOT3D, x, y, z
 
 ### Data Structures
 - `Vec<Vec<f64>>` for 2D surface data
-- `Vec<f64>` for 1D line data
+- `Vec<f64>` for 1D line data  
 - Validation ensures rectangular arrays
 - Error handling for dimension mismatches
 
@@ -247,5 +247,5 @@ open xdl_surface.png      # View on macOS
 
 3D plotting is now fully functional in XDL with PNG output support. All major 3D procedures (SURFACE, CONTOUR, SHADE_SURF, PLOT3D) are operational and produce high-quality visualizations. The system handles data validation, coordinate generation, and rendering automatically.
 
-**Ready for production use with file output.**
+**Ready for production use with file output.**  
 **GUI display support can be added as future enhancement.**

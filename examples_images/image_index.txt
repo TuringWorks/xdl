@@ -42,4 +42,3 @@ test:
   - test_plot_surface_xdl_plot.png
   - test_contour_xdl_contour.png
   - test_plot_surface_xdl_surface.png
-

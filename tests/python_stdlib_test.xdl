@@ -21,7 +21,7 @@ current_time = python_call(time_mod, "time")
 print, "Current timestamp:", current_time
 
 ; Test uuid module
-print, ""
+print, ""  
 print, "4. Testing uuid module..."
 uuid_mod = python_import("uuid")
 ; Generate a random UUID

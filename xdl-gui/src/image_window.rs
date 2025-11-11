@@ -29,9 +29,15 @@ impl ImageWindow {
         let win_height = img_height + padding * 2 + 30; // Extra for title bar
 
         // Create window
-        let mut window = Window::new(100, 100, win_width, win_height, title);
+        let mut window = Window::new(
+            100,
+            100,
+            win_width,
+            win_height,
+            title,
+        );
         window.set_color(Color::White);
-
+        
         // Scale image if too large
         let max_width = 1200;
         let max_height = 900;
@@ -39,10 +45,10 @@ impl ImageWindow {
             let scale_w = max_width as f64 / img_width as f64;
             let scale_h = max_height as f64 / img_height as f64;
             let scale = scale_w.min(scale_h);
-
+            
             let new_width = (img_width as f64 * scale) as i32;
             let new_height = (img_height as f64 * scale) as i32;
-
+            
             img.scale(new_width, new_height, true, true);
             window.set_size(new_width + padding * 2, new_height + padding * 2 + 30);
         }

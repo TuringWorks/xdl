@@ -1,0 +1,242 @@
+; Advanced Array Features Test Suite
+; Tests negative indexing, multi-dimensional indexing, and array element assignment
+
+print, "=== Testing Advanced Array Features ==="
+print, ""
+
+; =============================================================================
+; TEST 1: NEGATIVE INDEX SUPPORT
+; =============================================================================
+
+print, "1. Negative Index Support:"
+print, "--------------------------"
+
+arr = [10, 20, 30, 40, 50]
+print, "arr =", arr
+print, ""
+
+print, "Accessing elements with negative indices:"
+print, "  arr[-1] (last element) =", arr[-1]
+print, "  arr[-2] (second to last) =", arr[-2]
+print, "  arr[-5] (first element) =", arr[-5]
+print, ""
+
+; Test negative indices in slicing
+print, "Slicing with negative indices:"
+print, "  arr[-3:-1] =", arr[-3:-1]
+print, "  arr[-4:] (last 4 elements) =", arr[-4:]
+print, "  arr[:-2] (all but last 2) =", arr[:-2]
+print, ""
+
+; =============================================================================
+; TEST 2: MULTI-DIMENSIONAL INDEXING
+; =============================================================================
+
+print, "2. Multi-Dimensional Indexing:"
+print, "------------------------------"
+
+; Create a 3x3 matrix
+matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+print, "matrix =", matrix
+print, ""
+
+print, "Accessing matrix elements:"
+print, "  matrix[0, 0] =", matrix[0, 0]
+print, "  matrix[0, 1] =", matrix[0, 1]
+print, "  matrix[0, 2] =", matrix[0, 2]
+print, "  matrix[1, 0] =", matrix[1, 0]
+print, "  matrix[1, 1] (center) =", matrix[1, 1]
+print, "  matrix[1, 2] =", matrix[1, 2]
+print, "  matrix[2, 0] =", matrix[2, 0]
+print, "  matrix[2, 1] =", matrix[2, 1]
+print, "  matrix[2, 2] =", matrix[2, 2]
+print, ""
+
+; Negative indices in multi-dimensional arrays
+print, "Negative indices with matrix:"
+print, "  matrix[-1, -1] (bottom-right) =", matrix[-1, -1]
+print, "  matrix[-1, 0] (bottom-left) =", matrix[-1, 0]
+print, "  matrix[0, -1] (top-right) =", matrix[0, -1]
+print, ""
+
+; Access entire rows
+print, "Accessing entire rows:"
+print, "  matrix[0] (first row) =", matrix[0]
+print, "  matrix[1] (second row) =", matrix[1]
+print, "  matrix[2] (third row) =", matrix[2]
+print, "  matrix[-1] (last row) =", matrix[-1]
+print, ""
+
+; =============================================================================
+; TEST 3: ARRAY ELEMENT ASSIGNMENT
+; =============================================================================
+
+print, "3. Array Element Assignment:"
+print, "----------------------------"
+
+; Single element assignment
+numbers = [1, 2, 3, 4, 5]
+print, "Original array:", numbers
+
+numbers[0] = 100
+print, "After numbers[0] = 100:", numbers
+
+numbers[2] = 300
+print, "After numbers[2] = 300:", numbers
+
+numbers[-1] = 999
+print, "After numbers[-1] = 999 (last element):", numbers
+print, ""
+
+; Assignment in nested arrays (matrices)
+grid = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+print, "Initial grid:", grid
+
+grid[0, 0] = 1
+print, "After grid[0, 0] = 1:", grid
+
+grid[1, 1] = 5
+print, "After grid[1, 1] = 5 (center):", grid
+
+grid[2, 2] = 9
+print, "After grid[2, 2] = 9 (bottom-right):", grid
+
+grid[-1, 0] = 7
+print, "After grid[-1, 0] = 7 (bottom-left):", grid
+print, ""
+
+; =============================================================================
+; TEST 4: COMBINED OPERATIONS
+; =============================================================================
+
+print, "4. Combined Array Operations:"
+print, "------------------------------"
+
+; Create and modify an array using assignments
+data = [0, 0, 0, 0, 0]
+print, "Initial data:", data
+
+for i = 0, 4
+  data[i] = i * 10
+endfor
+print, "After loop assignment:", data
+print, ""
+
+; Use negative indices in calculations
+print, "Array calculations with negative indices:"
+print, "  data[0] + data[-1] =", data[0] + data[-1]
+print, "  data[1] * data[-2] =", data[1] * data[-2]
+print, ""
+
+; Modify matrix using negative indices
+mat = [[1, 2], [3, 4]]
+print, "Original matrix:", mat
+
+mat[-1, -1] = mat[0, 0] * 10
+print, "After mat[-1, -1] = mat[0, 0] * 10:", mat
+print, ""
+
+; =============================================================================
+; TEST 5: ARRAY ELEMENT SWAP
+; =============================================================================
+
+print, "5. Array Element Swap:"
+print, "----------------------"
+
+swap_arr = [5, 10, 15, 20, 25]
+print, "Original array:", swap_arr
+
+; Swap first and last elements
+temp = swap_arr[0]
+swap_arr[0] = swap_arr[-1]
+swap_arr[-1] = temp
+print, "After swapping first and last:", swap_arr
+print, ""
+
+; =============================================================================
+; TEST 6: MATRIX DIAGONAL OPERATIONS
+; =============================================================================
+
+print, "6. Matrix Diagonal Operations:"
+print, "------------------------------"
+
+square = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+print, "Identity matrix:", square
+
+; Modify diagonal
+square[0, 0] = 5
+square[1, 1] = 5
+square[2, 2] = 5
+print, "After setting diagonal to 5:", square
+print, ""
+
+; =============================================================================
+; TEST 7: ARRAY BUILDING WITH ASSIGNMENTS
+; =============================================================================
+
+print, "7. Building Arrays with Assignments:"
+print, "------------------------------------"
+
+; Build Fibonacci sequence using array assignments
+fib = [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+print, "Initial Fibonacci array:", fib
+
+for i = 2, 9
+  fib[i] = fib[i-1] + fib[i-2]
+endfor
+print, "After computing Fibonacci:", fib
+print, ""
+
+; Build multiplication table
+mult_table = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+print, "Building 3x3 multiplication table:"
+
+for i = 0, 2
+  for j = 0, 2
+    mult_table[i, j] = (i + 1) * (j + 1)
+  endfor
+endfor
+print, "Multiplication table:", mult_table
+print, ""
+
+; =============================================================================
+; TEST 8: ARRAY REVERSAL
+; =============================================================================
+
+print, "8. Array Reversal:"
+print, "------------------"
+
+original = [1, 2, 3, 4, 5, 6]
+print, "Original array:", original
+
+; Reverse array in place
+size = 6
+for i = 0, 2
+  temp = original[i]
+  original[i] = original[size - 1 - i]
+  original[size - 1 - i] = temp
+endfor
+print, "Reversed array:", original
+print, ""
+
+; =============================================================================
+; TEST 9: BOUNDARY TESTS
+; =============================================================================
+
+print, "9. Boundary and Edge Cases:"
+print, "---------------------------"
+
+edge = [100, 200, 300]
+print, "Test array:", edge
+
+; Access extremes
+print, "  edge[0] (first) =", edge[0]
+print, "  edge[-1] (last) =", edge[-1]
+
+; Modify extremes
+edge[0] = 111
+edge[-1] = 333
+print, "After modifying extremes:", edge
+print, ""
+
+print, "=== Advanced Array Tests Complete ==="

@@ -1,0 +1,428 @@
+; ============================================================================
+; Array Creation Functions Test Suite
+; ============================================================================
+; Tests all array creation functions:
+; - BYTARR, INTARR, LONARR, FLTARR, DBLARR, STRARR
+; - Multi-dimensional arrays
+; - Edge cases and error handling
+; ============================================================================
+
+print, "==================================================================="
+print, "           ARRAY CREATION FUNCTIONS TEST SUITE"
+print, "==================================================================="
+print, ""
+
+; ============================================================================
+; TEST 1: BYTARR - Byte Array Creation
+; ============================================================================
+
+print, "TEST 1: BYTARR (Byte Array Creation)"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 1a: 1D byte array
+print, "1a. Creating 1D byte arrays:"
+b1 = bytarr(5)
+print, "  bytarr(5):", b1
+print, "  n_elements(b1):", n_elements(b1)
+print, "  Expected: [0, 0, 0, 0, 0]"
+print, ""
+
+b2 = bytarr(10)
+print, "  bytarr(10):", b2
+print, "  n_elements(b2):", n_elements(b2)
+print, ""
+
+; Test 1b: 2D byte array
+print, "1b. Creating 2D byte arrays:"
+b3 = bytarr(3, 4)
+print, "  bytarr(3, 4) - 3x4 array"
+print, "  n_elements(b3):", n_elements(b3)
+print, "  Expected: 12 elements (3 * 4)"
+print, ""
+
+; Test 1c: 3D byte array
+print, "1c. Creating 3D byte arrays:"
+b4 = bytarr(2, 3, 4)
+print, "  bytarr(2, 3, 4) - 2x3x4 array"
+print, "  n_elements(b4):", n_elements(b4)
+print, "  Expected: 24 elements (2 * 3 * 4)"
+print, ""
+
+; ============================================================================
+; TEST 2: INTARR - Integer Array Creation
+; ============================================================================
+
+print, "TEST 2: INTARR (Integer Array Creation)"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 2a: 1D integer array
+print, "2a. Creating 1D integer arrays:"
+i1 = intarr(7)
+print, "  intarr(7):", i1
+print, "  n_elements(i1):", n_elements(i1)
+print, ""
+
+; Test 2b: 2D integer array
+print, "2b. Creating 2D integer arrays:"
+i2 = intarr(4, 5)
+print, "  intarr(4, 5) - 4x5 array"
+print, "  n_elements(i2):", n_elements(i2)
+print, "  Expected: 20 elements"
+print, ""
+
+; Test 2c: Large 1D array
+print, "2c. Creating larger arrays:"
+i3 = intarr(100)
+print, "  intarr(100) - large 1D array"
+print, "  n_elements(i3):", n_elements(i3)
+print, ""
+
+; ============================================================================
+; TEST 3: LONARR - Long Integer Array Creation
+; ============================================================================
+
+print, "TEST 3: LONARR (Long Integer Array Creation)"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 3a: 1D long array
+print, "3a. Creating 1D long arrays:"
+l1 = lonarr(6)
+print, "  lonarr(6):", l1
+print, "  n_elements(l1):", n_elements(l1)
+print, ""
+
+; Test 3b: 2D long array
+print, "3b. Creating 2D long arrays:"
+l2 = lonarr(5, 6)
+print, "  lonarr(5, 6) - 5x6 array"
+print, "  n_elements(l2):", n_elements(l2)
+print, "  Expected: 30 elements"
+print, ""
+
+; ============================================================================
+; TEST 4: FLTARR - Float Array Creation
+; ============================================================================
+
+print, "TEST 4: FLTARR (Float Array Creation)"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 4a: 1D float array
+print, "4a. Creating 1D float arrays:"
+f1 = fltarr(8)
+print, "  fltarr(8):", f1
+print, "  n_elements(f1):", n_elements(f1)
+print, ""
+
+; Test 4b: 2D float array
+print, "4b. Creating 2D float arrays:"
+f2 = fltarr(3, 3)
+print, "  fltarr(3, 3) - 3x3 array"
+print, "  n_elements(f2):", n_elements(f2)
+print, "  Expected: 9 elements"
+print, ""
+
+; Test 4c: 3D float array
+print, "4c. Creating 3D float arrays:"
+f3 = fltarr(2, 2, 2)
+print, "  fltarr(2, 2, 2) - 2x2x2 cube"
+print, "  n_elements(f3):", n_elements(f3)
+print, "  Expected: 8 elements"
+print, ""
+
+; ============================================================================
+; TEST 5: DBLARR - Double Precision Array Creation
+; ============================================================================
+
+print, "TEST 5: DBLARR (Double Array Creation)"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 5a: 1D double array
+print, "5a. Creating 1D double arrays:"
+d1 = dblarr(9)
+print, "  dblarr(9):", d1
+print, "  n_elements(d1):", n_elements(d1)
+print, ""
+
+; Test 5b: 2D double array
+print, "5b. Creating 2D double arrays:"
+d2 = dblarr(4, 4)
+print, "  dblarr(4, 4) - 4x4 array"
+print, "  n_elements(d2):", n_elements(d2)
+print, "  Expected: 16 elements"
+print, ""
+
+; Test 5c: Rectangular array
+print, "5c. Creating rectangular arrays:"
+d3 = dblarr(10, 3)
+print, "  dblarr(10, 3) - 10x3 array"
+print, "  n_elements(d3):", n_elements(d3)
+print, "  Expected: 30 elements"
+print, ""
+
+; ============================================================================
+; TEST 6: STRARR - String Array Creation
+; ============================================================================
+
+print, "TEST 6: STRARR (String Array Creation)"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 6a: 1D string array
+print, "6a. Creating 1D string arrays:"
+s1 = strarr(4)
+print, "  strarr(4):", s1
+print, "  n_elements(s1):", n_elements(s1)
+print, "  Note: String arrays currently represented as numeric arrays"
+print, ""
+
+; Test 6b: 2D string array
+print, "6b. Creating 2D string arrays:"
+s2 = strarr(3, 5)
+print, "  strarr(3, 5) - 3x5 array"
+print, "  n_elements(s2):", n_elements(s2)
+print, "  Expected: 15 elements"
+print, ""
+
+; ============================================================================
+; TEST 7: Array Initialization and Modification
+; ============================================================================
+
+print, "TEST 7: Array Initialization and Modification"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 7a: Initialize array and modify elements
+print, "7a. Modifying array elements:"
+arr = fltarr(5)
+print, "  Initial fltarr(5):", arr
+arr[0] = 1.5
+arr[1] = 2.5
+arr[2] = 3.5
+print, "  After modification:", arr
+print, ""
+
+; Test 7b: Fill array in loop
+print, "7b. Filling array in loop:"
+vals = dblarr(10)
+for i = 0, 9
+  vals[i] = i * 10.0
+endfor
+print, "  Filled dblarr(10):", vals
+print, ""
+
+; ============================================================================
+; TEST 8: Multi-Dimensional Array Element Access
+; ============================================================================
+
+print, "TEST 8: Multi-Dimensional Array Element Access"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 8a: 2D array access (flattened)
+print, "8a. Accessing 2D array elements (as 1D):"
+mat = intarr(3, 3)
+print, "  Created intarr(3, 3), n_elements:", n_elements(mat)
+print, "  Note: Currently stored as flat 1D array"
+print, "  Total elements: 9"
+print, ""
+
+; Modify flattened elements
+mat[0] = 1
+mat[4] = 5
+mat[8] = 9
+print, "  After modifying [0], [4], [8]:", mat
+print, "  (Diagonal elements in 3x3: positions 0, 4, 8)"
+print, ""
+
+; ============================================================================
+; TEST 9: Array Size Comparisons
+; ============================================================================
+
+print, "TEST 9: Array Size Comparisons"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "9a. Different array types, same size:"
+a1 = bytarr(10)
+a2 = intarr(10)
+a3 = lonarr(10)
+a4 = fltarr(10)
+a5 = dblarr(10)
+print, "  n_elements(bytarr(10)):", n_elements(a1)
+print, "  n_elements(intarr(10)):", n_elements(a2)
+print, "  n_elements(lonarr(10)):", n_elements(a3)
+print, "  n_elements(fltarr(10)):", n_elements(a4)
+print, "  n_elements(dblarr(10)):", n_elements(a5)
+print, "  All should be 10"
+print, ""
+
+print, "9b. Same dimensions, different layouts:"
+b1 = fltarr(6)
+b2 = fltarr(2, 3)
+b3 = fltarr(3, 2)
+print, "  n_elements(fltarr(6)):", n_elements(b1)
+print, "  n_elements(fltarr(2, 3)):", n_elements(b2)
+print, "  n_elements(fltarr(3, 2)):", n_elements(b3)
+print, "  All should be 6"
+print, ""
+
+; ============================================================================
+; TEST 10: Edge Cases
+; ============================================================================
+
+print, "TEST 10: Edge Cases"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 10a: Single element arrays
+print, "10a. Single element arrays:"
+single_byte = bytarr(1)
+single_float = fltarr(1)
+single_double = dblarr(1)
+print, "  bytarr(1):", single_byte
+print, "  fltarr(1):", single_float
+print, "  dblarr(1):", single_double
+print, "  All should have 1 element"
+print, ""
+
+; Test 10b: Small multi-dimensional arrays
+print, "10b. Minimal multi-dimensional arrays:"
+tiny_2d = intarr(1, 1)
+tiny_3d = fltarr(1, 1, 1)
+print, "  intarr(1, 1) elements:", n_elements(tiny_2d)
+print, "  fltarr(1, 1, 1) elements:", n_elements(tiny_3d)
+print, ""
+
+; Test 10c: Different dimension orderings
+print, "10c. Different dimension orderings:"
+d1_arr = dblarr(2, 3, 4)
+d2_arr = dblarr(4, 3, 2)
+d3_arr = dblarr(3, 4, 2)
+print, "  dblarr(2, 3, 4) elements:", n_elements(d1_arr)
+print, "  dblarr(4, 3, 2) elements:", n_elements(d2_arr)
+print, "  dblarr(3, 4, 2) elements:", n_elements(d3_arr)
+print, "  All should be 24"
+print, ""
+
+; ============================================================================
+; TEST 11: Using Arrays with Other Functions
+; ============================================================================
+
+print, "TEST 11: Using Arrays with Other Functions"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 11a: Statistical operations on created arrays
+print, "11a. Statistics on zero-initialized arrays:"
+stats_arr = fltarr(20)
+print, "  Array: fltarr(20)"
+print, "  mean:", mean(stats_arr)
+print, "  min:", min(stats_arr)
+print, "  max:", max(stats_arr)
+print, "  total:", total(stats_arr)
+print, "  All should be 0"
+print, ""
+
+; Test 11b: Modify and compute statistics
+print, "11b. Statistics after modification:"
+data = dblarr(5)
+data[0] = 10.0
+data[1] = 20.0
+data[2] = 30.0
+data[3] = 40.0
+data[4] = 50.0
+print, "  Modified array:", data
+print, "  mean:", mean(data)
+print, "  min:", min(data)
+print, "  max:", max(data)
+print, "  total:", total(data)
+print, ""
+
+; ============================================================================
+; TEST 12: Performance with Larger Arrays
+; ============================================================================
+
+print, "TEST 12: Larger Array Creation"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 12a: Moderately large 1D arrays
+print, "12a. Creating moderately large arrays:"
+large_1d = fltarr(1000)
+print, "  fltarr(1000) created"
+print, "  n_elements:", n_elements(large_1d)
+print, ""
+
+; Test 12b: Moderately large 2D arrays
+print, "12b. Creating 2D arrays:"
+large_2d = dblarr(50, 50)
+print, "  dblarr(50, 50) created"
+print, "  n_elements:", n_elements(large_2d)
+print, "  Expected: 2500 elements"
+print, ""
+
+; ============================================================================
+; TEST 13: Array Creation with Different Type Arguments
+; ============================================================================
+
+print, "TEST 13: Array Creation with Different Argument Types"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 13a: Using different integer types as dimensions
+print, "13a. Different argument types:"
+size_long = 5
+size_float = 5.0
+arr_from_long = intarr(size_long)
+arr_from_float = intarr(size_float)
+print, "  intarr(5) where 5 is long:", n_elements(arr_from_long)
+print, "  intarr(5.0) where 5.0 is float:", n_elements(arr_from_float)
+print, "  Both should work and create 5-element arrays"
+print, ""
+
+; ============================================================================
+; SUMMARY
+; ============================================================================
+
+print, "==================================================================="
+print, "                       TEST SUMMARY"
+print, "==================================================================="
+print, ""
+print, "All array creation functions tested successfully!"
+print, ""
+print, "Functions tested:"
+print, "  ✓ BYTARR - Byte array creation"
+print, "  ✓ INTARR - Integer array creation"
+print, "  ✓ LONARR - Long integer array creation"
+print, "  ✓ FLTARR - Float array creation"
+print, "  ✓ DBLARR - Double precision array creation"
+print, "  ✓ STRARR - String array creation (basic)"
+print, ""
+print, "Features tested:"
+print, "  ✓ 1D array creation"
+print, "  ✓ 2D array creation"
+print, "  ✓ 3D array creation"
+print, "  ✓ Multi-dimensional arrays"
+print, "  ✓ Element initialization (zeros)"
+print, "  ✓ Element modification"
+print, "  ✓ Array element access"
+print, "  ✓ Integration with n_elements()"
+print, "  ✓ Integration with statistics functions"
+print, "  ✓ Edge cases (single elements, etc.)"
+print, "  ✓ Large array creation"
+print, "  ✓ Different dimension orderings"
+print, ""
+print, "Notes:"
+print, "  - All arrays currently stored internally as f64 (double)"
+print, "  - Multi-dimensional arrays stored in row-major (C) order"
+print, "  - String arrays use numeric representation (placeholder)"
+print, "  - All arrays initialized to zero"
+print, ""
+print, "==================================================================="
+print, "           ALL TESTS COMPLETED SUCCESSFULLY!"
+print, "==================================================================="

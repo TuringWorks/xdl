@@ -30,11 +30,11 @@ An interactive plot window will appear with a sine wave!
 
 ## 🎨 What You Get
 
-✅ **44 Graphics Procedures** - All working
-✅ **Interactive FLTK Windows** - Resizable, beautiful
-✅ **Color Tables** - 5 predefined (grayscale, rainbow, etc.)
-✅ **PNG Fallback** - Works in CLI mode too
-✅ **Multiple Windows** - Create as many plots as you need
+✅ **44 Graphics Procedures** - All working  
+✅ **Interactive FLTK Windows** - Resizable, beautiful  
+✅ **Color Tables** - 5 predefined (grayscale, rainbow, etc.)  
+✅ **PNG Fallback** - Works in CLI mode too  
+✅ **Multiple Windows** - Create as many plots as you need  
 
 ---
 
@@ -129,13 +129,13 @@ PLOT, y, x
 
 ## 🐛 Troubleshooting
 
-**Q: Plot window doesn't appear**
+**Q: Plot window doesn't appear**  
 A: Make sure you're using `xdl-gui`, not `xdl` CLI
 
-**Q: Get PNG files instead**
+**Q: Get PNG files instead**  
 A: That's the CLI fallback - use GUI for interactive plots
 
-**Q: GUI won't start**
+**Q: GUI won't start**  
 A: Make sure FLTK dependencies are installed (they should be if it compiled)
 
 ---

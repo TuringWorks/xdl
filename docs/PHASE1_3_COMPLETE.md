@@ -36,7 +36,7 @@ pub fn string_fn(args: &[XdlValue]) -> XdlResult<XdlValue>
    - `42` → `"42"`
    - `-123` → `"-123"`
 
-2. **Floating-Point**:
+2. **Floating-Point**: 
    - Normal range: direct conversion (`3.14159` → `"3.14159"`)
    - Very small (< 1e-4): scientific notation (`0.00001` → `"1e-5"`)
    - Very large (>= 1e7): scientific notation (`10000000.0` → `"1e7"`)
@@ -112,7 +112,7 @@ PRINT, STRING(small)      ; Output: 1e-5
 
 All tests passed successfully:
 - ✅ Integer conversion
-- ✅ Float conversion
+- ✅ Float conversion  
 - ✅ Negative numbers
 - ✅ String pass-through
 - ✅ Zero values

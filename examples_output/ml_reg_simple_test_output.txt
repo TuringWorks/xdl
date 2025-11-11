@@ -1,4 +1,4 @@
-[2m2025-11-11T00:38:46.816003Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/ml_reg_simple_test.xdl
+[2m2025-11-11T00:51:34.694836Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/ml_reg_simple_test.xdl
 Regularization Layers Test
 ===========================
 

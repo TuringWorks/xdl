@@ -1,0 +1,23 @@
+; Sample XDL Script
+; This is a test script to demonstrate GUI functionality
+
+; Define variables
+x = findgen(50)
+y = sin(x / 10.0)
+z = cos(x / 5.0)
+
+; Print some information
+print, "Generated arrays x, y, and z"
+print, "X array size:", size(x)
+print, "Y contains sine values"
+print, "Z contains cosine values"
+
+; Create a plot
+plot, x, y
+
+; Some mathematical operations
+result = max(y)
+print, "Maximum value of y:", result
+
+; End of script
+print, "Script execution completed"

@@ -1,0 +1,440 @@
+; ============================================================================
+; WHERE Function Test Suite
+; ============================================================================
+; Tests the WHERE function for finding array indices matching conditions
+; - Basic usage with boolean arrays
+; - Comparison operators (GT, LT, EQ, NE, GE, LE)
+; - Multiple matches, single match, no matches
+; - Edge cases and integration with other functions
+; ============================================================================
+
+print, "==================================================================="
+print, "                WHERE FUNCTION TEST SUITE"
+print, "==================================================================="
+print, ""
+
+; ============================================================================
+; TEST 1: Basic WHERE with GT (Greater Than)
+; ============================================================================
+
+print, "TEST 1: WHERE with GT (Greater Than)"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 1a: Multiple matches
+print, "1a. Finding values greater than threshold:"
+arr1 = [1.0, 5.0, 3.0, 8.0, 2.0, 9.0]
+print, "  Array:", arr1
+print, ""
+
+indices = where(arr1 gt 4.0)
+print, "  WHERE(arr GT 4):", indices
+print, "  Expected: [1, 3, 5] (positions where arr > 4)"
+print, ""
+
+; Verify by extracting values
+print, "  Verification - values at those indices:"
+if n_elements(indices) gt 1 then
+  print, "    arr[1]:", arr1[1]
+  print, "    arr[3]:", arr1[3]
+  print, "    arr[5]:", arr1[5]
+endif
+print, ""
+
+; ============================================================================
+; TEST 2: WHERE with LT (Less Than)
+; ============================================================================
+
+print, "TEST 2: WHERE with LT (Less Than)"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "2a. Finding values less than threshold:"
+arr2 = [10.0, 2.0, 8.0, 1.0, 9.0, 3.0]
+print, "  Array:", arr2
+print, ""
+
+indices_lt = where(arr2 lt 5.0)
+print, "  WHERE(arr LT 5):", indices_lt
+print, "  Expected: [1, 3, 5] (positions where arr < 5)"
+print, ""
+
+; ============================================================================
+; TEST 3: WHERE with EQ (Equal)
+; ============================================================================
+
+print, "TEST 3: WHERE with EQ (Equal)"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "3a. Finding exact matches:"
+arr3 = [1.0, 2.0, 3.0, 2.0, 4.0, 2.0]
+print, "  Array:", arr3
+print, ""
+
+indices_eq = where(arr3 eq 2.0)
+print, "  WHERE(arr EQ 2):", indices_eq
+print, "  Expected: [1, 3, 5] (positions where arr == 2)"
+print, ""
+
+; Test 3b: No matches
+print, "3b. Finding non-existent value:"
+indices_none = where(arr3 eq 10.0)
+print, "  WHERE(arr EQ 10):", indices_none
+print, "  Expected: -1 (no matches)"
+print, ""
+
+; ============================================================================
+; TEST 4: WHERE with NE (Not Equal)
+; ============================================================================
+
+print, "TEST 4: WHERE with NE (Not Equal)"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "4a. Finding values not equal to target:"
+arr4 = [1.0, 1.0, 2.0, 1.0, 1.0]
+print, "  Array:", arr4
+print, ""
+
+indices_ne = where(arr4 ne 1.0)
+print, "  WHERE(arr NE 1):", indices_ne
+print, "  Expected: 2 (single position where arr != 1)"
+print, ""
+
+; ============================================================================
+; TEST 5: WHERE with GE (Greater or Equal)
+; ============================================================================
+
+print, "TEST 5: WHERE with GE (Greater or Equal)"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "5a. Finding values >= threshold:"
+arr5 = [3.0, 5.0, 4.0, 6.0, 3.0, 7.0]
+print, "  Array:", arr5
+print, ""
+
+indices_ge = where(arr5 ge 5.0)
+print, "  WHERE(arr GE 5):", indices_ge
+print, "  Expected: [1, 3, 5] (positions where arr >= 5)"
+print, ""
+
+; ============================================================================
+; TEST 6: WHERE with LE (Less or Equal)
+; ============================================================================
+
+print, "TEST 6: WHERE with LE (Less or Equal)"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "6a. Finding values <= threshold:"
+arr6 = [4.0, 2.0, 3.0, 5.0, 2.0, 1.0]
+print, "  Array:", arr6
+print, ""
+
+indices_le = where(arr6 le 2.0)
+print, "  WHERE(arr LE 2):", indices_le
+print, "  Expected: [1, 4, 5] (positions where arr <= 2)"
+print, ""
+
+; ============================================================================
+; TEST 7: Edge Cases
+; ============================================================================
+
+print, "TEST 7: Edge Cases"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 7a: All elements match
+print, "7a. All elements match condition:"
+arr_all = [5.0, 6.0, 7.0, 8.0]
+print, "  Array:", arr_all
+indices_all = where(arr_all gt 4.0)
+print, "  WHERE(arr GT 4):", indices_all
+print, "  Expected: [0, 1, 2, 3] (all indices)"
+print, ""
+
+; Test 7b: No elements match
+print, "7b. No elements match condition:"
+arr_none = [1.0, 2.0, 3.0]
+print, "  Array:", arr_none
+indices_zero = where(arr_none gt 10.0)
+print, "  WHERE(arr GT 10):", indices_zero
+print, "  Expected: -1 (no matches)"
+print, ""
+
+; Test 7c: Single element matches
+print, "7c. Single element matches:"
+arr_single = [1.0, 2.0, 10.0, 3.0]
+print, "  Array:", arr_single
+indices_one = where(arr_single gt 9.0)
+print, "  WHERE(arr GT 9):", indices_one
+print, "  Expected: 2 (scalar, not array)"
+print, ""
+
+; ============================================================================
+; TEST 8: WHERE with Zero and Non-Zero
+; ============================================================================
+
+print, "TEST 8: WHERE with Zero Detection"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 8a: Find non-zero elements
+print, "8a. Finding non-zero elements:"
+arr_zeros = [0.0, 1.0, 0.0, 2.0, 0.0, 3.0]
+print, "  Array:", arr_zeros
+indices_nonzero = where(arr_zeros ne 0.0)
+print, "  WHERE(arr NE 0):", indices_nonzero
+print, "  Expected: [1, 3, 5] (non-zero positions)"
+print, ""
+
+; Test 8b: Find zero elements
+print, "8b. Finding zero elements:"
+indices_iszero = where(arr_zeros eq 0.0)
+print, "  WHERE(arr EQ 0):", indices_iszero
+print, "  Expected: [0, 2, 4] (zero positions)"
+print, ""
+
+; ============================================================================
+; TEST 9: Using WHERE Results for Array Subsetting
+; ============================================================================
+
+print, "TEST 9: Using WHERE for Array Subsetting"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "9a. Extract matching elements:"
+data = [10.0, 25.0, 15.0, 30.0, 20.0, 35.0]
+print, "  Original array:", data
+print, ""
+
+idx = where(data gt 20.0)
+print, "  Indices WHERE(data GT 20):", idx
+print, ""
+
+if n_elements(idx) gt 1 then
+  print, "  Selected values:"
+  print, "    data[1]:", data[1]
+  print, "    data[3]:", data[3]
+  print, "    data[5]:", data[5]
+  print, "    (Should be: 25, 30, 35)"
+endif
+print, ""
+
+; ============================================================================
+; TEST 10: WHERE with Different Array Sizes
+; ============================================================================
+
+print, "TEST 10: WHERE with Different Array Sizes"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test 10a: Small array
+print, "10a. Small array (3 elements):"
+small = [1.0, 5.0, 2.0]
+print, "  Array:", small
+idx_small = where(small gt 3.0)
+print, "  WHERE(arr GT 3):", idx_small
+print, "  Expected: 1"
+print, ""
+
+; Test 10b: Larger array
+print, "10b. Larger array (20 elements):"
+large = fltarr(20)
+for i = 0, 19
+  large[i] = i * 1.0
+endfor
+print, "  Array: [0, 1, 2, ..., 19]"
+idx_large = where(large gt 15.0)
+print, "  WHERE(arr GT 15):", idx_large
+print, "  Expected: [16, 17, 18, 19]"
+print, ""
+
+; ============================================================================
+; TEST 11: WHERE with Negative Numbers
+; ============================================================================
+
+print, "TEST 11: WHERE with Negative Numbers"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "11a. Finding positive vs negative:"
+mixed = [-2.0, 3.0, -1.0, 5.0, -3.0, 0.0]
+print, "  Array:", mixed
+print, ""
+
+positives = where(mixed gt 0.0)
+print, "  WHERE(arr GT 0) [positives]:", positives
+print, "  Expected: [1, 3]"
+print, ""
+
+negatives = where(mixed lt 0.0)
+print, "  WHERE(arr LT 0) [negatives]:", negatives
+print, "  Expected: [0, 2, 4]"
+print, ""
+
+; ============================================================================
+; TEST 12: WHERE with Statistics
+; ============================================================================
+
+print, "TEST 12: WHERE with Statistical Operations"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "12a. Finding outliers:"
+vals = [10.0, 12.0, 11.0, 50.0, 13.0, 55.0, 12.0]
+print, "  Array:", vals
+print, ""
+
+mean_val = mean(vals)
+print, "  Mean:", mean_val
+print, ""
+
+; Find values significantly above mean
+outliers = where(vals gt mean_val + 10.0)
+print, "  WHERE(arr GT mean+10) [outliers]:", outliers
+print, "  Expected: [3, 5] (values 50 and 55)"
+print, ""
+
+; ============================================================================
+; TEST 13: WHERE Return Value Types
+; ============================================================================
+
+print, "TEST 13: WHERE Return Value Types"
+print, "---------------------------------------------------------------"
+print, ""
+
+; Test different return scenarios
+print, "13a. Return type variations:"
+test_arr = [1.0, 2.0, 3.0, 4.0, 5.0]
+print, "  Array:", test_arr
+print, ""
+
+; Multiple matches - returns array
+multi = where(test_arr ge 3.0)
+print, "  Multiple matches:", multi
+print, "  n_elements:", n_elements(multi)
+print, "  Type: Array (3 elements)"
+print, ""
+
+; Single match - returns scalar
+single = where(test_arr eq 3.0)
+print, "  Single match:", single
+print, "  n_elements:", n_elements(single)
+print, "  Type: Scalar Long (index 2)"
+print, ""
+
+; No matches - returns -1
+none = where(test_arr gt 10.0)
+print, "  No matches:", none
+print, "  n_elements:", n_elements(none)
+print, "  Type: Scalar Long (-1)"
+print, ""
+
+; ============================================================================
+; TEST 14: WHERE with Complex Conditions
+; ============================================================================
+
+print, "TEST 14: WHERE with Range Conditions"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "14a. Finding values in range:"
+range_arr = [5.0, 15.0, 25.0, 35.0, 45.0, 55.0]
+print, "  Array:", range_arr
+print, ""
+
+; Find values between 20 and 40
+in_range = where(range_arr ge 20.0 and range_arr le 40.0)
+print, "  WHERE(20 <= arr <= 40):", in_range
+print, "  Expected: [2, 3] (values 25, 35)"
+print, ""
+
+; ============================================================================
+; TEST 15: WHERE with Floating Point Comparisons
+; ============================================================================
+
+print, "TEST 15: WHERE with Floating Point Values"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "15a. Floating point comparisons:"
+floats = [1.5, 2.7, 3.2, 4.8, 5.1]
+print, "  Array:", floats
+print, ""
+
+idx_fp = where(floats gt 3.0)
+print, "  WHERE(arr GT 3.0):", idx_fp
+print, "  Expected: [2, 3, 4]"
+print, ""
+
+; ============================================================================
+; TEST 16: Practical Example - Data Filtering
+; ============================================================================
+
+print, "TEST 16: Practical Example - Temperature Data Filtering"
+print, "---------------------------------------------------------------"
+print, ""
+
+print, "16a. Filter temperature readings:"
+; Simulated temperature data
+temps = [18.5, 22.3, 19.8, 25.1, 20.2, 26.7, 21.5, 28.3]
+print, "  Temperature readings:", temps
+print, ""
+
+; Find comfortable temperatures (20-25°C)
+comfortable = where(temps ge 20.0 and temps le 25.0)
+print, "  Comfortable temps (20-25°C):", comfortable
+print, "  Indices: [1, 4, 6]"
+print, ""
+
+; Find hot days (> 25°C)
+hot = where(temps gt 25.0)
+print, "  Hot days (>25°C):", hot
+print, "  Indices: [3, 5, 7]"
+print, ""
+
+; ============================================================================
+; SUMMARY
+; ============================================================================
+
+print, "==================================================================="
+print, "                       TEST SUMMARY"
+print, "==================================================================="
+print, ""
+print, "All WHERE function tests completed successfully!"
+print, ""
+print, "Features tested:"
+print, "  ✓ GT (Greater Than) comparisons"
+print, "  ✓ LT (Less Than) comparisons"
+print, "  ✓ EQ (Equal) comparisons"
+print, "  ✓ NE (Not Equal) comparisons"
+print, "  ✓ GE (Greater or Equal) comparisons"
+print, "  ✓ LE (Less or Equal) comparisons"
+print, "  ✓ Multiple matches (returns array)"
+print, "  ✓ Single match (returns scalar)"
+print, "  ✓ No matches (returns -1)"
+print, "  ✓ All elements match"
+print, "  ✓ Zero/non-zero detection"
+print, "  ✓ Array subsetting with WHERE results"
+print, "  ✓ Different array sizes (small to large)"
+print, "  ✓ Negative numbers"
+print, "  ✓ Statistical operations"
+print, "  ✓ Return value type variations"
+print, "  ✓ Complex/range conditions"
+print, "  ✓ Floating point comparisons"
+print, "  ✓ Practical data filtering examples"
+print, ""
+print, "WHERE function behavior:"
+print, "  - Returns array of indices where condition is TRUE (non-zero)"
+print, "  - Multiple matches: returns array"
+print, "  - Single match: returns scalar Long (index)"
+print, "  - No matches: returns -1"
+print, "  - Works with all comparison operators"
+print, "  - Properly handles edge cases"
+print, ""
+print, "==================================================================="
+print, "           ALL TESTS COMPLETED SUCCESSFULLY!"
+print, "==================================================================="

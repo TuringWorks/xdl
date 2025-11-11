@@ -1,0 +1,92 @@
+; ML Normalizers Test
+; Tests all 5 normalization functions
+
+PRINT, 'ML Normalizers Test'
+PRINT, ''
+
+; Create test data: range from -10 to 10
+data = FINDGEN(21) - 10.0
+PRINT, 'Test data (first 5):', data[0], data[1], data[2], data[3], data[4]
+PRINT, 'Test data (last 5):', data[16], data[17], data[18], data[19], data[20]
+PRINT, ''
+
+; Test 1: Linear Normalizer
+PRINT, 'Test 1: XDLML_Linear_Normalizer'
+norm_linear = XDLML_Linear_Normalizer(data, 0.5, 10.0)
+PRINT, 'Scale=0.5, Offset=10.0'
+PRINT, 'Original first:', data[0]
+PRINT, 'Normalized first:', norm_linear[0]
+PRINT, 'Expected:', data[0] * 0.5 + 10.0
+PRINT, ''
+
+; Test 2: Range Normalizer (min-max to [0,1])
+PRINT, 'Test 2: XDLML_Range_Normalizer [0, 1]'
+norm_range = XDLML_Range_Normalizer(data)
+min_norm = MIN(norm_range)
+max_norm = MAX(norm_range)
+PRINT, 'Min of normalized:', min_norm
+PRINT, 'Max of normalized:', max_norm
+PRINT, 'Range correct (0 to 1):', (min_norm LT 0.01) AND (max_norm GT 0.99)
+PRINT, ''
+
+; Test 3: Variance Normalizer (z-score)
+PRINT, 'Test 3: XDLML_Variance_Normalizer (z-score)'
+norm_variance = XDLML_Variance_Normalizer(data)
+mean_norm = MEAN(norm_variance)
+stddev_norm = STDDEV(norm_variance)
+PRINT, 'Mean of normalized:', mean_norm
+PRINT, 'Std dev of normalized:', stddev_norm
+PRINT, 'Mean near 0:', ABS(mean_norm) LT 0.0001
+PRINT, 'Std dev near 1:', ABS(stddev_norm - 1.0) LT 0.01
+PRINT, ''
+
+; Test 4: TanH Normalizer (bounded to -1, 1)
+PRINT, 'Test 4: XDLML_TanH_Normalizer [-1, 1]'
+small_data = FINDGEN(5) - 2.0
+PRINT, 'Small data:', small_data[0], small_data[1], small_data[2], small_data[3], small_data[4]
+norm_tanh = XDLML_TanH_Normalizer(small_data)
+PRINT, 'TanH normalized:', norm_tanh[0], norm_tanh[1], norm_tanh[2], norm_tanh[3], norm_tanh[4]
+min_tanh = MIN(norm_tanh)
+max_tanh = MAX(norm_tanh)
+PRINT, 'Bounded to [-1, 1]:', (min_tanh GT -1.0) AND (max_tanh LT 1.0)
+PRINT, ''
+
+; Test 5: Unit Normalizer (L2 norm = 1)
+PRINT, 'Test 5: XDLML_Unit_Normalizer (L2 norm)'
+simple_data = FINDGEN(4) + 1.0
+PRINT, 'Simple data:', simple_data[0], simple_data[1], simple_data[2], simple_data[3]
+norm_unit = XDLML_Unit_Normalizer(simple_data)
+PRINT, 'Unit normalized:', norm_unit[0], norm_unit[1], norm_unit[2], norm_unit[3]
+
+; Calculate L2 norm manually
+l2_norm = SQRT(TOTAL(norm_unit * norm_unit))
+PRINT, 'L2 norm:', l2_norm
+PRINT, 'L2 norm is 1:', ABS(l2_norm - 1.0) LT 0.0001
+PRINT, ''
+
+; Test 6: Practical comparison
+PRINT, 'Test 6: Compare all normalizers on same data'
+sample = FINDGEN(10) * 2.0
+PRINT, 'Original:', sample[0], sample[1], sample[2], sample[9]
+
+lin = XDLML_Linear_Normalizer(sample, 0.1, 0.0)
+PRINT, 'Linear:', lin[0], lin[1], lin[2], lin[9]
+
+rng = XDLML_Range_Normalizer(sample)
+PRINT, 'Range:', rng[0], rng[1], rng[2], rng[9]
+
+vari = XDLML_Variance_Normalizer(sample)
+PRINT, 'Variance:', vari[0], vari[1], vari[2], vari[9]
+PRINT, ''
+
+; Test 7: Edge case - constant data
+PRINT, 'Test 7: Edge case - all values the same'
+const_data = FLTARR(5) + 5.0
+norm_const_range = XDLML_Range_Normalizer(const_data)
+norm_const_var = XDLML_Variance_Normalizer(const_data)
+PRINT, 'Constant data (all 5.0)'
+PRINT, 'Range normalized:', norm_const_range[0]
+PRINT, 'Variance normalized:', norm_const_var[0]
+PRINT, ''
+
+PRINT, 'All normalizer tests complete!'
