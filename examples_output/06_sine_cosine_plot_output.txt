@@ -1,0 +1,12 @@
+[2m2025-11-11T00:38:45.933635Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/06_sine_cosine_plot.xdl
+Creating sine and cosine plots...
+
+Plotting sine function...
+PLOT: Rendering 100 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+
+Plot complete! Check xdl_plot.png
+
+Note: To plot multiple functions on the same graph,
+XDL currently generates separate plot files.
+Future versions may support overlays.

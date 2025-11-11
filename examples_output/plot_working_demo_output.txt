@@ -1,0 +1,50 @@
+[2m2025-11-11T00:38:11.480103Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/demo/plot_working_demo.xdl
+=== XDL Working Graphics Demo ===
+
+--- Test 1: Simple Line Plot ---
+Creating sine wave plot...
+PLOT: Rendering 50 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Plot complete!
+Close the plot window to continue.
+
+--- Test 2: Cosine Wave ---
+Creating cosine wave plot...
+PLOT: Rendering 100 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Cosine plot complete!
+Close the plot window to continue.
+
+--- Test 3: Sine + Cosine ---
+Creating combined wave plot...
+PLOT: Rendering 80 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Combined wave plot complete!
+Close the plot window to continue.
+
+--- Test 4: Exponential Decay ---
+Creating decay plot...
+PLOT: Rendering 50 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Decay plot complete!
+Close the plot window to continue.
+
+--- Test 5: Parabola ---
+Creating parabola plot...
+PLOT: Rendering 40 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+Parabola plot complete!
+Close the plot window to continue.
+
+=== Graphics Demo Complete ===
+
+Successfully demonstrated:
+  - PLOT: 2D line plotting with FINDGEN arrays
+  - Mathematical functions: SIN, COS, EXP
+  - Interactive GUI plotting windows
+
+Note: 3D procedures (SURFACE, CONTOUR, SHADE_SURF, PLOT3D)
+      are registered but not yet fully implemented.
+
+To test in CLI mode: cargo run --release --bin xdl examples/plot_working_demo.xdl
+To test with GUI: cargo run --release --bin xdl-gui examples/plot_working_demo.xdl

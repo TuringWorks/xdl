@@ -1,0 +1,32 @@
+; ============================================
+; XDL Example 2: Arrays and Loops
+; ============================================
+; Demonstrates array creation and FOR loops
+
+; Create an array using FINDGEN
+data = FINDGEN(10)
+PRINT, 'Array created with FINDGEN(10):'
+PRINT, data
+
+; Square each element using a FOR loop
+squared = FLTARR(10)
+FOR i = 0, 9 DO BEGIN
+    squared[i] = data[i] * data[i]
+ENDFOR
+
+PRINT, ''
+PRINT, 'Squared values:'
+PRINT, squared
+
+; Sum all elements
+total = 0.0
+FOR i = 0, 9 DO BEGIN
+    total = total + data[i]
+ENDFOR
+
+PRINT, ''
+PRINT, 'Sum of array elements:', total
+
+; Calculate mean
+mean_value = total / 10.0
+PRINT, 'Mean value:', mean_value

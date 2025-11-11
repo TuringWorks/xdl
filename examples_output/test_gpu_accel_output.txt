@@ -1,0 +1,27 @@
+[2m2025-11-11T00:38:43.088796Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/test_gpu_accel.xdl
+=== XDL GPU Acceleration Test ===
+
+> Test 1: Small array (1,000 elements) - should use CPU
+Small array MIN: -3.648349451883163
+Small array MAX: 3.479645196569271
+Small array MEAN: 0.008508543736099
+Small array TOTAL: 8.508543736099281
+
+> Test 2: Medium array (99,999 elements) - should use CPU
+Medium array MIN: -4.107519288623500
+Medium array MAX: 4.445335442657112
+
+> Test 3: Large array (100,000 elements) - should use GPU
+Large array MIN: -4.107519288623500
+Large array MAX: 4.445335442657112
+Large array MEAN: 0.002569230074713
+Large array TOTAL: 256.923007471313610
+
+> Test 4: Very large array (4,000,000 elements) - should use GPU
+Huge array MIN: -6.535494774114684
+Huge array MAX: 5.765610486757985
+Huge array MEAN: 0.000414573238574
+Huge array TOTAL: 1658.292954294281344
+
+=== GPU Acceleration Test Complete ===
+Note: Run with RUST_LOG=xdl_stdlib=debug to see GPU debug messages

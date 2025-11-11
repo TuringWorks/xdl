@@ -1,0 +1,29 @@
+[2m2025-11-11T00:38:48.849305Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/rayleigh_taylor.xdl
+
+╔════════════════════════════════════════════════════════════════╗
+║        RAYLEIGH-TAYLOR INSTABILITY SIMULATION                  ║
+╠════════════════════════════════════════════════════════════════╣
+║  Simulating heavy fluid on top of light fluid                  ║
+║  Watch as gravity-driven instability creates patterns          ║
+╚════════════════════════════════════════════════════════════════╝
+
+Setting up simulation parameters...
+  Grid size: 128 x 128
+  Atwood number: 0.500000000000000
+  Time steps: 6
+  dt: 0.010000000000000
+
+Initializing density field with perturbations...
+  ✓ Initial conditions set
+  ✓ Perturbation amplitude: 5%
+  ✓ Multiple wavelength modes: 3
+
+Generating initial state visualization...
+RENDER_COLORMAP: Saved to rayleigh_taylor_t0.png
+  ✓ Saved: rayleigh_taylor_t0.png
+
+Time evolution:
+  Note: Simplified physics for demonstration
+
+  Step 1 / 6 ...
+[2m2025-11-11T00:38:51.843658Z[0m [31mERROR[0m [2mxdl[0m[2m:[0m Error: Failed to execute program: Runtime error: Index 16384 out of bounds for array of length 16384

@@ -1,0 +1,21 @@
+[2m2025-11-11T00:38:47.417995Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/ml_cv_simple_test.xdl
+Cross-Validation Test
+=====================
+
+TEST 1: K-Fold (50 samples, 5 folds)
+Fold masks size: 250
+Expected: 250
+K-Fold: PASS
+
+TEST 2: Stratified K-Fold
+Stratified fold masks size: 90
+Expected: 90
+Stratified K-Fold: PASS
+
+TEST 3: Leave-One-Out (10 samples)
+LOO fold masks size: 100
+Expected: 100
+Leave-One-Out: PASS
+
+=====================
+All tests PASSED!

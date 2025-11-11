@@ -1,0 +1,11 @@
+[2m2025-11-11T00:38:52.114728Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/05_conditionals.xdl
+Testing conditional statements:
+
+x = 5
+y = 10
+x and y are different
+
+z = 15
+z and y are different
+
+Conditional tests completed

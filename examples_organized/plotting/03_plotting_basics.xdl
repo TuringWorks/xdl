@@ -1,0 +1,16 @@
+; ============================================
+; XDL Example 3: Basic Plotting
+; ============================================
+; Demonstrates plotting with titles and labels
+
+; Create x values from 0 to 10
+x = FINDGEN(101) / 10.0
+
+; Create y = x^2
+y = x * x
+
+; Plot with title and axis labels
+PLOT, x, y, title='Quadratic Function', xtitle='X Values', ytitle='Y = X²'
+
+PRINT, 'Plot window should appear showing a quadratic curve'
+PRINT, 'Close the plot window to continue...'

@@ -1,0 +1,27 @@
+; Test complex number support
+
+print, 'Testing complex numbers...'
+
+; Create complex numbers
+z1 = complex(3.0, 4.0)
+z2 = complex(1.0, -2.0)
+
+print, 'z1 = complex(3, 4) =', z1
+print, 'z2 = complex(1, -2) =', z2
+
+; Extract parts
+r1 = real(z1)
+i1 = imaginary(z1)
+
+print, 'real(z1) =', r1
+print, 'imaginary(z1) =', i1
+
+; Conjugate
+z1_conj = conj(z1)
+print, 'conj(z1) =', z1_conj
+
+; Magnitude
+mag = abs(z1)
+print, 'abs(z1) =', mag
+
+print, 'Complex number test complete!'

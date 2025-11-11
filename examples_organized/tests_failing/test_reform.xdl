@@ -1,0 +1,40 @@
+; REFORM function tests
+
+; Test 1: Basic REFORM - reshape 1D to 2D
+arr = FINDGEN(12)
+PRINT, 'Original array (12 elements):'
+PRINT, arr
+
+reformed = REFORM(arr, 3, 4)
+PRINT, 'Reformed to 3x4:'
+PRINT, reformed
+PRINT, 'Size check:', N_ELEMENTS(reformed) EQ 12
+
+; Test 2: REFORM - reshape to 3D
+arr2 = FINDGEN(24)
+reformed2 = REFORM(arr2, 2, 3, 4)
+PRINT, 'Reformed 24 elements to 2x3x4:'
+PRINT, reformed2
+PRINT, 'Size check:', N_ELEMENTS(reformed2) EQ 24
+
+; Test 3: REFORM - reshape back to 1D
+arr3 = FLTARR(6, 4)
+reformed3 = REFORM(arr3, 24)
+PRINT, 'Reformed 6x4 to 1D (24 elements):'
+PRINT, reformed3
+PRINT, 'Size check:', N_ELEMENTS(reformed3) EQ 24
+
+; Test 4: REFORM with different dimensions
+arr4 = INDGEN(20)
+reformed4 = REFORM(arr4, 5, 4)
+PRINT, 'Reformed 20 elements to 5x4:'
+PRINT, reformed4
+
+; Test 5: REFORM preserves data
+arr5 = FINDGEN(6)
+reformed5 = REFORM(arr5, 2, 3)
+PRINT, 'Original:', arr5
+PRINT, 'Reformed 2x3:', reformed5
+PRINT, 'First element preserved:', reformed5[0] EQ arr5[0]
+
+PRINT, 'REFORM tests complete'

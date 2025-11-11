@@ -1,0 +1,8 @@
+[2m2025-11-11T00:38:48.587368Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/advanced_viz_simple.xdl
+
+============================================
+Advanced Scientific Visualization Demo
+============================================
+
+Demo 1: Testing RENDER_COLORMAP...
+[2m2025-11-11T00:38:48.604778Z[0m [31mERROR[0m [2mxdl[0m[2m:[0m Error: Failed to execute program: Runtime error: Cannot index non-array value

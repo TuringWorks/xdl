@@ -1,0 +1,515 @@
+; ================================================================
+; Medical Imaging Workflow - CT/MRI Visualization (Simplified)
+; ================================================================
+; Demonstrates:
+; - Synthetic CT/MRI data generation
+; - Bone/tissue/air segmentation
+; - Windowing controls (HU units)
+; - Multi-slice visualization
+; ================================================================
+
+PRINT, '=================================================='
+PRINT, 'Medical Imaging Workflow: CT/MRI Visualization'
+PRINT, '=================================================='
+PRINT, ''
+
+; ================================================================
+; STEP 1: Generate Synthetic CT Data (Hounsfield Units)
+; ================================================================
+PRINT, '> Step 1: Generating synthetic CT scan data...'
+PRINT, ''
+
+; Volume dimensions (simulating head CT) - reduced for faster execution
+nx = 64
+ny = 64
+nz = 32
+PRINT, '  Creating volume: ', nx, ' x ', ny, ' x ', nz
+
+; Initialize volume with air (-1000 HU)
+ct_volume = FLTARR(nx, ny, nz)
+
+; Fill with air value
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            ct_volume[i, j, k] = -1000.0
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Define anatomical regions (more realistic head model)
+center_x = nx / 2.0
+center_y = ny / 2.0
+center_z = nz / 2.0
+
+PRINT, '  Simulating anatomical structures...'
+
+; More realistic skull shape (ellipsoidal, not spherical)
+skull_x_radius = 26.0
+skull_y_radius = 26.0
+skull_z_radius = 20.0
+skull_thickness = 2.0
+
+; Brain dimensions (slightly smaller than inner skull)
+brain_x_radius = skull_x_radius - skull_thickness - 2.0
+brain_y_radius = skull_y_radius - skull_thickness - 2.0
+brain_z_radius = skull_z_radius - skull_thickness - 2.0
+
+; Ventricle size (fluid-filled spaces in brain)
+ventricle_size = 4.0
+
+; Pseudo-random seed for texture
+seed = 123.456
+
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            ; Calculate normalized distances from center
+            dx = (i - center_x) / skull_x_radius
+            dy = (j - center_y) / skull_y_radius
+            dz = (k - center_z) / skull_z_radius
+
+            ; Ellipsoidal distance
+            r_norm = SQRT(dx*dx + dy*dy + dz*dz)
+
+            ; Calculate actual distance for brain
+            dx_brain = (i - center_x) / brain_x_radius
+            dy_brain = (j - center_y) / brain_y_radius
+            dz_brain = (k - center_z) / brain_z_radius
+            r_brain = SQRT(dx_brain*dx_brain + dy_brain*dy_brain + dz_brain*dz_brain)
+
+            ; Add some anatomical variation using multiple sine waves
+            variation = SIN(i * 0.3 + seed) * SIN(j * 0.3 + seed) * SIN(k * 0.3 + seed)
+
+            ; SKULL: outer shell
+            skull_outer = 1.0
+            skull_inner = 1.0 - skull_thickness / skull_x_radius
+
+            IF r_norm GT skull_inner THEN BEGIN
+                IF r_norm LT skull_outer THEN BEGIN
+                    ; Skull bone with realistic variation
+                    base_density = 1500.0
+                    noise = SIN(i * 2.1 + j * 3.2 + k * 1.7 + seed) * 150.0
+                    ct_volume[i, j, k] = base_density + noise
+                END
+            END
+
+            ; BRAIN TISSUE
+            IF r_brain LT 1.0 THEN BEGIN
+                ; Calculate distance from brain center for gray/white matter
+                r_white = SQRT(dx_brain*dx_brain + dy_brain*dy_brain + dz_brain*dz_brain) * 1.5
+
+                ; Ventricles (CSF-filled spaces) - near center
+                ventricle_offset_y = 0.1
+                dx_vent = i - center_x
+                dy_vent = (j - center_y) - ventricle_offset_y * brain_y_radius
+                dz_vent = k - center_z
+                r_vent = SQRT(dx_vent*dx_vent*0.5 + dy_vent*dy_vent + dz_vent*dz_vent*2.0)
+
+                IF r_vent LT ventricle_size THEN BEGIN
+                    ; CSF (cerebrospinal fluid): ~15 HU
+                    ct_volume[i, j, k] = 15.0 + variation * 2.0
+                END
+
+                ; White matter (inner, anisotropic)
+                IF r_vent GE ventricle_size THEN BEGIN
+                    IF r_white LT 0.6 THEN BEGIN
+                        ; White matter: ~25-30 HU
+                        base_val = 28.0
+                        texture = SIN(i * 0.5 + seed) * SIN(j * 0.5 + seed) * 3.0
+                        ct_volume[i, j, k] = base_val + texture + variation * 2.0
+                    END
+                END
+
+                ; Gray matter (outer cortex, folded)
+                IF r_white GE 0.6 THEN BEGIN
+                    IF r_brain LT 1.0 THEN BEGIN
+                        ; Gray matter: ~35-42 HU
+                        base_val = 38.0
+                        ; Add cortical folding pattern (gyri/sulci)
+                        folding = SIN(i * 0.8 + j * 0.3 + seed) * SIN(j * 0.8 + k * 0.3 + seed) * 4.0
+                        texture = SIN(i * 0.4 + j * 0.4 + k * 0.4 + seed) * 3.0
+                        ct_volume[i, j, k] = base_val + folding + texture
+                    END
+                END
+            END
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Find min/max of CT volume
+vol_min = MIN(ct_volume)
+vol_max = MAX(ct_volume)
+
+PRINT, '  CT volume generated'
+PRINT, '    HU range: ', vol_min, ' to ', vol_max
+PRINT, ''
+
+; ================================================================
+; STEP 2: Tissue Segmentation
+; ================================================================
+PRINT, '> Step 2: Segmenting tissues by HU values...'
+PRINT, ''
+
+; Create segmentation masks and count voxels
+n_air = 0.0
+n_soft = 0.0
+n_bone = 0.0
+
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            val = ct_volume[i,j,k]
+
+            ; Air: HU < -500
+            IF val LT -500.0 THEN n_air = n_air + 1.0
+
+            ; Soft tissue: -100 <= HU < 200
+            IF val GE -100.0 THEN BEGIN
+                IF val LT 200.0 THEN n_soft = n_soft + 1.0
+            END
+
+            ; Bone: HU >= 200
+            IF val GE 200.0 THEN n_bone = n_bone + 1.0
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+n_total = nx * ny * nz
+pct_air = 100.0 * n_air / n_total
+pct_soft = 100.0 * n_soft / n_total
+pct_bone = 100.0 * n_bone / n_total
+
+PRINT, '  Segmentation results:'
+PRINT, '    Air:         ', n_air, ' voxels (', pct_air, '%)'
+PRINT, '    Soft tissue: ', n_soft, ' voxels (', pct_soft, '%)'
+PRINT, '    Bone:        ', n_bone, ' voxels (', pct_bone, '%)'
+PRINT, ''
+
+; ================================================================
+; STEP 3: Extract Axial Slice
+; ================================================================
+PRINT, '> Step 3: Extracting axial slice...'
+PRINT, ''
+
+slice_idx = nz / 2
+axial_slice = FLTARR(nx, ny)
+
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        axial_slice[i, j] = ct_volume[i, j, slice_idx]
+    ENDFOR
+ENDFOR
+
+; Find min/max of slice
+slice_min = MIN(axial_slice)
+slice_max = MAX(axial_slice)
+
+PRINT, '  Axial slice extracted at z = ', slice_idx
+PRINT, '    Slice dimensions: ', nx, ' x ', ny
+PRINT, '    HU range: ', slice_min, ' to ', slice_max
+PRINT, ''
+
+; ================================================================
+; STEP 4: Extract Coronal Slice
+; ================================================================
+PRINT, '> Step 4: Extracting coronal slice...'
+PRINT, ''
+
+coronal_idx = ny / 2
+coronal_slice = FLTARR(nx, nz)
+
+FOR i = 0, nx-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        coronal_slice[i, k] = ct_volume[i, coronal_idx, k]
+    ENDFOR
+ENDFOR
+
+; Find min/max of coronal slice
+coronal_min = MIN(coronal_slice)
+coronal_max = MAX(coronal_slice)
+
+PRINT, '  Coronal slice extracted at y = ', coronal_idx
+PRINT, '    Slice dimensions: ', nx, ' x ', nz
+PRINT, '    HU range: ', coronal_min, ' to ', coronal_max
+PRINT, ''
+
+; ================================================================
+; STEP 5: Extract Sagittal Slice
+; ================================================================
+PRINT, '> Step 5: Extracting sagittal slice...'
+PRINT, ''
+
+sagittal_idx = nx / 2
+sagittal_slice = FLTARR(ny, nz)
+
+FOR j = 0, ny-1 DO BEGIN
+    FOR k = 0, nz-1 DO BEGIN
+        sagittal_slice[j, k] = ct_volume[sagittal_idx, j, k]
+    ENDFOR
+ENDFOR
+
+; Find min/max of sagittal slice
+sagittal_min = MIN(sagittal_slice)
+sagittal_max = MAX(sagittal_slice)
+
+PRINT, '  Sagittal slice extracted at x = ', sagittal_idx
+PRINT, '    Slice dimensions: ', ny, ' x ', nz
+PRINT, '    HU range: ', sagittal_min, ' to ', sagittal_max
+PRINT, ''
+
+; ================================================================
+; STEP 6: Windowing Analysis
+; ================================================================
+PRINT, '> Step 6: Applying CT windowing presets...'
+PRINT, ''
+
+; Brain window (center: 40 HU, width: 80 HU)
+brain_center = 40.0
+brain_width = 80.0
+brain_min = brain_center - brain_width / 2.0
+brain_max = brain_center + brain_width / 2.0
+
+PRINT, '  Brain window:'
+PRINT, '    Center: ', brain_center, ' HU'
+PRINT, '    Width: ', brain_width, ' HU'
+PRINT, '    Range: ', brain_min, ' to ', brain_max, ' HU'
+
+; Bone window (center: 500 HU, width: 2000 HU)
+bone_center = 500.0
+bone_width = 2000.0
+bone_min = bone_center - bone_width / 2.0
+bone_max = bone_center + bone_width / 2.0
+
+PRINT, '  Bone window:'
+PRINT, '    Center: ', bone_center, ' HU'
+PRINT, '    Width: ', bone_width, ' HU'
+PRINT, '    Range: ', bone_min, ' to ', bone_max, ' HU'
+PRINT, ''
+
+; ================================================================
+; STEP 7: Volume Statistics
+; ================================================================
+PRINT, '> Step 7: Computing volume statistics...'
+PRINT, ''
+
+; Calculate mean HU value
+sum_hu = 0.0
+count_hu = 0.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            sum_hu = sum_hu + ct_volume[i,j,k]
+            count_hu = count_hu + 1.0
+        ENDFOR
+    ENDFOR
+ENDFOR
+mean_hu = sum_hu / count_hu
+
+; Calculate standard deviation
+sum_sq_diff = 0.0
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            diff = ct_volume[i,j,k] - mean_hu
+            sum_sq_diff = sum_sq_diff + diff * diff
+        ENDFOR
+    ENDFOR
+ENDFOR
+stddev_hu = SQRT(sum_sq_diff / count_hu)
+
+PRINT, '  Volume statistics:'
+PRINT, '    Mean HU: ', mean_hu
+PRINT, '    Std deviation: ', stddev_hu
+PRINT, '    Min HU: ', vol_min
+PRINT, '    Max HU: ', vol_max
+PRINT, '    Total voxels: ', count_hu
+PRINT, ''
+
+; ================================================================
+; STEP 8: Tissue Type Statistics
+; ================================================================
+PRINT, '> Step 8: Analyzing tissue-specific statistics...'
+PRINT, ''
+
+; Calculate mean HU for each tissue type
+sum_bone = 0.0
+count_bone = 0.0
+sum_soft = 0.0
+count_soft = 0.0
+sum_air = 0.0
+count_air = 0.0
+
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            val = ct_volume[i,j,k]
+
+            IF val GE 200.0 THEN BEGIN
+                sum_bone = sum_bone + val
+                count_bone = count_bone + 1.0
+            END
+
+            IF val GE -100.0 THEN BEGIN
+                IF val LT 200.0 THEN BEGIN
+                    sum_soft = sum_soft + val
+                    count_soft = count_soft + 1.0
+                END
+            END
+
+            IF val LT -500.0 THEN BEGIN
+                sum_air = sum_air + val
+                count_air = count_air + 1.0
+            END
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  Tissue-specific mean HU values:'
+
+IF count_bone GT 0.0 THEN BEGIN
+    mean_bone = sum_bone / count_bone
+    PRINT, '    Bone: ', mean_bone, ' HU (n=', count_bone, ')'
+END
+
+IF count_soft GT 0.0 THEN BEGIN
+    mean_soft = sum_soft / count_soft
+    PRINT, '    Soft tissue: ', mean_soft, ' HU (n=', count_soft, ')'
+END
+
+IF count_air GT 0.0 THEN BEGIN
+    mean_air = sum_air / count_air
+    PRINT, '    Air: ', mean_air, ' HU (n=', count_air, ')'
+END
+PRINT, ''
+
+; ================================================================
+; STEP 9: Quality Metrics
+; ================================================================
+PRINT, '> Step 9: Assessing image quality...'
+PRINT, ''
+
+; Signal-to-noise ratio (simplified)
+; Using soft tissue as signal
+signal = 40.0  ; Expected gray matter HU
+snr = signal / stddev_hu
+
+PRINT, '  Image quality metrics:'
+PRINT, '    Signal-to-noise ratio: ', snr
+PRINT, '    Dynamic range: ', vol_max - vol_min, ' HU'
+PRINT, '    Voxel count: ', nx * ny * nz
+PRINT, '    Volume size: ', nx, ' x ', ny, ' x ', nz
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, '=================================================='
+PRINT, 'Medical Imaging Workflow Complete!'
+PRINT, '=================================================='
+PRINT, ''
+PRINT, 'Demonstrated:'
+PRINT, '  - Synthetic CT volume generation (head model)'
+PRINT, '  - Anatomical structure simulation (skull, brain)'
+PRINT, '  - Hounsfield unit assignment'
+PRINT, '  - Tissue segmentation (air, soft tissue, bone)'
+PRINT, '  - Multi-planar reconstruction (axial, coronal, sagittal)'
+PRINT, '  - CT windowing presets'
+PRINT, '  - Volume and tissue statistics'
+PRINT, '  - Image quality assessment'
+PRINT, ''
+PRINT, 'Key Findings:'
+PRINT, '  • Volume size: ', nx, ' x ', ny, ' x ', nz
+PRINT, '  • Mean HU: ', mean_hu
+PRINT, '  • Bone coverage: ', pct_bone, '%'
+PRINT, '  • Soft tissue coverage: ', pct_soft, '%'
+PRINT, '  • Air coverage: ', pct_air, '%'
+PRINT, '  • SNR: ', snr
+PRINT, ''
+PRINT, 'Next Steps:'
+PRINT, '  - Import real DICOM data'
+PRINT, '  - Add image registration and fusion'
+PRINT, '  - Implement advanced segmentation algorithms'
+PRINT, '  - Add dose calculation and planning'
+PRINT, '  - Generate 3D surface renderings'
+PRINT, ''
+
+; ================================================================
+; STEP 10: 3D Volume Visualization (Optional)
+; ================================================================
+PRINT, '> Step 10: Launching 3D visualization...'
+PRINT, ''
+
+; Prepare volume for visualization by normalizing and windowing
+; Apply brain window (center=40, width=80) to emphasize soft tissue
+PRINT, '  Preparing volume for visualization...'
+PRINT, '  Applying brain window (C=40, W=80 HU)...'
+
+brain_center = 40.0
+brain_width = 80.0
+brain_min_hu = brain_center - brain_width / 2.0  ; 0 HU
+brain_max_hu = brain_center + brain_width / 2.0  ; 80 HU
+
+; Create normalized volume for visualization
+viz_volume = FLTARR(nx, ny, nz)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        FOR k = 0, nz-1 DO BEGIN
+            hu_val = ct_volume[i,j,k]
+
+            ; Apply windowing: clip to brain window range
+            windowed = hu_val
+            IF windowed LT brain_min_hu THEN windowed = brain_min_hu
+            IF windowed GT brain_max_hu THEN windowed = brain_max_hu
+
+            ; Normalize to 0-1 range
+            normalized = (windowed - brain_min_hu) / (brain_max_hu - brain_min_hu)
+            viz_volume[i,j,k] = normalized
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  Volume normalized for visualization (0.0 to 1.0)'
+PRINT, ''
+
+; Initialize VIZ3D
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Medical Imaging - CT Head Scan'
+
+; Set colormap for CT data (grayscale for medical imaging)
+VIZ3D_COLORMAP, 'GRAYSCALE'
+
+; Set camera position to view the head
+cam_dist = 2.5
+VIZ3D_CAMERA, POSITION=[cam_dist, cam_dist, cam_dist], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+
+; Load normalized volume
+VIZ3D_VOLUME, viz_volume, DIMENSIONS=[nx, ny, nz]
+
+PRINT, '  Volume loaded: ', nx, ' x ', ny, ' x ', nz
+PRINT, '  HU range: [', vol_min, ', ', vol_max, ']'
+PRINT, ''
+PRINT, '  Rendering 3D CT volume with brain windowing...'
+PRINT, '  - Windowed to 0-80 HU (brain/soft tissue)'
+PRINT, '  - Dark values: Low density tissue'
+PRINT, '  - Bright values: Higher density (skull edges)'
+PRINT, '  - Structures: Brain tissue and skull visible'
+PRINT, ''
+PRINT, '  Using threshold slider (0.0 to 1.0):'
+PRINT, '    • 0.0 = Show all soft tissue (air removed by windowing)'
+PRINT, '    • 0.5 = Show medium to high density tissue'
+PRINT, '    • 0.8 = Show only high density structures (skull)'
+PRINT, ''
+PRINT, '  Tip: Start at threshold 0.0, slowly increase to see'
+PRINT, '       the skull emerge from the brain tissue.'
+PRINT, ''
+
+; Render the volume
+VIZ3D_RENDER, /INTERACTIVE, TITLE='CT Head Scan - Interactive 3D View'
+
+PRINT, ''
+PRINT, '✓ 3D visualization complete!'
+PRINT, ''
+PRINT, '=================================================='
+PRINT, 'All Workflow Steps Complete!'
+PRINT, '=================================================='
+PRINT, ''

@@ -1,0 +1,17 @@
+; XDL Plot Demo - Test GUI Integration
+; Run this in the XDL GUI to see interactive plots!
+
+PRINT, '=== XDL Plot Demo ==='
+PRINT, ''
+
+; Create simple sine wave
+x = FINDGEN(50) / 5.0
+y = SIN(x)
+
+PRINT, 'Plotting sine wave...'
+PLOT, y, x
+
+PRINT, 'Plot window should appear!'
+PRINT, 'Close the plot window to continue.'
+PRINT, ''
+PRINT, 'Demo complete!'

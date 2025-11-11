@@ -1,0 +1,153 @@
+; ================================================================
+; GDL Graphics Test Script
+; ================================================================
+; Tests basic GDL graphics capabilities before running full demos
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'GDL Graphics Capability Test'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+; Check GDL version
+PRINT, 'GDL Version: ' + !VERSION.RELEASE
+PRINT, 'OS: ' + !VERSION.OS_NAME
+PRINT, ''
+
+; Set up graphics device
+PRINT, 'Setting up graphics device...'
+SET_PLOT, 'X'
+DEVICE, RETAIN=2, DECOMPOSED=0
+PRINT, '  ✓ Device set to X11'
+PRINT, ''
+
+; ================================================================
+; TEST 1: Simple Line Plot
+; ================================================================
+PRINT, '▶ Test 1: Simple line plot...'
+x = FINDGEN(100)
+y = SIN(x/10.0)
+
+WINDOW, 0, XSIZE=600, YSIZE=400, TITLE='Test 1: Line Plot'
+PLOT, x, y, TITLE='Sine Wave', XTITLE='X', YTITLE='Y', THICK=2
+PRINT, '  ✓ Line plot created (Window 0)'
+PRINT, '    If you see a sine wave, basic plotting works!'
+PRINT, ''
+
+; ================================================================
+; TEST 2: Contour Plot
+; ================================================================
+PRINT, '▶ Test 2: Contour plot...'
+nx = 50
+ny = 50
+data2d = FLTARR(nx, ny)
+FOR i = 0, nx-1 DO BEGIN
+    FOR j = 0, ny-1 DO BEGIN
+        dx = (i - nx/2.0) / 10.0
+        dy = (j - ny/2.0) / 10.0
+        data2d[i,j] = SIN(dx) * COS(dy)
+    ENDFOR
+ENDFOR
+
+WINDOW, 1, XSIZE=600, YSIZE=600, TITLE='Test 2: Contour Plot'
+CONTOUR, data2d, NLEVELS=15, FILL=1, TITLE='2D Function', $
+         XTITLE='X', YTITLE='Y'
+PRINT, '  ✓ Contour plot created (Window 1)'
+PRINT, '    If you see filled contours, 2D plotting works!'
+PRINT, ''
+
+; ================================================================
+; TEST 3: Surface Plot
+; ================================================================
+PRINT, '▶ Test 3: Surface plot...'
+WINDOW, 2, XSIZE=600, YSIZE=600, TITLE='Test 3: Surface Plot'
+SURFACE, data2d, TITLE='3D Surface', XTITLE='X', YTITLE='Y', ZTITLE='Z'
+PRINT, '  ✓ Surface plot created (Window 2)'
+PRINT, '    If you see a 3D surface, 3D plotting works!'
+PRINT, ''
+
+; ================================================================
+; TEST 4: Image Display
+; ================================================================
+PRINT, '▶ Test 4: Image display...'
+image = BYTSCL(data2d)
+WINDOW, 3, XSIZE=500, YSIZE=500, TITLE='Test 4: Image Display'
+TV, image
+PRINT, '  ✓ Image displayed (Window 3)'
+PRINT, '    If you see a grayscale image, TV command works!'
+PRINT, ''
+
+; ================================================================
+; TEST 5: Multiple Plots (Grid Layout)
+; ================================================================
+PRINT, '▶ Test 5: Multiple plot layout...'
+WINDOW, 4, XSIZE=800, YSIZE=800, TITLE='Test 5: Multi-Panel Layout'
+!P.MULTI = [0, 2, 2]
+
+; Panel 1
+PLOT, x, SIN(x/10.0), TITLE='Sin(x)', XTITLE='X', YTITLE='Y'
+
+; Panel 2
+PLOT, x, COS(x/10.0), TITLE='Cos(x)', XTITLE='X', YTITLE='Y'
+
+; Panel 3
+PLOT, x, TAN(x/20.0), TITLE='Tan(x)', XTITLE='X', YTITLE='Y'
+
+; Panel 4
+PLOT, x, EXP(-x/50.0), TITLE='Exp(-x)', XTITLE='X', YTITLE='Y'
+
+!P.MULTI = 0
+PRINT, '  ✓ Multi-panel layout created (Window 4)'
+PRINT, '    If you see 4 plots in a 2x2 grid, multi-panel works!'
+PRINT, ''
+
+; ================================================================
+; TEST 6: Color Table
+; ================================================================
+PRINT, '▶ Test 6: Color table test...'
+LOADCT, 13, /SILENT  ; Rainbow color table
+colors = BINDGEN(256)
+color_bar = REBIN(colors, 256, 50)
+
+WINDOW, 5, XSIZE=600, YSIZE=200, TITLE='Test 6: Color Table'
+TV, color_bar
+PRINT, '  ✓ Color table loaded and displayed (Window 5)'
+PRINT, '    If you see rainbow colors, color tables work!'
+PRINT, ''
+
+; ================================================================
+; TEST 7: TVSCL (Auto-scaling Display)
+; ================================================================
+PRINT, '▶ Test 7: TVSCL auto-scaling...'
+WINDOW, 6, XSIZE=500, YSIZE=500, TITLE='Test 7: TVSCL'
+TVSCL, data2d
+PRINT, '  ✓ TVSCL display created (Window 6)'
+PRINT, '    If you see a scaled grayscale image, TVSCL works!'
+PRINT, ''
+
+; ================================================================
+; Summary
+; ================================================================
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, '✓ Graphics Test Complete!'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+PRINT, 'Tests Performed:'
+PRINT, '  ✓ Line plots (PLOT)'
+PRINT, '  ✓ Contour plots (CONTOUR with FILL)'
+PRINT, '  ✓ Surface plots (SURFACE)'
+PRINT, '  ✓ Image display (TV)'
+PRINT, '  ✓ Multi-panel layouts (!P.MULTI)'
+PRINT, '  ✓ Color tables (LOADCT)'
+PRINT, '  ✓ Auto-scaled images (TVSCL)'
+PRINT, ''
+PRINT, 'If all windows appeared, your GDL graphics setup is working!'
+PRINT, ''
+PRINT, 'Press Enter to close all windows and exit...'
+dummy = ''
+READ, dummy
+
+; Close all windows
+WDELETE, 0, 1, 2, 3, 4, 5, 6
+
+PRINT, 'All windows closed. Test complete.'

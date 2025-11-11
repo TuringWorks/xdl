@@ -1,0 +1,34 @@
+[2m2025-11-11T00:38:46.469513Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/test_advanced_arrays.xdl
+=== Testing Advanced Array Features ===
+
+1. Negative Index Support:
+--------------------------
+arr = [10.000000, 20.000000, 30.000000, 40.000000, 50.000000]
+
+Accessing elements with negative indices:
+  arr[-1] (last element) = 50.000000000000000
+  arr[-2] (second to last) = 40.000000000000000
+  arr[-5] (first element) = 10.000000000000000
+
+Slicing with negative indices:
+  arr[-3:-1] = []
+  arr[-4:] (last 4 elements) = []
+  arr[:-2] (all but last 2) = [10.000000, 20.000000, 30.000000, 40.000000, 50.000000]
+
+2. Multi-Dimensional Indexing:
+------------------------------
+matrix = Array[3x3]: [1.000, 2.000, ..., 9.000] (9)
+
+Accessing matrix elements:
+  matrix[0, 0] = 1.000000000000000
+  matrix[0, 1] = 2.000000000000000
+  matrix[0, 2] = 3.000000000000000
+  matrix[1, 0] = 4.000000000000000
+  matrix[1, 1] (center) = 5.000000000000000
+  matrix[1, 2] = 6.000000000000000
+  matrix[2, 0] = 7.000000000000000
+  matrix[2, 1] = 8.000000000000000
+  matrix[2, 2] = 9.000000000000000
+
+Negative indices with matrix:
+[2m2025-11-11T00:38:46.476762Z[0m [31mERROR[0m [2mxdl[0m[2m:[0m Error: Failed to execute program: Runtime error: Index 18446744073709551615 out of bounds for dimension 1 (size 3)

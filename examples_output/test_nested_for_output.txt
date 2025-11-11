@@ -1,0 +1,10 @@
+[2m2025-11-11T00:38:53.274311Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/charting/test_nested_for.xdl
+0 0
+0 1
+0 2
+1 0
+1 1
+1 2
+2 0
+2 1
+2 2

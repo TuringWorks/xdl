@@ -1,0 +1,48 @@
+[2m2025-11-11T00:38:48.066717Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/ml_rnn_test.xdl
+RNN Sequence Processing Test
+============================
+
+TEST 1: SimpleRNN with short sequence
+Input sequence: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000]
+Hidden state size: 3
+Final hidden state: [-1.000000, -0.999999, 0.998822]
+SimpleRNN: PASS
+
+TEST 2: RNN with hidden_size=5
+Sequence: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000]
+Hidden state size: 5
+Hidden state: [-0.999999, -0.999997, 0.999500, 0.646812, 0.998441]
+RNN Hidden Size: PASS
+
+TEST 3: Sequence Mean with window=3
+Input: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000]
+Running means: [1.000000, 1.500000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000]
+Output size: 8
+Sequence Mean: PASS
+
+TEST 4: Time series processing
+Time series: [10.000000, 12.000000, 11.000000, 15.000000, 14.000000, 16.000000, 18.000000, 17.000000]
+RNN processed (hidden=4): [-1.000000, -1.000000, -1.000000, 0.661875]
+Smoothed (window=2): [10.000000, 11.000000, 11.500000, 13.000000, 14.500000, 15.000000, 17.000000, 17.500000]
+Time Series: PASS
+
+TEST 5: Pattern detection
+Pattern: [1.000000, 1.000000, 1.000000, 5.000000, 5.000000, 5.000000, 1.000000, 1.000000, 1.000000]
+Hidden representation: [-0.871945, -0.595930, 0.433986, -0.220015, 0.811595, -0.939823]
+Pattern Detection: PASS
+
+TEST 6: Sequence Mean - varying windows
+Data: [1.000000, 2.000000, 3.000000, 4.000000, 5.000000, 6.000000, 7.000000, 8.000000, 9.000000, 10.000000]
+Window=2: [1.000000, 1.500000, 2.500000, 3.500000, 4.500000, 5.500000, 6.500000, 7.500000, 8.500000, 9.500000]
+Window=4: [1.000000, 1.500000, 2.000000, 2.500000, 3.500000, 4.500000, 5.500000, 6.500000, 7.500000, 8.500000]
+Window Variations: PASS
+
+============================
+All tests PASSED!
+
+Summary:
+- SimpleRNN: Sequence processing ✓
+- SimpleRNN: Configurable hidden size ✓
+- SequenceMean: Running averages ✓
+- Time series: Temporal patterns ✓
+- Pattern detection: Hidden representations ✓

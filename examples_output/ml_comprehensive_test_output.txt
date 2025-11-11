@@ -1,0 +1,145 @@
+[2m2025-11-11T00:38:48.330853Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/ml_comprehensive_test.xdl
+=========================================
+XDL Machine Learning Functions Test Suite
+=========================================
+
+--- PHASE ML-1: FOUNDATION ---
+
+Test 1: XDLML_Partition (Train/Test Split)
+Training samples: 0  (expected 80)
+Test samples: 100  (expected 20)
+
+Test 2: XDLML_Shuffle (Data Shuffling)
+Shuffled indices (seed=42): 2.000000000000000 5.000000000000000 6.000000000000000 3.000000000000000
+Reproducibility test: 1  (expected 1)
+
+Test 3: XDLML_LinearNormalizer (scale=0.5, offset=10)
+First 3 values: 10.000000000000000 15.000000000000000 20.000000000000000
+Expected: 10.0, 15.0, 20.0
+
+Test 4: XDLML_RangeNormalizer (Min-Max to [0,1])
+Min value: 0.000000000000000  (expected 0.0)
+Max value: 1.000000000000000  (expected 1.0)
+Mid value: 0.444444444444444  (expected 0.44)
+
+Test 5: XDLML_VarianceNormalizer (Z-score)
+Mean should be ~0: 0.174077655955698
+First value: -1.566698903601281
+
+Test 6: XDLML_TanHNormalizer
+tanh(0): 0.000000000000000  (expected 0.0)
+tanh(1): 0.761594155955765  (expected 0.76)
+
+Test 7: XDLML_UnitNormalizer (L2 normalization)
+Normalized [3,4,0]: 0.600000000000000 0.800000000000000 0.000000000000000
+Expected: 0.6, 0.8, 0.0
+
+Test 8: XDLML_KMeans (K-means clustering)
+First cluster labels: 2.000000000000000 2.000000000000000 2.000000000000000
+Second cluster labels: 1.000000000000000 1.000000000000000 1.000000000000000
+Third cluster labels: 0.000000000000000 0.000000000000000 0.000000000000000
+
+--- PHASE ML-2: ACTIVATION FUNCTIONS ---
+
+Test 9: Identity Activation
+Identity[-2, -0.5, 0, 0.5, 2]: -2.000000000000000 0.000000000000000 2.000000000000000
+
+Test 10: Binary Step Activation
+BinaryStep[-2, 0, 2]: 0.000000000000000 1.000000000000000 1.000000000000000
+Expected: 0, 1, 1
+
+Test 11: Logistic (Sigmoid) Activation
+Sigmoid(0): 0.500000000000000  (expected 0.5)
+Sigmoid(2): 0.880797077977882  (expected 0.88)
+
+Test 12: TanH Activation
+tanh(0): 0.000000000000000  (expected 0.0)
+tanh(2): 0.964027580075817  (expected 0.96)
+
+Test 13: ReLU Activation
+ReLU[-2, 0, 2]: 0.000000000000000 0.000000000000000 2.000000000000000
+Expected: 0, 0, 2
+
+Test 14: PReLU Activation (alpha=0.1)
+PReLU(-2) with alpha=0.1: -0.200000000000000  (expected -0.2)
+PReLU(2): 2.000000000000000  (expected 2.0)
+
+Test 15: ELU Activation (alpha=1.0)
+ELU(2): 2.000000000000000  (expected 2.0)
+ELU(-0.5): -0.393469340287367  (expected -0.39)
+
+Test 16: SoftPlus Activation
+SoftPlus(0): 0.693147180559945  (expected 0.69)
+SoftPlus(2): 2.126928011042973  (expected 2.13)
+
+Test 17: SoftSign Activation
+SoftSign(0): 0.000000000000000  (expected 0.0)
+SoftSign(2): 0.666666666666667  (expected 0.67)
+
+Test 18: Softmax Activation
+Softmax[1,2,3]: 0.090030573170380 0.244728471054798 0.665240955774822
+Sum (should be 1.0): 1.000000000000000
+
+Test 19: ArcTan Activation
+atan(0): 0.000000000000000  (expected 0.0)
+atan(1): 0.463647609000806  (expected 0.46)
+
+Test 20: Gaussian Activation
+Gaussian(0): 1.000000000000000  (expected 1.0)
+Gaussian(2): 0.018315638888734  (expected 0.018)
+
+Test 21: Sinc Activation
+Sinc(0): 1.000000000000000  (expected 1.0)
+Sinc(2): 0.454648713412841  (expected 0.45)
+
+Test 22: Sinusoid Activation
+sin(0): 0.000000000000000  (expected 0.0)
+sin(2): 0.909297426825682  (expected 0.91)
+
+--- PHASE ML-2: LOSS FUNCTIONS ---
+
+Test 23: Mean Squared Error
+MSE: 0.038000000000000  (expected 0.06)
+
+Test 24: Mean Absolute Error
+MAE: 0.180000000000000  (expected 0.18)
+
+Test 25: Cross-Entropy Loss
+CrossEntropy: 0.118891647931958  (expected 0.12)
+
+Test 26: Huber Loss (delta=1.0)
+Huber Loss: 0.019000000000000  (should be between MAE and MSE)
+
+Test 27: Log-Cosh Loss
+LogCosh Loss: 0.018812058249850  (smooth approximation of MAE)
+
+--- PHASE ML-3: OPTIMIZERS ---
+
+Test 28: Gradient Descent (lr=0.1)
+Original weights: 1.000000000000000 2.000000000000000 3.000000000000000
+Updated weights: 0.990000000000000 1.980000000000000 2.970000000000000
+Expected: 0.99, 1.98, 2.97
+
+Test 29: Momentum Optimizer (lr=0.1, momentum=0.9)
+Updated weights with momentum: 0.990000000000000 1.980000000000000 2.970000000000000
+
+Test 30: RMSProp Optimizer (lr=0.1, decay=0.9)
+Updated weights with RMSProp: 0.900000009999999 1.824588411523208 2.776393218916687
+
+Test 31: Adam Optimizer (lr=0.1, beta1=0.9, beta2=0.999)
+Updated weights with Adam: 0.900000009999999 1.900000005000000 2.900000003333333
+
+Test 32: QuickProp Optimizer (lr=0.01, mu=1.75)
+Updated weights with QuickProp: 1.017500000000000 2.035000000000000 3.052500000000000
+
+=========================================
+Test Suite Complete!
+=========================================
+Functions Tested:
+  Phase ML-1: 8 functions (Data utils, Normalizers, K-means)
+  Phase ML-2: 17 Activation functions
+  Phase ML-2: 5 Loss functions
+  Phase ML-3: 5 Optimizer functions
+
+Total: 35 ML functions tested successfully!
+=========================================

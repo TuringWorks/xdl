@@ -1,0 +1,70 @@
+; Simple ML Data Utilities Test
+; Tests XDLmlPartition and XDLmlShuffle
+
+PRINT, 'ML Data Utilities Test'
+PRINT, ''
+
+; Test 1: Partition with 80/20 split
+PRINT, 'Test 1: 80/20 train/test split'
+partition = XDLML_Partition(100, 0.8)
+n_train = TOTAL(partition)
+n_test = 100 - n_train
+PRINT, 'Total: 100, Train:', n_train, ', Test:', n_test
+PRINT, ''
+
+; Test 2: Different split ratios
+PRINT, 'Test 2: Various split ratios'
+part_60 = XDLML_Partition(100, 0.6)
+part_70 = XDLML_Partition(100, 0.7)
+part_90 = XDLML_Partition(100, 0.9)
+PRINT, '60/40 split - Train:', TOTAL(part_60)
+PRINT, '70/30 split - Train:', TOTAL(part_70)
+PRINT, '90/10 split - Train:', TOTAL(part_90)
+PRINT, ''
+
+; Test 3: Shuffle with fixed seed (reproducible)
+PRINT, 'Test 3: Shuffle with fixed seed'
+shuf1 = XDLML_Shuffle(10, 42)
+shuf2 = XDLML_Shuffle(10, 42)
+PRINT, 'First 5 from shuffle 1:', shuf1[0], shuf1[1], shuf1[2], shuf1[3], shuf1[4]
+PRINT, 'First 5 from shuffle 2:', shuf2[0], shuf2[1], shuf2[2], shuf2[3], shuf2[4]
+PRINT, 'Reproducible (same seed):', shuf1[0] EQ shuf2[0]
+PRINT, ''
+
+; Test 4: Different seeds produce different shuffles
+PRINT, 'Test 4: Different seeds'
+shuf_a = XDLML_Shuffle(10, 123)
+shuf_b = XDLML_Shuffle(10, 456)
+PRINT, 'Seed 123, first 5:', shuf_a[0], shuf_a[1], shuf_a[2], shuf_a[3], shuf_a[4]
+PRINT, 'Seed 456, first 5:', shuf_b[0], shuf_b[1], shuf_b[2], shuf_b[3], shuf_b[4]
+PRINT, 'Different results:', shuf_a[0] NE shuf_b[0]
+PRINT, ''
+
+; Test 5: Practical workflow
+PRINT, 'Test 5: Shuffle and partition workflow'
+n = 20
+data = FINDGEN(n)
+PRINT, 'Original data (first 5):', data[0], data[1], data[2], data[3], data[4]
+
+shuffled_idx = XDLML_Shuffle(n, 999)
+PRINT, 'Shuffled indices:', shuffled_idx[0], shuffled_idx[1], shuffled_idx[2], shuffled_idx[3], shuffled_idx[4]
+
+partition_data = XDLML_Partition(n, 0.75)
+train_count = TOTAL(partition_data)
+test_count = n - train_count
+PRINT, 'Training samples:', train_count
+PRINT, 'Test samples:', test_count
+PRINT, ''
+
+; Test 6: Large dataset
+PRINT, 'Test 6: Large dataset (1000 samples)'
+large_part = XDLML_Partition(1000, 0.8)
+large_shuf = XDLML_Shuffle(1000, 777)
+PRINT, 'Partition size:', N_ELEMENTS(large_part)
+PRINT, 'Training samples:', TOTAL(large_part)
+PRINT, 'Shuffle size:', N_ELEMENTS(large_shuf)
+PRINT, 'First index:', large_shuf[0]
+PRINT, 'Last index:', large_shuf[999]
+PRINT, ''
+
+PRINT, 'All tests complete!'

@@ -1,0 +1,19 @@
+[2m2025-11-11T00:38:53.456121Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/charting/test_plot_surface.xdl
+=======================================
+Testing PLOT and SURFACE with xdl-charts
+=======================================
+
+1. Testing PLOT with sine wave...
+PLOT: Rendering 100 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+2. Testing PLOT with cosine (auto X)...
+PLOT: Rendering 100 points to xdl_plot.png
+  Plot saved to 'xdl_plot.png'
+3. Testing SURFACE with 3D data...
+SURFACE: Rendering 40x40 surface plot to xdl_surface.png
+  Surface plot saved to 'xdl_surface.png'
+
+=======================================
+Test complete!
+If you see Tauri windows, integration works!
+=======================================

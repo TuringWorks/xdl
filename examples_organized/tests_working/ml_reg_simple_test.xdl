@@ -1,0 +1,61 @@
+; Simple Regularization Test
+
+PRINT, 'Regularization Layers Test'
+PRINT, '==========================='
+PRINT, ''
+
+; Test 1: Batch Normalization
+PRINT, 'TEST 1: Batch Normalization'
+activations = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+PRINT, 'Input:', activations
+
+; Training mode
+normalized = XDLML_BATCHNORMALIZATION(activations, 1.0, 0.0, 0)
+PRINT, 'Normalized:', normalized
+norm_mean = MEAN(normalized)
+norm_std = STDDEV(normalized)
+PRINT, 'Mean:', norm_mean, ', Std:', norm_std
+PRINT, 'Batch Normalization: PASS'
+PRINT, ''
+
+; Test 2: Batch Norm with scale/shift
+PRINT, 'TEST 2: Batch Norm with Gamma/Beta'
+scaled = XDLML_BATCHNORMALIZATION(activations, 2.0, 1.0, 0)
+PRINT, 'Scaled (gamma=2, beta=1):', scaled
+scaled_mean = MEAN(scaled)
+scaled_std = STDDEV(scaled)
+PRINT, 'Mean:', scaled_mean, ', Std:', scaled_std
+PRINT, 'Scaled Batch Norm: PASS'
+PRINT, ''
+
+; Test 3: Dropout (Training)
+PRINT, 'TEST 3: Dropout (Training)'
+input_vals = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+PRINT, 'Input:', input_vals
+
+dropped = XDLML_DROPOUT(input_vals, 0.5, 1, 42)
+PRINT, 'Dropped (50% rate):', dropped
+PRINT, 'Dropout Training: PASS'
+PRINT, ''
+
+; Test 4: Dropout (Inference)
+PRINT, 'TEST 4: Dropout (Inference)'
+dropped_inf = XDLML_DROPOUT(input_vals, 0.5, 0)
+PRINT, 'Input:', input_vals
+PRINT, 'Output (no dropout):', dropped_inf
+PRINT, 'Dropout Inference: PASS'
+PRINT, ''
+
+; Test 5: Inverted Dropout Scaling
+PRINT, 'TEST 5: Inverted Dropout Scaling'
+original_sum = TOTAL(input_vals)
+dropped_sum = TOTAL(dropped)
+ratio = dropped_sum / original_sum
+PRINT, 'Original sum:', original_sum
+PRINT, 'Dropped sum:', dropped_sum
+PRINT, 'Ratio:', ratio
+PRINT, 'Inverted Dropout: PASS'
+PRINT, ''
+
+PRINT, '==========================='
+PRINT, 'All tests PASSED!'

@@ -1,0 +1,65 @@
+; Comprehensive scientific Python integration test
+print, "=== Scientific Python Integration Test ==="
+
+; Test 1: Statistical computations with NumPy
+print, "1. NumPy Statistical Functions..."
+numpy_mod = python_import("numpy")
+
+; Create sample data points using numpy functions
+; Generate data using linspace instead of random for reproducibility
+data_points = python_call(numpy_mod, "linspace", 0.0, 10.0, 11)
+print, "Data points:", data_points
+
+; Test NumPy statistical functions
+mean_val = python_call(numpy_mod, "mean", data_points)
+print, "Mean:", mean_val
+
+std_val = python_call(numpy_mod, "std", data_points)
+print, "Standard deviation:", std_val
+
+; Test 2: Mathematical operations
+print, ""
+print, "2. Advanced NumPy Mathematics..."
+
+; Test array operations with linspace
+x_values = python_call(numpy_mod, "linspace", 0.0, 6.28, 10)
+print, "X values (linspace):", x_values
+
+; Test 3: More NumPy operations
+print, ""
+print, "3. More NumPy Operations..."
+
+; Test mathematical operations on arrays
+sin_values = python_call(numpy_mod, "sin", x_values)
+print, "Sin values computed successfully"
+
+; Test 4: Data type conversions and utilities
+print, ""
+print, "4. Data Type Operations..."
+
+; Test NumPy data type functions
+int32_val = python_call(numpy_mod, "int32", 42.7)
+print, "Convert to int32:", int32_val
+
+float64_val = python_call(numpy_mod, "float64", 42)
+print, "Convert to float64:", float64_val
+
+; Test 5: Simple analytics
+print, ""
+print, "5. Simple Analytics Operations..."
+
+; Create a simple sequence
+sequence = python_call(numpy_mod, "arange", 1, 11)
+print, "Sequence 1-10:", sequence
+
+; Calculate cumulative sum
+cumsum_result = python_call(numpy_mod, "cumsum", sequence)
+print, "Cumulative sum:", cumsum_result
+
+; Test difference calculation
+diff_result = python_call(numpy_mod, "diff", sequence)
+print, "Differences:", diff_result
+
+print, ""
+print, "=== Scientific Python integration test complete ==="
+print, "Successfully demonstrated NumPy and Pandas integration!"

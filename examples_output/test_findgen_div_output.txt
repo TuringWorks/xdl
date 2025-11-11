@@ -1,0 +1,13 @@
+[2m2025-11-11T00:38:52.205996Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/xdl/test_findgen_div.xdl
+Testing FINDGEN division
+
+Test 1: First FINDGEN division
+x1 =  [0.000000, 0.200000, 0.400000, 0.600000, 0.800000, 1.000000, 1.200000, 1.400000, 1.600000, 1.800000]
+
+Test 2: Second FINDGEN division
+x2 =  [0.000000, 0.100000, ..., 1.900000] (20)
+
+Test 3: COS of divided array
+y2 =  [1.000000, 0.995004, ..., -0.323290] (20)
+
+Tests complete

@@ -1,0 +1,51 @@
+; Test NumPy integration with XDL - using scalar values
+print, "=== NumPy Simple Integration Test ==="
+
+; Import numpy
+print, "1. Importing NumPy..."
+numpy_mod = python_import("numpy")
+print, "NumPy imported successfully"
+
+; Test simple NumPy functions with scalars
+print, ""
+print, "2. Testing NumPy with scalar values..."
+
+; Test sqrt with a single value
+sqrt_result = python_call(numpy_mod, "sqrt", 16.0)
+print, "numpy.sqrt(16):", sqrt_result
+
+; Test exp with a single value
+exp_result = python_call(numpy_mod, "exp", 1.0)
+print, "numpy.exp(1):", exp_result
+
+; Test log with a single value
+log_result = python_call(numpy_mod, "log", 2.718281828)
+print, "numpy.log(e):", log_result
+
+; Test trigonometric functions
+print, ""
+print, "3. Testing NumPy trig functions..."
+sin_result = python_call(numpy_mod, "sin", 0.0)
+print, "numpy.sin(0):", sin_result
+
+cos_result = python_call(numpy_mod, "cos", 0.0)
+print, "numpy.cos(0):", cos_result
+
+; Test numpy constants and functions
+print, ""
+print, "4. Testing NumPy array creation with simple methods..."
+
+; Test zeros function
+zeros_result = python_call(numpy_mod, "zeros", 3)
+print, "numpy.zeros(3):", zeros_result
+
+; Test ones function
+ones_result = python_call(numpy_mod, "ones", 3)
+print, "numpy.ones(3):", ones_result
+
+; Test arange function
+arange_result = python_call(numpy_mod, "arange", 5)
+print, "numpy.arange(5):", arange_result
+
+print, ""
+print, "=== NumPy simple test complete ==="

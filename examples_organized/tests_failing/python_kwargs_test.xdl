@@ -1,0 +1,38 @@
+; Test Python keyword arguments functionality
+print, "=== Python Keyword Arguments Test ==="
+
+; Import builtins for range function
+print, "1. Testing basic function calls..."
+builtins_mod = python_import("builtins")
+
+; Test range function with different arguments
+range_result = python_call(builtins_mod, "range", 5)
+print, "range(5) created:", range_result
+
+; Test round function with precision
+round_result = python_call(builtins_mod, "round", 3.14159, 2)
+print, "round(3.14159, 2) =", round_result
+
+; Test divmod function
+divmod_result = python_call(builtins_mod, "divmod", 13, 5)
+print, "divmod(13, 5) =", divmod_result
+
+; Test some math functions that might benefit from multiple args
+print, ""
+print, "2. Testing math functions with multiple arguments..."
+math_mod = python_import("math")
+
+; Test atan2 function
+atan2_result = python_call(math_mod, "atan2", 1.0, 1.0)
+print, "atan2(1, 1) =", atan2_result
+
+; Test hypot function
+hypot_result = python_call(math_mod, "hypot", 3.0, 4.0)
+print, "hypot(3, 4) =", hypot_result
+
+; Test gcd function
+gcd_result = python_call(math_mod, "gcd", 48, 18)
+print, "gcd(48, 18) =", gcd_result
+
+print, ""
+print, "=== Keyword arguments test complete ==="

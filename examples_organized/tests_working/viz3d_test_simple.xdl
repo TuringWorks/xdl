@@ -1,0 +1,24 @@
+; Simple VIZ3D Test
+PRINT, '=== VIZ3D Test ==='
+
+; Test initialization
+VIZ3D_INIT, WINDOW_SIZE=[800, 600]
+
+; Test colormap
+VIZ3D_COLORMAP, 'VIRIDIS'
+
+; Create simple volume data
+size = 4
+volume = FLTARR(size, size, size)
+
+; Fill with some test data
+; Since loops might not work yet, let's just test with zeros
+PRINT, 'Volume dimensions: ', size, 'x', size, 'x', size
+
+; Test volume loading
+VIZ3D_VOLUME, volume, DIMENSIONS=[size, size, size]
+
+; Test render (need to provide at least empty args)
+VIZ3D_RENDER, ''
+
+PRINT, 'Test complete!'

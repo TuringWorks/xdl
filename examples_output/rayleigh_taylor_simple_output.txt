@@ -1,0 +1,42 @@
+[2m2025-11-11T00:38:11.481400Z[0m [32m INFO[0m [2mxdl[0m[2m:[0m Executing file: examples/demo/rayleigh_taylor_simple.xdl
+=== Rayleigh-Taylor Instability Demo ===
+
+Grid size:  32 x 32 x 32
+Created  32 x 32 x 32  volume
+Total voxels:  32768
+
+Note: Full RT simulation with time evolution requires
+FOR loop support in the parser. This demo shows the
+framework working with static data.
+
+Initializing 3D visualization...
+VIZ3D: Initialized (1280x720)
+Setting colormap to RAINBOW
+VIZ3D: Set colormap to RAINBOW
+VIZ3D: Camera configured
+Loading volume to GPU...
+VIZ3D: Loaded volume 32x32x32 (32768 voxels)
+Rendering volume...
+
+Controls:
+  - Left mouse: Rotate camera
+  - Mouse wheel: Zoom in/out
+  - ESC: Close window
+
+VIZ3D: Rendering volume (interactive=false)
+  Volume: 32x32x32
+  Colormap: RAINBOW
+  Backend: ThreeJS
+
+Visualization prepared (non-interactive mode).
+Note: Use /INTERACTIVE keyword to open 3D window.
+
+
+=== Demo Complete ===
+
+To see full RT instability with time evolution:
+1. Parser needs to support nested FOR loops
+2. Parser needs to support IF/THEN/ELSE/ENDIF blocks
+3. Then use examples/demo/rayleigh_taylor.xdl
+
+VIZ3D framework is ready and working!

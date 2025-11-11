@@ -1,0 +1,111 @@
+; ================================================================
+; VIZ3D Three.js Advanced Demo
+; ================================================================
+; Demonstrates enhanced volume rendering with lighting and quality
+; improvements including:
+; - Gradient-based shading
+; - Phong lighting model
+; - Adjustable rendering quality
+; - Larger volume size (32³)
+; ================================================================
+
+PRINT, '🚀 VIZ3D Three.js Advanced Demo'
+PRINT, '================================================'
+PRINT, ''
+
+; Create a 32x32x32 volume with interesting structure
+grid = 32
+total = grid * grid * grid
+
+PRINT, 'Creating 32x32x32 volume with radial gradient...'
+PRINT, 'This may take a moment...'
+PRINT, ''
+
+; Create radial gradient with multiple shells
+volume = FLTARR(total)
+center = grid / 2.0
+
+idx = 0
+FOR k = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR i = 0, grid-1 DO BEGIN
+            dx = i - center
+            dy = j - center
+            dz = k - center
+            r = SQRT(dx*dx + dy*dy + dz*dz)
+
+            ; Create concentric shells with varying density
+            shell1 = EXP(-((r - 8.0) * (r - 8.0)) / 4.0)
+            shell2 = EXP(-((r - 12.0) * (r - 12.0)) / 4.0) * 0.7
+            shell3 = EXP(-((r - 15.0) * (r - 15.0)) / 4.0) * 0.5
+
+            ; Combine shells
+            volume[idx] = shell1 + shell2 + shell3
+
+            idx = idx + 1
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+; Normalize to [0, 1]
+max_val = MAX(volume)
+volume = volume / max_val
+
+PRINT, 'Volume created!'
+PRINT, '  Grid: ', grid, 'x', grid, 'x', grid
+PRINT, '  Total voxels: ', total
+PRINT, '  Value range: [', MIN(volume), ', ', MAX(volume), ']'
+PRINT, ''
+
+; Initialize visualization with enhanced settings
+PRINT, 'Initializing visualization...'
+VIZ3D_INIT, WINDOW_SIZE=[1400, 900], TITLE='Advanced Volume Rendering'
+VIZ3D_COLORMAP, 'PLASMA'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 2.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume, DIMENSIONS=[grid, grid, grid]
+
+PRINT, ''
+PRINT, '🎨 Launching advanced Three.js visualization...'
+PRINT, ''
+PRINT, 'Features enabled:'
+PRINT, '  ✓ Gradient-based normal calculation'
+PRINT, '  ✓ Phong lighting model (ambient + diffuse + specular)'
+PRINT, '  ✓ Edge enhancement via gradient magnitude'
+PRINT, '  ✓ Adjustable rendering quality'
+PRINT, '  ✓ Interactive parameter controls'
+PRINT, ''
+PRINT, 'Controls:'
+PRINT, '  • Left mouse drag: Rotate volume'
+PRINT, '  • Mouse wheel: Zoom in/out'
+PRINT, '  • GUI panel (right): Adjust all parameters'
+PRINT, ''
+PRINT, 'GUI Parameters:'
+PRINT, '  Rendering:'
+PRINT, '    - Threshold: Filter low-density voxels'
+PRINT, '    - Opacity: Overall transparency'
+PRINT, '    - Step Size: Ray marching quality (lower = better)'
+PRINT, '    - Max Steps: Maximum ray samples (higher = better)'
+PRINT, '  Lighting:'
+PRINT, '    - Enable Lighting: Toggle Phong shading'
+PRINT, '    - Ambient: Base illumination level'
+PRINT, '    - Diffuse: Surface angle-dependent lighting'
+PRINT, '    - Specular: Highlights strength'
+PRINT, '    - Shininess: Highlight focus'
+PRINT, ''
+VIZ3D_RENDER, /INTERACTIVE
+
+PRINT, ''
+PRINT, '✅ Visualization launched successfully!'
+PRINT, ''
+PRINT, 'Tips for best results:'
+PRINT, '  • Lower step size (0.005) = better quality but slower'
+PRINT, '  • Higher max steps (512) = more detail but slower'
+PRINT, '  • Enable lighting to see internal structure'
+PRINT, '  • Try different colormaps: VIRIDIS, RAINBOW, INFERNO'
+PRINT, ''
+PRINT, 'Performance notes:'
+PRINT, '  • 32³ volume = 32,768 voxels'
+PRINT, '  • Default: 256 steps × 0.01 step size'
+PRINT, '  • GPU-accelerated via WebGL'
+PRINT, '  • Expect 30-60 FPS on modern hardware'
+PRINT, ''

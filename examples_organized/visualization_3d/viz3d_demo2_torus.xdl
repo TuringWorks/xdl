@@ -1,0 +1,61 @@
+; ================================================================
+; Demo 2: Torus with Viridis Colormap
+; ================================================================
+; Demonstrates smooth torus shape with distance field visualization
+; ================================================================
+
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, 'Demo 2: Torus Shape (Viridis Colormap)'
+PRINT, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+PRINT, ''
+
+grid = 64
+PRINT, 'Creating torus volume...'
+volume2 = FLTARR(grid, grid, grid)
+
+; Torus parameters
+center = grid / 2.0
+R = grid / 3.0   ; Major radius
+r = grid / 8.0   ; Minor radius
+
+FOR i = 0, grid-1 DO BEGIN
+    FOR j = 0, grid-1 DO BEGIN
+        FOR k = 0, grid-1 DO BEGIN
+            x = i - center
+            y = j - center
+            z = k - center
+
+            ; Distance from Z axis
+            rho = SQRT(x*x + y*y)
+
+            ; Torus distance function
+            d_major = rho - R
+            d_torus = SQRT(d_major*d_major + z*z) - r
+
+            ; Sharp boundary - inside torus is 1.0, outside is 0.0
+            abs_d = ABS(d_torus)
+            IF abs_d LT 2.0 THEN BEGIN
+                volume2[i, j, k] = 1.0
+            END ELSE BEGIN
+                volume2[i, j, k] = 0.0
+            END
+        ENDFOR
+    ENDFOR
+ENDFOR
+
+PRINT, '  Torus generated'
+PRINT, ''
+
+; Visualize with Viridis colormap
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Demo 2 - Torus'
+VIZ3D_COLORMAP, 'VIRIDIS'
+VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.5], TARGET=[0.0, 0.0, 0.0], FOV=45.0
+VIZ3D_VOLUME, volume2, DIMENSIONS=[grid, grid, grid]
+
+PRINT, 'Launching interactive visualization...'
+PRINT, ''
+VIZ3D_RENDER, /INTERACTIVE, TITLE='Demo 2: Torus (Viridis)'
+
+PRINT, ''
+PRINT, '✓ Demo 2 complete!'
+PRINT, ''
