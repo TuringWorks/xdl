@@ -19,7 +19,6 @@ PRINT, 'y =', y
 cmp = x - y
 IF cmp THEN BEGIN
     PRINT, 'x and y are different'
-END
 
 PRINT, ''
 
@@ -28,7 +27,6 @@ PRINT, 'z =', z
 diff = z - y
 IF diff THEN BEGIN
     PRINT, 'z and y are different'
-END
 
 PRINT, ''
 PRINT, 'Conditional tests completed'

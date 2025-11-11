@@ -136,6 +136,17 @@ impl Evaluator {
         self.stdlib.call_procedure(name, args)
     }
 
+    /// Call a procedure from the standard library with keyword arguments
+    pub fn call_procedure_with_keywords(
+        &self,
+        name: &str,
+        args: &[XdlValue],
+        keywords: &std::collections::HashMap<String, XdlValue>,
+    ) -> XdlResult<XdlValue> {
+        self.stdlib
+            .call_procedure_with_keywords(name, args, keywords)
+    }
+
     /// Evaluate binary operations
     pub fn evaluate_binary_op(
         &self,
@@ -849,7 +860,7 @@ mod tests {
         let evaluator = Evaluator::new();
         let mut context = Context::new();
 
-        context.set_variable("x".to_string(), XdlValue::Double(3.14));
+        context.set_variable("x".to_string(), XdlValue::Double(3.5));
 
         let expr = Expression::Variable {
             name: "x".to_string(),
@@ -857,7 +868,7 @@ mod tests {
         };
 
         let result = evaluator.evaluate(&expr, &mut context).unwrap();
-        assert_eq!(result, XdlValue::Double(3.14));
+        assert_eq!(result, XdlValue::Double(3.5));
     }
 
     #[test]

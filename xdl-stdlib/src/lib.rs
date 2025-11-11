@@ -3,19 +3,27 @@
 //! Built-in functions and procedures for XDL
 
 pub mod array;
+mod charting_procs; // ECharts charting procedures
+pub mod complex;
+pub mod gpu_array; // GPU-accelerated array operations
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
+pub mod image; // Image processing
 pub mod io;
+pub mod linalg; // Linear algebra
 pub mod math;
 pub mod ml;
 pub mod python;
+pub mod signal; // Signal processing
 pub mod statistics;
 pub mod string;
 pub mod system;
+pub mod viz3d; // 3D volume visualization
 
 // Re-export graphics callback registration for GUI
 pub use graphics_procs::{register_gui_image_callback, register_gui_plot_callback};
 
+use std::collections::HashMap;
 use xdl_core::{XdlResult, XdlValue};
 
 /// Standard library function registry
@@ -32,6 +40,16 @@ impl StandardLibrary {
 
     /// Call a XDL procedure
     pub fn call_procedure(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
+        self.call_procedure_with_keywords(name, args, &HashMap::new())
+    }
+
+    /// Call a XDL procedure with keyword arguments
+    pub fn call_procedure_with_keywords(
+        &self,
+        name: &str,
+        args: &[XdlValue],
+        keywords: &HashMap<String, XdlValue>,
+    ) -> XdlResult<XdlValue> {
         match name.to_uppercase().as_str() {
             // Graphics procedures - Basic plotting
             "PLOT" => graphics_procs::plot(args),
@@ -39,6 +57,7 @@ impl StandardLibrary {
             "PLOTS" => graphics_procs::plots(args),
             "XYOUTS" => graphics_procs::xyouts(args),
             "AXIS" => graphics_procs::axis(args),
+            "SET_PLOT_BACKEND" => graphics_procs::set_plot_backend_proc(args),
 
             // Graphics procedures - 2D shapes
             "POLYFILL" => graphics_procs::polyfill(args),
@@ -92,6 +111,32 @@ impl StandardLibrary {
             "MAP_CONTINENTS" => graphics_procs::map_continents(args),
             "MAP_GRID" => graphics_procs::map_grid(args),
 
+            // Graphics procedures - Advanced visualization
+            "RENDER_COLORMAP" => graphics_procs::render_colormap(args),
+            "DEM_RENDER" => graphics_procs::dem_render(args),
+            "HILLSHADE" => graphics_procs::hillshade_proc(args),
+            "QUIVER" => graphics_procs::quiver_proc(args),
+
+            // Charting procedures - ECharts integration (interactive HTML)
+            "CHART_PLOT" => charting_procs::plot(args),
+            "CHART_SCATTER" => charting_procs::scatter(args),
+            "CHART_BAR" => charting_procs::bar(args),
+            "CHART_CONTOUR" => charting_procs::contour(args),
+            "CHART_SHADE_SURF" => charting_procs::shade_surf(args),
+            "CHART_PLOT3D" => charting_procs::plot3d(args),
+            "SURFACE3D" => charting_procs::surface3d(args),
+            "SCATTER3D" => charting_procs::scatter3d(args),
+
+            // VIZ3D procedures - 3D volume visualization
+            "VIZ3D_INIT" => viz3d::viz3d_init(args, keywords),
+            "VIZ3D_VOLUME" => viz3d::viz3d_volume(args, keywords),
+            "VIZ3D_COLORMAP" => viz3d::viz3d_colormap(args, keywords),
+            "VIZ3D_CAMERA" => viz3d::viz3d_camera(args, keywords),
+            "VIZ3D_RENDER" => viz3d::viz3d_render(args, keywords),
+            "VIZ3D_TRANSFER" => viz3d::viz3d_transfer(args, keywords),
+            "VIZ3D_LIGHT" => viz3d::viz3d_light(args, keywords),
+            "VIZ3D_ISOSURFACE" => viz3d::viz3d_isosurface(args, keywords),
+
             // System procedures
             "HELP" => system::help(args),
             "CD" => system::cd(args),
@@ -102,6 +147,39 @@ impl StandardLibrary {
             ".COMPILE" => system::compile_pro(args),
             ".CONTINUE" => system::continue_execution(args),
             "CATCH" => system::catch_error(args),
+            "WAIT" => system::wait(args),
+            "STOP" => system::stop(args),
+
+            // Signal processing procedures
+            "A_CORRELATE" => signal::a_correlate(args),
+            "C_CORRELATE" => signal::c_correlate(args),
+            "DIGITAL_FILTER" => signal::digital_filter(args),
+            "HILBERT" => signal::hilbert(args),
+            "MEDIAN_FILTER" => signal::median_filter(args),
+
+            // Image processing procedures
+            "CONVOL" => image::convol(args),
+            "DILATE" => image::dilate(args),
+            "ERODE" => image::erode(args),
+            "SOBEL" => image::sobel(args),
+            "ROBERTS" => image::roberts(args),
+            "PREWITT" => image::prewitt(args),
+            "GAUSSIAN_FILTER" => image::gaussian_filter(args),
+            "THRESHOLD" => image::threshold(args),
+
+            // Linear algebra procedures
+            "IDENTITY" => linalg::identity(args),
+            "INVERT" => linalg::invert(args),
+            "DETERM" => linalg::determ(args),
+            "CROSSP" => linalg::crossp(args),
+            "DOTP" => linalg::dotp(args),
+            "NORM" => linalg::norm(args),
+            "DIAGONAL" => linalg::diagonal(args),
+            "TRACE" => linalg::trace(args),
+            "SVDC" => linalg::svdc(args),
+            "LA_EIGENVAL" => linalg::la_eigenval(args),
+            "LUDC" => linalg::ludc(args),
+            "LUSOL" => linalg::lusol(args),
 
             // I/O procedures
             "FREE_LUN" => io::free_lun(args),
@@ -142,11 +220,15 @@ impl StandardLibrary {
             "FLOOR" => math::floor(args),
             "CEIL" => math::ceil(args),
             "ROUND" => math::round(args),
+            "FIX" => math::fix(args),
 
             // Array generation functions
             "FINDGEN" => math::findgen(args),
+            "DINDGEN" => math::dindgen(args),
             "INDGEN" => math::indgen(args),
             "RANDOMU" => math::randomu(args),
+            "RANDOMN" => math::randomn(args),
+            "MESHGRID" => math::meshgrid(args),
 
             // Signal processing
             "FFT" => math::fft(args),
@@ -212,6 +294,43 @@ impl StandardLibrary {
             "STRUPCASE" => string::strupcase(args),
             "STRLOWCASE" => string::strlowcase(args),
             "STRING" => string::string_fn(args),
+
+            // Complex number functions
+            "COMPLEX" => complex::complex(args),
+            "REAL" => complex::real_part(args),
+            "IMAGINARY" | "IMAG" => complex::imaginary_part(args),
+            "CONJ" => complex::conj(args),
+
+            // Linear algebra functions
+            "IDENTITY" => linalg::identity(args),
+            "INVERT" => linalg::invert(args),
+            "DETERM" => linalg::determ(args),
+            "CROSSP" => linalg::crossp(args),
+            "DOTP" => linalg::dotp(args),
+            "NORM" => linalg::norm(args),
+            "DIAGONAL" => linalg::diagonal(args),
+            "TRACE" => linalg::trace(args),
+            "SVDC" => linalg::svdc(args),
+            "LA_EIGENVAL" => linalg::la_eigenval(args),
+            "LUDC" => linalg::ludc(args),
+            "LUSOL" => linalg::lusol(args),
+
+            // Signal processing functions
+            "A_CORRELATE" => signal::a_correlate(args),
+            "C_CORRELATE" => signal::c_correlate(args),
+            "DIGITAL_FILTER" => signal::digital_filter(args),
+            "HILBERT" => signal::hilbert(args),
+            "MEDIAN_FILTER" => signal::median_filter(args),
+
+            // Image processing functions
+            "CONVOL" => image::convol(args),
+            "DILATE" => image::dilate(args),
+            "ERODE" => image::erode(args),
+            "SOBEL" => image::sobel(args),
+            "ROBERTS" => image::roberts(args),
+            "PREWITT" => image::prewitt(args),
+            "GAUSSIAN_FILTER" => image::gaussian_filter(args),
+            "THRESHOLD" => image::threshold(args),
 
             // Python integration functions
             "PYTHON_IMPORT" => python::python_import(args),

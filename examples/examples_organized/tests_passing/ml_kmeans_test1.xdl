@@ -1,4 +1,4 @@
-// File: ml_kmeans_test.xdl
+; File: ml_kmeans_test.xdl
 ; K-means Clustering Test
 ; Demonstrates XDLML_KMeans clustering algorithm
 

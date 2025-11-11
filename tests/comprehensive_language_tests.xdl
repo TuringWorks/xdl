@@ -38,5 +38,4 @@ endwhile
 nums = [1, 2, 3]
 size = n_elements(nums)
 
-print, "=== TESTS COMPLETED ==="</content>
-</xai:function_call">Test a comprehensive test based on the working control flow test
+print, "=== TESTS COMPLETED ==="

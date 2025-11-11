@@ -23,7 +23,7 @@ VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.0]
 VIZ3D_VOLUME, volume, DIMENSIONS=[grid, grid, grid]
 
 PRINT, '🎨 Launching Three.js visualization...'
-VIZ3D_RENDER, /INTERACTIVE
+VIZ3D_RENDER, INTERACTIVE=1
 
 PRINT, ''
 PRINT, '✓ Test complete!'

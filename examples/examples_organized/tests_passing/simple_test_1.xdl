@@ -10,5 +10,3 @@ CHART_PLOT, x, y, 'Simple Test Plot'
 
 PRINT, 'Chart window should open.'
 PRINT, 'If you see a chart, the integration is working!'
-
-END

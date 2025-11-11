@@ -438,10 +438,8 @@ IF abs_amp LT 0.0 THEN abs_amp = -abs_amp
 
 IF abs_amp GT 0.5 THEN BEGIN
     PRINT, '    Interpretation: Strong reflection - possible hydrocarbon indicator'
-END
 IF abs_amp LE 0.5 THEN BEGIN
     PRINT, '    Interpretation: Moderate reflection - brine-filled'
-END
 PRINT, ''
 
 ; ================================================================

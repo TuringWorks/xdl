@@ -158,7 +158,7 @@ print "Identity matrix created"
 print "10. TIME AND DATE FUNCTIONS"
 
 ; Time functions
-current_time = systime()
+; current_time = systime()
 print "System time retrieved"
 
 print "11. FILE I/O BASICS"

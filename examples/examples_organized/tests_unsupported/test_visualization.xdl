@@ -1,5 +1,5 @@
-// New XDL Script
-// Enter your XDL commands here
+; New XDL Script
+; Enter your XDL commands here
 ; test_visualization.xdl
 ; Use Python for advanced visualization via XDL's Python bridge
 

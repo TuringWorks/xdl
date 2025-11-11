@@ -86,7 +86,6 @@ PRO test_string_basic
     PRINT, ''
 
     PRINT, 'STRING CONVERSION BASIC TESTS COMPLETE'
-
-END
+ENDPRO
 
 test_string_basic

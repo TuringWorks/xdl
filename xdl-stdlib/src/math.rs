@@ -344,6 +344,103 @@ pub fn findgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Array(data))
 }
 
+/// Generate double precision array: DINDGEN(n)
+/// Same as FINDGEN but explicitly for double precision
+pub fn dindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // DINDGEN is identical to FINDGEN in our implementation
+    // since we use f64 for numeric arrays by default
+    findgen(_args)
+}
+
+/// FIX function - truncates to integer (floor for positive, ceil for negative)
+/// IDL/GDL FIX converts to integer by truncation towards zero
+pub fn fix(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FIX: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    match &_args[0] {
+        XdlValue::Array(arr) => {
+            let result: Vec<f64> = arr.iter().map(|v| v.trunc()).collect();
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            let result: Vec<f64> = data.iter().map(|v| v.trunc()).collect();
+            Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: shape.clone(),
+            })
+        }
+        _ => {
+            let val = _args[0].to_double()?;
+            Ok(XdlValue::Long(val.trunc() as i32))
+        }
+    }
+}
+
+/// MESHGRID function - creates coordinate arrays from coordinate vectors
+/// Usage: MESHGRID, x, y, xx, yy
+/// Creates 2D coordinate matrices from 1D coordinate vectors
+pub fn meshgrid(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "MESHGRID: Expected 2 arguments (x, y), got {}",
+            _args.len()
+        )));
+    }
+
+    let x_vec = match &_args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", _args[0].gdl_type()),
+            })
+        }
+    };
+
+    let y_vec = match &_args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", _args[1].gdl_type()),
+            })
+        }
+    };
+
+    let nx = x_vec.len();
+    let ny = y_vec.len();
+
+    // Create XX: each row is a copy of x_vec
+    let mut xx_data = Vec::with_capacity(nx * ny);
+    for _ in 0..ny {
+        xx_data.extend_from_slice(&x_vec);
+    }
+
+    // Create YY: each column is a copy of y_vec
+    let mut yy_data = Vec::with_capacity(nx * ny);
+    for &y_val in &y_vec {
+        for _ in 0..nx {
+            yy_data.push(y_val);
+        }
+    }
+
+    // Return as a 2-element nested array [XX, YY]
+    Ok(XdlValue::NestedArray(vec![
+        XdlValue::MultiDimArray {
+            data: xx_data,
+            shape: vec![nx, ny],
+        },
+        XdlValue::MultiDimArray {
+            data: yy_data,
+            shape: vec![nx, ny],
+        },
+    ]))
+}
+
 /// Generate integer array: INDGEN(n)
 pub fn indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     if _args.len() != 1 {
@@ -629,6 +726,67 @@ pub fn randomu(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let rand_val = ((current_seed % 1000000) as f64) / 1000000.0;
             values.push(rand_val);
         }
+        Ok(XdlValue::Array(values))
+    }
+}
+
+/// RANDOMN - Generate normally distributed random numbers (Gaussian/normal distribution)
+/// Usage: result = RANDOMN(seed [, d1, d2, ...])
+pub fn randomn(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "RANDOMN: Expected at least 1 argument (seed)".to_string(),
+        ));
+    }
+
+    // Get seed from first argument
+    let seed = match &args[0] {
+        XdlValue::Long(v) => *v as u64,
+        XdlValue::Int(v) => *v as u64,
+        XdlValue::Byte(v) => *v as u64,
+        XdlValue::Double(v) => *v as u64,
+        XdlValue::Float(v) => *v as u64,
+        _ => 12345u64, // Default seed
+    };
+
+    // Box-Muller transform to convert uniform random to normal distribution
+    fn box_muller(u1: f64, u2: f64) -> (f64, f64) {
+        let r = (-2.0 * u1.ln()).sqrt();
+        let theta = 2.0 * std::f64::consts::PI * u2;
+        (r * theta.cos(), r * theta.sin())
+    }
+
+    // Generate uniform random numbers using LCG
+    fn uniform_random(seed: &mut u64) -> f64 {
+        let a = 1664525u64;
+        let c = 1013904223u64;
+        *seed = a.wrapping_mul(*seed).wrapping_add(c);
+        ((*seed % 1000000) as f64) / 1000000.0
+    }
+
+    if args.len() == 1 {
+        // Single random number
+        let mut current_seed = seed;
+        let u1 = uniform_random(&mut current_seed);
+        let u2 = uniform_random(&mut current_seed);
+        let (z0, _z1) = box_muller(u1, u2);
+        Ok(XdlValue::Double(z0))
+    } else {
+        // Array of random numbers
+        let n = args[1].to_long()? as usize;
+        let mut values = Vec::new();
+        let mut current_seed = seed;
+
+        for _i in 0..n.div_ceil(2) {
+            let u1 = uniform_random(&mut current_seed);
+            let u2 = uniform_random(&mut current_seed);
+            let (z0, z1) = box_muller(u1, u2);
+            values.push(z0);
+            if values.len() < n {
+                values.push(z1);
+            }
+        }
+        values.truncate(n);
         Ok(XdlValue::Array(values))
     }
 }

@@ -8,4 +8,3 @@ FOR i=0, nx-1 DO FOR j=0, ny-1 DO BEGIN
 ENDFOR
 
 PRINT, 'Done'
-END

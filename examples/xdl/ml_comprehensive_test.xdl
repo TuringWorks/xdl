@@ -78,15 +78,12 @@ PRINT, 'Test 8: XDLML_KMeans (K-means clustering)'
 cluster_data = FLTARR(30)
 FOR i=0, 9 DO BEGIN
     cluster_data[i] = FINDGEN(1) * 2 + 10.0  ; Around 10
-END
 endfor
 FOR i=10, 19 DO BEGIN
     cluster_data[i] = FINDGEN(1) * 2 + 50.0  ; Around 50
-END
 endfor
 FOR i=20, 29 DO BEGIN
     cluster_data[i] = FINDGEN(1) * 2 + 90.0  ; Around 90
-END
 endfor
 km_result = XDLML_KMEANS(cluster_data, 3, 50, 42)
 PRINT, 'First cluster labels:', km_result[0], km_result[5], km_result[9]

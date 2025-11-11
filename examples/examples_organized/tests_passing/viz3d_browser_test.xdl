@@ -1,10 +1,11 @@
 ; ================================================================
-; VIZ3D Native Rendering Test
+; VIZ3D Browser-Based Rendering Test
 ; ================================================================
-; Tests native window-based volume visualization
+; Demonstrates browser-based volume visualization
+; Multiple visualizations can run simultaneously in separate tabs
 ; ================================================================
 
-PRINT, '🖥️  VIZ3D Native Rendering Test'
+PRINT, '🌐 VIZ3D Browser-Based Rendering Test'
 PRINT, ''
 
 ; Create a simple 32x32x32 test volume
@@ -30,15 +31,17 @@ ENDFOR
 PRINT, '  Volume created!'
 PRINT, ''
 
-; Visualize with native window
-VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Native Test - Sphere'
+; Visualize in browser
+VIZ3D_INIT, WINDOW_SIZE=[1280, 720], TITLE='Browser Test - Sphere'
 VIZ3D_COLORMAP, 'VIRIDIS'
 VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
 VIZ3D_VOLUME, volume, DIMENSIONS=[grid, grid, grid]
 
-PRINT, '🖥️  Launching native visualization window...'
-VIZ3D_RENDER, /INTERACTIVE, TITLE='Sphere Visualization'
+PRINT, '📊 Launching visualization in browser...'
+VIZ3D_RENDER, INTERACTIVE=1, TITLE='Sphere Visualization'
 
 PRINT, ''
 PRINT, '✓ Test complete!'
+PRINT, '  The visualization is now running in your browser.'
+PRINT, '  You can close this XDL script, but the browser tab will remain active.'
 PRINT, ''

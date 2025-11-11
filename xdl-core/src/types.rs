@@ -367,7 +367,7 @@ mod tests {
     #[test]
     fn test_gdl_value_types() {
         assert_eq!(XdlValue::Byte(42).gdl_type(), GdlType::Byte);
-        assert_eq!(XdlValue::Float(3.14).gdl_type(), GdlType::Float);
+        assert_eq!(XdlValue::Float(3.5).gdl_type(), GdlType::Float);
         assert_eq!(
             XdlValue::String("hello".to_string()).gdl_type(),
             GdlType::String

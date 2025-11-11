@@ -8,5 +8,3 @@ z = [[1, 2, 3, 2, 1], [2, 5, 8, 5, 2], [3, 8, 10, 8, 3], [2, 5, 8, 5, 2], [1, 2,
 CONTOUR, z
 
 PRINT, 'CONTOUR plot complete!'
-
-END

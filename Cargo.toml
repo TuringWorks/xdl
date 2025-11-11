@@ -7,7 +7,13 @@ members = [
     "xdl-stdlib",
     "xdl-cli",
     "xdl-ffi",
-    "xdl-gui"
+    "xdl-gui",
+    "xdl-viz3d",
+    "xdl-viz3d-web",
+    "xdl-viz3d-threejs",
+    "xdl-charts",
+    "xdl-chart-viewer",
+    "xdl-amp"
 ]
 resolver = "2"
 
@@ -54,7 +60,8 @@ clap = { version = "4.4", features = ["derive"] }
 
 # Graphics and UI
 plotters = "0.3"
-wgpu = "0.18"
+wgpu = "23.0"
+winit = "0.30"
 eframe = "0.28"
 egui = "0.28"
 egui_plot = "0.28"

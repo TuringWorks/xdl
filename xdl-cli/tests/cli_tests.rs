@@ -3,7 +3,7 @@ use std::process::Command;
 #[test]
 fn test_cli_version() {
     let output = Command::new("cargo")
-        .args(&["run", "--bin", "xdl", "--", "--version"])
+        .args(["run", "--bin", "xdl", "--", "--version"])
         .current_dir("/Users/ravindraboddipalli/sources/xdl")
         .output()
         .expect("Failed to run xdl --version");
@@ -16,7 +16,7 @@ fn test_cli_version() {
 #[test]
 fn test_cli_help() {
     let output = Command::new("cargo")
-        .args(&["run", "--bin", "xdl", "--", "--help"])
+        .args(["run", "--bin", "xdl", "--", "--help"])
         .current_dir("/Users/ravindraboddipalli/sources/xdl")
         .output()
         .expect("Failed to run xdl --help");
@@ -29,7 +29,7 @@ fn test_cli_help() {
 #[test]
 fn test_cli_execute_expression() {
     let output = Command::new("cargo")
-        .args(&["run", "--bin", "xdl", "--", "-e", "2 + 3"])
+        .args(["run", "--bin", "xdl", "--", "-e", "2 + 3"])
         .current_dir("/Users/ravindraboddipalli/sources/xdl")
         .output()
         .expect("Failed to run xdl -e '2 + 3'");

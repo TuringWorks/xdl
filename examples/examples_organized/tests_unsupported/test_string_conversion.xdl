@@ -257,7 +257,8 @@ PRO test_string_conversion
     PRINT, 'STRING CONVERSION TESTS COMPLETE'
     PRINT, '========================================='
 
-END
+
+ENDPRO
 
 ; Run the test suite
 test_string_conversion

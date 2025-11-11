@@ -247,7 +247,6 @@ PRO TRACE_STREAMLINE, u, v, x0, y0, x_grid, y_grid, nsteps, sx, sy
         IF sy[i] LT 0 THEN sy[i] = sy[i] + 2.0*!PI
     ENDFOR
     ; Return via output parameters
-END
 
 ; Trace several streamlines from different seed points
 n_streamlines = 16

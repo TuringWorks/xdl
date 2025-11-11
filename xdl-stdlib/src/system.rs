@@ -293,3 +293,57 @@ pub fn catch_error(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("CATCH: Error handling not yet implemented");
     Ok(XdlValue::Undefined)
 }
+
+/// WAIT - Pause execution for specified seconds
+/// Usage: WAIT, seconds
+pub fn wait(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::RuntimeError(
+            "WAIT requires at least one argument (seconds)".to_string(),
+        ));
+    }
+
+    let seconds = match &args[0] {
+        XdlValue::Long(n) => *n as f64,
+        XdlValue::Double(f) => *f,
+        XdlValue::Float(f) => *f as f64,
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "WAIT requires a numeric argument".to_string(),
+            ))
+        }
+    };
+
+    if seconds < 0.0 {
+        return Err(XdlError::RuntimeError(
+            "WAIT time cannot be negative".to_string(),
+        ));
+    }
+
+    // Sleep for the specified duration
+    std::thread::sleep(std::time::Duration::from_secs_f64(seconds));
+
+    Ok(XdlValue::Undefined)
+}
+
+/// STOP - Halt program execution
+/// Usage: STOP [, message]
+pub fn stop(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let message = if args.is_empty() {
+        "% Stop encountered: Execution halted".to_string()
+    } else {
+        match &args[0] {
+            XdlValue::String(s) => format!("% Stop encountered: {}", s),
+            _ => format!("% Stop encountered: {:?}", args[0]),
+        }
+    };
+
+    // In GDL/IDL, STOP enters an interactive debug mode
+    // For now, we'll print the message and return an error to halt execution
+    eprintln!("{}", message);
+    eprintln!("% Execution halted.");
+
+    Err(XdlError::RuntimeError(
+        "Execution stopped by STOP command".to_string(),
+    ))
+}

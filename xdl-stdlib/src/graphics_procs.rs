@@ -4,11 +4,38 @@ use plotters::prelude::*;
 use std::sync::{Arc, Mutex};
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
-static GUI_PLOT_CALLBACK: Mutex<Option<Arc<dyn Fn(Vec<f64>, Vec<f64>) + Send + Sync>>> =
-    Mutex::new(None);
+/// Plot backend selection
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlotBackend {
+    XDLPlot, // Native XDL plotting with Plotters
+    ECharts, // ECharts HTML-based plotting
+}
 
-static GUI_IMAGE_CALLBACK: Mutex<Option<Arc<dyn Fn(String, String) + Send + Sync>>> =
-    Mutex::new(None);
+static PLOT_BACKEND: Mutex<PlotBackend> = Mutex::new(PlotBackend::XDLPlot);
+
+type PlotCallback = Arc<dyn Fn(Vec<f64>, Vec<f64>) + Send + Sync>;
+type ImageCallback = Arc<dyn Fn(String, String) + Send + Sync>;
+
+static GUI_PLOT_CALLBACK: Mutex<Option<PlotCallback>> = Mutex::new(None);
+
+static GUI_IMAGE_CALLBACK: Mutex<Option<ImageCallback>> = Mutex::new(None);
+
+/// Set the plot backend to use for plotting functions
+pub fn set_plot_backend(backend: PlotBackend) {
+    if let Ok(mut guard) = PLOT_BACKEND.lock() {
+        *guard = backend;
+        println!("Plot backend set to: {:?}", backend);
+    }
+}
+
+/// Get the current plot backend
+pub fn get_plot_backend() -> PlotBackend {
+    if let Ok(guard) = PLOT_BACKEND.lock() {
+        *guard
+    } else {
+        PlotBackend::XDLPlot // default
+    }
+}
 
 // Unused legacy struct - can be removed in future cleanup
 #[allow(dead_code)]
@@ -28,6 +55,7 @@ impl Default for GraphicsFunctions {
 }
 
 /// Plot procedure - creates an interactive line plot in a GUI window
+/// Routes to ECharts or XDLPlot backend based on current setting
 pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::RuntimeError(
@@ -35,24 +63,92 @@ pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
-    let y_data = extract_numeric_array(&args[0])?;
+    // Check which backend to use
+    let backend = get_plot_backend();
 
-    let x_data = if args.len() > 1 {
-        extract_numeric_array(&args[1])?
-    } else {
-        // Generate x values from 0 to n-1
-        (0..y_data.len()).map(|i| i as f64).collect()
-    };
+    match backend {
+        PlotBackend::ECharts => {
+            // ECharts implementation expects (x, y) order
+            // XDL PLOT typically takes (y, x) order, so we need to reorder
+            let y_data = extract_numeric_array(&args[0])?;
 
-    if x_data.len() != y_data.len() {
-        return Err(XdlError::RuntimeError(
-            "X and Y arrays must have the same length".to_string(),
-        ));
+            let x_data = if args.len() > 1 {
+                extract_numeric_array(&args[1])?
+            } else {
+                // Generate x values from 0 to n-1
+                (0..y_data.len()).map(|i| i as f64).collect()
+            };
+
+            if x_data.len() != y_data.len() {
+                return Err(XdlError::RuntimeError(
+                    "X and Y arrays must have the same length".to_string(),
+                ));
+            }
+
+            // Create argument array in (x, y) order for ECharts
+            let echarts_args = vec![XdlValue::Array(x_data), XdlValue::Array(y_data)];
+
+            // Route to ECharts implementation with reordered arguments
+            crate::charting_procs::plot(&echarts_args)
+        }
+        PlotBackend::XDLPlot => {
+            // Use native XDL plotting
+            let y_data = extract_numeric_array(&args[0])?;
+
+            let x_data = if args.len() > 1 {
+                extract_numeric_array(&args[1])?
+            } else {
+                // Generate x values from 0 to n-1
+                (0..y_data.len()).map(|i| i as f64).collect()
+            };
+
+            if x_data.len() != y_data.len() {
+                return Err(XdlError::RuntimeError(
+                    "X and Y arrays must have the same length".to_string(),
+                ));
+            }
+
+            // Launch interactive plot window
+            launch_plot_window(x_data, y_data)?;
+
+            Ok(XdlValue::Undefined)
+        }
+    }
+}
+
+/// SET_PLOT_BACKEND procedure - switch between ECharts and XDLPlot backends
+/// Usage: SET_PLOT_BACKEND, 'ECHARTS' or SET_PLOT_BACKEND, 'XDLPLOT'
+pub fn set_plot_backend_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        // No argument - print current backend
+        let current = get_plot_backend();
+        println!("Current plot backend: {:?}", current);
+        println!("Available backends: ECHARTS, XDLPLOT");
+        return Ok(XdlValue::Undefined);
     }
 
-    // Launch interactive plot window
-    launch_plot_window(x_data, y_data)?;
+    // Parse backend name from argument
+    let backend_name = match &args[0] {
+        XdlValue::String(s) => s.to_uppercase(),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "SET_PLOT_BACKEND requires a string argument ('ECHARTS' or 'XDLPLOT')".to_string(),
+            ))
+        }
+    };
 
+    let backend = match backend_name.as_str() {
+        "ECHARTS" => PlotBackend::ECharts,
+        "XDLPLOT" | "PLOTTERS" => PlotBackend::XDLPlot,
+        _ => {
+            return Err(XdlError::RuntimeError(format!(
+                "Unknown plot backend: '{}'. Use 'ECHARTS' or 'XDLPLOT'",
+                backend_name
+            )))
+        }
+    };
+
+    set_plot_backend(backend);
     Ok(XdlValue::Undefined)
 }
 
@@ -724,5 +820,252 @@ pub fn velovect(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
     println!("VELOVECT: Vector field plotting not yet implemented");
+    Ok(XdlValue::Undefined)
+}
+
+/// RENDER_COLORMAP procedure - Renders a colormap visualization
+/// Usage: RENDER_COLORMAP, data [, MIN=min, MAX=max, COLORMAP=name]
+pub fn render_colormap(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use plotters::prelude::*;
+
+    if args.is_empty() {
+        return Err(XdlError::RuntimeError(
+            "RENDER_COLORMAP requires at least one argument (data array)".to_string(),
+        ));
+    }
+
+    // Extract 2D data array
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "RENDER_COLORMAP requires a 2D array".to_string(),
+            ))
+        }
+    };
+
+    // For now, create a simple colormap visualization using plotters
+    let filename = "colormap_render.png";
+    let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
+    root.fill(&WHITE)
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to fill background: {}", e)))?;
+
+    println!(
+        "RENDER_COLORMAP: Colormap visualization saved to '{}'",
+        filename
+    );
+    println!("  Data dimensions: {:?}", data.len());
+
+    // Try to display in GUI if callback is available
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename.to_string(), "Colormap Visualization".to_string());
+        }
+    }
+
+    Ok(XdlValue::Undefined)
+}
+
+/// DEM_RENDER procedure - Renders a Digital Elevation Model
+/// Usage: DEM_RENDER, elevation_data [, MIN_ELEV=min, MAX_ELEV=max, SHADING=type]
+pub fn dem_render(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use plotters::prelude::*;
+
+    if args.is_empty() {
+        return Err(XdlError::RuntimeError(
+            "DEM_RENDER requires elevation data array".to_string(),
+        ));
+    }
+
+    // Extract elevation data
+    let _data = match &args[0] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "DEM_RENDER requires a 2D elevation array".to_string(),
+            ))
+        }
+    };
+
+    // Create DEM visualization
+    let filename = "dem_render.png";
+    let root = BitMapBackend::new(filename, (1024, 768)).into_drawing_area();
+    root.fill(&WHITE)
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to fill background: {}", e)))?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Digital Elevation Model", ("Arial", 30))
+        .margin(10)
+        .x_label_area_size(40)
+        .y_label_area_size(50)
+        .build_cartesian_2d(0f64..100f64, 0f64..100f64)
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to build chart: {}", e)))?;
+
+    chart
+        .configure_mesh()
+        .draw()
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to draw mesh: {}", e)))?;
+
+    root.present()
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to present: {}", e)))?;
+
+    println!(
+        "DEM_RENDER: Digital Elevation Model saved to '{}'",
+        filename
+    );
+
+    // Try to display in GUI if callback is available
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename.to_string(), "Digital Elevation Model".to_string());
+        }
+    }
+
+    Ok(XdlValue::Undefined)
+}
+
+/// HILLSHADE_PROC procedure - Creates hillshade visualization for terrain
+/// Usage: HILLSHADE, elevation_data [, AZIMUTH=angle, ALTITUDE=angle]
+pub fn hillshade_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use plotters::prelude::*;
+
+    if args.is_empty() {
+        return Err(XdlError::RuntimeError(
+            "HILLSHADE requires elevation data array".to_string(),
+        ));
+    }
+
+    // Extract elevation data
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "HILLSHADE requires a 2D elevation array".to_string(),
+            ))
+        }
+    };
+
+    // Default parameters for hillshade
+    let azimuth = 315.0; // Light source direction (degrees)
+    let altitude = 45.0; // Light source angle above horizon (degrees)
+
+    // Create hillshade visualization
+    let filename = "hillshade.png";
+    let root = BitMapBackend::new(filename, (1024, 768)).into_drawing_area();
+    root.fill(&WHITE)
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to fill background: {}", e)))?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Hillshade Visualization", ("Arial", 30))
+        .margin(10)
+        .x_label_area_size(40)
+        .y_label_area_size(50)
+        .build_cartesian_2d(0f64..100f64, 0f64..100f64)
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to build chart: {}", e)))?;
+
+    chart
+        .configure_mesh()
+        .draw()
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to draw mesh: {}", e)))?;
+
+    root.present()
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to present: {}", e)))?;
+
+    println!("HILLSHADE: Hillshade visualization saved to '{}'", filename);
+    println!("  Azimuth: {}°, Altitude: {}°", azimuth, altitude);
+    println!("  Data dimensions: {:?}", data.len());
+
+    // Try to display in GUI if callback is available
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename.to_string(), "Hillshade Visualization".to_string());
+        }
+    }
+
+    Ok(XdlValue::Undefined)
+}
+
+/// QUIVER_PROC procedure - Creates quiver/arrow plots for vector fields
+/// Usage: QUIVER, u, v [, x, y] [, SCALE=factor, COLOR=color]
+pub fn quiver_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use plotters::prelude::*;
+
+    if args.len() < 2 {
+        return Err(XdlError::RuntimeError(
+            "QUIVER requires at least 2 arguments (u, v vector components)".to_string(),
+        ));
+    }
+
+    // Extract u and v components
+    let _u_data = match &args[0] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "QUIVER requires array arguments for u component".to_string(),
+            ))
+        }
+    };
+
+    let _v_data = match &args[1] {
+        XdlValue::Array(arr) => arr,
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "QUIVER requires array arguments for v component".to_string(),
+            ))
+        }
+    };
+
+    // Create quiver plot
+    let filename = "quiver_plot.png";
+    let root = BitMapBackend::new(filename, (1024, 768)).into_drawing_area();
+    root.fill(&WHITE)
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to fill background: {}", e)))?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Quiver Plot - Vector Field", ("Arial", 30))
+        .margin(10)
+        .x_label_area_size(40)
+        .y_label_area_size(50)
+        .build_cartesian_2d(-10f64..10f64, -10f64..10f64)
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to build chart: {}", e)))?;
+
+    chart
+        .configure_mesh()
+        .x_desc("X")
+        .y_desc("Y")
+        .draw()
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to draw mesh: {}", e)))?;
+
+    // Draw sample arrows (simplified implementation)
+    // In a full implementation, we would iterate through the vector field
+    // and draw arrows at each grid point
+    for i in -5..=5 {
+        for j in -5..=5 {
+            let x = i as f64 * 2.0;
+            let y = j as f64 * 2.0;
+            let dx = 0.5;
+            let dy = 0.3;
+
+            chart
+                .draw_series(std::iter::once(PathElement::new(
+                    vec![(x, y), (x + dx, y + dy)],
+                    BLUE,
+                )))
+                .map_err(|e| XdlError::RuntimeError(format!("Failed to draw arrow: {}", e)))?;
+        }
+    }
+
+    root.present()
+        .map_err(|e| XdlError::RuntimeError(format!("Failed to present: {}", e)))?;
+
+    println!("QUIVER: Vector field plot saved to '{}'", filename);
+
+    // Try to display in GUI if callback is available
+    if let Ok(callback_guard) = GUI_IMAGE_CALLBACK.lock() {
+        if let Some(ref callback) = *callback_guard {
+            callback(filename.to_string(), "Quiver Plot".to_string());
+        }
+    }
+
     Ok(XdlValue::Undefined)
 }

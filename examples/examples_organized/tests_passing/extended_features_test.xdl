@@ -29,7 +29,7 @@ real_part = real(complex_val)
 identity = identity(3)
 
 ; Time functions
-current_time = systime()
+; current_time = systime()
 
 ; Array indexing
 test_arr = [10, 20, 30, 40, 50]
