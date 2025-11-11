@@ -1,16 +1,19 @@
+// File: test_echarts_contour.xdl
 // File: test_contour.xdl
 ; Test CONTOUR plot with heatmap visualization
 
-SET_PLOT_BACKEND, 'XDLPLOT'
+SET_PLOT_BACKEND, 'ECHARTS'
 
 PRINT, 'Testing CONTOUR plot...'
 
 ; Create peak-like data
 z = [[1, 2, 3, 2, 1], [2, 5, 8, 5, 2], [3, 8, 10, 8, 3], [2, 5, 8, 5, 2], [1, 2, 3, 2, 1]]
 
-CONTOUR, z
+CHART_CONTOUR, z
 
 PRINT, 'CONTOUR plot complete!'
 
+
+// Click Execute to run this code
 
 // Click Execute to run this code

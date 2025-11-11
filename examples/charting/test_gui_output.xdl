@@ -1,0 +1,10 @@
+; Test file to verify GUI output capture
+PRINT, 'Testing GUI output capture'
+PRINT, ''
+
+x = 42
+PRINT, 'The answer is:'
+PRINT, x
+
+PRINT, ''
+PRINT, 'If you see this in the results pane, output capture is working!'

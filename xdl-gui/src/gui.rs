@@ -27,10 +27,28 @@ use once_cell::sync::Lazy;
 use crate::image_window::ImageWindow;
 use crate::plot_window::PlotWindow;
 use xdl_interpreter::Interpreter;
+use xdl_matlab::transpile_matlab_to_xdl;
 use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
 
-// Global queue for pending plot windows to show after execution
-static PENDING_PLOT_WINDOWS: Lazy<Mutex<Vec<PlotWindow>>> = Lazy::new(|| Mutex::new(Vec::new()));
+// Structure to hold plot parameters for deferred window creation
+#[derive(Clone)]
+struct PlotParams {
+    x_data: Vec<f64>,
+    y_data: Vec<f64>,
+}
+
+// Global queue for pending plot parameters to create windows after execution
+static PENDING_PLOT_PARAMS: Lazy<Mutex<Vec<PlotParams>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
+// Structure to hold image parameters for deferred window creation
+#[derive(Clone)]
+struct ImageParams {
+    image_path: String,
+    title: String,
+}
+
+// Global queue for pending image parameters to create windows after execution
+static PENDING_IMAGE_PARAMS: Lazy<Mutex<Vec<ImageParams>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 // Variable data structure for table display
 #[derive(Clone)]
@@ -794,13 +812,25 @@ impl XdlGui {
         execute_btn.set_callback(move |btn| {
             info!("=== EXECUTE BUTTON CLICKED ===");
 
-            // Clear any pending plot windows from previous executions
-            if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
+            // Clear any pending plot parameters from previous executions
+            if let Ok(mut plots) = PENDING_PLOT_PARAMS.lock() {
                 let old_count = plots.len();
                 plots.clear();
                 if old_count > 0 {
                     info!(
-                        "Cleared {} old plot windows from previous execution",
+                        "Cleared {} old plot parameters from previous execution",
+                        old_count
+                    );
+                }
+            }
+
+            // Clear any pending image parameters from previous executions
+            if let Ok(mut images) = PENDING_IMAGE_PARAMS.lock() {
+                let old_count = images.len();
+                images.clear();
+                if old_count > 0 {
+                    info!(
+                        "Cleared {} old image parameters from previous execution",
                         old_count
                     );
                 }
@@ -892,13 +922,47 @@ impl XdlGui {
                         btn_for_thread.activate();
                         cancel_btn_for_result.deactivate();
 
-                        // Show all queued plot windows
-                        if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
-                            info!("Showing {} queued plot windows...", plots.len());
-                            for mut plot_win in plots.drain(..) {
-                                plot_win.show();
+                        // Create and show all queued plot windows from parameters
+                        if let Ok(mut params) = PENDING_PLOT_PARAMS.lock() {
+                            info!(
+                                "Creating {} plot windows from queued parameters...",
+                                params.len()
+                            );
+                            for param in params.drain(..) {
+                                match PlotWindow::new(param.x_data, param.y_data) {
+                                    Ok(mut plot_win) => {
+                                        plot_win.show();
+                                        info!("Plot window shown");
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to create plot window: {}", e);
+                                    }
+                                }
                             }
                             info!("All plot windows shown");
+                        }
+
+                        // Create and show all queued image windows from parameters
+                        if let Ok(mut params) = PENDING_IMAGE_PARAMS.lock() {
+                            info!(
+                                "Creating {} image windows from queued parameters...",
+                                params.len()
+                            );
+                            for param in params.drain(..) {
+                                match ImageWindow::new(&param.image_path, &param.title) {
+                                    Ok(mut img_win) => {
+                                        img_win.show();
+                                        info!("Image window shown: {}", param.title);
+                                    }
+                                    Err(e) => {
+                                        error!(
+                                            "Failed to create image window for {}: {}",
+                                            param.image_path, e
+                                        );
+                                    }
+                                }
+                            }
+                            info!("All image windows shown");
                         }
                         // Callback completes - no need to repeat
                     } else {
@@ -955,24 +1019,25 @@ impl XdlGui {
             out_buffer_clone_clear.set_text("Output cleared.\n");
         });
 
-        // Register plot callback - queue plots to show after execution
-        register_gui_plot_callback(
-            move |x_data, y_data| match PlotWindow::new(x_data, y_data) {
-                Ok(plot_win) => {
-                    if let Ok(mut plots) = PENDING_PLOT_WINDOWS.lock() {
-                        plots.push(plot_win);
-                        info!("Queued plot window (total: {})", plots.len());
-                    }
-                }
-                Err(e) => eprintln!("Plot error: {}", e),
-            },
-        );
+        // Register plot callback - queue parameters to create windows later
+        register_gui_plot_callback(move |x_data, y_data| {
+            if let Ok(mut params) = PENDING_PLOT_PARAMS.lock() {
+                params.push(PlotParams {
+                    x_data: x_data.clone(),
+                    y_data: y_data.clone(),
+                });
+                info!("Queued plot parameters (total: {})", params.len());
+            }
+        });
 
-        // Register image display callback for 3D plots
+        // Register image display callback for 3D plots - queue parameters to create windows later
         register_gui_image_callback(move |image_path, title| {
-            match ImageWindow::new(&image_path, &title) {
-                Ok(mut img_win) => img_win.show(),
-                Err(e) => eprintln!("Image display error: {}", e),
+            if let Ok(mut params) = PENDING_IMAGE_PARAMS.lock() {
+                params.push(ImageParams {
+                    image_path: image_path.clone(),
+                    title: title.clone(),
+                });
+                info!("Queued image parameters (total: {})", params.len());
             }
         });
 
@@ -1087,6 +1152,38 @@ impl XdlGui {
         }
     }
 
+    /// Detect if code is MATLAB syntax and transpile if needed
+    fn maybe_transpile_matlab(code: &str, filename: &str) -> (String, bool) {
+        // Check if this looks like MATLAB code by checking for MATLAB-specific patterns
+        let is_matlab = filename.ends_with(".m")
+            || code.contains("disp(")
+            || code.contains("fprintf(")
+            || code.contains("% ")  // MATLAB comment style
+            || code.trim_start().starts_with("%"); // MATLAB comment at start
+
+        if is_matlab {
+            info!("Detected MATLAB syntax, transpiling to XDL...");
+            match transpile_matlab_to_xdl(code) {
+                Ok(xdl_code) => {
+                    info!("Successfully transpiled MATLAB to XDL");
+                    info!("Transpiled code:\n{}", xdl_code);
+                    (xdl_code, true)
+                }
+                Err(e) => {
+                    error!("MATLAB transpilation failed: {}", e);
+                    // Return original code and mark as failed transpilation
+                    (
+                        format!("; MATLAB transpilation error: {}\n{}", e, code),
+                        false,
+                    )
+                }
+            }
+        } else {
+            // Not MATLAB, return as-is
+            (code.to_string(), false)
+        }
+    }
+
     /// Execute XDL code asynchronously with cancellation support
     fn execute_xdl_code_async(
         xdl_code: &str,
@@ -1099,6 +1196,13 @@ impl XdlGui {
 
         let mut results = Vec::new();
         results.push(format!("=== Executing {} ===", filename));
+
+        // Detect and transpile MATLAB code if needed
+        let (code_to_execute, was_transpiled) = Self::maybe_transpile_matlab(xdl_code, filename);
+
+        if was_transpiled {
+            results.push("✓ Transpiled MATLAB to XDL".to_string());
+        }
         results.push("✓ Executing with XDL interpreter".to_string());
         results.push("".to_string());
 
@@ -1119,7 +1223,7 @@ impl XdlGui {
         }
 
         // Parse and execute
-        let execution_result = match tokenize(xdl_code) {
+        let execution_result = match tokenize(&code_to_execute) {
             Ok(tokens) => {
                 // Check for cancellation after tokenization
                 if cancel_flag.load(Ordering::Relaxed) {

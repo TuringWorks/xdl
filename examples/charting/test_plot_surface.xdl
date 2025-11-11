@@ -1,5 +1,8 @@
+// File: test_plot_surface.xdl
 ; Test that PLOT and SURFACE now use xdl-charts/Tauri
 ; These should open interactive Tauri windows instead of static images
+
+SET_PLOT_BACKEND, 'XDLPLOT'
 
 PRINT, '======================================='
 PRINT, 'Testing PLOT and SURFACE with xdl-charts'
@@ -41,3 +44,6 @@ PRINT, '======================================='
 PRINT, 'Test complete!'
 PRINT, 'If you see Tauri windows, integration works!'
 PRINT, '======================================='
+
+
+// Click Execute to run this code

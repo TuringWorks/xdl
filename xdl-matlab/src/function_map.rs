@@ -55,17 +55,27 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("plot", "PLOT");
     map.insert("xlabel", "XTITLE");
     map.insert("ylabel", "YTITLE");
+    map.insert("zlabel", "ZTITLE"); // Z-axis label (may not be supported in 2D plots)
     map.insert("title", "TITLE");
+    map.insert("legend", "LEGEND"); // legend -> LEGEND (XDL may not support, will be ignored)
     map.insert("figure", "WINDOW");
     map.insert("hold", "OPLOT"); // hold on -> use OPLOT
     map.insert("clf", "ERASE");
     map.insert("close", "WDELETE");
 
+    // MATLAB compatibility functions
+    map.insert("linspace", "LINSPACE");
+    map.insert("logspace", "LOGSPACE");
+    map.insert("meshgrid", "MESHGRID");
+    map.insert("ndgrid", "NDGRID");
+    map.insert("repmat", "REPMAT");
+    map.insert("squeeze", "SQUEEZE");
+    map.insert("interp1", "INTERP1");
+
     // Array manipulation
     map.insert("reshape", "REFORM");
     map.insert("sort", "SORT");
     map.insert("find", "WHERE");
-    map.insert("repmat", "REBIN");
 
     // I/O
     map.insert("disp", "PRINT");
@@ -92,10 +102,7 @@ pub fn get_xdl_function(matlab_func: &str) -> Option<&'static str> {
 
 /// Check if a MATLAB function needs special handling during transpilation
 pub fn needs_special_handling(matlab_func: &str) -> bool {
-    matches!(
-        matlab_func,
-        "ones" | "rand" | "randn" | "eye" | "linspace" | "logspace"
-    )
+    matches!(matlab_func, "ones" | "rand" | "randn" | "eye")
 }
 
 #[cfg(test)]
