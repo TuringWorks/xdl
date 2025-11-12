@@ -137,6 +137,15 @@ impl<'a> Parser<'a> {
             Token::While => self.parse_while_statement(),
             Token::Repeat => self.parse_repeat_statement(),
             Token::Return => self.parse_return_statement(),
+            Token::Goto => self.parse_goto_statement(),
+            Token::Label(name) => {
+                let label_name = name.clone();
+                self.advance();
+                Ok(Statement::Label {
+                    name: label_name,
+                    location: Location::unknown(),
+                })
+            }
             Token::Break => {
                 self.advance();
                 Ok(Statement::Break {
@@ -418,6 +427,29 @@ impl<'a> Parser<'a> {
 
         Ok(Statement::Return {
             value,
+            location: Location::unknown(),
+        })
+    }
+
+    /// Parse GOTO statement
+    fn parse_goto_statement(&mut self) -> XdlResult<Statement> {
+        self.consume(Token::Goto, "Expected 'goto'")?;
+
+        // Get the label name
+        let label = if let Token::Identifier(name) = self.peek() {
+            name.clone()
+        } else {
+            return Err(XdlError::ParseError {
+                message: "Expected label name after GOTO".to_string(),
+                line: 1,
+                column: self.current,
+            });
+        };
+
+        self.advance(); // consume label identifier
+
+        Ok(Statement::Goto {
+            label,
             location: Location::unknown(),
         })
     }

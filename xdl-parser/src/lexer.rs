@@ -45,6 +45,7 @@ pub enum Token {
     Pro,
     Endpro,
     Return,
+    Goto,
     Common,
     CompileOpt,
     Begin,
@@ -193,6 +194,7 @@ fn parse_identifier_or_keyword(input: &str) -> ParseResult<'_, Token> {
         "PROCEDURE" | "PRO" => Token::Pro,
         "ENDPRO" => Token::Endpro,
         "RETURN" => Token::Return,
+        "GOTO" => Token::Goto,
 
         // Other keywords
         "COMMON" => Token::Common,
