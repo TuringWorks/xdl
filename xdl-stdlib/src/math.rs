@@ -1,6 +1,5 @@
 //! Mathematical functions
 
-use xdl_core::{Dimension, LongArray};
 use xdl_core::{GdlType, XdlError, XdlResult, XdlValue};
 
 /// Convert XdlValue to f64 for mathematical operations
@@ -364,39 +363,271 @@ pub fn round(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(from_float(result, input.gdl_type()))
 }
 
-/// Generate floating point array: FINDGEN(n)
-pub fn findgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if _args.len() != 1 {
+/// Helper function to extract dimensions from arguments
+/// Used by all *INDGEN and *GEN array generation functions
+fn extract_dimensions(args: &[XdlValue]) -> XdlResult<Vec<usize>> {
+    if args.is_empty() || args.len() > 8 {
         return Err(XdlError::InvalidArgument(format!(
-            "FINDGEN: Expected 1 argument, got {}",
-            _args.len()
+            "Array generation: Expected 1-8 dimension arguments, got {}",
+            args.len()
         )));
     }
 
-    let n = match &_args[0] {
-        XdlValue::Long(v) => *v as usize,
-        XdlValue::Int(v) => *v as usize,
-        XdlValue::Byte(v) => *v as usize,
-        XdlValue::Float(v) => (*v as i64).max(0) as usize, // Convert float to int, ensure non-negative
-        XdlValue::Double(v) => (*v as i64).max(0) as usize, // Convert double to int, ensure non-negative
-        _ => {
-            return Err(XdlError::TypeMismatch {
-                expected: "numeric".to_string(),
-                actual: format!("{:?}", _args[0].gdl_type()),
-            })
-        }
-    };
-
-    let data: Vec<f64> = (0..n).map(|i| i as f64).collect();
-    Ok(XdlValue::Array(data))
+    let mut dimensions = Vec::new();
+    for arg in args {
+        let dim = match arg {
+            XdlValue::Long(v) => {
+                if *v < 0 {
+                    return Err(XdlError::InvalidArgument(
+                        "Array dimensions must be non-negative".to_string(),
+                    ));
+                }
+                *v as usize
+            }
+            XdlValue::Int(v) => {
+                if *v < 0 {
+                    return Err(XdlError::InvalidArgument(
+                        "Array dimensions must be non-negative".to_string(),
+                    ));
+                }
+                *v as usize
+            }
+            XdlValue::Byte(v) => *v as usize,
+            XdlValue::Float(v) => {
+                if *v < 0.0 {
+                    return Err(XdlError::InvalidArgument(
+                        "Array dimensions must be non-negative".to_string(),
+                    ));
+                }
+                *v as usize
+            }
+            XdlValue::Double(v) => {
+                if *v < 0.0 {
+                    return Err(XdlError::InvalidArgument(
+                        "Array dimensions must be non-negative".to_string(),
+                    ));
+                }
+                *v as usize
+            }
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", arg.gdl_type()),
+                })
+            }
+        };
+        dimensions.push(dim);
+    }
+    Ok(dimensions)
 }
 
-/// Generate double precision array: DINDGEN(n)
-/// Same as FINDGEN but explicitly for double precision
+/// Generate floating point array: FINDGEN(D1 [, D2, ..., D8])
+/// Result = FINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with floating-point
+/// values starting from START (default 0.0) and incrementing by INCREMENT (default 1.0).
+///
+/// Note: Currently INCREMENT and START keywords are not yet supported.
+/// TODO: Add keyword argument support when evaluator supports them.
+///
+/// Examples:
+///   FINDGEN(5)       ; Returns [0.0, 1.0, 2.0, 3.0, 4.0]
+///   FINDGEN(3, 4)    ; Returns 3x4 array with values 0-11
+///   FINDGEN(2, 3, 2) ; Returns 2x3x2 array with values 0-11
+pub fn findgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Extract dimensions from arguments
+    let dimensions = extract_dimensions(_args)?;
+
+    // Calculate total size
+    let total_size: usize = dimensions.iter().product();
+
+    // Default values (TODO: get from keywords when supported)
+    let start = 0.0_f64;
+    let increment = 1.0_f64;
+
+    // Generate data: start + (index * increment)
+    let data: Vec<f64> = (0..total_size)
+        .map(|i| start + (i as f64 * increment))
+        .collect();
+
+    // Return appropriate type based on number of dimensions
+    if dimensions.len() == 1 {
+        // 1D array - return simple Array
+        Ok(XdlValue::Array(data))
+    } else {
+        // Multi-dimensional array - return MultiDimArray with shape
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// Generate double precision array: DINDGEN(D1 [, D2, ..., D8])
+/// Result = DINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Same as FINDGEN but explicitly for double precision.
+/// Since our implementation uses f64 for numeric arrays by default,
+/// DINDGEN is identical to FINDGEN.
+///
+/// See FINDGEN documentation for details.
 pub fn dindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     // DINDGEN is identical to FINDGEN in our implementation
     // since we use f64 for numeric arrays by default
     findgen(_args)
+}
+
+/// Generate byte integer array: BINDGEN(D1 [, D2, ..., D8])
+/// Result = BINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with byte integer
+/// values (0-255) starting from START (default 0) and incrementing by INCREMENT (default 1).
+///
+/// Examples:
+///   BINDGEN(5)       ; Returns byte array [0, 1, 2, 3, 4]
+///   BINDGEN(3, 4)    ; Returns 3x4 byte array with values 0-11
+pub fn bindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(_args)?;
+    let total_size: usize = dimensions.iter().product();
+
+    let start = 0_u8;
+    let increment = 1_u8;
+
+    // Generate data as f64 for compatibility with XdlValue::Array
+    let data: Vec<f64> = (0..total_size)
+        .map(|i| ((start as usize + i * increment as usize) % 256) as f64)
+        .collect();
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// Generate complex integer array: CINDGEN(D1 [, D2, ..., D8])
+/// Result = CINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with complex values.
+/// Real part increments from 0, imaginary part is 0.
+///
+/// Note: XDL currently represents complex as interleaved [real, imag, real, imag, ...]
+pub fn cindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(_args)?;
+    let total_size: usize = dimensions.iter().product();
+
+    // Generate complex data: [real0, imag0, real1, imag1, ...]
+    let mut data = Vec::with_capacity(total_size * 2);
+    for i in 0..total_size {
+        data.push(i as f64); // Real part
+        data.push(0.0); // Imaginary part
+    }
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// Generate double complex integer array: DCINDGEN(D1 [, D2, ..., D8])
+/// Result = DCINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Same as CINDGEN but for double precision complex.
+/// Since we use f64 by default, this is identical to CINDGEN.
+pub fn dcindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    cindgen(_args)
+}
+
+/// Generate integer array: INDGEN(D1 [, D2, ..., D8])
+/// Result = INDGEN(D1[, ..., D8] [, /BYTE | , /COMPLEX | , /DCOMPLEX | , /DOUBLE | , /FLOAT |
+///                 INCREMENT=value | , /L64 | , /LONG | , /STRING | , /UINT | , /UL64 | , /ULONG]
+///                [, START=value] [, TYPE=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with integer values.
+/// Type flags are not yet supported (TODO: add when evaluator supports keyword flags).
+///
+/// Examples:
+///   INDGEN(5)       ; Returns [0, 1, 2, 3, 4]
+///   INDGEN(3, 4)    ; Returns 3x4 array with values 0-11
+pub fn indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(_args)?;
+    let total_size: usize = dimensions.iter().product();
+
+    // Generate integer data as f64 for compatibility
+    let data: Vec<f64> = (0..total_size).map(|i| i as f64).collect();
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// Generate long integer array: LINDGEN(D1 [, D2, ..., D8])
+/// Result = LINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with long integer values.
+///
+/// Examples:
+///   LINDGEN(5)       ; Returns [0, 1, 2, 3, 4]
+///   LINDGEN(3, 4)    ; Returns 3x4 array with values 0-11
+pub fn lindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Same as INDGEN for our implementation
+    indgen(_args)
+}
+
+/// Generate 64-bit long integer array: L64INDGEN(D1 [, D2, ..., D8])
+/// Result = L64INDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with 64-bit long integer values.
+pub fn l64indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    indgen(_args)
+}
+
+/// Generate string array: SINDGEN(D1 [, D2, ..., D8])
+/// Result = SINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with string representations
+/// of integer values.
+///
+/// Note: Currently returns numeric array. String arrays need full XdlValue support.
+pub fn sindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // For now, return numeric array (TODO: implement proper string arrays)
+    indgen(_args)
+}
+
+/// Generate unsigned integer array: UINDGEN(D1 [, D2, ..., D8])
+/// Result = UINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with unsigned integer values.
+pub fn uindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    indgen(_args)
+}
+
+/// Generate unsigned 64-bit long array: UL64INDGEN(D1 [, D2, ..., D8])
+/// Result = UL64INDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with unsigned 64-bit long values.
+pub fn ul64indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    indgen(_args)
+}
+
+/// Generate unsigned long integer array: ULINDGEN(D1 [, D2, ..., D8])
+/// Result = ULINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+///
+/// Creates an array with dimensions D1 through D8, filled with unsigned long integer values.
+pub fn ulindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    indgen(_args)
 }
 
 /// FIX function - truncates to integer (floor for positive, ceil for negative)
@@ -486,38 +717,6 @@ pub fn meshgrid(_args: &[XdlValue]) -> XdlResult<XdlValue> {
             shape: vec![nx, ny],
         },
     ]))
-}
-
-/// Generate integer array: INDGEN(n)
-pub fn indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if _args.len() != 1 {
-        return Err(XdlError::InvalidArgument(format!(
-            "INDGEN: Expected 1 argument, got {}",
-            _args.len()
-        )));
-    }
-
-    let n = match &_args[0] {
-        XdlValue::Long(v) => *v as usize,
-        XdlValue::Int(v) => *v as usize,
-        XdlValue::Byte(v) => *v as usize,
-        XdlValue::Float(v) => (*v as i64).max(0) as usize, // Convert float to int, ensure non-negative
-        XdlValue::Double(v) => (*v as i64).max(0) as usize, // Convert double to int, ensure non-negative
-        _ => {
-            return Err(XdlError::TypeMismatch {
-                expected: "numeric".to_string(),
-                actual: format!("{:?}", _args[0].gdl_type()),
-            })
-        }
-    };
-
-    let data: Vec<i32> = (0..n as i32).collect();
-    let dim = Dimension::from_size(n)?;
-    let _array = LongArray::from_vec(data, dim, GdlType::Long)?;
-
-    // For now, return the first element to show it works
-    // TODO: Properly integrate array types with XdlValue
-    Ok(XdlValue::Long(0))
 }
 
 #[cfg(test)]

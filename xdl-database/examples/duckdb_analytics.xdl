@@ -1,0 +1,87 @@
+; DuckDB Analytics Example
+; Demonstrates using DuckDB for in-process analytical queries
+
+PRO duckdb_analytics
+    ; Create a database object
+    objdb = OBJ_NEW('XDLdbDatabase')
+
+    ; Connect to DuckDB (creates file if doesn't exist)
+    PRINT, 'Connecting to DuckDB...'
+    objdb->Connect, CONNECTION='analytics.duckdb'
+
+    ; Create sample sales table
+    PRINT, 'Creating sales table...'
+    create_sql = 'CREATE TABLE IF NOT EXISTS sales (' + $
+                 'id INTEGER, ' + $
+                 'product VARCHAR, ' + $
+                 'region VARCHAR, ' + $
+                 'amount DECIMAL(10,2), ' + $
+                 'sale_date DATE)'
+    objdb->ExecuteCommand, create_sql
+
+    ; Insert sample data
+    PRINT, 'Loading sample data...'
+    objdb->ExecuteCommand, "INSERT INTO sales VALUES (1, 'Widget A', 'North', 1500.00, '2024-01-15')"
+    objdb->ExecuteCommand, "INSERT INTO sales VALUES (2, 'Widget B', 'South', 2200.00, '2024-01-16')"
+    objdb->ExecuteCommand, "INSERT INTO sales VALUES (3, 'Widget A', 'East', 1800.00, '2024-01-17')"
+    objdb->ExecuteCommand, "INSERT INTO sales VALUES (4, 'Widget C', 'North', 3100.00, '2024-01-18')"
+    objdb->ExecuteCommand, "INSERT INTO sales VALUES (5, 'Widget B', 'West', 1900.00, '2024-01-19')"
+
+    ; Aggregate sales by product
+    PRINT, ''
+    PRINT, 'Sales by Product:'
+    PRINT, '-------------------------------------------'
+    product_query = 'SELECT product, SUM(amount) as total_sales, COUNT(*) as num_sales ' + $
+                    'FROM sales GROUP BY product ORDER BY total_sales DESC'
+    recordset1 = objdb->ExecuteSQL(product_query)
+    product_data = recordset1->GetData()
+    PRINT, product_data
+
+    ; Sales by region
+    PRINT, ''
+    PRINT, 'Sales by Region:'
+    PRINT, '-------------------------------------------'
+    region_query = 'SELECT region, SUM(amount) as total_sales ' + $
+                   'FROM sales GROUP BY region'
+    recordset2 = objdb->ExecuteSQL(region_query)
+    region_data = recordset2->GetData()
+    PRINT, region_data
+
+    ; Top selling product
+    PRINT, ''
+    PRINT, 'Top Selling Product:'
+    PRINT, '-------------------------------------------'
+    top_query = 'SELECT product, SUM(amount) as total FROM sales ' + $
+                'GROUP BY product ORDER BY total DESC LIMIT 1'
+    recordset3 = objdb->ExecuteSQL(top_query)
+    top_data = recordset3->GetData()
+    PRINT, top_data
+
+    ; Total sales statistics
+    PRINT, ''
+    PRINT, 'Overall Statistics:'
+    PRINT, '-------------------------------------------'
+    stats_query = 'SELECT COUNT(*) as num_transactions, ' + $
+                  'SUM(amount) as total_revenue, ' + $
+                  'AVG(amount) as avg_sale, ' + $
+                  'MAX(amount) as largest_sale, ' + $
+                  'MIN(amount) as smallest_sale ' + $
+                  'FROM sales'
+    recordset4 = objdb->ExecuteSQL(stats_query)
+    stats_data = recordset4->GetData()
+    PRINT, stats_data
+
+    ; Cleanup
+    recordset1->Destroy()
+    recordset2->Destroy()
+    recordset3->Destroy()
+    recordset4->Destroy()
+    objdb->Disconnect()
+    OBJ_DESTROY, objdb
+
+    PRINT, ''
+    PRINT, 'Analytics example completed!'
+ENDPRO
+
+; Run the example
+duckdb_analytics
