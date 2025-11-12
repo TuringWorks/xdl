@@ -1,0 +1,265 @@
+; MySQL Database Example
+; Demonstrates connecting to MySQL/MariaDB and performing CRUD operations
+
+PRO mysql_example
+    ; Create a database object
+    objdb = OBJ_NEW('XDLdbDatabase')
+
+    ; MySQL Connection string
+    ; Format: mysql://user:password@host:port/database
+    ;
+    ; Examples:
+    ; - mysql://root:password@localhost:3306/testdb
+    ; - mysql://user@localhost/mydb (port defaults to 3306)
+    ; - mysql://user:pass@192.168.1.100/data
+    ;
+    ; Also works with MariaDB which uses the same protocol
+
+    conn_str = 'mysql://root:password@localhost:3306/testdb'
+
+    PRINT, 'Connecting to MySQL...'
+    objdb->Connect, CONNECTION=conn_str
+
+    ; Check connection
+    IF objdb->IsConnected() THEN BEGIN
+        PRINT, 'Successfully connected to MySQL!'
+        PRINT, 'Database type: ', objdb->DatabaseType()
+    ENDIF ELSE BEGIN
+        PRINT, 'Connection failed!'
+        RETURN
+    ENDELSE
+
+    ; ==================================================================
+    ; CREATE TABLE
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Creating Test Table ==='
+
+    ; Drop table if exists
+    objdb->ExecuteCommand, 'DROP TABLE IF EXISTS employees'
+
+    ; Create table
+    create_sql = 'CREATE TABLE employees (' + $
+                 'id INT AUTO_INCREMENT PRIMARY KEY, ' + $
+                 'name VARCHAR(100) NOT NULL, ' + $
+                 'department VARCHAR(50), ' + $
+                 'salary DECIMAL(10,2), ' + $
+                 'hire_date DATE, ' + $
+                 'is_active BOOLEAN DEFAULT 1)'
+
+    objdb->ExecuteCommand, create_sql
+    PRINT, 'Table created successfully'
+
+    ; ==================================================================
+    ; INSERT DATA
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Inserting Sample Data ==='
+
+    ; Insert individual records
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary, hire_date) " + $
+                          "VALUES ('Alice Johnson', 'Engineering', 95000.00, '2020-01-15')"
+
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary, hire_date) " + $
+                          "VALUES ('Bob Smith', 'Marketing', 75000.00, '2019-06-20')"
+
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary, hire_date) " + $
+                          "VALUES ('Carol Davis', 'Engineering', 88000.00, '2021-03-10')"
+
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary, hire_date) " + $
+                          "VALUES ('David Wilson', 'Sales', 82000.00, '2020-09-05')"
+
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary, hire_date) " + $
+                          "VALUES ('Eve Martinez', 'Engineering', 92000.00, '2021-11-22')"
+
+    PRINT, 'Inserted 5 employee records'
+
+    ; ==================================================================
+    ; SELECT QUERIES
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Query 1: All Employees ==='
+    PRINT, '-------------------------------------------'
+
+    recordset = objdb->ExecuteSQL('SELECT * FROM employees ORDER BY salary DESC')
+
+    ; Display results
+    n_rows = recordset->RowCount()
+    n_cols = recordset->ColumnCount()
+    PRINT, 'Found ' + STRTRIM(n_rows,2) + ' employees'
+    PRINT, 'Columns: ' + STRTRIM(n_cols,2)
+
+    ; Get column names
+    col_names = recordset->ColumnNames()
+    PRINT, 'Column names:', col_names
+
+    ; Get all data
+    data = recordset->GetData()
+    PRINT, data
+
+    recordset->Destroy()
+
+    ; Query by department
+    PRINT, ''
+    PRINT, '=== Query 2: Engineering Department ==='
+    PRINT, '-------------------------------------------'
+
+    eng_query = "SELECT name, salary, hire_date FROM employees " + $
+                "WHERE department = 'Engineering' ORDER BY salary DESC"
+
+    eng_recordset = objdb->ExecuteSQL(eng_query)
+    eng_data = eng_recordset->GetData()
+    PRINT, 'Engineering employees:', eng_recordset->RowCount()
+    PRINT, eng_data
+
+    ; Get specific column
+    PRINT, ''
+    PRINT, 'Names only:'
+    names = eng_recordset->GetColumn('name')
+    FOR i = 0, N_ELEMENTS(names)-1 DO BEGIN
+        PRINT, '  ' + STRTRIM(i+1,2) + '. ' + names[i]
+    ENDFOR
+
+    eng_recordset->Destroy()
+
+    ; ==================================================================
+    ; AGGREGATE QUERIES
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Query 3: Salary Statistics ==='
+    PRINT, '-------------------------------------------'
+
+    stats_query = 'SELECT ' + $
+                  'department, ' + $
+                  'COUNT(*) as emp_count, ' + $
+                  'AVG(salary) as avg_salary, ' + $
+                  'MIN(salary) as min_salary, ' + $
+                  'MAX(salary) as max_salary ' + $
+                  'FROM employees ' + $
+                  'GROUP BY department ' + $
+                  'ORDER BY avg_salary DESC'
+
+    stats_recordset = objdb->ExecuteSQL(stats_query)
+    stats_data = stats_recordset->GetData()
+    PRINT, 'Department statistics:'
+    PRINT, stats_data
+
+    stats_recordset->Destroy()
+
+    ; ==================================================================
+    ; UPDATE OPERATIONS
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Update Operation ==='
+
+    ; Give raises to Engineering department
+    update_sql = "UPDATE employees SET salary = salary * 1.10 " + $
+                 "WHERE department = 'Engineering'"
+
+    rows_affected = objdb->ExecuteCommand(update_sql)
+    PRINT, 'Gave 10% raise to Engineering department'
+    PRINT, 'Rows affected:', rows_affected
+
+    ; Verify update
+    verify_query = "SELECT name, salary FROM employees " + $
+                   "WHERE department = 'Engineering' ORDER BY salary DESC"
+
+    verify_recordset = objdb->ExecuteSQL(verify_query)
+    verify_data = verify_recordset->GetData()
+    PRINT, 'Updated salaries:'
+    PRINT, verify_data
+
+    verify_recordset->Destroy()
+
+    ; ==================================================================
+    ; DATE/TIME QUERIES
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Query 4: Recent Hires (2021+) ==='
+    PRINT, '-------------------------------------------'
+
+    date_query = "SELECT name, department, hire_date " + $
+                 "FROM employees " + $
+                 "WHERE hire_date >= '2021-01-01' " + $
+                 "ORDER BY hire_date"
+
+    date_recordset = objdb->ExecuteSQL(date_query)
+    date_data = date_recordset->GetData()
+    PRINT, 'Recent hires:', date_recordset->RowCount()
+    PRINT, date_data
+
+    date_recordset->Destroy()
+
+    ; ==================================================================
+    ; ADVANCED FEATURES
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Advanced Query: Salary Ranges ==='
+    PRINT, '-------------------------------------------'
+
+    range_query = "SELECT " + $
+                  "  CASE " + $
+                  "    WHEN salary < 80000 THEN 'Junior' " + $
+                  "    WHEN salary < 90000 THEN 'Mid-Level' " + $
+                  "    ELSE 'Senior' " + $
+                  "  END as level, " + $
+                  "  name, salary " + $
+                  "FROM employees " + $
+                  "ORDER BY salary DESC"
+
+    range_recordset = objdb->ExecuteSQL(range_query)
+    range_data = range_recordset->GetData()
+    PRINT, 'Employee levels:'
+    PRINT, range_data
+
+    range_recordset->Destroy()
+
+    ; ==================================================================
+    ; DELETE OPERATIONS
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Delete Operation ==='
+
+    ; Delete an employee
+    delete_sql = "DELETE FROM employees WHERE name = 'Bob Smith'"
+    deleted = objdb->ExecuteCommand(delete_sql)
+    PRINT, 'Deleted Bob Smith from database'
+    PRINT, 'Rows deleted:', deleted
+
+    ; Count remaining
+    count_query = "SELECT COUNT(*) as total FROM employees"
+    count_recordset = objdb->ExecuteSQL(count_query)
+    count_data = count_recordset->GetData()
+    PRINT, 'Remaining employees:', count_data
+
+    count_recordset->Destroy()
+
+    ; ==================================================================
+    ; CLEANUP
+    ; ==================================================================
+
+    PRINT, ''
+    PRINT, '=== Cleanup ==='
+
+    ; Drop the test table
+    objdb->ExecuteCommand, 'DROP TABLE IF EXISTS employees'
+    PRINT, 'Table dropped'
+
+    ; Disconnect
+    objdb->Disconnect()
+    OBJ_DESTROY, objdb
+
+    PRINT, ''
+    PRINT, 'MySQL example completed successfully!'
+ENDPRO
+
+; Run the example
+mysql_example

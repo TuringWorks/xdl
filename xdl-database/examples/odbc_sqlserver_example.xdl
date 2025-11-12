@@ -1,0 +1,124 @@
+; ODBC SQL Server Example
+; Demonstrates connecting to SQL Server via ODBC and querying data
+
+PRO odbc_sqlserver_example
+    ; Create a database object
+    objdb = OBJ_NEW('XDLdbDatabase')
+
+    ; ODBC Connection string for SQL Server
+    ; Format: DRIVER={driver_name};SERVER=server;DATABASE=dbname;UID=user;PWD=password
+    ;
+    ; Common ODBC drivers:
+    ; - SQL Server: "ODBC Driver 17 for SQL Server" or "SQL Server"
+    ; - PostgreSQL: "PostgreSQL Unicode"
+    ; - MySQL: "MySQL ODBC 8.0 Driver"
+    ; - Oracle: "Oracle in OraClient19Home1"
+    ; - SQLite: "SQLite3 ODBC Driver"
+
+    conn_str = 'DRIVER={ODBC Driver 17 for SQL Server};' + $
+               'SERVER=localhost;' + $
+               'DATABASE=TestDB;' + $
+               'UID=sa;' + $
+               'PWD=YourPassword123;' + $
+               'TrustServerCertificate=yes'
+
+    PRINT, 'Connecting to SQL Server via ODBC...'
+    objdb->Connect, CONNECTION=conn_str
+
+    ; Check connection
+    IF objdb->IsConnected() THEN BEGIN
+        PRINT, 'Successfully connected!'
+    ENDIF ELSE BEGIN
+        PRINT, 'Connection failed!'
+        RETURN
+    ENDELSE
+
+    ; Create a test table
+    PRINT, ''
+    PRINT, 'Creating test table...'
+    create_sql = 'CREATE TABLE Products (' + $
+                 'ProductID INT PRIMARY KEY, ' + $
+                 'ProductName NVARCHAR(100), ' + $
+                 'Category NVARCHAR(50), ' + $
+                 'Price DECIMAL(10,2))'
+
+    ; Drop table if exists first
+    objdb->ExecuteCommand, 'DROP TABLE IF EXISTS Products'
+    objdb->ExecuteCommand, create_sql
+
+    ; Insert sample data
+    PRINT, 'Inserting sample data...'
+    objdb->ExecuteCommand, "INSERT INTO Products VALUES (1, 'Laptop', 'Electronics', 1299.99)"
+    objdb->ExecuteCommand, "INSERT INTO Products VALUES (2, 'Mouse', 'Accessories', 29.99)"
+    objdb->ExecuteCommand, "INSERT INTO Products VALUES (3, 'Keyboard', 'Accessories', 79.99)"
+    objdb->ExecuteCommand, "INSERT INTO Products VALUES (4, 'Monitor', 'Electronics', 349.99)"
+
+    ; Query all products
+    PRINT, ''
+    PRINT, 'All Products:'
+    PRINT, '-------------------------------------------'
+    recordset = objdb->ExecuteSQL('SELECT * FROM Products ORDER BY Price DESC')
+
+    ; Display results
+    n_rows = recordset->RowCount()
+    PRINT, 'Found ' + STRTRIM(n_rows,2) + ' products'
+
+    data = recordset->GetData()
+    PRINT, data
+
+    ; Query by category
+    PRINT, ''
+    PRINT, 'Electronics Products:'
+    PRINT, '-------------------------------------------'
+    electronics_query = "SELECT ProductName, Price FROM Products WHERE Category = 'Electronics'"
+    elec_recordset = objdb->ExecuteSQL(electronics_query)
+    elec_data = elec_recordset->GetData()
+    PRINT, elec_data
+
+    ; Calculate statistics
+    PRINT, ''
+    PRINT, 'Price Statistics:'
+    PRINT, '-------------------------------------------'
+    stats_query = 'SELECT ' + $
+                  'COUNT(*) as ProductCount, ' + $
+                  'AVG(Price) as AvgPrice, ' + $
+                  'MIN(Price) as MinPrice, ' + $
+                  'MAX(Price) as MaxPrice ' + $
+                  'FROM Products'
+    stats_recordset = objdb->ExecuteSQL(stats_query)
+    stats_data = stats_recordset->GetData()
+    PRINT, stats_data
+
+    ; Update a product
+    PRINT, ''
+    PRINT, 'Updating product price...'
+    update_sql = "UPDATE Products SET Price = 1199.99 WHERE ProductID = 1"
+    rows_affected = objdb->ExecuteCommand(update_sql)
+    PRINT, 'Rows updated:', rows_affected
+
+    ; Verify update
+    verify_query = "SELECT ProductName, Price FROM Products WHERE ProductID = 1"
+    verify_recordset = objdb->ExecuteSQL(verify_query)
+    verify_data = verify_recordset->GetData()
+    PRINT, 'Updated product:', verify_data
+
+    ; Cleanup
+    verify_recordset->Destroy()
+    stats_recordset->Destroy()
+    elec_recordset->Destroy()
+    recordset->Destroy()
+
+    ; Clean up table
+    PRINT, ''
+    PRINT, 'Cleaning up...'
+    objdb->ExecuteCommand, 'DROP TABLE Products'
+
+    objdb->Disconnect()
+    OBJ_DESTROY, objdb
+
+    PRINT, ''
+    PRINT, 'ODBC example completed successfully!'
+ENDPRO
+
+; Run the example
+odbc_sqlserver_example

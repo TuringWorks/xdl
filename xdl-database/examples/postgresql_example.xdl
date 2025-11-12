@@ -1,0 +1,86 @@
+; PostgreSQL Database Example
+; Demonstrates connecting to PostgreSQL and querying data
+
+PRO postgresql_example
+    ; Create a database object
+    objdb = OBJ_NEW('XDLdbDatabase')
+
+    ; Connection string for PostgreSQL
+    ; Format: postgresql://username:password@hostname:port/database
+    conn_str = 'postgresql://localhost:5432/testdb'
+
+    PRINT, 'Connecting to PostgreSQL...'
+    objdb->Connect, CONNECTION=conn_str
+
+    ; Check connection
+    IF objdb->IsConnected() THEN BEGIN
+        PRINT, 'Successfully connected!'
+    ENDIF ELSE BEGIN
+        PRINT, 'Connection failed!'
+        RETURN
+    ENDELSE
+
+    ; Create a test table
+    PRINT, 'Creating test table...'
+    create_sql = 'CREATE TABLE IF NOT EXISTS employees (' + $
+                 'id SERIAL PRIMARY KEY, ' + $
+                 'name VARCHAR(100), ' + $
+                 'department VARCHAR(50), ' + $
+                 'salary NUMERIC(10,2))'
+    objdb->ExecuteCommand, create_sql
+
+    ; Insert sample data
+    PRINT, 'Inserting sample data...'
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary) VALUES ('Alice', 'Engineering', 95000.00)"
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary) VALUES ('Bob', 'Marketing', 75000.00)"
+    objdb->ExecuteCommand, "INSERT INTO employees (name, department, salary) VALUES ('Charlie', 'Engineering', 105000.00)"
+
+    ; Query the data
+    PRINT, 'Querying data...'
+    query = 'SELECT * FROM employees ORDER BY salary DESC'
+    recordset = objdb->ExecuteSQL(query)
+
+    ; Get recordset info
+    n_rows = recordset->RowCount()
+    n_cols = recordset->ColumnCount()
+    col_names = recordset->ColumnNames()
+
+    PRINT, 'Retrieved ' + STRTRIM(n_rows,2) + ' rows with ' + STRTRIM(n_cols,2) + ' columns'
+    PRINT, 'Columns:', col_names
+
+    ; Get all data
+    PRINT, ''
+    PRINT, 'Employee Data:'
+    PRINT, '-------------------------------------------'
+    data = recordset->GetData()
+    PRINT, data
+
+    ; Query specific department
+    PRINT, ''
+    PRINT, 'Engineering Department:'
+    PRINT, '-------------------------------------------'
+    eng_query = "SELECT name, salary FROM employees WHERE department = 'Engineering'"
+    eng_recordset = objdb->ExecuteSQL(eng_query)
+    eng_data = eng_recordset->GetData()
+    PRINT, eng_data
+
+    ; Calculate average salary
+    avg_query = 'SELECT AVG(salary) as avg_salary FROM employees'
+    avg_recordset = objdb->ExecuteSQL(avg_query)
+    avg_data = avg_recordset->GetData()
+    PRINT, ''
+    PRINT, 'Average Salary:', avg_data
+
+    ; Cleanup
+    avg_recordset->Destroy()
+    eng_recordset->Destroy()
+    recordset->Destroy()
+    objdb->Disconnect()
+    OBJ_DESTROY, objdb
+
+    PRINT, ''
+    PRINT, 'Example completed successfully!'
+ENDPRO
+
+; Run the example
+postgresql_example

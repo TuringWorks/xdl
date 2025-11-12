@@ -1,0 +1,74 @@
+[package]
+name = "xdl-database"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Database connectivity module for XDL - supports PostgreSQL, MySQL, DuckDB, ODBC, Redis, and more"
+
+[dependencies]
+# Core XDL dependencies
+xdl-core = { path = "../xdl-core" }
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json = "1.0"
+
+# Database drivers (all optional)
+# SQL databases
+sqlx = { version = "0.8", features = ["runtime-tokio-native-tls"], optional = true }
+postgres = { version = "0.19", features = ["with-serde_json-1"], optional = true }
+tokio-postgres = { version = "0.7", features = ["with-serde_json-1"], optional = true }
+mysql_async = { version = "0.34", optional = true }
+duckdb = { version = "1.1", features = ["bundled"], optional = true }
+
+# ODBC
+odbc-api = { version = "8.0", optional = true }
+
+# NoSQL / Key-Value stores
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"], optional = true }
+
+# Apache Kafka (for streaming data)
+rdkafka = { version = "0.36", features = ["tokio"], optional = true }
+
+# Connection pooling
+deadpool = { version = "0.12", optional = true }
+deadpool-postgres = { version = "0.14", optional = true }
+
+# URL parsing for connection strings
+url = "2.5"
+
+# For global registry
+lazy_static = "1.4"
+
+[features]
+default = ["postgres-support", "duckdb-support", "redis-support"]
+
+# Individual database support
+postgres-support = ["tokio-postgres", "deadpool-postgres"]
+mysql-support = ["mysql_async"]
+duckdb-support = ["duckdb"]
+odbc-support = ["odbc-api"]
+redis-support = ["redis"]
+kafka-support = ["rdkafka"]
+
+# Enable all databases
+all = [
+    "postgres-support",
+    "mysql-support",
+    "duckdb-support",
+    "odbc-support",
+    "redis-support",
+    "kafka-support"
+]
+
+[dev-dependencies]
+tokio-test = "0.4"
