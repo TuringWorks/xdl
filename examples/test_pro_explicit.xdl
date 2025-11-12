@@ -1,0 +1,11 @@
+; Test procedures with explicit calling syntax
+
+PRO test_with_args, x, y
+  PRINT, 'x =', x
+  PRINT, 'y =', y
+ENDPRO
+
+; Call with explicit arguments
+test_with_args, 10, 20
+
+PRINT, 'Test completed'

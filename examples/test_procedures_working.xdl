@@ -1,0 +1,57 @@
+; Test user-defined procedures with PRO/ENDPRO
+; Demonstrates working functionality
+
+PRINT, '=== Testing User-Defined Procedures ==='
+PRINT, ''
+
+; Test 1: Procedure with parameters
+PRO greet, name, age
+  PRINT, 'Hello,', name
+  PRINT, 'You are', age, 'years old'
+ENDPRO
+
+PRINT, 'Test 1: Calling procedure with parameters'
+greet, 'Alice', 30
+PRINT, ''
+
+; Test 2: Procedure with calculations
+PRO calculate_area, width, height
+  area = width * height
+  PRINT, 'Rectangle:', width, 'x', height
+  PRINT, 'Area =', area
+ENDPRO
+
+PRINT, 'Test 2: Procedure with calculations'
+calculate_area, 10, 20
+PRINT, ''
+
+; Test 3: Nested procedure calls
+PRO inner, val
+  result = val * 2
+  PRINT, 'Inner procedure: doubled', val, 'to', result
+ENDPRO
+
+PRO outer, x
+  PRINT, 'Outer procedure called with', x
+  inner, x
+ENDPRO
+
+PRINT, 'Test 3: Nested procedure calls'
+outer, 21
+PRINT, ''
+
+; Test 4: Procedure modifying variables
+PRO compute, a, b
+  sum = a + b
+  diff = a - b
+  prod = a * b
+  PRINT, 'Sum:', sum
+  PRINT, 'Difference:', diff
+  PRINT, 'Product:', prod
+ENDPRO
+
+PRINT, 'Test 4: Multiple operations'
+compute, 15, 5
+PRINT, ''
+
+PRINT, '=== All procedure tests completed successfully! ==='

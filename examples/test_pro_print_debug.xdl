@@ -1,0 +1,13 @@
+; Debug PRINT inside procedures
+
+; First test PRINT outside a procedure
+PRINT, 'PRINT works outside procedure'
+
+PRO test_proc
+  a = 42
+  ; No PRINT for now
+ENDPRO
+
+test_proc,
+
+PRINT, 'Procedure executed successfully'

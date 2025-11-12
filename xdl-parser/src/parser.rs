@@ -116,6 +116,20 @@ impl<'a> Parser<'a> {
 
     /// Parse a statement
     fn parse_statement(&mut self) -> XdlResult<Statement> {
+        // Skip leading newlines
+        while matches!(self.peek(), Token::Newline) {
+            self.advance();
+        }
+
+        // If we've reached EOF after skipping newlines, return an error
+        if self.is_at_end() {
+            return Err(XdlError::ParseError {
+                message: "Unexpected end of file".to_string(),
+                line: 0,
+                column: self.current,
+            });
+        }
+
         match self.peek() {
             Token::If => self.parse_if_statement(),
             Token::For => self.parse_for_statement(),
@@ -144,10 +158,10 @@ impl<'a> Parser<'a> {
                     let start_pos = self.current;
                     self.advance(); // consume identifier
 
-                    // Check if this is a procedure call (identifier followed by comma or end of statement)
+                    // Check if this is a procedure call (identifier followed by comma, newline, or end of statement)
                     if self.check(&Token::Comma)
                         || self.is_at_end()
-                        || matches!(self.peek(), Token::EOF)
+                        || matches!(self.peek(), Token::EOF | Token::Newline)
                     {
                         return self.parse_procedure_call(name);
                     }
@@ -260,6 +274,11 @@ impl<'a> Parser<'a> {
         // Parse comma-separated arguments
         while self.check(&Token::Comma) {
             self.advance(); // consume comma
+
+            // Check if this is a trailing comma (end of line or statement)
+            if matches!(self.peek(), Token::Newline | Token::EOF) {
+                break;
+            }
 
             // Check for keyword argument (identifier = expression)
             if let Token::Identifier(kw_name) = self.peek() {
@@ -417,9 +436,63 @@ impl<'a> Parser<'a> {
             });
         };
 
-        // Parse parameters (simplified)
-        let params = Vec::new(); // TODO: implement parameter parsing
-        let keywords = Vec::new(); // TODO: implement keyword parsing
+        // Parse parameters and keywords
+        let mut params = Vec::new();
+        let mut keywords = Vec::new();
+
+        // Check if there's a comma after the procedure name
+        if self.check(&Token::Comma) {
+            self.advance(); // consume first comma
+
+            // Parse comma-separated parameters and keywords
+            loop {
+                // Check if we've reached the end of the parameter list
+                if matches!(self.peek(), Token::Newline | Token::EOF) {
+                    break;
+                }
+
+                // Get the parameter/keyword name
+                let param_name = if let Token::Identifier(name) = self.peek() {
+                    name.clone()
+                } else {
+                    break; // No more parameters
+                };
+
+                self.advance(); // consume identifier
+
+                // Check if this is a keyword (has '=' after it)
+                if self.check(&Token::Assign) {
+                    self.advance(); // consume '='
+                                    // For keyword declarations in procedure definitions,
+                                    // we don't parse the default value at definition time
+                                    // (IDL doesn't support default values in PRO declarations)
+                    keywords.push(KeywordDecl {
+                        name: param_name,
+                        by_reference: false,
+                        location: Location::unknown(),
+                    });
+                } else {
+                    // Regular parameter
+                    params.push(Parameter {
+                        name: param_name,
+                        by_reference: false,
+                        optional: false,
+                        location: Location::unknown(),
+                    });
+                }
+
+                // Check for next comma
+                if !self.check(&Token::Comma) {
+                    break;
+                }
+                self.advance(); // consume comma
+            }
+        }
+
+        // Consume any remaining tokens until we hit a newline or start of body
+        while matches!(self.peek(), Token::Comma | Token::Newline) {
+            self.advance();
+        }
 
         // Parse body
         let mut body = Vec::new();

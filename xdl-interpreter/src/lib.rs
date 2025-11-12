@@ -132,10 +132,9 @@ impl Interpreter {
                     }
                     _ => {
                         // Check for user-defined procedures
-                        if let Some(_proc_def) = self.context.get_procedure(name) {
-                            Err(XdlError::NotImplemented(
-                                "User-defined procedures".to_string(),
-                            ))
+                        if let Some(proc_def) = self.context.get_procedure(name).cloned() {
+                            self.call_user_procedure(name, args, keywords, &proc_def)?;
+                            Ok(())
                         } else {
                             // Try calling standard library procedure
                             let mut arg_values = Vec::new();
@@ -642,6 +641,81 @@ impl Interpreter {
                 )),
             }
         }
+    }
+
+    /// Call a user-defined procedure
+    fn call_user_procedure(
+        &mut self,
+        name: &str,
+        args: &[Expression],
+        keywords: &[xdl_parser::Keyword],
+        proc_def: &context::ProcedureDef,
+    ) -> XdlResult<()> {
+        // Evaluate all arguments
+        let mut arg_values = Vec::new();
+        for arg in args {
+            arg_values.push(self.evaluate_expression(arg)?);
+        }
+
+        // Evaluate keyword arguments
+        let mut keyword_map = HashMap::new();
+        for keyword in keywords {
+            if let Some(value_expr) = &keyword.value {
+                let value = self.evaluate_expression(value_expr)?;
+                keyword_map.insert(keyword.name.to_uppercase(), value);
+            }
+        }
+
+        // Push a new scope for the procedure execution
+        self.context.push_scope();
+
+        // Bind positional parameters to arguments
+        for (i, param) in proc_def.params.iter().enumerate() {
+            if i < arg_values.len() {
+                self.context
+                    .set_variable(param.name.clone(), arg_values[i].clone());
+            } else if !param.optional {
+                self.context.pop_scope()?;
+                return Err(XdlError::RuntimeError(format!(
+                    "Missing required parameter '{}' for procedure '{}'",
+                    param.name, name
+                )));
+            }
+        }
+
+        // Bind keyword parameters
+        for keyword_decl in &proc_def.keywords {
+            let key = keyword_decl.name.clone();
+            // Check both the original case and uppercase in the keyword_map
+            let value_opt = keyword_map
+                .get(&key)
+                .or_else(|| keyword_map.get(&key.to_uppercase()));
+            if let Some(value) = value_opt {
+                self.context.set_variable(key, value.clone());
+            }
+            // If no value provided, the keyword is undefined (IDL behavior)
+        }
+
+        // Execute procedure body
+        let mut result = Ok(());
+        for stmt in &proc_def.body {
+            match self.execute_statement(stmt) {
+                Ok(()) => continue,
+                Err(XdlError::Return(_)) => {
+                    // Procedures can have RETURN statements (without values)
+                    break;
+                }
+                Err(e) => {
+                    result = Err(e);
+                    break;
+                }
+            }
+        }
+
+        // Pop the procedure scope
+        self.context.pop_scope()?;
+
+        result
     }
 
     /// Get a reference to the context (for testing/debugging)

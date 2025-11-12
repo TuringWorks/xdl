@@ -1,0 +1,10 @@
+; Test procedure with no arguments
+
+PRO test_simple
+  PRINT, 'Hello from test_simple'
+ENDPRO
+
+; Call with explicit comma (IDL style for procedures)
+test_simple,
+
+PRINT, 'Test completed'
