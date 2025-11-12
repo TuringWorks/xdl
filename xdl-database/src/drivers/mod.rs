@@ -9,6 +9,9 @@ pub mod mysql;
 #[cfg(feature = "duckdb-support")]
 pub mod duckdb;
 
+#[cfg(feature = "sqlite-support")]
+pub mod sqlite;
+
 #[cfg(feature = "odbc-support")]
 pub mod odbc;
 

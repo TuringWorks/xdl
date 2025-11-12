@@ -4,6 +4,7 @@
 //! - PostgreSQL
 //! - MySQL
 //! - DuckDB
+//! - SQLite
 //! - ODBC (generic)
 //! - Redis
 //! - Apache Kafka (streaming)
@@ -49,6 +50,7 @@ pub enum DatabaseType {
     PostgreSQL,
     MySQL,
     DuckDB,
+    SQLite,
     ODBC,
     Redis,
     Kafka,
@@ -64,6 +66,12 @@ impl DatabaseType {
             DatabaseType::PostgreSQL
         } else if lower.starts_with("mysql://") {
             DatabaseType::MySQL
+        } else if lower.starts_with("sqlite://")
+            || lower.starts_with("sqlite:")
+            || lower.contains(".sqlite")
+            || lower.contains(":memory:")
+        {
+            DatabaseType::SQLite
         } else if lower.starts_with("duckdb://")
             || lower.contains(".duckdb")
             || lower.contains(".db")
