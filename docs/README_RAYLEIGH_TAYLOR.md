@@ -48,33 +48,41 @@ The simulation generates 8 PNG images:
 ## Physics Implemented
 
 ### 1. Buoyancy Force
+
 ```idl
 buoy = -g * (rho - rho_mean) / rho_mean * atwood
 ```
+
 - Heavy fluid (ρ=1) accelerates downward
 - Light fluid (ρ=0) rises upward
 - Atwood number controls density contrast
 
 ### 2. Velocity Advection
+
 ```idl
 v[idx] = v[idx] + buoy * dt
 ```
+
 - Forward Euler time integration
 - Gravitational acceleration drives flow
 
 ### 3. Semi-Lagrangian Advection
+
 ```idl
 x_back = i - u[idx] * dt
 y_back = j - v[idx] * dt
 ```
+
 - Trace particles backward in time
 - Bilinear interpolation for smooth fields
 - Unconditionally stable (large time steps possible)
 
 ### 4. Viscous Damping
+
 ```idl
 u[idx] = u[idx] * (1.0 - viscosity)
 ```
+
 - Simple exponential decay
 - Prevents numerical instabilities
 - Models physical viscosity
@@ -82,6 +90,7 @@ u[idx] = u[idx] * (1.0 - viscosity)
 ## Parameters
 
 ### Physical Parameters
+
 ```idl
 g = 9.8              ; Gravitational acceleration (m/s²)
 atwood = 0.5         ; Atwood number (density contrast)
@@ -89,6 +98,7 @@ viscosity = 0.001    ; Kinematic viscosity (m²/s)
 ```
 
 ### Numerical Parameters
+
 ```idl
 nx = 128             ; Grid resolution (x-direction)
 ny = 128             ; Grid resolution (y-direction)
@@ -97,9 +107,11 @@ n_steps = 6          ; Number of visualization snapshots
 ```
 
 ### Initial Perturbations
+
 ```idl
 interface = 0.6 + 0.05 * (sin(8π x) + 0.5*sin(12π x + 1.5) + 0.3*cos(16π x - 0.5))
 ```
+
 - Base interface at y=0.6
 - 5% amplitude perturbations
 - 3 wavelength modes for rich dynamics
@@ -109,11 +121,13 @@ interface = 0.6 + 0.05 * (sin(8π x) + 0.5*sin(12π x + 1.5) + 0.3*cos(16π x - 
 ### Semi-Lagrangian Advection
 
 **Advantages:**
+
 - Unconditionally stable (no CFL restriction)
 - Handles large time steps
 - Preserves features well
 
 **Implementation:**
+
 1. Trace particle position backward: `x_back = x - u*dt`
 2. Interpolate field value at backward position
 3. Assign to current position
@@ -121,6 +135,7 @@ interface = 0.6 + 0.05 * (sin(8π x) + 0.5*sin(12π x + 1.5) + 0.3*cos(16π x - 
 ### Bilinear Interpolation
 
 For smooth field reconstruction:
+
 ```idl
 val0 = f[i0,j0]*(1-fx) + f[i1,j0]*fx
 val1 = f[i0,j1]*(1-fx) + f[i1,j1]*fx
@@ -129,7 +144,7 @@ result = val0*(1-fy) + val1*fy
 
 ## Code Structure
 
-```
+```text
 1. Setup (lines 1-44)
    - Parameters
    - Grid initialization
@@ -158,25 +173,30 @@ result = val0*(1-fy) + val1*fy
 ## Modifying the Simulation
 
 ### Increase Resolution
+
 ```idl
 nx = 256
 ny = 256
 ```
+
 Higher resolution captures finer details but runs slower.
 
 ### Change Density Contrast
+
 ```idl
 atwood = 0.8  ; Stronger instability
 atwood = 0.2  ; Weaker instability
 ```
 
 ### Adjust Viscosity
+
 ```idl
 viscosity = 0.01   ; More damping (stable, less detail)
 viscosity = 0.0001 ; Less damping (turbulent, more detail)
 ```
 
 ### Different Perturbations
+
 ```idl
 ; Single mode
 interface = 0.6 + 0.05 * sin(8.0 * 3.14159 * x)
@@ -186,6 +206,7 @@ interface = 0.6 + 0.05 * (randomu(seed) - 0.5)
 ```
 
 ### More Time Steps
+
 ```idl
 n_steps = 12  ; Watch evolution longer
 ```
@@ -193,26 +214,31 @@ n_steps = 12  ; Watch evolution longer
 ## XDL Features Demonstrated
 
 ### Array Operations
+
 - Large 1D arrays (16,384 elements for 128×128 grid)
 - Array indexing and manipulation
 - `reform()` for reshaping
 
 ### Control Flow
+
 - Nested `for` loops
 - Conditional statements (`if`/`then`/`else`)
 - Loop variables
 
 ### Mathematical Functions
+
 - Trigonometric: `sin()`, `cos()`
 - Array creation: `fltarr()`
 - String operations: `strlen()`, `strmid()`
 
 ### Advanced Visualization
+
 - `RENDER_COLORMAP` - Density field visualization
 - `QUIVER` - Vector field arrows
 - Multiple output files
 
 ### String Manipulation
+
 ```idl
 ; Dynamic filename generation
 filename = 'rayleigh_taylor_t' + string(step) + '.png'
@@ -227,17 +253,20 @@ end
 ## Performance Tips
 
 1. **Reduce grid size** for faster testing:
+
    ```idl
    nx = 64
    ny = 64
    ```
 
 2. **Fewer time steps** for quick preview:
+
    ```idl
    n_steps = 3
    ```
 
 3. **Increase stride** for velocity visualization:
+
    ```idl
    stride = 8  ; Fewer arrows, faster rendering
    ```
@@ -247,19 +276,23 @@ end
 ### Growth Rate
 
 The linear growth rate of R-T instability is:
-```
+
+```text
 γ = sqrt(A * g * k)
 ```
+
 where:
+
 - A = Atwood number
 - g = gravitational acceleration
 - k = wavenumber of perturbation
 
 ### Atwood Number
 
-```
+```text
 A = (ρ₂ - ρ₁) / (ρ₂ + ρ₁)
 ```
+
 - A = 0: No density difference (no instability)
 - A = 1: Maximum contrast (fastest growth)
 
@@ -282,6 +315,7 @@ This is a **simplified demonstration** for educational purposes. A complete simu
 - ✗ Multi-material interface tracking (simplified)
 
 For research-grade simulations, see specialized codes like:
+
 - FLASH (astrophysics)
 - ATHENA (magnetohydrodynamics)
 - Gerris (free-surface flows)
@@ -295,18 +329,23 @@ For research-grade simulations, see specialized codes like:
 ## Troubleshooting
 
 ### Issue: Images not generated
+
 **Solution**: Check that RENDER_COLORMAP and QUIVER procedures are registered. Rebuild with:
+
 ```bash
 cargo build --release
 ```
 
 ### Issue: Simulation too slow
+
 **Solution**: Reduce grid size or number of time steps
 
 ### Issue: Results look unstable
+
 **Solution**: Increase viscosity or decrease time step
 
 ### Issue: Not enough mixing
+
 **Solution**: Increase Atwood number or run more time steps
 
 ## Further Reading

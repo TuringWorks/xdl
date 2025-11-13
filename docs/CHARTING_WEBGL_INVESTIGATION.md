@@ -391,16 +391,16 @@ webbrowser = "1.0"        # Already in xdl-viz3d-web
 
 ### Hybrid Approach (Recommended)
 
-```
-┌─────────────────────────────────────────────┐
-│           XDL Visualization Stack           │
-├─────────────────────────────────────────────┤
-│  Volume Rendering    →  WebGPU (xdl-viz3d-web)
-│  2D/3D Charts        →  ECharts + ECharts GL
-│  Custom Viz          →  D3.js (as needed)
-│  Static Plots        →  plotters (fallback)
-│  3D Models           →  Three.js (future)
-└─────────────────────────────────────────────┘
+```text
+┌─────────────────────────────────────────-──--──┐
+│           XDL Visualization Stack              │
+├─────────────────────────────────────────---────┤
+│  Volume Rendering    →  WebGPU (xdl-viz3d-web) |
+│  2D/3D Charts        →  ECharts + ECharts GL.  |
+│  Custom Viz          →  D3.js (as needed)      |
+│  Static Plots        →  plotters (fallback)    |
+│  3D Models           →  Three.js (future)      |
+└────────────────────────────────────────────---─┘
 ```
 
 ---

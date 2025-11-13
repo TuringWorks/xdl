@@ -15,11 +15,13 @@ XDL now includes enterprise-grade scientific visualization capabilities includin
 ## 1. Color Mapping (`colormap.rs`)
 
 ### Overview
+
 Provides scientifically-validated color schemes based on research in perceptual uniformity and accessibility.
 
 ### Available Color Maps
 
 #### Sequential (Single Hue)
+
 - **Viridis** - Default, perceptually uniform
 - **Plasma** - Purple to yellow
 - **Inferno** - Black to white through orange
@@ -27,11 +29,13 @@ Provides scientifically-validated color schemes based on research in perceptual 
 - **Cividis** - Optimized for colorblind viewers
 
 #### Sequential (Multi-Hue)
+
 - **Turbo** - Improved rainbow
 - **Rainbow** - Traditional HSV-based
 - **Jet** - Classic (not perceptually uniform)
 
 #### Diverging
+
 - **RdBu** - Red-Blue diverging
 - **BrBG** - Brown-Blue-Green
 - **PiYG** - Pink-Yellow-Green
@@ -39,6 +43,7 @@ Provides scientifically-validated color schemes based on research in perceptual 
 - **RdYlBu** - Red-Yellow-Blue
 
 #### Terrain
+
 - **Terrain** - Elevation coloring (blue→green→brown→white)
 - **Ocean** - Bathymetry (deep blue to light blue)
 - **Topography** - Combined ocean + terrain
@@ -74,21 +79,25 @@ let color_table = cmap.generate_table(256);
 ### Supported Map Projections
 
 #### Cylindrical
+
 - **Mercator** - Conformal, preserves angles
 - **MillerCylindrical** - Compromise projection
 - **PlateCarree** - Equirectangular
 
 #### Conic
+
 - **LambertConformal** - Used for aeronautical charts
 - **AlbersEqualArea** - Preserves area
 
 #### Azimuthal
+
 - **Stereographic** - Perspective projection
 - **Orthographic** - Globe-like view
 - **Gnomonic** - Great circles as straight lines
 - **AzimuthalEquidistant** - Preserves distances from center
 
 #### Pseudocylindrical
+
 - **Mollweide** - Equal-area
 - **Sinusoidal** - Equal-area
 - **Robinson** - Compromise projection
@@ -397,6 +406,7 @@ export_to_html(
 ```
 
 The generated HTML includes:
+
 - Embedded SVG plot
 - Download buttons for SVG and PNG
 - Responsive layout

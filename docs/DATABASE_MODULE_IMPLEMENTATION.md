@@ -612,7 +612,7 @@ pub enum DatabaseConnection {
 }
 ```
 
-4. **Update DatabaseType:**
+1. **Update DatabaseType:**
 
 ```rust
 pub enum DatabaseType {

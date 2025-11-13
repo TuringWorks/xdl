@@ -7,13 +7,16 @@ Successfully reorganized slow tests to keep the test suite fast and responsive. 
 ## Changes Made
 
 ### 1. Identified Slow Tests
+
 - **xdl-matlab integration tests**: These tests read files from disk and perform complex transpilation
   - `control_flow_integration_test.rs` - Tests control flow structures (switch/case, try/catch, loops)
   - `array_literals_integration_test.rs` - Tests array literal transpilation
 
 ### 2. Moved to Separate Directory
+
 Created new directory structure:
-```
+
+```text
 slow_tests/
 ├── README.md                           # Documentation for slow tests
 └── xdl-matlab/
@@ -22,7 +25,9 @@ slow_tests/
 ```
 
 ### 3. Added `#[ignore]` Attributes
+
 Both tests now have:
+
 ```rust
 #[test]
 #[ignore = "Slow test: Integration test with file I/O"]
@@ -30,22 +35,26 @@ fn test_name() { ... }
 ```
 
 ### 4. Created Helper Script
+
 - `run_slow_tests.sh` - Shell script to easily run slow tests
 - Makes slow tests executable: `chmod +x run_slow_tests.sh`
 
 ### 5. Updated Documentation
+
 - **README.md**: Added section on running slow tests
 - **slow_tests/README.md**: Comprehensive guide for slow test management
 
 ## Performance Improvement
 
-### Before:
-```
+### Before
+
+```text
 cargo test --all: >120 seconds (timed out)
 ```
 
-### After:
-```
+### After
+
+```text
 cargo test --all: ~4.4 seconds ✓
 ```
 
@@ -54,12 +63,14 @@ cargo test --all: ~4.4 seconds ✓
 ## Usage
 
 ### Run Fast Tests (Default)
+
 ```bash
 cargo test --all
 # Completes in ~4-6 seconds
 ```
 
 ### Run Slow Tests
+
 ```bash
 # Option 1: Use the helper script
 ./run_slow_tests.sh
@@ -93,6 +104,7 @@ When adding new tests that might be slow:
 ## Examples of Slow Tests
 
 Tests that should be marked as slow:
+
 - File I/O operations (reading large files)
 - Network operations (HTTP requests, database queries)
 - Heavy computation (ML training, complex simulations)
@@ -100,6 +112,7 @@ Tests that should be marked as slow:
 - Tests with `sleep()` or delays
 
 Tests that should remain in main suite:
+
 - Unit tests (testing single functions)
 - Fast computation tests
 - Memory/allocation tests

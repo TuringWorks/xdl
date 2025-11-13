@@ -134,7 +134,7 @@ VIZ3D_RENDER, /INTERACTIVE, TITLE='My Custom Viz'
 
 ## Technology Stack
 
-```
+```text
 XDL Script
     ↓
 Parser & Interpreter
@@ -160,7 +160,7 @@ Metal/Vulkan/DirectX 12
 
 **Mathematical Function:**
 
-```
+```text
 ρ(x,y,z) = exp(-(dx² + dy² + dz²) / (2σ²))
 ```
 
@@ -170,7 +170,7 @@ Shows a smooth 3D Gaussian distribution, perfect for demonstrating basic volume 
 
 **Distance Function:**
 
-```
+```text
 d = √((√(x² + y²) - R)² + z²) - r
 ρ = exp(-|d| / 3)
 ```
@@ -181,7 +181,7 @@ Uses signed distance field to create a perfect donut shape. Demonstrates the ren
 
 **Multi-scale Turbulence:**
 
-```
+```text
 T = 0.5·sin(3x)cos(3y)sin(3z)
   + 0.3·sin(7x)cos(7y)sin(7z)
   + 0.2·sin(13x)cos(13y)sin(13z)
@@ -194,7 +194,7 @@ Simulates turbulent flow with multiple spatial frequencies. The Plasma colormap 
 
 **Galaxy Structure:**
 
-```
+```text
 ρ = disk_density × thickness × spiral_arms + bulge
 
 Spiral arms: Multiple sinusoidal patterns with twist

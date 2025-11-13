@@ -37,6 +37,7 @@ This will run all examples in sequence and verify they work correctly.
 ## Example Output
 
 ### XDL Example
+
 ```bash
 $ xdl examples/xdl/01_hello_world.xdl
 Hello, XDL World!
@@ -45,6 +46,7 @@ Product: 200
 ```
 
 ### MATLAB Example
+
 ```bash
 $ xdl examples/matlab/01_simple_math.m
 Basic arithmetic:
@@ -57,6 +59,7 @@ b =
 ## Using the GUI
 
 1. Launch GUI:
+
    ```bash
    xdl-gui
    ```

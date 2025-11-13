@@ -1,6 +1,6 @@
 # XDL Graphics Quick Start 🚀
 
-## ✅ Ready to Use NOW!
+## ✅ Ready to Use NOW
 
 Your graphics system is **fully functional** with GUI support!
 
@@ -9,21 +9,26 @@ Your graphics system is **fully functional** with GUI support!
 ## 🎯 Run Your First Plot (30 seconds)
 
 ### Step 1: Launch the GUI
+
 ```bash
 cd /Users/ravindraboddipalli/sources/gdl/xdl
 ./target/release/xdl-gui
 ```
 
 ### Step 2: Load Demo Script
+
 In the GUI menu:
+
 - **File** → **Open**
 - Navigate to: `examples/plot_demo.xdl`
 - Click **Open**
 
 ### Step 3: Execute
+
 Click the **Execute** button
 
 ### Step 4: Watch Magic! ✨
+
 An interactive plot window will appear with a sine wave!
 
 ---
@@ -41,6 +46,7 @@ An interactive plot window will appear with a sine wave!
 ## 📝 Simple Examples
 
 ### Example 1: Basic Plot
+
 ```xdl
 x = FINDGEN(100) / 10.0
 y = SIN(x)
@@ -48,6 +54,7 @@ PLOT, y, x
 ```
 
 ### Example 2: Histogram
+
 ```xdl
 seed = 42
 data = RANDOMU(seed, 1000)
@@ -55,12 +62,14 @@ HISTOGRAM, data
 ```
 
 ### Example 3: Bar Chart
+
 ```xdl
 values = [10, 25, 15, 30, 20]
 BAR_PLOT, values
 ```
 
 ### Example 4: With Colors
+
 ```xdl
 LOADCT, 13  ; Rainbow colors
 x = FINDGEN(50)
@@ -73,6 +82,7 @@ PLOT, y, x
 ## 🛠️ Available Commands
 
 ### Plotting
+
 - `PLOT` - Line plots
 - `OPLOT` - Overplot
 - `CONTOUR` - Contour plots
@@ -82,12 +92,14 @@ PLOT, y, x
 - `PLOT3D` - 3D line plots
 
 ### Window Management
+
 - `WINDOW, n` - Create window n
 - `WSET, n` - Switch to window n
 - `WDELETE, n` - Delete window n
 - `ERASE` - Clear current window
 
 ### Colors
+
 - `LOADCT, table_num` - Load color table
   - 0 = Grayscale
   - 1 = Blue-Red
@@ -96,6 +108,7 @@ PLOT, y, x
   - 13 = Rainbow
 
 ### Image Display
+
 - `TV, image` - Display image
 - `TVSCL, image` - Display with scaling
 
@@ -104,6 +117,7 @@ PLOT, y, x
 ## 🎮 GUI Features
 
 **In the main GUI window:**
+
 - **File → Open** - Load .xdl scripts
 - **File → Save** - Save your code
 - **Execute Button** - Run current script
@@ -111,6 +125,7 @@ PLOT, y, x
 - **Variable Browser** - View all variables
 
 **In plot windows:**
+
 - **Resizable** - Drag corners to resize
 - **Plot Info Button** - View statistics
 - **Close** - Continue script execution
@@ -148,9 +163,10 @@ A: Make sure FLTK dependencies are installed (they should be if it compiled)
 
 ---
 
-## 🎉 You're Ready!
+## 🎉 You're Ready
 
 **Try it now:**
+
 ```bash
 ./target/release/xdl-gui
 ```

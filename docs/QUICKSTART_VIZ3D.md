@@ -12,6 +12,7 @@ A complete plan and demo framework for high-fidelity 3D visualization in XDL, in
 ## Demo Files Created
 
 ### 1. Simple Volume Demo
+
 **File**: `examples/demo/volume_render_simple.xdl`
 
 A minimal 64³ volume rendering of a Gaussian blob. Perfect for testing the basic pipeline.
@@ -21,9 +22,11 @@ xdl examples/demo/volume_render_simple.xdl
 ```
 
 ### 2. Rayleigh-Taylor Instability
+
 **File**: `examples/demo/rayleigh_taylor.xdl`
 
 Full simulation demo with:
+
 - 128³ grid resolution
 - Time evolution (50 steps)
 - Multiple rendering modes (volume + isosurface)
@@ -66,6 +69,7 @@ VIZ3D_RENDER, /INTERACTIVE
 ## Implementation Status
 
 ### ✅ Fully Implemented
+
 - [x] Complete 3D visualization system
 - [x] WebGPU backend with ray marching
 - [x] Three.js backend for surface plots
@@ -77,6 +81,7 @@ VIZ3D_RENDER, /INTERACTIVE
 - [x] Multiple rendering backends
 
 ### 🎯 Production Features
+
 - **VIZ3D_VOLUME**: Volume rendering with transfer functions
 - **VIZ3D_SURFACE**: Surface plots with lighting
 - **VIZ3D_ISOSURFACE**: Isosurface extraction
@@ -85,14 +90,16 @@ VIZ3D_RENDER, /INTERACTIVE
 - **VIZ3D_LIGHT**: Lighting configuration
 
 ### 📊 Performance Metrics
+
 - Volume rendering: 60 FPS @ 256³ voxels
 - Surface plots: 60 FPS @ 512x512 grids
 - Memory efficient: GPU-resident data
 - Cross-platform: WebGPU standard
-   # - fullscreen.wgsl
-   ```
+
+  ## - fullscreen.wgsl
 
 3. **Test Standalone**
+
    ```bash
    cargo run --example standalone_test
    ```
@@ -118,7 +125,7 @@ VIZ3D_RENDER, /INTERACTIVE
 
 ## File Structure
 
-```
+```text
 xdl/
 ├── xdl-viz3d/              # New crate for 3D viz
 │   ├── src/
@@ -197,6 +204,7 @@ xdl examples/demo/rayleigh_taylor.xdl
 ```
 
 Should produce:
+
 - **Window**: 1280x720 interactive 3D view
 - **Rendering**: Volume ray marching with rainbow colormap
 - **Controls**: Mouse rotate, wheel zoom
@@ -214,6 +222,7 @@ Similar to the reference image you showed, but fully interactive and scriptable 
 ## Questions?
 
 See the full implementation plan in `docs/VIZ3D_IMPLEMENTATION.md` for:
+
 - Detailed API specifications
 - Shader code examples
 - Performance targets

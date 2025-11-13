@@ -41,7 +41,7 @@ Successfully implemented **browser-based WebGPU visualization** for XDL, complet
 
 ### Before: Native Window Issues ❌
 
-```
+```text
 1. Single window per process (winit limitation)
 2. Event loop crashes after first use
 3. macOS winit warnings in console
@@ -53,7 +53,7 @@ Successfully implemented **browser-based WebGPU visualization** for XDL, complet
 
 ### After: Browser Solution ✅
 
-```
+```text
 1. Unlimited windows (browser tabs)
 2. No crashes - each tab is independent
 3. No warnings - clean execution

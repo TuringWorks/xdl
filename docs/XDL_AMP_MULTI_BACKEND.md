@@ -64,7 +64,7 @@ October 25, 2025
 - **Advantages**: Open-source, good performance on AMD
 - **Use Cases**: HPC, ML on AMD GPUs
 
-### 4. Windows
+### 4. Windows DirectML/DirectX
 
 #### DirectML ✅
 
@@ -108,7 +108,7 @@ October 25, 2025
 2. Metal - Low-level control
 3. CoreML - ML-specific workloads
 
-### Windows
+### Windows Requirements
 
 1. **cuDNN** (if NVIDIA GPU) - Best for ML
 2. CUDA (if NVIDIA GPU) - General NVIDIA compute
@@ -264,14 +264,14 @@ cargo build -p xdl-amp --release --features all-amd
 # Requires: ROCm 5.0+
 ```
 
-### Windows with NVIDIA
+### Windows Build with NVIDIA
 
 ```bash
 cargo build -p xdl-amp --release --features all-nvidia
 # Includes CUDA, cuDNN
 ```
 
-### Windows Generic
+### Windows with Generic GPU
 
 ```bash
 cargo build -p xdl-amp --release --features directml

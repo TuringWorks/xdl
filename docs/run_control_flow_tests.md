@@ -5,8 +5,10 @@ This directory contains comprehensive tests for XDL's control flow constructs (l
 ## Test Files
 
 ### 1. `unit_control_flow_tests.xdl`
+
 **Purpose**: Basic unit tests for individual control flow constructs
 **Coverage**:
+
 - Simple IF/THEN/ELSE statements
 - Basic FOR and WHILE loops
 - BREAK and CONTINUE statements
@@ -16,13 +18,16 @@ This directory contains comprehensive tests for XDL's control flow constructs (l
 - Arithmetic expressions in conditions
 
 **Usage**:
+
 ```bash
 xdl unit_control_flow_tests.xdl
 ```
 
 ### 2. `control_flow_tests.xdl`
+
 **Purpose**: Comprehensive integration tests for control flow features
 **Coverage**:
+
 - Nested IF statements
 - Nested loops (FOR and WHILE)
 - Loop control (BREAK/CONTINUE)
@@ -32,13 +37,16 @@ xdl unit_control_flow_tests.xdl
 - Complex conditional expressions
 
 **Usage**:
+
 ```bash
 xdl control_flow_tests.xdl
 ```
 
 ### 3. `advanced_control_flow_tests.xdl`
+
 **Purpose**: Real-world algorithms demonstrating advanced control flow patterns
 **Coverage**:
+
 - Search algorithms (binary search)
 - Sort algorithms (bubble sort)
 - Mathematical algorithms (GCD, factorial, prime factorization)
@@ -48,6 +56,7 @@ xdl control_flow_tests.xdl
 - Loop optimization techniques
 
 **Usage**:
+
 ```bash
 xdl advanced_control_flow_tests.xdl
 ```
@@ -55,12 +64,14 @@ xdl advanced_control_flow_tests.xdl
 ## Test Categories
 
 ### Basic Control Structures
+
 - [x] IF/THEN/ELSE conditionals
 - [x] FOR loops with start, end, step
 - [x] WHILE loops
 - [x] BREAK and CONTINUE statements
 
 ### Comparison Operators
+
 - [x] EQ (equal)
 - [x] NE (not equal)
 - [x] LT (less than)
@@ -69,11 +80,13 @@ xdl advanced_control_flow_tests.xdl
 - [x] GE (greater than or equal)
 
 ### Logical Operators
+
 - [x] AND logical conjunction
 - [x] OR logical disjunction
 - [x] NOT logical negation
 
 ### Advanced Patterns
+
 - [x] Nested control structures
 - [x] Loop with array processing
 - [x] Early termination patterns
@@ -83,14 +96,18 @@ xdl advanced_control_flow_tests.xdl
 ## Expected Behavior
 
 ### Parser Tests
+
 These files test the XDL parser's ability to:
+
 1. Recognize control flow keywords (IF, FOR, WHILE, etc.)
 2. Parse nested structures correctly
 3. Handle complex expressions in conditions
 4. Generate proper AST nodes for control flow
 
 ### Interpreter Tests
+
 These files test the XDL interpreter's ability to:
+
 1. Execute conditional branches correctly
 2. Iterate loops with proper variable updates
 3. Handle BREAK and CONTINUE statements
@@ -100,6 +117,7 @@ These files test the XDL interpreter's ability to:
 ## Running the Tests
 
 ### Individual Test Files
+
 ```bash
 # Run basic unit tests
 xdl unit_control_flow_tests.xdl
@@ -112,6 +130,7 @@ xdl advanced_control_flow_tests.xdl
 ```
 
 ### All Tests (when test runner is implemented)
+
 ```bash
 # Future test runner command
 xdl test control_flow
@@ -134,18 +153,22 @@ These tests should be integrated into the XDL build pipeline:
 ## Development Guidelines
 
 ### Adding New Control Flow Tests
+
 1. **Unit Tests**: Add simple, focused tests to `unit_control_flow_tests.xdl`
 2. **Integration Tests**: Add complex scenarios to `control_flow_tests.xdl`
 3. **Algorithm Tests**: Add real-world examples to `advanced_control_flow_tests.xdl`
 
 ### Test Naming Convention
+
 - Prefix test descriptions with "Test N:" for unit tests
 - Use descriptive comments for integration tests
 - Include algorithm names for advanced tests
 
 ### Expected Output Format
+
 Each test should produce clear, verifiable output:
-```
+
+```text
 Test 1 PASS: Basic if-then
 Test 2 PASS: Basic if-then-else
 Test 3 PASS: If with EQ comparison
@@ -154,12 +177,14 @@ Test 3 PASS: If with EQ comparison
 ## Future Enhancements
 
 ### Planned Control Flow Features
+
 - [ ] FOREACH loops for array iteration
 - [ ] REPEAT/UNTIL loops
 - [ ] CASE/OF statements (switch-like)
 - [ ] Exception handling (TRY/CATCH)
 
 ### Additional Test Categories
+
 - [ ] Performance benchmarks for loop constructs
 - [ ] Memory usage tests for nested loops
 - [ ] Stress tests with deep nesting
@@ -168,6 +193,7 @@ Test 3 PASS: If with EQ comparison
 ## Validation Checklist
 
 When implementing control flow features, ensure:
+
 - [ ] Parser recognizes all keywords correctly
 - [ ] AST nodes are generated properly
 - [ ] Interpreter executes control flow correctly
@@ -179,6 +205,7 @@ When implementing control flow features, ensure:
 ## Contributing
 
 When adding new control flow tests:
+
 1. Follow existing naming conventions
 2. Include clear comments explaining the test purpose
 3. Add both positive and negative test cases
