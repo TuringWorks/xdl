@@ -261,6 +261,12 @@ impl Interpreter {
 
             Statement::Goto { .. } => Err(XdlError::NotImplemented("GOTO statements".to_string())),
 
+            Statement::Case { .. } => Err(XdlError::NotImplemented("CASE statements".to_string())),
+
+            Statement::Switch { .. } => {
+                Err(XdlError::NotImplemented("SWITCH statements".to_string()))
+            }
+
             // Object-oriented programming
             Statement::ClassDefinition { name, body, .. } => {
                 self.execute_class_definition(name, body)
