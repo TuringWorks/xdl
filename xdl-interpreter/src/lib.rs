@@ -261,18 +261,29 @@ impl Interpreter {
 
             Statement::Goto { .. } => Err(XdlError::NotImplemented("GOTO statements".to_string())),
 
-            // Object-oriented programming (TODO: Phase 2-4)
-            Statement::ClassDefinition { .. } => Err(XdlError::NotImplemented(
-                "Class definitions (Phase 2: Parser implementation pending)".to_string(),
-            )),
+            // Object-oriented programming
+            Statement::ClassDefinition { name, body, .. } => {
+                self.execute_class_definition(name, body)
+            }
 
-            Statement::MethodDefinition { .. } => Err(XdlError::NotImplemented(
-                "Method definitions (Phase 2: Parser implementation pending)".to_string(),
-            )),
+            Statement::MethodDefinition {
+                class_name,
+                method_name,
+                is_function,
+                params,
+                keywords,
+                body,
+                ..
+            } => self.execute_method_definition(
+                class_name,
+                method_name,
+                *is_function,
+                params,
+                keywords,
+                body,
+            ),
 
-            Statement::ObjectDestroy { .. } => Err(XdlError::NotImplemented(
-                "OBJ_DESTROY (Phase 4: Evaluator implementation pending)".to_string(),
-            )),
+            Statement::ObjectDestroy { objects, .. } => self.execute_obj_destroy(objects),
         }
     }
 
@@ -734,6 +745,138 @@ impl Interpreter {
     /// Get a reference to the context (for testing/debugging)
     pub fn context(&self) -> &Context {
         &self.context
+    }
+
+    /// Execute a class definition (PRO ClassName__define)
+    fn execute_class_definition(&mut self, name: &str, body: &[Statement]) -> XdlResult<()> {
+        use crate::context::ClassDef;
+
+        // Create new class definition
+        let mut class_def = ClassDef::new(name.to_string());
+
+        // Execute the body to extract structure definitions
+        // In IDL, the class __define procedure typically contains a structure definition
+        // that specifies the class fields
+        for stmt in body {
+            // Look for structure definitions or other initialization
+            // For now, we'll support basic field initialization via assignments
+            if let Statement::Assignment {
+                target:
+                    Expression::Variable {
+                        name: field_name, ..
+                    },
+                value,
+                ..
+            } = stmt
+            {
+                let field_value = self.evaluate_expression(value)?;
+                class_def
+                    .fields
+                    .insert(field_name.to_uppercase(), field_value);
+            }
+            // Also execute any other statements in the body
+            self.execute_statement(stmt)?;
+        }
+
+        // Store the class definition
+        self.context.define_class(name.to_string(), class_def);
+        Ok(())
+    }
+
+    /// Execute a method definition (PRO/FUNCTION ClassName::MethodName)
+    fn execute_method_definition(
+        &mut self,
+        class_name: &str,
+        method_name: &str,
+        is_function: bool,
+        params: &[xdl_parser::Parameter],
+        keywords: &[xdl_parser::KeywordDecl],
+        body: &[Statement],
+    ) -> XdlResult<()> {
+        use crate::context::MethodDef;
+
+        // Create method definition
+        let method = MethodDef {
+            is_function,
+            params: params.to_vec(),
+            keywords: keywords.to_vec(),
+            body: body.to_vec(),
+        };
+
+        // Get or create the class
+        let class = if let Ok(cls) = self.context.get_class_mut(class_name) {
+            cls
+        } else {
+            // If class doesn't exist yet, create it
+            // This can happen if methods are defined before __define
+            use crate::context::ClassDef;
+            let class_def = ClassDef::new(class_name.to_string());
+            self.context.define_class(class_name.to_string(), class_def);
+            self.context.get_class_mut(class_name)?
+        };
+
+        // Add method to the class
+        class.add_method(method_name.to_string(), method);
+        Ok(())
+    }
+
+    /// Execute OBJ_DESTROY statement
+    fn execute_obj_destroy(&mut self, objects: &[Expression]) -> XdlResult<()> {
+        for obj_expr in objects {
+            let obj_val = self.evaluate_expression(obj_expr)?;
+
+            // Extract object ID
+            let obj_id = match obj_val {
+                XdlValue::Object(id) => id,
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "object".to_string(),
+                        actual: format!("{:?}", obj_val.gdl_type()),
+                    })
+                }
+            };
+
+            // Skip NULL objects
+            if obj_id == 0 {
+                continue;
+            }
+
+            // Get object to find class name for Cleanup method
+            let class_name = {
+                let obj = self.context.get_object(obj_id)?;
+                obj.class_name.clone()
+            };
+
+            // Try to call Cleanup method if it exists
+            if let Ok(class) = self.context.get_class(&class_name) {
+                if class.get_method("CLEANUP").is_some() {
+                    // Call the Cleanup method
+                    // For now, we'll execute it without parameters
+                    // TODO: Implement full method dispatch with SELF support
+                    let _ = self.execute_user_method(obj_id, "CLEANUP", &[], &[]);
+                }
+            }
+
+            // Remove the object from storage
+            self.context.remove_object(obj_id)?;
+        }
+
+        Ok(())
+    }
+
+    /// Execute a user-defined method on an object (helper for method dispatch)
+    fn execute_user_method(
+        &mut self,
+        _obj_id: usize,
+        _method_name: &str,
+        _args: &[Expression],
+        _keywords: &[xdl_parser::Keyword],
+    ) -> XdlResult<XdlValue> {
+        // TODO: Implement full method dispatch with SELF support
+        // For now, return a placeholder
+        Err(XdlError::NotImplemented(
+            "User-defined method dispatch not yet implemented".to_string(),
+        ))
     }
 }
 

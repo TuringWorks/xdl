@@ -20,6 +20,76 @@ pub struct ProcedureDef {
     pub body: Vec<xdl_parser::Statement>,
 }
 
+/// Method definition (function or procedure belonging to a class)
+#[derive(Debug, Clone)]
+pub struct MethodDef {
+    pub is_function: bool, // true = function, false = procedure
+    pub params: Vec<Parameter>,
+    pub keywords: Vec<KeywordDecl>,
+    pub body: Vec<xdl_parser::Statement>,
+}
+
+/// Class definition stored in context
+#[derive(Debug, Clone)]
+pub struct ClassDef {
+    pub name: String,
+    pub fields: HashMap<String, XdlValue>, // Default field values from __define
+    pub methods: HashMap<String, MethodDef>, // Method name -> definition (case-insensitive)
+}
+
+impl ClassDef {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            fields: HashMap::new(),
+            methods: HashMap::new(),
+        }
+    }
+
+    /// Add a method to this class
+    pub fn add_method(&mut self, name: String, method: MethodDef) {
+        self.methods.insert(name.to_uppercase(), method);
+    }
+
+    /// Get a method by name (case-insensitive)
+    pub fn get_method(&self, name: &str) -> Option<&MethodDef> {
+        self.methods.get(&name.to_uppercase())
+    }
+
+    /// Set default field values from structure definition
+    pub fn set_fields(&mut self, fields: HashMap<String, XdlValue>) {
+        self.fields = fields;
+    }
+}
+
+/// Object instance (runtime instance of a class)
+#[derive(Debug, Clone)]
+pub struct ObjectInstance {
+    pub class_name: String,
+    pub id: usize,
+    pub fields: HashMap<String, XdlValue>, // Instance field values (case-insensitive)
+}
+
+impl ObjectInstance {
+    pub fn new(class_name: String, id: usize, default_fields: &HashMap<String, XdlValue>) -> Self {
+        Self {
+            class_name,
+            id,
+            fields: default_fields.clone(),
+        }
+    }
+
+    /// Get a field value (case-insensitive)
+    pub fn get_field(&self, name: &str) -> Option<&XdlValue> {
+        self.fields.get(&name.to_uppercase())
+    }
+
+    /// Set a field value (case-insensitive)
+    pub fn set_field(&mut self, name: String, value: XdlValue) {
+        self.fields.insert(name.to_uppercase(), value);
+    }
+}
+
 /// Variable scope for nested scope management
 #[derive(Debug, Clone)]
 pub struct Scope {
@@ -66,6 +136,12 @@ pub struct Context {
     dataframes: HashMap<usize, xdl_dataframe::DataFrame>,
     /// Next DataFrame ID
     next_dataframe_id: usize,
+    /// Class definitions (case-insensitive class name -> ClassDef)
+    classes: HashMap<String, ClassDef>,
+    /// Object instances (ID -> ObjectInstance)
+    objects: HashMap<usize, ObjectInstance>,
+    /// Next object ID (0 is reserved for NULL)
+    next_object_id: usize,
 }
 
 impl Context {
@@ -77,6 +153,9 @@ impl Context {
             system_variables: HashMap::new(),
             dataframes: HashMap::new(),
             next_dataframe_id: 0,
+            classes: HashMap::new(),
+            objects: HashMap::new(),
+            next_object_id: 1, // 0 is reserved for NULL
         };
 
         // Initialize system variables
@@ -213,6 +292,81 @@ impl Context {
         self.dataframes
             .remove(&id)
             .ok_or_else(|| XdlError::RuntimeError(format!("DataFrame {} not found", id)))
+    }
+
+    /// Define a class (case-insensitive)
+    pub fn define_class(&mut self, name: String, class: ClassDef) {
+        self.classes.insert(name.to_uppercase(), class);
+    }
+
+    /// Get a class definition (case-insensitive)
+    pub fn get_class(&self, name: &str) -> XdlResult<&ClassDef> {
+        self.classes
+            .get(&name.to_uppercase())
+            .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", name)))
+    }
+
+    /// Get a mutable reference to a class definition (case-insensitive)
+    pub fn get_class_mut(&mut self, name: &str) -> XdlResult<&mut ClassDef> {
+        self.classes
+            .get_mut(&name.to_uppercase())
+            .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", name)))
+    }
+
+    /// Store an object instance and return its ID
+    pub fn store_object(&mut self, obj: ObjectInstance) -> usize {
+        let id = obj.id;
+        self.objects.insert(id, obj);
+        id
+    }
+
+    /// Create a new object instance (allocates ID and stores it)
+    pub fn create_object(
+        &mut self,
+        class_name: String,
+        default_fields: &HashMap<String, XdlValue>,
+    ) -> usize {
+        let id = self.next_object_id;
+        self.next_object_id += 1;
+        let obj = ObjectInstance::new(class_name, id, default_fields);
+        self.objects.insert(id, obj);
+        id
+    }
+
+    /// Get a reference to an object instance by ID
+    pub fn get_object(&self, id: usize) -> XdlResult<&ObjectInstance> {
+        if id == 0 {
+            return Err(XdlError::RuntimeError(
+                "Cannot access NULL object".to_string(),
+            ));
+        }
+        self.objects
+            .get(&id)
+            .ok_or_else(|| XdlError::RuntimeError(format!("Object {} not found", id)))
+    }
+
+    /// Get a mutable reference to an object instance by ID
+    pub fn get_object_mut(&mut self, id: usize) -> XdlResult<&mut ObjectInstance> {
+        if id == 0 {
+            return Err(XdlError::RuntimeError(
+                "Cannot access NULL object".to_string(),
+            ));
+        }
+        self.objects
+            .get_mut(&id)
+            .ok_or_else(|| XdlError::RuntimeError(format!("Object {} not found", id)))
+    }
+
+    /// Remove an object instance from storage (for OBJ_DESTROY)
+    pub fn remove_object(&mut self, id: usize) -> XdlResult<ObjectInstance> {
+        if id == 0 {
+            return Err(XdlError::RuntimeError(
+                "Cannot destroy NULL object".to_string(),
+            ));
+        }
+        self.objects
+            .remove(&id)
+            .ok_or_else(|| XdlError::RuntimeError(format!("Object {} not found", id)))
     }
 }
 

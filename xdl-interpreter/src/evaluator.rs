@@ -181,6 +181,50 @@ impl Evaluator {
                 }
             }
 
+            Expression::ObjectNew {
+                class_name,
+                args,
+                keywords,
+                ..
+            } => {
+                // Handle empty OBJ_NEW() which returns NULL
+                if class_name.is_empty() {
+                    return Ok(XdlValue::Object(0));
+                }
+
+                // Get the class definition and clone the fields
+                let (default_fields, has_init) = {
+                    let class = context.get_class(class_name)?;
+                    (class.fields.clone(), class.get_method("INIT").is_some())
+                };
+
+                // Create a new object instance with default fields
+                let obj_id = context.create_object(class_name.clone(), &default_fields);
+
+                // Evaluate constructor arguments
+                let mut _arg_values = Vec::new();
+                for arg in args {
+                    _arg_values.push(self.evaluate(arg, context)?);
+                }
+
+                // Call Init method if it exists
+                if has_init {
+                    // TODO: Implement full method dispatch with SELF support
+                    // For now, we'll skip calling Init
+                    // When properly implemented, Init should be called with obj_id and args
+                    // If Init returns 0, the object should be destroyed and NULL returned
+                }
+
+                // TODO: Handle keywords
+                if !keywords.is_empty() {
+                    return Err(XdlError::NotImplemented(
+                        "OBJ_NEW keywords not yet supported".to_string(),
+                    ));
+                }
+
+                Ok(XdlValue::Object(obj_id))
+            }
+
             _ => Err(XdlError::NotImplemented(format!(
                 "Expression type: {:?}",
                 expr

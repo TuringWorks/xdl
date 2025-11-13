@@ -237,6 +237,13 @@ pub fn string_fn(args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::PythonObject(id) => format!("<Python:{}>", id),
         XdlValue::DataFrame(id) => format!("<DataFrame:{}>", id),
         XdlValue::Struct(_) => "<Struct>".to_string(),
+        XdlValue::Object(id) => {
+            if *id == 0 {
+                "<NULL>".to_string()
+            } else {
+                format!("<Object:{}>", id)
+            }
+        }
         XdlValue::Undefined => "!NULL".to_string(),
     };
 
