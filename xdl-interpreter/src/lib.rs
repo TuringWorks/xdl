@@ -260,6 +260,19 @@ impl Interpreter {
             }
 
             Statement::Goto { .. } => Err(XdlError::NotImplemented("GOTO statements".to_string())),
+
+            // Object-oriented programming (TODO: Phase 2-4)
+            Statement::ClassDefinition { .. } => Err(XdlError::NotImplemented(
+                "Class definitions (Phase 2: Parser implementation pending)".to_string(),
+            )),
+
+            Statement::MethodDefinition { .. } => Err(XdlError::NotImplemented(
+                "Method definitions (Phase 2: Parser implementation pending)".to_string(),
+            )),
+
+            Statement::ObjectDestroy { .. } => Err(XdlError::NotImplemented(
+                "OBJ_DESTROY (Phase 4: Evaluator implementation pending)".to_string(),
+            )),
         }
     }
 

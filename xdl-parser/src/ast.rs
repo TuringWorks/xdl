@@ -106,6 +106,25 @@ pub enum Statement {
         label: String,
         location: Location,
     },
+    // Object-oriented programming
+    ClassDefinition {
+        name: String,
+        body: Vec<Statement>,
+        location: Location,
+    },
+    MethodDefinition {
+        class_name: String,
+        method_name: String,
+        is_function: bool, // true for FUNCTION, false for PRO
+        params: Vec<Parameter>,
+        keywords: Vec<KeywordDecl>,
+        body: Vec<Statement>,
+        location: Location,
+    },
+    ObjectDestroy {
+        objects: Vec<Expression>,
+        location: Location,
+    },
 }
 
 /// XDL Expressions
@@ -194,6 +213,13 @@ pub enum Expression {
     },
     PreDecrement {
         expr: Box<Expression>,
+        location: Location,
+    },
+    // Object-oriented programming
+    ObjectNew {
+        class_name: String,
+        args: Vec<Expression>,
+        keywords: Vec<Keyword>,
         location: Location,
     },
 }
@@ -347,6 +373,9 @@ impl Statement {
             Statement::ProcedureDef { location, .. } => location,
             Statement::Label { location, .. } => location,
             Statement::Goto { location, .. } => location,
+            Statement::ClassDefinition { location, .. } => location,
+            Statement::MethodDefinition { location, .. } => location,
+            Statement::ObjectDestroy { location, .. } => location,
         }
     }
 }
@@ -373,6 +402,7 @@ impl Expression {
             Expression::PostDecrement { location, .. } => location,
             Expression::PreIncrement { location, .. } => location,
             Expression::PreDecrement { location, .. } => location,
+            Expression::ObjectNew { location, .. } => location,
         }
     }
 
