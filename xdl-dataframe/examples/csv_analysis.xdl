@@ -1,0 +1,133 @@
+; CSV Data Analysis Example
+; Demonstrates reading, manipulating, and analyzing CSV data with XDLDataFrame
+
+PRO csv_analysis_example
+    PRINT, '=== XDL DataFrame - CSV Analysis Example ==='
+    PRINT, ''
+
+    ; Create sample CSV data
+    csv_data = 'name,age,city,salary,department' + STRING(10B) + $
+               'Alice,28,NYC,75000,Engineering' + STRING(10B) + $
+               'Bob,35,LA,82000,Engineering' + STRING(10B) + $
+               'Carol,42,Chicago,95000,Management' + STRING(10B) + $
+               'David,31,NYC,68000,Sales' + STRING(10B) + $
+               'Eve,26,LA,72000,Engineering' + STRING(10B) + $
+               'Frank,38,Chicago,88000,Sales' + STRING(10B) + $
+               'Grace,29,NYC,79000,Engineering' + STRING(10B) + $
+               'Henry,45,LA,105000,Management' + STRING(10B) + $
+               'Iris,33,Chicago,76000,Sales' + STRING(10B) + $
+               'Jack,27,NYC,71000,Engineering'
+
+    ; Save to file
+    lun = GET_LUN()
+    OPENW, lun, 'employee_data.csv'
+    PRINTF, lun, csv_data
+    CLOSE, lun
+    FREE_LUN, lun
+
+    PRINT, '1. Reading CSV Data'
+    PRINT, '-------------------'
+    ; Read CSV file into DataFrame
+    df = XDLDATAFRAME_READ_CSV('employee_data.csv')
+
+    ; Display info
+    PRINT, 'DataFrame loaded successfully!'
+    PRINT, 'Shape: ', df->Shape()
+    PRINT, 'Columns: ', df->ColumnNames()
+    PRINT, ''
+
+    ; Show first few rows
+    PRINT, '2. First 5 Rows (Head)'
+    PRINT, '---------------------'
+    head_df = df->Head(5)
+    PRINT, head_df->ToJSON()
+    PRINT, ''
+
+    ; Show last few rows
+    PRINT, '3. Last 3 Rows (Tail)'
+    PRINT, '--------------------'
+    tail_df = df->Tail(3)
+    PRINT, tail_df->ToJSON()
+    PRINT, ''
+
+    ; Statistical summary
+    PRINT, '4. Statistical Summary (Describe)'
+    PRINT, '---------------------------------'
+    stats = df->Describe()
+    PRINT, 'Age statistics:'
+    PRINT, '  Mean: ', stats.age.mean
+    PRINT, '  Min: ', stats.age.min
+    PRINT, '  Max: ', stats.age.max
+    PRINT, '  Std: ', stats.age.std
+    PRINT, ''
+    PRINT, 'Salary statistics:'
+    PRINT, '  Mean: $', stats.salary.mean
+    PRINT, '  Min: $', stats.salary.min
+    PRINT, '  Max: $', stats.salary.max
+    PRINT, ''
+
+    ; Select specific columns
+    PRINT, '5. Select Columns'
+    PRINT, '-----------------'
+    df_subset = df->Select(['name', 'age', 'salary'])
+    PRINT, 'Selected columns: ', df_subset->ColumnNames()
+    PRINT, ''
+
+    ; Filter data
+    PRINT, '6. Filter Data (Age > 30)'
+    PRINT, '-------------------------'
+    df_filtered = df->Filter(COLUMN='age', CONDITION='>30')
+    PRINT, 'Filtered rows: ', df_filtered->NRows()
+    PRINT, df_filtered->ToJSON()
+    PRINT, ''
+
+    ; Group by and aggregate
+    PRINT, '7. Group By Department - Mean Salary'
+    PRINT, '-------------------------------------'
+    grouped = df->GroupBy(['department'])->Mean()
+    PRINT, grouped->ToJSON()
+    PRINT, ''
+
+    ; Sort data
+    PRINT, '8. Sort By Salary (Descending)'
+    PRINT, '------------------------------'
+    df_sorted = df->SortBy(['salary'], ASCENDING=0)
+    PRINT, 'Top 5 earners:'
+    PRINT, df_sorted->Head(5)->Select(['name', 'salary'])->ToJSON()
+    PRINT, ''
+
+    ; Value counts
+    PRINT, '9. Value Counts - Employees per City'
+    PRINT, '-------------------------------------'
+    city_series = df->Column('city')
+    city_counts = city_series->ValueCounts()
+    PRINT, city_counts
+    PRINT, ''
+
+    ; Data visualization integration
+    PRINT, '10. Integration with Charts'
+    PRINT, '---------------------------'
+    ; Extract data for plotting
+    ages = df->Column('age')->Data()
+    salaries = df->Column('salary')->Data()
+
+    ; Create scatter plot
+    PLOT, ages, salaries, PSYM=4, XTITLE='Age', YTITLE='Salary', $
+          TITLE='Age vs Salary Distribution'
+
+    PRINT, 'Scatter plot created: Age vs Salary'
+    PRINT, ''
+
+    ; Export to TSV
+    PRINT, '11. Export to TSV'
+    PRINT, '-----------------'
+    df->WriteTSV, 'employee_data.tsv'
+    PRINT, 'Data exported to employee_data.tsv'
+    PRINT, ''
+
+    ; Cleanup
+    PRINT, '=== Example Completed Successfully ==='
+ENDPRO
+
+; Run the example
+csv_analysis_example

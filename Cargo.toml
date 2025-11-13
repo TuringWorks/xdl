@@ -14,7 +14,8 @@ members = [
     "xdl-charts",
     "xdl-chart-viewer",
     "xdl-amp",
-    "xdl-database"
+    "xdl-database",
+    "xdl-dataframe"
 ]
 resolver = "2"
 
