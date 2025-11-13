@@ -1,0 +1,191 @@
+; Database and DataFrame Integration Example
+; Demonstrates seamless integration between SQL databases and DataFrames
+
+PRO database_dataframe_integration
+    PRINT, '=== XDL DataFrame - Database Integration Example ==='
+    PRINT, ''
+
+    ; Create database object
+    objdb = OBJ_NEW('XDLdbDatabase')
+
+    ; Connect to SQLite database
+    PRINT, '1. Connecting to Database'
+    PRINT, '-------------------------'
+    objdb->Connect, CONNECTION='sqlite:///analytics.sqlite'
+    PRINT, 'Connected to SQLite database'
+    PRINT, ''
+
+    ; Create sample sales table
+    PRINT, '2. Creating Sample Sales Data'
+    PRINT, '-----------------------------'
+    create_sql = 'CREATE TABLE IF NOT EXISTS sales (' + $
+                 'id INTEGER PRIMARY KEY, ' + $
+                 'product TEXT, ' + $
+                 'category TEXT, ' + $
+                 'region TEXT, ' + $
+                 'quantity INTEGER, ' + $
+                 'revenue REAL, ' + $
+                 'sale_date TEXT)'
+
+    objdb->ExecuteCommand, create_sql
+
+    ; Insert sample data
+    objdb->ExecuteCommand, "DELETE FROM sales"  ; Clear existing data
+
+    insert_sql = [ $
+        "INSERT INTO sales VALUES (1, 'Laptop', 'Electronics', 'North', 50, 75000.00, '2024-01-15')", $
+        "INSERT INTO sales VALUES (2, 'Mouse', 'Accessories', 'North', 200, 4000.00, '2024-01-16')", $
+        "INSERT INTO sales VALUES (3, 'Keyboard', 'Accessories', 'South', 150, 7500.00, '2024-01-17')", $
+        "INSERT INTO sales VALUES (4, 'Monitor', 'Electronics', 'East', 75, 22500.00, '2024-01-18')", $
+        "INSERT INTO sales VALUES (5, 'Laptop', 'Electronics', 'West', 60, 90000.00, '2024-01-19')", $
+        "INSERT INTO sales VALUES (6, 'Mouse', 'Accessories', 'West', 180, 3600.00, '2024-01-20')", $
+        "INSERT INTO sales VALUES (7, 'Monitor', 'Electronics', 'North', 40, 12000.00, '2024-01-21')", $
+        "INSERT INTO sales VALUES (8, 'Keyboard', 'Accessories', 'East', 120, 6000.00, '2024-01-22')" $
+    ]
+
+    FOR i = 0, N_ELEMENTS(insert_sql) - 1 DO BEGIN
+        objdb->ExecuteCommand, insert_sql[i]
+    ENDFOR
+
+    PRINT, 'Sample sales data inserted'
+    PRINT, ''
+
+    ; Query database and convert to DataFrame
+    PRINT, '3. Query to DataFrame Conversion'
+    PRINT, '--------------------------------'
+    query = 'SELECT * FROM sales ORDER BY revenue DESC'
+    recordset = objdb->ExecuteSQL(query)
+
+    ; Convert Recordset to DataFrame
+    df = XDLDATAFRAME_FROM_RECORDSET(recordset)
+
+    PRINT, 'Recordset converted to DataFrame'
+    PRINT, 'Shape: ', df->Shape()
+    PRINT, 'Columns: ', df->ColumnNames()
+    PRINT, ''
+
+    ; Display data
+    PRINT, '4. Sales Data (sorted by revenue)'
+    PRINT, '---------------------------------'
+    PRINT, df->ToJSON()
+    PRINT, ''
+
+    ; DataFrame analysis
+    PRINT, '5. DataFrame Analytics'
+    PRINT, '---------------------'
+
+    ; Total revenue by region
+    region_revenue = df->GroupBy(['region'])->Sum()
+    PRINT, 'Total Revenue by Region:'
+    PRINT, region_revenue->Select(['region', 'revenue'])->ToJSON()
+    PRINT, ''
+
+    ; Product performance
+    product_stats = df->GroupBy(['product'])->Mean()
+    PRINT, 'Average metrics by Product:'
+    PRINT, product_stats->ToJSON()
+    PRINT, ''
+
+    ; Filter high-value transactions
+    high_value = df->Filter(COLUMN='revenue', CONDITION='>10000')
+    PRINT, 'High-value transactions (>$10,000):'
+    PRINT, high_value->Select(['product', 'region', 'revenue'])->ToJSON()
+    PRINT, ''
+
+    ; Data visualization
+    PRINT, '6. Visualization Integration'
+    PRINT, '----------------------------'
+
+    ; Extract data for charting
+    regions = df->Column('region')->Unique()
+    region_names = STRARR(N_ELEMENTS(regions))
+    region_revenues = FLTARR(N_ELEMENTS(regions))
+
+    FOR i = 0, N_ELEMENTS(regions) - 1 DO BEGIN
+        region_names[i] = regions[i]
+        df_region = df->Filter(COLUMN='region', VALUE=regions[i])
+        region_revenues[i] = df_region->Column('revenue')->Sum()
+    ENDFOR
+
+    ; Create bar chart using XDL charting
+    XDLCHART_BAR, region_names, region_revenues, $
+        TITLE='Revenue by Region', $
+        XTITLE='Region', $
+        YTITLE='Total Revenue ($)', $
+        OUTPUT='revenue_by_region.html'
+
+    PRINT, 'Bar chart created: revenue_by_region.html'
+    PRINT, ''
+
+    ; Export DataFrame back to CSV for Excel/reporting
+    PRINT, '7. Export DataFrame to CSV'
+    PRINT, '-------------------------'
+    df->WriteCSV, 'sales_report.csv'
+    PRINT, 'Sales report exported to sales_report.csv'
+    PRINT, ''
+
+    ; Advanced: Join with another dataset
+    PRINT, '8. DataFrame Join Operations'
+    PRINT, '---------------------------'
+
+    ; Create product info DataFrame from CSV
+    product_csv = 'product,cost,supplier' + STRING(10B) + $
+                  'Laptop,1200.00,TechCorp' + STRING(10B) + $
+                  'Mouse,15.00,Peripherals Inc' + STRING(10B) + $
+                  'Keyboard,40.00,Peripherals Inc' + STRING(10B) + $
+                  'Monitor,250.00,DisplayTech'
+
+    lun = GET_LUN()
+    OPENW, lun, 'products.csv'
+    PRINTF, lun, product_csv
+    CLOSE, lun
+    FREE_LUN, lun
+
+    df_products = XDLDATAFRAME_READ_CSV('products.csv')
+
+    ; Join sales with product info
+    df_joined = df->Join(df_products, ON='product')
+
+    PRINT, 'Joined DataFrame (Sales + Product Info):'
+    PRINT, df_joined->Select(['product', 'region', 'revenue', 'supplier'])->Head(5)->ToJSON()
+    PRINT, ''
+
+    ; Calculate profit margins
+    PRINT, '9. Calculated Columns'
+    PRINT, '--------------------'
+
+    ; Calculate profit (revenue - cost * quantity)
+    df_profit = df_joined->Copy()
+    df_profit->AddColumn('profit', $
+        df_joined->Column('revenue')->Data() - $
+        (df_joined->Column('cost')->Data() * df_joined->Column('quantity')->Data()))
+
+    PRINT, 'Profit analysis:'
+    PRINT, df_profit->Select(['product', 'region', 'revenue', 'profit'])->Head(5)->ToJSON()
+    PRINT, ''
+
+    ; Write results back to database
+    PRINT, '10. Write DataFrame Back to Database'
+    PRINT, '------------------------------------'
+
+    ; Create summary table
+    objdb->ExecuteCommand, 'DROP TABLE IF EXISTS sales_summary'
+    objdb->ExecuteCommand, 'CREATE TABLE sales_summary (region TEXT, total_revenue REAL, avg_quantity REAL)'
+
+    summary = region_revenue->ToXDLValue()
+    ; Insert summary data back to database
+    ; (In practice, you'd iterate through DataFrame rows)
+
+    PRINT, 'Summary table created in database'
+    PRINT, ''
+
+    ; Cleanup
+    recordset->Destroy()
+    objdb->Disconnect()
+    OBJ_DESTROY, objdb
+
+    PRINT, '=== Database Integration Example Completed ==='
+ENDPRO
+
+; Run the example
+database_dataframe_integration

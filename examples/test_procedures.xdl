@@ -1,0 +1,59 @@
+; Test user-defined procedures with PRO/ENDPRO
+
+; Test 1: Simple procedure with no parameters
+PRO test_simple
+  PRINT, 'Hello from test_simple'
+ENDPRO
+
+; Test 2: Procedure with parameters
+PRO test_params, x, y
+  PRINT, 'x =', x
+  PRINT, 'y =', y
+  sum = x + y
+  PRINT, 'sum =', sum
+ENDPRO
+
+; Test 3: Procedure with keyword
+PRO test_keyword, value, verbose=
+  IF KEYWORD_SET(verbose) THEN BEGIN
+    PRINT, 'Verbose mode enabled'
+  ENDIF
+  PRINT, 'Value =', value
+ENDPRO
+
+; Test 4: Procedure with multiple parameters and keywords
+PRO calculate, a, b, op, result=
+  CASE op OF
+    '+': res = a + b
+    '-': res = a - b
+    '*': res = a * b
+    '/': res = a / b
+    ELSE: res = 0
+  ENDCASE
+
+  IF KEYWORD_SET(result) THEN BEGIN
+    PRINT, 'Result =', res
+  ENDIF
+ENDPRO
+
+; Run tests
+PRINT, '=== Test 1: Simple procedure ==='
+test_simple
+
+PRINT, ''
+PRINT, '=== Test 2: Procedure with parameters ==='
+test_params, 10, 20
+
+PRINT, ''
+PRINT, '=== Test 3: Procedure with keyword ==='
+test_keyword, 42
+test_keyword, 99, /verbose
+
+PRINT, ''
+PRINT, '=== Test 4: Complex procedure ==='
+calculate, 15, 5, '+'
+calculate, 15, 5, '-', /result
+calculate, 15, 5, '*', /result
+
+PRINT, ''
+PRINT, 'All procedure tests completed!'

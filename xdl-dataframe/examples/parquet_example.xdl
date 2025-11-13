@@ -1,0 +1,81 @@
+; Parquet Data Analysis Example
+; Demonstrates reading and working with Parquet files - efficient columnar storage format
+
+PRO parquet_example
+    PRINT, '=== XDL DataFrame - Parquet Format Example ==='
+    PRINT, ''
+
+    ; Note: This example assumes you have a Parquet file available
+    ; Parquet is a columnar storage format optimized for big data processing
+
+    PRINT, '1. Reading Parquet File'
+    PRINT, '-----------------------'
+
+    ; Read Parquet file (requires parquet-support feature)
+    df = XDLDATAFRAME_READ_PARQUET('sample_data.parquet')
+
+    PRINT, 'Parquet file loaded successfully!'
+    PRINT, 'Shape: ', df->Shape()
+    PRINT, 'Columns: ', df->ColumnNames()
+    PRINT, ''
+
+    ; Display first few rows
+    PRINT, '2. Preview Data (First 10 rows)'
+    PRINT, '-------------------------------'
+    PRINT, df->Head(10)->ToJSON()
+    PRINT, ''
+
+    ; Statistical analysis
+    PRINT, '3. Statistical Summary'
+    PRINT, '---------------------'
+    stats = df->Describe()
+    FOREACH col_name, stats.keys() DO BEGIN
+        PRINT, col_name, ' statistics:'
+        col_stats = stats[col_name]
+        PRINT, '  Count: ', col_stats.count
+        PRINT, '  Mean: ', col_stats.mean
+        PRINT, '  Std: ', col_stats.std
+        PRINT, '  Min: ', col_stats.min
+        PRINT, '  Max: ', col_stats.max
+        PRINT, ''
+    ENDFOREACH
+
+    ; Advanced filtering and aggregation
+    PRINT, '4. Advanced Analysis'
+    PRINT, '-------------------'
+
+    ; Multi-column grouping
+    grouped = df->GroupBy(['category', 'region'])->Sum()
+    PRINT, 'Grouped by category and region:'
+    PRINT, grouped->ToJSON()
+    PRINT, ''
+
+    ; Complex filtering
+    df_complex = df->Filter(LAMBDA='value > 1000 AND category == "A"')
+    PRINT, 'Complex filter results: ', df_complex->NRows(), ' rows'
+    PRINT, ''
+
+    ; Integration with Machine Learning
+    PRINT, '5. ML Integration - Feature Preparation'
+    PRINT, '---------------------------------------'
+
+    ; Extract numeric features for ML
+    features = df->Select(['feature1', 'feature2', 'feature3'])
+    labels = df->Column('target')->Data()
+
+    ; Normalize features using XDL ML functions
+    normalized = XDLML_NORMALIZE(features->ToXDLValue())
+
+    PRINT, 'Features extracted and normalized for ML pipeline'
+    PRINT, 'Feature shape: ', SIZE(normalized, /DIMENSIONS)
+    PRINT, ''
+
+    ; Save processed data as CSV for further analysis
+    df_processed = df->Select(['id', 'processed_feature1', 'processed_feature2'])
+    df_processed->WriteCSV, 'processed_data.csv'
+
+    PRINT, '=== Parquet Example Completed ==='
+ENDPRO
+
+; Run the example
+parquet_example

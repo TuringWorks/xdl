@@ -1,0 +1,29 @@
+; Test PRINT step by step
+
+; Step 1: PRINT works outside
+PRINT, 'Step 1: PRINT works outside procedures'
+
+; Step 2: Simple procedure with just assignment
+PRO test_assign, val
+  x = val + 10
+ENDPRO
+
+test_assign, 5
+PRINT, 'Step 2: Simple procedure with assignment works'
+
+; Step 3: Try PRINT inside procedure
+PRO test_print_inside
+  x = 100
+ENDPRO
+
+test_print_inside,
+PRINT, 'Step 3: Procedure executed, now try PRINT'
+
+; Now the problematic one
+PRO test_with_print
+  PRINT, 'This is inside the procedure'
+ENDPRO
+
+PRINT, 'About to call procedure with PRINT inside'
+test_with_print,
+PRINT, 'After calling procedure with PRINT'

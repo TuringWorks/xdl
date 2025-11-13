@@ -1,0 +1,5 @@
+PRO test
+ENDPRO
+
+test,;
+PRINT, 'After procedure call with semicolon'

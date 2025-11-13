@@ -1,0 +1,35 @@
+; Test simple user-defined procedures with PRO/ENDPRO
+
+; Test 1: Simple procedure with no parameters
+PRO test_simple
+  PRINT, 'Hello from test_simple'
+ENDPRO
+
+; Test 2: Procedure with parameters
+PRO test_params, x, y
+  PRINT, 'x =', x
+  PRINT, 'y =', y
+  sum = x + y
+  PRINT, 'sum =', sum
+ENDPRO
+
+; Test 3: Procedure that modifies variables
+PRO double_value, val
+  result = val * 2
+  PRINT, 'Input:', val, 'Output:', result
+ENDPRO
+
+; Run tests
+PRINT, '=== Test 1: Simple procedure ==='
+test_simple
+
+PRINT, ''
+PRINT, '=== Test 2: Procedure with parameters ==='
+test_params, 10, 20
+
+PRINT, ''
+PRINT, '=== Test 3: Procedure with calculation ==='
+double_value, 42
+
+PRINT, ''
+PRINT, 'All procedure tests completed!'

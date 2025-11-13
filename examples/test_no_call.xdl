@@ -1,0 +1,4 @@
+PRO test
+ENDPRO
+
+PRINT, 'Direct PRINT without procedure call'

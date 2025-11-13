@@ -1,0 +1,276 @@
+; Machine Learning and 3D Visualization Integration Example
+; Demonstrates DataFrame integration with XDL's ML and visualization capabilities
+
+PRO ml_viz_integration_example
+    PRINT, '=== XDL DataFrame - ML and Visualization Integration ==='
+    PRINT, ''
+
+    ; Load scientific dataset (e.g., sensor measurements)
+    PRINT, '1. Loading Scientific Dataset'
+    PRINT, '-----------------------------'
+
+    ; Create sample sensor data
+    csv_data = 'timestamp,sensor_id,temperature,pressure,humidity,vibration,status' + STRING(10B) + $
+               '2024-01-01T10:00:00,A1,22.5,101.3,45.2,0.05,normal' + STRING(10B) + $
+               '2024-01-01T10:05:00,A1,23.1,101.2,46.1,0.06,normal' + STRING(10B) + $
+               '2024-01-01T10:10:00,A1,24.8,101.0,47.5,0.12,warning' + STRING(10B) + $
+               '2024-01-01T10:15:00,A1,26.2,100.8,48.9,0.18,warning' + STRING(10B) + $
+               '2024-01-01T10:20:00,A1,28.5,100.5,50.3,0.25,critical' + STRING(10B) + $
+               '2024-01-01T10:00:00,B2,21.8,101.4,44.8,0.04,normal' + STRING(10B) + $
+               '2024-01-01T10:05:00,B2,22.0,101.3,45.0,0.05,normal' + STRING(10B) + $
+               '2024-01-01T10:10:00,B2,22.5,101.2,45.5,0.06,normal' + STRING(10B) + $
+               '2024-01-01T10:15:00,B2,23.0,101.1,46.0,0.07,normal' + STRING(10B) + $
+               '2024-01-01T10:20:00,B2,23.8,101.0,46.8,0.09,normal'
+
+    lun = GET_LUN()
+    OPENW, lun, 'sensor_data.csv'
+    PRINTF, lun, csv_data
+    CLOSE, lun
+    FREE_LUN, lun
+
+    ; Load into DataFrame
+    df = XDLDATAFRAME_READ_CSV('sensor_data.csv')
+
+    PRINT, 'Dataset loaded: ', df->Shape()
+    PRINT, 'Columns: ', df->ColumnNames()
+    PRINT, ''
+
+    ; Exploratory Data Analysis
+    PRINT, '2. Exploratory Data Analysis'
+    PRINT, '----------------------------'
+
+    stats = df->Describe()
+    PRINT, 'Temperature stats: Min=', stats.temperature.min, ', Max=', stats.temperature.max, ', Mean=', stats.temperature.mean
+    PRINT, 'Pressure stats: Min=', stats.pressure.min, ', Max=', stats.pressure.max
+    PRINT, 'Humidity stats: Min=', stats.humidity.min, ', Max=', stats.humidity.max
+    PRINT, 'Vibration stats: Min=', stats.vibration.min, ', Max=', stats.vibration.max
+    PRINT, ''
+
+    ; Feature Engineering
+    PRINT, '3. Feature Engineering'
+    PRINT, '---------------------'
+
+    ; Extract numeric features for ML
+    feature_names = ['temperature', 'pressure', 'humidity', 'vibration']
+    X_raw = df->Select(feature_names)->ToXDLValue()
+
+    ; Convert status labels to numeric (0=normal, 1=warning, 2=critical)
+    status_col = df->Column('status')->Data()
+    y = INTARR(N_ELEMENTS(status_col))
+    FOR i = 0, N_ELEMENTS(status_col) - 1 DO BEGIN
+        CASE status_col[i] OF
+            'normal': y[i] = 0
+            'warning': y[i] = 1
+            'critical': y[i] = 2
+        ENDCASE
+    ENDFOR
+
+    PRINT, 'Features extracted: ', SIZE(X_raw, /DIMENSIONS)
+    PRINT, 'Labels encoded: ', N_ELEMENTS(y), ' samples'
+    PRINT, ''
+
+    ; Normalization using XDL ML functions
+    PRINT, '4. Data Normalization'
+    PRINT, '--------------------'
+
+    X_normalized = XDLML_NORMALIZE(X_raw, METHOD='minmax')
+
+    PRINT, 'Features normalized using Min-Max scaling'
+    PRINT, ''
+
+    ; Machine Learning - Classification
+    PRINT, '5. Train Classification Model'
+    PRINT, '-----------------------------'
+
+    ; Split data into train/test
+    n_samples = N_ELEMENTS(y)
+    n_train = FIX(n_samples * 0.7)
+
+    X_train = X_normalized[*, 0:n_train-1]
+    y_train = y[0:n_train-1]
+    X_test = X_normalized[*, n_train:*]
+    y_test = y[n_train:*]
+
+    ; Train a classifier (e.g., Random Forest)
+    model = XDLML_TRAIN_CLASSIFIER(X_train, y_train, $
+        ALGORITHM='random_forest', $
+        N_ESTIMATORS=100, $
+        MAX_DEPTH=10)
+
+    PRINT, 'Model trained successfully'
+    PRINT, ''
+
+    ; Predictions
+    PRINT, '6. Model Predictions and Evaluation'
+    PRINT, '-----------------------------------'
+
+    y_pred = XDLML_PREDICT(model, X_test)
+
+    ; Calculate accuracy
+    correct = TOTAL(y_pred EQ y_test)
+    accuracy = correct / N_ELEMENTS(y_test) * 100.0
+
+    PRINT, 'Test Accuracy: ', accuracy, '%'
+    PRINT, ''
+
+    ; Confusion Matrix
+    confusion_mat = XDLML_CONFUSION_MATRIX(y_test, y_pred)
+    PRINT, 'Confusion Matrix:'
+    PRINT, confusion_mat
+    PRINT, ''
+
+    ; Feature Importance
+    importance = XDLML_FEATURE_IMPORTANCE(model)
+    PRINT, 'Feature Importance:'
+    FOR i = 0, N_ELEMENTS(feature_names) - 1 DO BEGIN
+        PRINT, '  ', feature_names[i], ': ', importance[i]
+    ENDFOR
+    PRINT, ''
+
+    ; 2D Visualization - Scatter Matrix
+    PRINT, '7. 2D Data Visualization'
+    PRINT, '-----------------------'
+
+    ; Create scatter plot matrix
+    temp = df->Column('temperature')->Data()
+    press = df->Column('pressure')->Data()
+    humid = df->Column('humidity')->Data()
+    vib = df->Column('vibration')->Data()
+
+    ; Temperature vs Pressure
+    PLOT, temp, press, PSYM=4, $
+        XTITLE='Temperature (°C)', $
+        YTITLE='Pressure (kPa)', $
+        TITLE='Sensor Correlation: Temp vs Pressure'
+
+    ; Create correlation heatmap
+    corr_matrix = XDLML_CORRELATION_MATRIX(X_raw)
+    XDLCHART_HEATMAP, corr_matrix, $
+        LABELS=feature_names, $
+        TITLE='Feature Correlation Matrix', $
+        OUTPUT='correlation_heatmap.html'
+
+    PRINT, 'Correlation heatmap saved: correlation_heatmap.html'
+    PRINT, ''
+
+    ; 3D Visualization
+    PRINT, '8. 3D Surface Visualization'
+    PRINT, '---------------------------'
+
+    ; Create 3D surface from sensor data
+    ; Grid for temperature, pressure, vibration relationship
+    x_grid = FINDGEN(20) / 19.0 * 10.0 + 20.0  ; Temperature range
+    y_grid = FINDGEN(20) / 19.0 * 2.0 + 100.0  ; Pressure range
+
+    ; Create meshgrid
+    z_surface = FLTARR(20, 20)
+    FOR i = 0, 19 DO BEGIN
+        FOR j = 0, 19 DO BEGIN
+            ; Simulate vibration as function of temp and pressure
+            z_surface[i, j] = 0.01 * (x_grid[i] - 22.0)^2 + $
+                             0.05 * (y_grid[j] - 101.0)^2
+        ENDFOR
+    ENDFOR
+
+    ; Create 3D surface plot
+    XDLVIZ3D_SURFACE, x_grid, y_grid, z_surface, $
+        TITLE='Vibration Model: f(Temperature, Pressure)', $
+        XLABEL='Temperature (°C)', $
+        YLABEL='Pressure (kPa)', $
+        ZLABEL='Vibration (mm/s)', $
+        COLORMAP='jet', $
+        OUTPUT='vibration_surface.html'
+
+    PRINT, '3D surface plot saved: vibration_surface.html'
+    PRINT, ''
+
+    ; 3D Scatter Plot with Classification Results
+    PRINT, '9. 3D Scatter Plot - Classification'
+    PRINT, '-----------------------------------'
+
+    ; Extract 3 features for 3D visualization
+    x_3d = df->Column('temperature')->Data()
+    y_3d = df->Column('pressure')->Data()
+    z_3d = df->Column('vibration')->Data()
+    colors = y  ; Color by status
+
+    XDLVIZ3D_SCATTER, x_3d, y_3d, z_3d, $
+        COLORS=colors, $
+        TITLE='Sensor Status Classification (3D)', $
+        XLABEL='Temperature', $
+        YLABEL='Pressure', $
+        ZLABEL='Vibration', $
+        POINT_SIZE=8, $
+        OUTPUT='classification_3d.html'
+
+    PRINT, '3D scatter plot saved: classification_3d.html'
+    PRINT, ''
+
+    ; Time Series Analysis
+    PRINT, '10. Time Series Visualization'
+    PRINT, '-----------------------------'
+
+    ; Group by sensor and plot time series
+    sensors = df->Column('sensor_id')->Unique()
+
+    FOR i = 0, N_ELEMENTS(sensors) - 1 DO BEGIN
+        sensor_df = df->Filter(COLUMN='sensor_id', VALUE=sensors[i])
+        sensor_temps = sensor_df->Column('temperature')->Data()
+        time_indices = FINDGEN(N_ELEMENTS(sensor_temps))
+
+        PLOT, time_indices, sensor_temps, $
+            XTITLE='Time Index', $
+            YTITLE='Temperature (°C)', $
+            TITLE='Temperature Trend - Sensor ' + sensors[i], $
+            LINESTYLE=0
+
+        PRINT, 'Sensor ', sensors[i], ' temperature trend plotted'
+    ENDFOR
+    PRINT, ''
+
+    ; Save processed results
+    PRINT, '11. Export Results'
+    PRINT, '-----------------'
+
+    ; Add predictions to DataFrame
+    df_results = df->Copy()
+    predictions = STRARR(n_samples)
+    predictions[n_train:*] = STRARR(N_ELEMENTS(y_pred))
+    FOR i = 0, N_ELEMENTS(y_pred) - 1 DO BEGIN
+        CASE y_pred[i] OF
+            0: predictions[n_train + i] = 'normal'
+            1: predictions[n_train + i] = 'warning'
+            2: predictions[n_train + i] = 'critical'
+        ENDCASE
+    ENDFOR
+
+    df_results->AddColumn('predicted_status', predictions)
+
+    ; Export to CSV
+    df_results->WriteCSV, 'sensor_predictions.csv'
+    PRINT, 'Results exported to sensor_predictions.csv'
+    PRINT, ''
+
+    ; Statistical Report
+    PRINT, '12. Generate Statistical Report'
+    PRINT, '-------------------------------'
+
+    report_df = df->GroupBy(['sensor_id', 'status'])->Count()
+    report_df->WriteCSV, 'status_report.csv'
+
+    PRINT, 'Status Report by Sensor:'
+    PRINT, report_df->ToJSON()
+    PRINT, ''
+
+    PRINT, '=== ML and Visualization Integration Example Completed ==='
+    PRINT, ''
+    PRINT, 'Generated Files:'
+    PRINT, '  - correlation_heatmap.html'
+    PRINT, '  - vibration_surface.html'
+    PRINT, '  - classification_3d.html'
+    PRINT, '  - sensor_predictions.csv'
+    PRINT, '  - status_report.csv'
+ENDPRO
+
+; Run the example
+ml_viz_integration_example

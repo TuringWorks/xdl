@@ -1,0 +1,114 @@
+; SQLite Database Example
+; Demonstrates using SQLite for embedded database operations
+
+PRO sqlite_example
+    ; Create a database object
+    objdb = OBJ_NEW('XDLdbDatabase')
+
+    ; Connect to SQLite database (creates file if doesn't exist)
+    ; Use sqlite:// prefix or just the filename
+    PRINT, 'Connecting to SQLite database...'
+    objdb->Connect, CONNECTION='sqlite:///test_database.sqlite'
+
+    ; Alternative connection strings:
+    ; objdb->Connect, CONNECTION='test_database.sqlite'
+    ; objdb->Connect, CONNECTION='sqlite://:memory:'  ; For in-memory database
+
+    ; Create a sample users table
+    PRINT, 'Creating users table...'
+    create_sql = 'CREATE TABLE IF NOT EXISTS users (' + $
+                 'id INTEGER PRIMARY KEY AUTOINCREMENT, ' + $
+                 'name TEXT NOT NULL, ' + $
+                 'email TEXT UNIQUE, ' + $
+                 'age INTEGER, ' + $
+                 'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'
+    objdb->ExecuteCommand, create_sql
+
+    ; Insert sample data
+    PRINT, 'Inserting sample users...'
+    objdb->ExecuteCommand, "INSERT INTO users (name, email, age) VALUES ('Alice Johnson', 'alice@example.com', 28)"
+    objdb->ExecuteCommand, "INSERT INTO users (name, email, age) VALUES ('Bob Smith', 'bob@example.com', 35)"
+    objdb->ExecuteCommand, "INSERT INTO users (name, email, age) VALUES ('Carol White', 'carol@example.com', 42)"
+    objdb->ExecuteCommand, "INSERT INTO users (name, email, age) VALUES ('David Brown', 'david@example.com', 31)"
+    objdb->ExecuteCommand, "INSERT INTO users (name, email, age) VALUES ('Eve Davis', 'eve@example.com', 26)"
+
+    ; Query all users
+    PRINT, ''
+    PRINT, 'All Users:'
+    PRINT, '-------------------------------------------'
+    all_users_query = 'SELECT id, name, email, age FROM users ORDER BY name'
+    recordset1 = objdb->ExecuteSQL(all_users_query)
+    all_users = recordset1->GetData()
+    PRINT, all_users
+
+    ; Query users older than 30
+    PRINT, ''
+    PRINT, 'Users older than 30:'
+    PRINT, '-------------------------------------------'
+    older_users_query = 'SELECT name, age FROM users WHERE age > 30 ORDER BY age DESC'
+    recordset2 = objdb->ExecuteSQL(older_users_query)
+    older_users = recordset2->GetData()
+    PRINT, older_users
+
+    ; Get user statistics
+    PRINT, ''
+    PRINT, 'User Statistics:'
+    PRINT, '-------------------------------------------'
+    stats_query = 'SELECT COUNT(*) as total_users, ' + $
+                  'AVG(age) as avg_age, ' + $
+                  'MIN(age) as youngest, ' + $
+                  'MAX(age) as oldest ' + $
+                  'FROM users'
+    recordset3 = objdb->ExecuteSQL(stats_query)
+    stats = recordset3->GetData()
+    PRINT, stats
+
+    ; Update a user
+    PRINT, ''
+    PRINT, 'Updating user age...'
+    update_sql = "UPDATE users SET age = 29 WHERE name = 'Alice Johnson'"
+    rows_affected = objdb->ExecuteCommand(update_sql)
+    PRINT, 'Rows affected: ', rows_affected
+
+    ; Verify update
+    verify_query = "SELECT name, age FROM users WHERE name = 'Alice Johnson'"
+    recordset4 = objdb->ExecuteSQL(verify_query)
+    updated_user = recordset4->GetData()
+    PRINT, 'Updated user: ', updated_user
+
+    ; Create an index for better query performance
+    PRINT, ''
+    PRINT, 'Creating index on email column...'
+    index_sql = 'CREATE INDEX IF NOT EXISTS idx_email ON users(email)'
+    objdb->ExecuteCommand, index_sql
+
+    ; Demonstrate transactions
+    PRINT, ''
+    PRINT, 'Demonstrating transaction...'
+    objdb->ExecuteCommand, 'BEGIN TRANSACTION'
+    objdb->ExecuteCommand, "INSERT INTO users (name, email, age) VALUES ('Frank Miller', 'frank@example.com', 38)"
+    objdb->ExecuteCommand, 'COMMIT'
+    PRINT, 'Transaction committed successfully'
+
+    ; Count total users after transaction
+    count_query = 'SELECT COUNT(*) as total FROM users'
+    recordset5 = objdb->ExecuteSQL(count_query)
+    final_count = recordset5->GetData()
+    PRINT, 'Final user count: ', final_count
+
+    ; Cleanup
+    recordset1->Destroy()
+    recordset2->Destroy()
+    recordset3->Destroy()
+    recordset4->Destroy()
+    recordset5->Destroy()
+    objdb->Disconnect()
+    OBJ_DESTROY, objdb
+
+    PRINT, ''
+    PRINT, 'SQLite example completed successfully!'
+    PRINT, 'Database file: test_database.sqlite'
+ENDPRO
+
+; Run the example
+sqlite_example

@@ -37,6 +37,10 @@ pub enum DatabaseError {
     #[error("DuckDB error: {0}")]
     DuckDBError(String),
 
+    #[cfg(feature = "sqlite-support")]
+    #[error("SQLite error: {0}")]
+    SQLiteError(String),
+
     #[cfg(feature = "odbc-support")]
     #[error("ODBC error: {0}")]
     ODBCError(String),

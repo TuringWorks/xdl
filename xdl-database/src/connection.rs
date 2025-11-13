@@ -15,6 +15,9 @@ pub enum DatabaseConnection {
     #[cfg(feature = "duckdb-support")]
     DuckDB(drivers::duckdb::DuckDBConnection),
 
+    #[cfg(feature = "sqlite-support")]
+    SQLite(drivers::sqlite::SQLiteConnection),
+
     #[cfg(feature = "odbc-support")]
     ODBC(drivers::odbc::ODBCConnection),
 
@@ -48,6 +51,12 @@ impl DatabaseConnection {
             DatabaseType::DuckDB => {
                 let conn = drivers::duckdb::DuckDBConnection::connect(connection_string).await?;
                 Ok(DatabaseConnection::DuckDB(conn))
+            }
+
+            #[cfg(feature = "sqlite-support")]
+            DatabaseType::SQLite => {
+                let conn = drivers::sqlite::SQLiteConnection::connect(connection_string).await?;
+                Ok(DatabaseConnection::SQLite(conn))
             }
 
             #[cfg(feature = "odbc-support")]
@@ -85,6 +94,9 @@ impl DatabaseConnection {
             #[cfg(feature = "duckdb-support")]
             DatabaseConnection::DuckDB(conn) => conn.execute(query).await,
 
+            #[cfg(feature = "sqlite-support")]
+            DatabaseConnection::SQLite(conn) => conn.execute(query).await,
+
             #[cfg(feature = "odbc-support")]
             DatabaseConnection::ODBC(conn) => conn.execute(query).await,
 
@@ -111,6 +123,9 @@ impl DatabaseConnection {
 
             #[cfg(feature = "duckdb-support")]
             DatabaseConnection::DuckDB(conn) => conn.execute_command(command).await,
+
+            #[cfg(feature = "sqlite-support")]
+            DatabaseConnection::SQLite(conn) => conn.execute_command(command).await,
 
             #[cfg(feature = "odbc-support")]
             DatabaseConnection::ODBC(conn) => conn.execute_command(command).await,
@@ -139,6 +154,9 @@ impl DatabaseConnection {
             #[cfg(feature = "duckdb-support")]
             DatabaseConnection::DuckDB(conn) => conn.close().await,
 
+            #[cfg(feature = "sqlite-support")]
+            DatabaseConnection::SQLite(conn) => conn.close().await,
+
             #[cfg(feature = "odbc-support")]
             DatabaseConnection::ODBC(conn) => conn.close().await,
 
@@ -163,6 +181,9 @@ impl DatabaseConnection {
 
             #[cfg(feature = "duckdb-support")]
             DatabaseConnection::DuckDB(conn) => conn.is_connected().await,
+
+            #[cfg(feature = "sqlite-support")]
+            DatabaseConnection::SQLite(conn) => conn.is_connected().await,
 
             #[cfg(feature = "odbc-support")]
             DatabaseConnection::ODBC(conn) => conn.is_connected().await,

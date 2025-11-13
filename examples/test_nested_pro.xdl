@@ -1,0 +1,13 @@
+; Test calling one procedure from another
+
+PRO inner_proc, val
+  result = val * 2
+ENDPRO
+
+PRO outer_proc, x
+  inner_proc, x
+ENDPRO
+
+outer_proc, 21
+
+PRINT, 'Test completed'

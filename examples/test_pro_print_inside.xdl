@@ -1,0 +1,12 @@
+; Test PRINT inside procedure
+
+PRINT, 'Before procedure definition'
+
+PRO test_proc
+  a = 42
+  PRINT, 'Inside procedure, a =', a
+ENDPRO
+
+PRINT, 'Before procedure call'
+test_proc,
+PRINT, 'After procedure call'

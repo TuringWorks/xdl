@@ -1,0 +1,11 @@
+; Test built-in functions inside procedure
+
+PRO test_proc, x
+  ; Try using SIZE which is a built-in function
+  arr = [1, 2, 3]
+  sz = SIZE(arr)
+ENDPRO
+
+test_proc, 42
+
+PRINT, 'Test completed'

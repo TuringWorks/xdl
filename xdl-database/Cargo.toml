@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Database connectivity module for XDL - supports PostgreSQL, MySQL, DuckDB, ODBC, Redis, and more"
+description = "Database connectivity module for XDL - supports PostgreSQL, MySQL, DuckDB, SQLite, ODBC, Redis, and more"
 
 [dependencies]
 # Core XDL dependencies
@@ -29,6 +29,7 @@ postgres = { version = "0.19", features = ["with-serde_json-1"], optional = true
 tokio-postgres = { version = "0.7", features = ["with-serde_json-1"], optional = true }
 mysql_async = { version = "0.34", optional = true }
 duckdb = { version = "1.1", features = ["bundled"], optional = true }
+rusqlite = { version = "0.31", features = ["bundled"], optional = true }
 
 # ODBC
 odbc-api = { version = "8.0", optional = true }
@@ -56,6 +57,7 @@ default = ["postgres-support", "duckdb-support", "redis-support"]
 postgres-support = ["tokio-postgres", "deadpool-postgres"]
 mysql-support = ["mysql_async"]
 duckdb-support = ["duckdb"]
+sqlite-support = ["rusqlite"]
 odbc-support = ["odbc-api"]
 redis-support = ["redis"]
 kafka-support = ["rdkafka"]
@@ -65,6 +67,7 @@ all = [
     "postgres-support",
     "mysql-support",
     "duckdb-support",
+    "sqlite-support",
     "odbc-support",
     "redis-support",
     "kafka-support"
