@@ -59,3 +59,12 @@ all = [
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"
+rand = "0.8"
+
+[[example]]
+name = "dataframe_demo"
+path = "examples/dataframe_demo.rs"
+
+[[example]]
+name = "comprehensive_demo"
+path = "examples/comprehensive_demo.rs"

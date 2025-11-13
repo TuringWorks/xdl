@@ -1,0 +1,302 @@
+; 3D Visualization with DataFrame
+; Demonstrates DataFrame integration with XDL 3D graphics
+
+PRO viz3d_dataframe_demo
+    PRINT, '=== XDL DataFrame + 3D Visualization Demo ==='
+    PRINT, ''
+
+    ; Generate 3D dataset
+    PRINT, '1. Generating 3D Dataset'
+    PRINT, '------------------------'
+
+    n_points = 500
+    seed = 42
+
+    ; Generate spiral in 3D space
+    t = FINDGEN(n_points) / n_points * 4 * !PI
+
+    x = 5 * COS(t) + RANDOMN(seed, n_points) * 0.5
+    y = 5 * SIN(t) + RANDOMN(seed, n_points) * 0.5
+    z = t + RANDOMN(seed, n_points) * 0.3
+
+    ; Create color mapping based on z-value
+    colors = BYTSCL(z, TOP=255)
+
+    PRINT, 'Generated ', n_points, ' 3D points in spiral pattern'
+    PRINT, ''
+
+    ; Create DataFrame
+    PRINT, '2. Creating DataFrame'
+    PRINT, '--------------------'
+
+    lun = GET_LUN()
+    OPENW, lun, '3d_data.csv'
+    PRINTF, lun, 'x,y,z,color'
+
+    FOR i = 0, n_points-1 DO BEGIN
+        PRINTF, lun, FORMAT='(F8.4,",",F8.4,",",F8.4,",",I3)', $
+                x[i], y[i], z[i], colors[i]
+    ENDFOR
+
+    CLOSE, lun
+    FREE_LUN, lun
+
+    df = XDLDATAFRAME_READ_CSV('3d_data.csv')
+
+    PRINT, 'DataFrame shape: ', df->Shape()
+    PRINT, ''
+
+    ; 3D Scatter Plot
+    PRINT, '3. Creating 3D Scatter Plot'
+    PRINT, '---------------------------'
+
+    ; Set up 3D plotting
+    WINDOW, 0, XSIZE=800, YSIZE=800
+
+    ; Create 3D coordinate system
+    SURFACE, DIST(5), /NODATA, /SAVE, $
+            XRANGE=[MIN(x)-1, MAX(x)+1], $
+            YRANGE=[MIN(y)-1, MAX(y)+1], $
+            ZRANGE=[MIN(z)-1, MAX(z)+1], $
+            XTITLE='X', YTITLE='Y', ZTITLE='Z', $
+            TITLE='3D Spiral Visualization', $
+            AZ=30, AX=30
+
+    ; Plot points in 3D
+    FOR i = 0, n_points-1 DO BEGIN
+        color = BYTSCL(z[i], MIN=MIN(z), MAX=MAX(z), TOP=255)
+        PLOTS, x[i], y[i], z[i], PSYM=3, COLOR=color, /T3D
+    ENDFOR
+
+    PRINT, '3D scatter plot created'
+    PRINT, ''
+
+    ; 3D Surface from DataFrame
+    PRINT, '4. Creating 3D Surface'
+    PRINT, '---------------------'
+
+    ; Generate grid for surface
+    n_grid = 50
+    x_surf = FINDGEN(n_grid) / (n_grid-1) * 10 - 5
+    y_surf = FINDGEN(n_grid) / (n_grid-1) * 10 - 5
+
+    ; Create 2D array for surface
+    z_surf = FLTARR(n_grid, n_grid)
+
+    FOR i = 0, n_grid-1 DO BEGIN
+        FOR j = 0, n_grid-1 DO BEGIN
+            ; Create wave pattern
+            r = SQRT(x_surf[i]^2 + y_surf[j]^2)
+            z_surf[i,j] = 3 * SIN(r) / (r + 0.1) + 2
+        ENDFOR
+    ENDFOR
+
+    WINDOW, 1, XSIZE=800, YSIZE=800
+    SURFACE, z_surf, x_surf, y_surf, $
+            AZ=30, AX=30, $
+            TITLE='3D Surface: Wave Pattern', $
+            XTITLE='X', YTITLE='Y', ZTITLE='Z', $
+            CHARSIZE=1.5
+
+    PRINT, '3D surface plot created'
+    PRINT, ''
+
+    ; Volume Visualization
+    PRINT, '5. 3D Volume Data'
+    PRINT, '----------------'
+
+    ; Create 3D volume grid
+    n_vol = 30
+    volume = FLTARR(n_vol, n_vol, n_vol)
+
+    FOR i = 0, n_vol-1 DO BEGIN
+        FOR j = 0, n_vol-1 DO BEGIN
+            FOR k = 0, n_vol-1 DO BEGIN
+                ; Create 3D Gaussian
+                cx = n_vol/2.0
+                cy = n_vol/2.0
+                cz = n_vol/2.0
+                sigma = n_vol/4.0
+
+                dist_sq = (i-cx)^2 + (j-cy)^2 + (k-cz)^2
+                volume[i,j,k] = EXP(-dist_sq / (2*sigma^2))
+            ENDFOR
+        ENDFOR
+    ENDFOR
+
+    ; Create isosurface visualization
+    WINDOW, 2, XSIZE=800, YSIZE=800
+
+    ; Display slices through volume
+    CONTOUR, volume[*, *, n_vol/2], $
+            LEVELS=FINDGEN(10)/10, $
+            TITLE='Volume Slice (Z=middle)', $
+            XTITLE='X', YTITLE='Y', $
+            /FILL
+
+    PRINT, 'Volume slice visualization created'
+    PRINT, ''
+
+    ; Parametric 3D Curve
+    PRINT, '6. Parametric 3D Curves'
+    PRINT, '----------------------'
+
+    WINDOW, 3, XSIZE=800, YSIZE=800
+
+    ; Create multiple parametric curves
+    n_curves = 3
+    n_pts = 100
+    t_param = FINDGEN(n_pts) / n_pts * 4 * !PI
+
+    ; Set up 3D space
+    SURFACE, DIST(5), /NODATA, /SAVE, $
+            XRANGE=[-6, 6], YRANGE=[-6, 6], ZRANGE=[-6, 6], $
+            XTITLE='X', YTITLE='Y', ZTITLE='Z', $
+            TITLE='Parametric 3D Curves', $
+            AZ=45, AX=25
+
+    ; Draw multiple helices
+    FOR c = 0, n_curves-1 DO BEGIN
+        phase = c * 2 * !PI / n_curves
+        radius = 3 + c * 0.5
+
+        x_curve = radius * COS(t_param + phase)
+        y_curve = radius * SIN(t_param + phase)
+        z_curve = 4 * t_param / !PI - 4
+
+        color = (c EQ 0) ? !RED : (c EQ 1) ? !BLUE : !GREEN
+
+        FOR i = 0, n_pts-2 DO BEGIN
+            PLOTS, [x_curve[i], x_curve[i+1]], $
+                   [y_curve[i], y_curve[i+1]], $
+                   [z_curve[i], z_curve[i+1]], $
+                   COLOR=color, THICK=2, /T3D
+        ENDFOR
+    ENDFOR
+
+    PRINT, 'Parametric curves plotted'
+    PRINT, ''
+
+    ; Mesh Surface
+    PRINT, '7. 3D Mesh Surface'
+    PRINT, '-----------------'
+
+    WINDOW, 4, XSIZE=800, YSIZE=800
+
+    ; Create mesh grid
+    x_mesh = FINDGEN(40) / 39 * 8 - 4
+    y_mesh = FINDGEN(40) / 39 * 8 - 4
+
+    z_mesh = FLTARR(40, 40)
+    FOR i = 0, 39 DO BEGIN
+        FOR j = 0, 39 DO BEGIN
+            ; Create saddle surface
+            z_mesh[i,j] = x_mesh[i]^2 - y_mesh[j]^2
+        ENDFOR
+    ENDFOR
+
+    SHADE_SURF, z_mesh, x_mesh, y_mesh, $
+               AZ=30, AX=30, $
+               TITLE='3D Mesh: Saddle Surface', $
+               XTITLE='X', YTITLE='Y', ZTITLE='Z', $
+               SHADES=BYTSCL(z_mesh)
+
+    PRINT, 'Mesh surface created'
+    PRINT, ''
+
+    ; DataFrame Statistics for 3D Data
+    PRINT, '8. 3D Data Statistics'
+    PRINT, '--------------------'
+
+    x_stats = df->Column('x')->Describe()
+    y_stats = df->Column('y')->Describe()
+    z_stats = df->Column('z')->Describe()
+
+    PRINT, 'X Statistics:'
+    PRINT, '  Range: [', x_stats.min, ', ', x_stats.max, ']'
+    PRINT, '  Mean: ', x_stats.mean
+    PRINT, '  Std: ', x_stats.std
+    PRINT, ''
+
+    PRINT, 'Y Statistics:'
+    PRINT, '  Range: [', y_stats.min, ', ', y_stats.max, ']'
+    PRINT, '  Mean: ', y_stats.mean
+    PRINT, '  Std: ', y_stats.std
+    PRINT, ''
+
+    PRINT, 'Z Statistics:'
+    PRINT, '  Range: [', z_stats.min, ', ', z_stats.max, ']'
+    PRINT, '  Mean: ', z_stats.mean
+    PRINT, '  Std: ', z_stats.std
+    PRINT, ''
+
+    ; Correlation analysis
+    PRINT, '9. 3D Correlation Analysis'
+    PRINT, '-------------------------'
+
+    ; Extract data
+    x_data = df->Column('x')->Data()
+    y_data = df->Column('y')->Data()
+    z_data = df->Column('z')->Data()
+
+    ; Calculate correlations
+    corr_xy = CORRELATE(x_data, y_data)
+    corr_xz = CORRELATE(x_data, z_data)
+    corr_yz = CORRELATE(y_data, z_data)
+
+    PRINT, 'Correlations:'
+    PRINT, '  X-Y: ', corr_xy
+    PRINT, '  X-Z: ', corr_xz
+    PRINT, '  Y-Z: ', corr_yz
+    PRINT, ''
+
+    ; 3D Histogram
+    PRINT, '10. 3D Density Visualization'
+    PRINT, '---------------------------'
+
+    WINDOW, 5, XSIZE=800, YSIZE=800
+
+    ; Create 2D histogram
+    hist2d = HIST_2D(x_data, y_data, BIN1=0.5, BIN2=0.5)
+
+    SURFACE, hist2d, $
+            AZ=30, AX=30, $
+            TITLE='3D Density: X-Y Distribution', $
+            XTITLE='X bins', YTITLE='Y bins', ZTITLE='Count', $
+            CHARSIZE=1.5
+
+    PRINT, '3D density visualization created'
+    PRINT, ''
+
+    ; Export 3D data summary
+    PRINT, '11. Exporting 3D Data Summary'
+    PRINT, '----------------------------'
+
+    lun = GET_LUN()
+    OPENW, lun, '3d_summary.csv'
+    PRINTF, lun, 'axis,min,max,mean,std,correlation_with_z'
+    PRINTF, lun, 'x,' + STRING(x_stats.min) + ',' + STRING(x_stats.max) + ',' + $
+                 STRING(x_stats.mean) + ',' + STRING(x_stats.std) + ',' + STRING(corr_xz)
+    PRINTF, lun, 'y,' + STRING(y_stats.min) + ',' + STRING(y_stats.max) + ',' + $
+                 STRING(y_stats.mean) + ',' + STRING(y_stats.std) + ',' + STRING(corr_yz)
+    PRINTF, lun, 'z,' + STRING(z_stats.min) + ',' + STRING(z_stats.max) + ',' + $
+                 STRING(z_stats.mean) + ',' + STRING(z_stats.std) + ',1.0'
+    CLOSE, lun
+    FREE_LUN, lun
+
+    PRINT, 'Summary exported to 3d_summary.csv'
+    PRINT, ''
+
+    PRINT, '=== 3D Visualization Demo Complete ==='
+    PRINT, ''
+    PRINT, 'Created 6 visualization windows:'
+    PRINT, '  Window 0: 3D Spiral scatter plot'
+    PRINT, '  Window 1: 3D Wave surface'
+    PRINT, '  Window 2: Volume slice'
+    PRINT, '  Window 3: Parametric 3D curves'
+    PRINT, '  Window 4: Mesh saddle surface'
+    PRINT, '  Window 5: 3D density histogram'
+ENDPRO
+
+; Run the demo
+viz3d_dataframe_demo
