@@ -1,0 +1,287 @@
+; Machine Learning Classification with DataFrame
+; Demonstrates full ML pipeline: data loading, preprocessing, training, evaluation
+
+PRO ml_classification_demo
+    PRINT, '=== XDL DataFrame + ML Classification Demo ==='
+    PRINT, ''
+
+    ; Generate synthetic classification dataset
+    PRINT, '1. Generating Classification Dataset'
+    PRINT, '------------------------------------'
+    n_samples = 200
+    seed = 12345
+
+    ; Generate features
+    ; Class 0: centered at (2, 2)
+    ; Class 1: centered at (6, 6)
+    ; Class 2: centered at (2, 6)
+
+    features1 = RANDOMN(seed, n_samples/3, 2) + REBIN([2.0, 2.0], n_samples/3, 2)
+    features2 = RANDOMN(seed, n_samples/3, 2) + REBIN([6.0, 6.0], n_samples/3, 2)
+    features3 = RANDOMN(seed, n_samples - 2*(n_samples/3), 2) + REBIN([2.0, 6.0], n_samples - 2*(n_samples/3), 2)
+
+    ; Combine features
+    X = [[features1], [features2], [features3]]
+
+    ; Create labels
+    labels = [REPLICATE(0, n_samples/3), $
+              REPLICATE(1, n_samples/3), $
+              REPLICATE(2, n_samples - 2*(n_samples/3))]
+
+    PRINT, 'Generated ', n_samples, ' samples with 2 features, 3 classes'
+    PRINT, ''
+
+    ; Create DataFrame from features
+    PRINT, '2. Creating DataFrame'
+    PRINT, '--------------------'
+
+    ; Save to CSV for DataFrame loading
+    lun = GET_LUN()
+    OPENW, lun, 'classification_data.csv'
+    PRINTF, lun, 'feature1,feature2,class'
+
+    FOR i = 0, n_samples-1 DO BEGIN
+        PRINTF, lun, FORMAT='(F8.4,",",F8.4,",",I1)', $
+                X[i,0], X[i,1], labels[i]
+    ENDFOR
+
+    CLOSE, lun
+    FREE_LUN, lun
+
+    ; Load into DataFrame
+    df = XDLDATAFRAME_READ_CSV('classification_data.csv')
+
+    PRINT, 'DataFrame created: ', df->Shape()
+    PRINT, 'Columns: ', df->ColumnNames()
+    PRINT, ''
+
+    ; Visualize raw data
+    PRINT, '3. Visualizing Data Distribution'
+    PRINT, '--------------------------------'
+
+    WINDOW, 0, XSIZE=800, YSIZE=600
+    PLOT, X[*,0], X[*,1], PSYM=3, $
+          XTITLE='Feature 1', YTITLE='Feature 2', $
+          TITLE='Classification Dataset', $
+          XRANGE=[MIN(X[*,0])-1, MAX(X[*,0])+1], $
+          YRANGE=[MIN(X[*,1])-1, MAX(X[*,1])+1], $
+          /NODATA
+
+    ; Plot each class with different symbols
+    class0_idx = WHERE(labels EQ 0, c0)
+    class1_idx = WHERE(labels EQ 1, c1)
+    class2_idx = WHERE(labels EQ 2, c2)
+
+    IF c0 GT 0 THEN OPLOT, X[class0_idx,0], X[class0_idx,1], PSYM=4, COLOR=!RED, SYMSIZE=1.5
+    IF c1 GT 0 THEN OPLOT, X[class1_idx,0], X[class1_idx,1], PSYM=5, COLOR=!BLUE, SYMSIZE=1.5
+    IF c2 GT 0 THEN OPLOT, X[class2_idx,0], X[class2_idx,1], PSYM=6, COLOR=!GREEN, SYMSIZE=1.5
+
+    XYOUTS, MIN(X[*,0]), MAX(X[*,1])-0.5, 'Class 0', COLOR=!RED, /DATA
+    XYOUTS, MIN(X[*,0]), MAX(X[*,1])-1.0, 'Class 1', COLOR=!BLUE, /DATA
+    XYOUTS, MIN(X[*,0]), MAX(X[*,1])-1.5, 'Class 2', COLOR=!GREEN, /DATA
+
+    PRINT, 'Scatter plot created'
+    PRINT, ''
+
+    ; Split into train/test
+    PRINT, '4. Train/Test Split'
+    PRINT, '-------------------'
+
+    n_train = FIX(n_samples * 0.7)
+    train_idx = LINDGEN(n_train)
+    test_idx = LINDGEN(n_samples - n_train) + n_train
+
+    X_train = X[train_idx, *]
+    y_train = labels[train_idx]
+    X_test = X[test_idx, *]
+    y_test = labels[test_idx]
+
+    PRINT, 'Training samples: ', n_train
+    PRINT, 'Test samples: ', n_samples - n_train
+    PRINT, ''
+
+    ; Train classifier
+    PRINT, '5. Training Random Forest Classifier'
+    PRINT, '------------------------------------'
+
+    ; Normalize features
+    X_mean = MEAN(X_train, DIMENSION=1)
+    X_std = STDDEV(X_train, DIMENSION=1)
+
+    X_train_norm = (X_train - REBIN(X_mean, n_train, 2)) / REBIN(X_std, n_train, 2)
+    X_test_norm = (X_test - REBIN(X_mean, n_samples-n_train, 2)) / REBIN(X_std, n_samples-n_train, 2)
+
+    ; Simple k-NN classifier (simulating ML)
+    k = 5
+    y_pred = INTARR(n_samples - n_train)
+
+    FOR i = 0, n_samples - n_train - 1 DO BEGIN
+        ; Calculate distances to all training points
+        test_point = X_test_norm[i, *]
+        distances = SQRT(TOTAL((X_train_norm - REBIN(test_point, n_train, 2))^2, 2))
+
+        ; Find k nearest neighbors
+        sorted_idx = SORT(distances)
+        nearest = y_train[sorted_idx[0:k-1]]
+
+        ; Majority vote
+        counts = HISTOGRAM(nearest, MIN=0, MAX=2)
+        y_pred[i] = WHERE(counts EQ MAX(counts))
+    ENDFOR
+
+    PRINT, 'Model trained (k-NN with k=', k, ')'
+    PRINT, ''
+
+    ; Evaluate model
+    PRINT, '6. Model Evaluation'
+    PRINT, '-------------------'
+
+    correct = TOTAL(y_pred EQ y_test)
+    accuracy = FLOAT(correct) / (n_samples - n_train) * 100.0
+
+    PRINT, 'Test Accuracy: ', accuracy, '%'
+    PRINT, 'Correct predictions: ', correct, '/', n_samples - n_train
+    PRINT, ''
+
+    ; Confusion Matrix
+    PRINT, '7. Confusion Matrix'
+    PRINT, '-------------------'
+
+    confusion = INTARR(3, 3)
+    FOR i = 0, n_samples - n_train - 1 DO BEGIN
+        confusion[y_test[i], y_pred[i]] += 1
+    ENDFOR
+
+    PRINT, '           Predicted'
+    PRINT, '         0    1    2'
+    PRINT, 'Actual 0 ', confusion[0,0], '  ', confusion[0,1], '  ', confusion[0,2]
+    PRINT, '       1 ', confusion[1,0], '  ', confusion[1,1], '  ', confusion[1,2]
+    PRINT, '       2 ', confusion[2,0], '  ', confusion[2,1], '  ', confusion[2,2]
+    PRINT, ''
+
+    ; Visualize decision boundary
+    PRINT, '8. Decision Boundary Visualization'
+    PRINT, '-----------------------------------'
+
+    WINDOW, 1, XSIZE=800, YSIZE=600
+
+    ; Create grid for decision boundary
+    n_grid = 50
+    x1_grid = FINDGEN(n_grid) / (n_grid-1) * (MAX(X[*,0]) - MIN(X[*,0])) + MIN(X[*,0])
+    x2_grid = FINDGEN(n_grid) / (n_grid-1) * (MAX(X[*,1]) - MIN(X[*,1])) + MIN(X[*,1])
+
+    ; Create decision boundary image
+    boundary = INTARR(n_grid, n_grid)
+
+    FOR i = 0, n_grid-1 DO BEGIN
+        FOR j = 0, n_grid-1 DO BEGIN
+            test_point = [x1_grid[i], x2_grid[j]]
+            test_point_norm = (test_point - X_mean) / X_std
+
+            ; Find nearest neighbors
+            distances = SQRT(TOTAL((X_train_norm - REBIN(test_point_norm, n_train, 2))^2, 2))
+            sorted_idx = SORT(distances)
+            nearest = y_train[sorted_idx[0:k-1]]
+
+            ; Assign class
+            counts = HISTOGRAM(nearest, MIN=0, MAX=2)
+            boundary[i,j] = WHERE(counts EQ MAX(counts))
+        ENDFOR
+    ENDFOR
+
+    ; Display decision boundary
+    TVSCL, boundary
+    CONTOUR, boundary, x1_grid, x2_grid, LEVELS=[0.5, 1.5], $
+            /OVERPLOT, C_COLORS=[!RED, !BLUE]
+
+    ; Overlay data points
+    OPLOT, X[class0_idx,0], X[class0_idx,1], PSYM=4, COLOR=!RED, SYMSIZE=1.5
+    OPLOT, X[class1_idx,0], X[class1_idx,1], PSYM=5, COLOR=!BLUE, SYMSIZE=1.5
+    OPLOT, X[class2_idx,0], X[class2_idx,1], PSYM=6, COLOR=!GREEN, SYMSIZE=1.5
+
+    PRINT, 'Decision boundary plotted'
+    PRINT, ''
+
+    ; Feature importance (variance)
+    PRINT, '9. Feature Statistics'
+    PRINT, '---------------------'
+
+    feat1_stats = df->Column('feature1')->Describe()
+    feat2_stats = df->Column('feature2')->Describe()
+
+    PRINT, 'Feature 1:'
+    PRINT, '  Mean: ', feat1_stats.mean
+    PRINT, '  Std:  ', feat1_stats.std
+    PRINT, '  Range: [', feat1_stats.min, ', ', feat1_stats.max, ']'
+    PRINT, ''
+    PRINT, 'Feature 2:'
+    PRINT, '  Mean: ', feat2_stats.mean
+    PRINT, '  Std:  ', feat2_stats.std
+    PRINT, '  Range: [', feat2_stats.min, ', ', feat2_stats.max, ']'
+    PRINT, ''
+
+    ; Class distribution
+    PRINT, '10. Class Distribution'
+    PRINT, '---------------------'
+
+    class_series = df->Column('class')
+    class_counts = class_series->ValueCounts()
+
+    PRINT, 'Class distribution:'
+    FOREACH class_name, class_counts.keys() DO BEGIN
+        PRINT, '  Class ', class_name, ': ', class_counts[class_name], ' samples'
+    ENDFOREACH
+    PRINT, ''
+
+    ; Create bar chart of class distribution
+    WINDOW, 2, XSIZE=800, YSIZE=600
+
+    classes = [0, 1, 2]
+    counts = [class_counts['0'], class_counts['1'], class_counts['2']]
+
+    PLOT, classes, counts, PSYM=0, $
+          XTITLE='Class', YTITLE='Count', $
+          TITLE='Class Distribution', $
+          XRANGE=[-0.5, 2.5], YRANGE=[0, MAX(counts)*1.2], $
+          /NODATA
+
+    FOR i = 0, 2 DO BEGIN
+        color = (i EQ 0) ? !RED : (i EQ 1) ? !BLUE : !GREEN
+        POLYFILL, [i-0.3, i+0.3, i+0.3, i-0.3], $
+                  [0, 0, counts[i], counts[i]], COLOR=color
+    ENDFOR
+
+    PRINT, 'Class distribution bar chart created'
+    PRINT, ''
+
+    ; Export results
+    PRINT, '11. Exporting Results'
+    PRINT, '---------------------'
+
+    ; Create results DataFrame
+    lun = GET_LUN()
+    OPENW, lun, 'ml_results.csv'
+    PRINTF, lun, 'metric,value'
+    PRINTF, lun, 'accuracy,' + STRING(accuracy)
+    PRINTF, lun, 'n_train,' + STRING(n_train)
+    PRINTF, lun, 'n_test,' + STRING(n_samples - n_train)
+    PRINTF, lun, 'k_neighbors,' + STRING(k)
+    CLOSE, lun
+    FREE_LUN, lun
+
+    PRINT, 'Results exported to ml_results.csv'
+    PRINT, ''
+
+    PRINT, '=== ML Classification Demo Complete ==='
+    PRINT, ''
+    PRINT, 'Summary:'
+    PRINT, '  • Trained k-NN classifier on ', n_samples, ' samples'
+    PRINT, '  • Test accuracy: ', accuracy, '%'
+    PRINT, '  • Created 3 visualizations:'
+    PRINT, '    - Window 0: Data distribution by class'
+    PRINT, '    - Window 1: Decision boundary'
+    PRINT, '    - Window 2: Class distribution bar chart'
+ENDPRO
+
+; Run the demo
+ml_classification_demo

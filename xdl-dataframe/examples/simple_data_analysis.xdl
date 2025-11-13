@@ -1,0 +1,195 @@
+; Simple Data Analysis and Plotting Example
+; Generates sample data, creates DataFrame, and visualizes results
+
+PRO simple_data_analysis
+    PRINT, '=== Simple DataFrame Data Analysis Example ==='
+    PRINT, ''
+
+    ; Generate sample dataset
+    PRINT, '1. Generating Sample Data'
+    PRINT, '-------------------------'
+    n_samples = 50
+
+    ; Create some sample data arrays
+    ages = RANDOMU(seed, n_samples) * 40 + 20  ; Ages between 20-60
+    salaries = ages * 1000 + RANDOMU(seed, n_samples) * 20000 + 30000  ; Salary correlated with age
+    experience = ages - 22 + RANDOMU(seed, n_samples) * 3  ; Experience roughly = age - 22
+
+    ; Create categories
+    departments = STRARR(n_samples)
+    FOR i = 0, n_samples-1 DO BEGIN
+        rand = RANDOMU(seed)
+        IF rand LT 0.33 THEN departments[i] = 'Engineering'
+        ELSE IF rand LT 0.66 THEN departments[i] = 'Sales'
+        ELSE departments[i] = 'Marketing'
+    ENDFOR
+
+    PRINT, 'Generated ', n_samples, ' sample records'
+    PRINT, ''
+
+    ; Create CSV file
+    PRINT, '2. Creating CSV File'
+    PRINT, '-------------------'
+    lun = GET_LUN()
+    OPENW, lun, 'sample_data.csv'
+    PRINTF, lun, 'age,salary,experience,department'
+
+    FOR i = 0, n_samples-1 DO BEGIN
+        PRINTF, lun, FORMAT='(F5.1,",",F8.2,",",F5.1,",",A)', $
+                ages[i], salaries[i], experience[i], departments[i]
+    ENDFOR
+
+    CLOSE, lun
+    FREE_LUN, lun
+    PRINT, 'CSV file created: sample_data.csv'
+    PRINT, ''
+
+    ; Simple data visualization without DataFrame (using base XDL)
+    PRINT, '3. Creating Visualizations'
+    PRINT, '-------------------------'
+
+    ; Plot 1: Age vs Salary scatter plot
+    WINDOW, 0, XSIZE=800, YSIZE=600
+    PLOT, ages, salaries, PSYM=4, SYMSIZE=1.5, $
+          XTITLE='Age (years)', $
+          YTITLE='Salary ($)', $
+          TITLE='Age vs Salary Distribution', $
+          XRANGE=[15,65], $
+          YRANGE=[30000,100000], $
+          /NODATA
+
+    ; Plot points by department with different colors
+    eng_idx = WHERE(departments EQ 'Engineering', eng_count)
+    sales_idx = WHERE(departments EQ 'Sales', sales_count)
+    mkt_idx = WHERE(departments EQ 'Marketing', mkt_count)
+
+    IF eng_count GT 0 THEN $
+        OPLOT, ages[eng_idx], salaries[eng_idx], PSYM=4, COLOR=!RED, SYMSIZE=1.5
+    IF sales_count GT 0 THEN $
+        OPLOT, ages[sales_idx], salaries[sales_idx], PSYM=5, COLOR=!BLUE, SYMSIZE=1.5
+    IF mkt_count GT 0 THEN $
+        OPLOT, ages[mkt_idx], salaries[mkt_idx], PSYM=6, COLOR=!GREEN, SYMSIZE=1.5
+
+    ; Add legend
+    XYOUTS, 20, 95000, 'Engineering', COLOR=!RED, /DATA
+    XYOUTS, 20, 90000, 'Sales', COLOR=!BLUE, /DATA
+    XYOUTS, 20, 85000, 'Marketing', COLOR=!GREEN, /DATA
+
+    PRINT, 'Created scatter plot: Age vs Salary'
+    PRINT, ''
+
+    ; Plot 2: Histogram of ages
+    WINDOW, 1, XSIZE=800, YSIZE=600
+    age_bins = HISTOGRAM(ages, BINSIZE=5, MIN=20, MAX=60, LOCATIONS=bin_locs)
+    PLOT, bin_locs, age_bins, PSYM=10, THICK=2, $
+          XTITLE='Age (years)', $
+          YTITLE='Count', $
+          TITLE='Age Distribution Histogram', $
+          XRANGE=[15,65], $
+          YRANGE=[0,MAX(age_bins)+2]
+
+    PRINT, 'Created histogram: Age Distribution'
+    PRINT, ''
+
+    ; Plot 3: Box plot style visualization of salaries by department
+    WINDOW, 2, XSIZE=800, YSIZE=600
+
+    ; Calculate statistics by department
+    IF eng_count GT 0 THEN BEGIN
+        eng_mean = MEAN(salaries[eng_idx])
+        eng_std = STDDEV(salaries[eng_idx])
+        eng_min = MIN(salaries[eng_idx])
+        eng_max = MAX(salaries[eng_idx])
+    ENDIF
+
+    IF sales_count GT 0 THEN BEGIN
+        sales_mean = MEAN(salaries[sales_idx])
+        sales_std = STDDEV(salaries[sales_idx])
+        sales_min = MIN(salaries[sales_idx])
+        sales_max = MAX(salaries[sales_idx])
+    ENDIF
+
+    IF mkt_count GT 0 THEN BEGIN
+        mkt_mean = MEAN(salaries[mkt_idx])
+        mkt_std = STDDEV(salaries[mkt_idx])
+        mkt_min = MIN(salaries[mkt_idx])
+        mkt_max = MAX(salaries[mkt_idx])
+    ENDIF
+
+    ; Create bar plot of mean salaries
+    x_positions = [1, 2, 3]
+    means = [eng_mean, sales_mean, mkt_mean]
+
+    PLOT, x_positions, means, PSYM=0, $
+          XTITLE='Department', $
+          YTITLE='Average Salary ($)', $
+          TITLE='Average Salary by Department', $
+          XRANGE=[0,4], $
+          YRANGE=[0,MAX(means)*1.2], $
+          XSTYLE=1, $
+          XTICKS=3, $
+          XTICKNAME=[' ','Engineering','Sales','Marketing'], $
+          /NODATA
+
+    ; Draw bars
+    FOR i = 0, 2 DO BEGIN
+        x = x_positions[i]
+        h = means[i]
+        POLYFILL, [x-0.3, x+0.3, x+0.3, x-0.3], [0, 0, h, h], $
+                  COLOR=(i EQ 0) ? !RED : (i EQ 1) ? !BLUE : !GREEN
+    ENDFOR
+
+    PRINT, 'Created bar plot: Average Salary by Department'
+    PRINT, ''
+
+    ; Print statistics
+    PRINT, '4. Statistical Summary'
+    PRINT, '---------------------'
+    PRINT, ''
+    PRINT, 'Overall Statistics:'
+    PRINT, '  Sample Size: ', n_samples
+    PRINT, '  Age Range: ', MIN(ages), ' to ', MAX(ages)
+    PRINT, '  Average Age: ', MEAN(ages)
+    PRINT, '  Average Salary: $', MEAN(salaries)
+    PRINT, '  Salary Range: $', MIN(salaries), ' to $', MAX(salaries)
+    PRINT, ''
+
+    PRINT, 'By Department:'
+    PRINT, '  Engineering: ', eng_count, ' employees, Avg Salary: $', eng_mean
+    PRINT, '  Sales: ', sales_count, ' employees, Avg Salary: $', sales_mean
+    PRINT, '  Marketing: ', mkt_count, ' employees, Avg Salary: $', mkt_mean
+    PRINT, ''
+
+    ; Plot 4: Experience vs Salary with trend line
+    WINDOW, 3, XSIZE=800, YSIZE=600
+    PLOT, experience, salaries, PSYM=4, SYMSIZE=1.5, $
+          XTITLE='Years of Experience', $
+          YTITLE='Salary ($)', $
+          TITLE='Experience vs Salary with Trend Line', $
+          XRANGE=[-2,MAX(experience)+2], $
+          YRANGE=[30000,100000]
+
+    ; Calculate and plot trend line
+    coeffs = POLY_FIT(experience, salaries, 1)
+    x_trend = FINDGEN(100) / 99 * MAX(experience)
+    y_trend = coeffs[0] + coeffs[1] * x_trend
+    OPLOT, x_trend, y_trend, THICK=2, COLOR=!RED, LINESTYLE=2
+
+    PRINT, 'Created scatter plot with trend line: Experience vs Salary'
+    PRINT, 'Trend: Salary = $', coeffs[0], ' + $', coeffs[1], ' * Experience'
+    PRINT, ''
+
+    PRINT, '=== Analysis Complete ==='
+    PRINT, ''
+    PRINT, 'Generated Files:'
+    PRINT, '  - sample_data.csv (raw data)'
+    PRINT, ''
+    PRINT, 'Created 4 Visualization Windows:'
+    PRINT, '  Window 0: Age vs Salary (colored by department)'
+    PRINT, '  Window 1: Age Distribution Histogram'
+    PRINT, '  Window 2: Average Salary by Department (bar chart)'
+    PRINT, '  Window 3: Experience vs Salary with Trend Line'
+ENDPRO
+
+; Run the analysis
+simple_data_analysis
