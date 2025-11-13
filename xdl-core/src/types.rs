@@ -32,6 +32,8 @@ pub enum XdlValue {
         shape: Vec<usize>, // Dimensions: [rows, cols] for 2D, [depth, rows, cols] for 3D
     },
     PythonObject(String), // Opaque reference to Python object (stored by ID)
+    DataFrame(usize),     // Reference to DataFrame stored by ID
+    Struct(HashMap<String, XdlValue>), // Structure with named fields
 }
 
 impl XdlValue {
@@ -57,6 +59,8 @@ impl XdlValue {
             XdlValue::NestedArray(_) => GdlType::Float, // Nested arrays also default to float
             XdlValue::MultiDimArray { .. } => GdlType::Float, // Multi-dim arrays are float
             XdlValue::PythonObject(_) => GdlType::ObjRef, // Python objects are object references
+            XdlValue::DataFrame(_) => GdlType::ObjRef, // DataFrames are object references
+            XdlValue::Struct(_) => GdlType::ObjRef, // Structs are object references
         }
     }
 
@@ -159,6 +163,16 @@ impl XdlValue {
             XdlValue::PythonObject(id) => {
                 // Return a placeholder - actual string conversion happens in the stdlib layer
                 format!("<Python:{}>", id)
+            }
+            XdlValue::DataFrame(id) => {
+                format!("<DataFrame:{}>", id)
+            }
+            XdlValue::Struct(map) => {
+                let fields: Vec<String> = map
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v.to_string_repr()))
+                    .collect();
+                format!("{{{}}}", fields.join(", "))
             }
         }
     }

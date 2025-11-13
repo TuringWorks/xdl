@@ -235,6 +235,8 @@ pub fn string_fn(args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Pointer(p) => format!("<Pointer:0x{:x}>", p),
         XdlValue::ObjRef(o) => format!("<Object:0x{:x}>", o),
         XdlValue::PythonObject(id) => format!("<Python:{}>", id),
+        XdlValue::DataFrame(id) => format!("<DataFrame:{}>", id),
+        XdlValue::Struct(_) => "<Struct>".to_string(),
         XdlValue::Undefined => "!NULL".to_string(),
     };
 

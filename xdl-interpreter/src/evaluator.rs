@@ -64,8 +64,48 @@ impl Evaluator {
                     return Err(XdlError::NotImplemented("Function keywords".to_string()));
                 }
 
-                // Call standard library function
-                self.stdlib.call_function(name, &arg_values)
+                // Handle DataFrame functions that need Context access
+                match name.to_uppercase().as_str() {
+                    "XDLDATAFRAME_READ_CSV" => {
+                        if arg_values.is_empty() {
+                            return Err(XdlError::InvalidArgument(
+                                "XDLDATAFRAME_READ_CSV requires a filename argument".to_string(),
+                            ));
+                        }
+
+                        let filename = match &arg_values[0] {
+                            XdlValue::String(s) => s.clone(),
+                            _ => arg_values[0].to_string_repr(),
+                        };
+
+                        // Default delimiter is comma
+                        let delimiter = if arg_values.len() > 1 {
+                            match &arg_values[1] {
+                                XdlValue::String(s) if !s.is_empty() => s.as_bytes()[0],
+                                _ => b',',
+                            }
+                        } else {
+                            b','
+                        };
+
+                        // Create CSV reader options
+                        let options =
+                            xdl_dataframe::CsvReaderOptions::default().with_delimiter(delimiter);
+
+                        // Read the CSV file
+                        let df = xdl_dataframe::read_csv(&filename, options).map_err(|e| {
+                            XdlError::RuntimeError(format!("CSV read error: {}", e))
+                        })?;
+
+                        // Store DataFrame in Context and return ID
+                        let id = context.store_dataframe(df);
+                        Ok(XdlValue::DataFrame(id))
+                    }
+                    _ => {
+                        // Call standard library function
+                        self.stdlib.call_function(name, &arg_values)
+                    }
+                }
             }
 
             Expression::ArrayDef { elements, .. } => {
@@ -118,10 +158,27 @@ impl Evaluator {
                     }
                 }
 
-                // Generic method call handling
-                let _obj_val = self.evaluate(object, context)?;
-                // TODO: Implement generic method calls
-                Err(XdlError::NotImplemented("Method calls".to_string()))
+                // Evaluate the object
+                let obj_val = self.evaluate(object, context)?;
+
+                // Dispatch based on object type
+                match obj_val {
+                    XdlValue::DataFrame(id) => {
+                        self.call_dataframe_method(id, method, args, context)
+                    }
+                    XdlValue::Struct(ref _map) => {
+                        // For structs, methods might be stored as function pointers
+                        // For now, return error
+                        Err(XdlError::NotImplemented(format!(
+                            "Struct method: {}",
+                            method
+                        )))
+                    }
+                    _ => Err(XdlError::TypeMismatch {
+                        expected: "object with methods".to_string(),
+                        actual: format!("{:?}", obj_val.gdl_type()),
+                    }),
+                }
             }
 
             _ => Err(XdlError::NotImplemented(format!(
@@ -1019,6 +1076,89 @@ impl Evaluator {
             "<Python module: {}>",
             module_name
         )))
+    }
+
+    /// Call a method on a DataFrame
+    fn call_dataframe_method(
+        &self,
+        df_id: usize,
+        method: &str,
+        args: &[Expression],
+        context: &mut Context,
+    ) -> XdlResult<XdlValue> {
+        match method {
+            "Shape" | "shape" => {
+                let df = context.get_dataframe(df_id)?;
+                let rows = df.nrows() as f64;
+                let cols = df.ncols() as f64;
+                Ok(XdlValue::Array(vec![rows, cols]))
+            }
+
+            "ColumnNames" | "column_names" => {
+                let df = context.get_dataframe(df_id)?;
+                let names = df.column_names();
+                // Return as array of strings (for now, just return count)
+                Ok(XdlValue::Array(vec![names.len() as f64]))
+            }
+
+            "Column" | "column" => {
+                if args.is_empty() {
+                    return Err(XdlError::RuntimeError(
+                        "Column() requires a column name argument".to_string(),
+                    ));
+                }
+
+                let col_name_val = self.evaluate(&args[0], context)?;
+                let col_name = match col_name_val {
+                    XdlValue::String(s) => s,
+                    _ => col_name_val.to_string_repr(),
+                };
+
+                let df = context.get_dataframe(df_id)?;
+                let series = df
+                    .column(&col_name)
+                    .map_err(|e| XdlError::RuntimeError(format!("Column error: {}", e)))?;
+
+                // Convert series data to XdlValue::Array
+                let data: Vec<f64> = series
+                    .data()
+                    .iter()
+                    .map(|v| match v {
+                        XdlValue::Long(n) => *n as f64,
+                        XdlValue::Double(d) => *d,
+                        XdlValue::Float(f) => *f as f64,
+                        _ => 0.0, // TODO: Better conversion
+                    })
+                    .collect();
+
+                Ok(XdlValue::Array(data))
+            }
+
+            "WriteCSV" | "write_csv" => {
+                if args.is_empty() {
+                    return Err(XdlError::RuntimeError(
+                        "WriteCSV() requires a filename argument".to_string(),
+                    ));
+                }
+
+                let filename_val = self.evaluate(&args[0], context)?;
+                let filename = match filename_val {
+                    XdlValue::String(s) => s,
+                    _ => filename_val.to_string_repr(),
+                };
+
+                let df = context.get_dataframe(df_id)?;
+                xdl_dataframe::write_csv(df, &filename, b',')
+                    .map_err(|e| XdlError::RuntimeError(format!("CSV write error: {}", e)))?;
+
+                Ok(XdlValue::Undefined)
+            }
+
+            _ => Err(XdlError::NotImplemented(format!(
+                "DataFrame method: {}",
+                method
+            ))),
+        }
     }
 }
 

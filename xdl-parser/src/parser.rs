@@ -778,9 +778,10 @@ impl<'a> Parser<'a> {
     fn parse_postfix(&mut self) -> XdlResult<Expression> {
         let mut expr = self.parse_primary()?;
 
-        // Handle postfix operations like array indexing
+        // Handle postfix operations like array indexing, method calls, and field access
         loop {
             if self.check(&Token::LeftBracket) {
+                // Array indexing: expr[index]
                 self.advance(); // consume '['
                 let indices = self.parse_array_indices()?;
                 self.consume(Token::RightBracket, "Expected ']' after array indices")?;
@@ -788,6 +789,78 @@ impl<'a> Parser<'a> {
                 expr = Expression::ArrayRef {
                     array: Box::new(expr),
                     indices,
+                    location: Location::unknown(),
+                };
+            } else if self.check(&Token::Arrow) {
+                // Method call: expr->method(args)
+                self.advance(); // consume '->'
+
+                // Get method name
+                let method = match self.advance() {
+                    Token::Identifier(name) => name.clone(),
+                    _ => {
+                        return Err(XdlError::ParseError {
+                            message: "Expected method name after '->'".to_string(),
+                            line: 1, // TODO: track line numbers
+                            column: self.current,
+                        });
+                    }
+                };
+
+                // Check if method has arguments
+                if self.check(&Token::LeftParen) {
+                    self.advance(); // consume '('
+                    let mut args = Vec::new();
+
+                    if !self.check(&Token::RightParen) {
+                        loop {
+                            args.push(self.parse_expression()?);
+                            if self.check(&Token::Comma) {
+                                self.advance();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+
+                    self.consume(Token::RightParen, "Expected ')' after method arguments")?;
+
+                    expr = Expression::MethodCall {
+                        object: Box::new(expr),
+                        method,
+                        args,
+                        keywords: Vec::new(), // TODO: implement keyword arguments
+                        location: Location::unknown(),
+                    };
+                } else {
+                    // Method call without parentheses (treat as property access that returns a value)
+                    expr = Expression::MethodCall {
+                        object: Box::new(expr),
+                        method,
+                        args: vec![],
+                        keywords: vec![],
+                        location: Location::unknown(),
+                    };
+                }
+            } else if self.check(&Token::Dot) {
+                // Struct field access: expr.field
+                self.advance(); // consume '.'
+
+                // Get field name
+                let field = match self.advance() {
+                    Token::Identifier(name) => name.clone(),
+                    _ => {
+                        return Err(XdlError::ParseError {
+                            message: "Expected field name after '.'".to_string(),
+                            line: 1, // TODO: track line numbers
+                            column: self.current,
+                        });
+                    }
+                };
+
+                expr = Expression::StructRef {
+                    object: Box::new(expr),
+                    field,
                     location: Location::unknown(),
                 };
             } else {

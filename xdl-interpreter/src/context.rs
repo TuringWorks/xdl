@@ -62,6 +62,10 @@ pub struct Context {
     procedures: HashMap<String, ProcedureDef>,
     /// System variables (!PI, !E, etc.)
     system_variables: HashMap<String, XdlValue>,
+    /// DataFrame storage (ID -> DataFrame)
+    dataframes: HashMap<usize, xdl_dataframe::DataFrame>,
+    /// Next DataFrame ID
+    next_dataframe_id: usize,
 }
 
 impl Context {
@@ -71,6 +75,8 @@ impl Context {
             functions: HashMap::new(),
             procedures: HashMap::new(),
             system_variables: HashMap::new(),
+            dataframes: HashMap::new(),
+            next_dataframe_id: 0,
         };
 
         // Initialize system variables
@@ -178,6 +184,35 @@ impl Context {
             }
         }
         all_vars
+    }
+
+    /// Store a DataFrame and return its ID
+    pub fn store_dataframe(&mut self, df: xdl_dataframe::DataFrame) -> usize {
+        let id = self.next_dataframe_id;
+        self.next_dataframe_id += 1;
+        self.dataframes.insert(id, df);
+        id
+    }
+
+    /// Get a reference to a DataFrame by ID
+    pub fn get_dataframe(&self, id: usize) -> XdlResult<&xdl_dataframe::DataFrame> {
+        self.dataframes
+            .get(&id)
+            .ok_or_else(|| XdlError::RuntimeError(format!("DataFrame {} not found", id)))
+    }
+
+    /// Get a mutable reference to a DataFrame by ID
+    pub fn get_dataframe_mut(&mut self, id: usize) -> XdlResult<&mut xdl_dataframe::DataFrame> {
+        self.dataframes
+            .get_mut(&id)
+            .ok_or_else(|| XdlError::RuntimeError(format!("DataFrame {} not found", id)))
+    }
+
+    /// Remove a DataFrame from storage
+    pub fn remove_dataframe(&mut self, id: usize) -> XdlResult<xdl_dataframe::DataFrame> {
+        self.dataframes
+            .remove(&id)
+            .ok_or_else(|| XdlError::RuntimeError(format!("DataFrame {} not found", id)))
     }
 }
 

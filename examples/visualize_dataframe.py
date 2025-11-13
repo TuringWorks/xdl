@@ -2,11 +2,16 @@
 """
 Visualize XDL DataFrame Analysis Results
 Generates plots from the DataFrame demo output
+
+This script runs XDL's simple_data_analysis.xdl demo to generate
+employee data, then reads the CSV and creates visualizations using pandas.
 """
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import subprocess
+import sys
 from pathlib import Path
 
 # Set style
@@ -15,21 +20,70 @@ plt.rcParams['figure.figsize'] = (12, 8)
 
 print("=== XDL DataFrame Visualization ===\n")
 
-# Sample employee data (same as in the demo)
-employee_data = {
-    'name': ['Alice Johnson', 'Bob Smith', 'Carol White', 'David Brown', 'Eve Davis',
-             'Frank Miller', 'Grace Lee', 'Henry Wilson', 'Iris Chen', 'Jack Taylor',
-             'Kate Anderson', 'Leo Martinez', 'Maya Patel', 'Noah Kim', 'Olivia Garcia'],
-    'age': [28, 35, 42, 31, 26, 38, 29, 45, 33, 27, 40, 32, 30, 36, 25],
-    'department': ['Engineering', 'Engineering', 'Management', 'Sales', 'Engineering',
-                   'Sales', 'Engineering', 'Management', 'Sales', 'Engineering',
-                   'Management', 'Sales', 'Engineering', 'Sales', 'Engineering'],
-    'salary': [75000, 82000, 95000, 68000, 72000, 88000, 79000, 105000, 76000, 71000,
-               98000, 74000, 80000, 85000, 70000],
-    'years_experience': [5, 10, 18, 7, 3, 12, 6, 20, 9, 4, 16, 8, 7, 11, 2]
-}
+# Step 1: Run XDL demo to generate data
+print("Step 1: Running XDL DataFrame demo to generate employee data...")
+print("-" * 60)
 
-df = pd.DataFrame(employee_data)
+# Find XDL executable
+xdl_path = Path(__file__).parent.parent / "target" / "release" / "xdl"
+if not xdl_path.exists():
+    xdl_path = Path(__file__).parent.parent / "target" / "debug" / "xdl"
+if not xdl_path.exists():
+    print("ERROR: XDL executable not found. Please run 'cargo build --release' first.")
+    sys.exit(1)
+
+# Run simple_data_analysis demo
+demo_script = Path(__file__).parent.parent / "xdl-dataframe" / "examples" / "simple_data_analysis.xdl"
+if demo_script.exists():
+    print(f"\nRunning: {demo_script.name}")
+    try:
+        result = subprocess.run(
+            [str(xdl_path), str(demo_script)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=demo_script.parent.parent  # Run in xdl-dataframe directory
+        )
+        if result.returncode == 0:
+            print("  ✓ Demo completed successfully")
+        else:
+            print(f"  ✗ Demo failed: {result.stderr[:200]}")
+    except subprocess.TimeoutExpired:
+        print("  ⚠ Demo timed out (may have opened visualization windows)")
+    except Exception as e:
+        print(f"  ✗ Error running demo: {e}")
+else:
+    print(f"WARNING: Demo script not found at {demo_script}")
+
+print("\nStep 2: Loading generated data from CSV...")
+print("-" * 60)
+
+# Load data from generated CSV
+csv_file = Path(__file__).parent.parent / "xdl-dataframe" / "sample_data.csv"
+if csv_file.exists():
+    print(f"✓ Loading data from: {csv_file}")
+    df = pd.read_csv(csv_file)
+    # Rename columns to match expected format
+    df = df.rename(columns={'experience': 'years_experience'})
+    print(f"  Loaded {len(df)} employee records")
+else:
+    print(f"WARNING: CSV file not found at {csv_file}")
+    print("Falling back to hardcoded data...")
+    # Fallback to hardcoded data
+    employee_data = {
+        'age': [28, 35, 42, 31, 26, 38, 29, 45, 33, 27, 40, 32, 30, 36, 25],
+        'department': ['Engineering', 'Engineering', 'Management', 'Sales', 'Engineering',
+                       'Sales', 'Engineering', 'Management', 'Sales', 'Engineering',
+                       'Management', 'Sales', 'Engineering', 'Sales', 'Engineering'],
+        'salary': [75000, 82000, 95000, 68000, 72000, 88000, 79000, 105000, 76000, 71000,
+                   98000, 74000, 80000, 85000, 70000],
+        'years_experience': [5, 10, 18, 7, 3, 12, 6, 20, 9, 4, 16, 8, 7, 11, 2]
+    }
+    df = pd.DataFrame(employee_data)
+
+print("\nStep 3: Creating visualizations...")
+print("-" * 60)
+print()
 
 # Create figure with subplots
 fig = plt.figure(figsize=(16, 12))
