@@ -15,6 +15,7 @@ IDL provides a comprehensive Machine Learning framework with 50+ functions cover
 ### 1. **Models & Classifiers** (7 functions)
 
 #### Core Models
+
 1. **IDLmlAutoEncoder** - Autoencoder for unsupervised clustering
    - **Scope**: Neural network architecture for dimensionality reduction
    - **Complexity**: High (requires backpropagation, encoder/decoder architecture)
@@ -52,6 +53,7 @@ IDL provides a comprehensive Machine Learning framework with 50+ functions cover
    - **Use Cases**: Non-linear regression, robust prediction
 
 #### Evaluation
+
 7. **IDLmlTestClassifier** - Model evaluation and metrics
    - **Scope**: Confusion matrix, accuracy, precision, recall, F1-score
    - **Complexity**: Low (statistical calculations)
@@ -128,12 +130,14 @@ Gradient-based optimization algorithms for training neural networks:
 Non-linear transformations for neural networks:
 
 #### Basic Activations
+
 20. **IDLmlafIdentity** - `f(x) = x` (linear)
 21. **IDLmlafBinaryStep** - `f(x) = (x >= 0) ? 1 : 0`
 22. **IDLmlafLogistic** - Sigmoid: `f(x) = 1 / (1 + e^-x)`
 23. **IDLmlafTanH** - Hyperbolic tangent: `f(x) = tanh(x)`
 
 #### ReLU Family
+
 24. **IDLmlafReLU** - Rectified Linear Unit: `f(x) = max(0, x)`
 25. **IDLmlafPReLU** - Parametric ReLU (learnable parameter)
 26. **IDLmlafELU** - Exponential Linear Unit
@@ -141,6 +145,7 @@ Non-linear transformations for neural networks:
 28. **IDLmlafISRLU** - Inverse Square Root Linear Unit
 
 #### Advanced Activations
+
 29. **IDLmlafArcTan** - `f(x) = atan(x)`
 30. **IDLmlafBentIdentity** - Bent identity function
 31. **IDLmlafGaussian** - Gaussian activation
@@ -148,6 +153,7 @@ Non-linear transformations for neural networks:
 33. **IDLmlafSinusoid** - Sine wave activation
 
 #### Soft Functions
+
 34. **IDLmlafSoftmax** - Softmax: `f(x_i) = e^x_i / Σe^x_j`
 35. **IDLmlafSoftPlus** - Smooth ReLU: `f(x) = ln(1 + e^x)`
 36. **IDLmlafSoftSign** - `f(x) = x / (1 + |x|)`
@@ -203,6 +209,7 @@ Objective functions for training:
 ## Implementation Priority & Phases
 
 ### **Phase ML-1: Foundation** (Estimated: 2-3 weeks)
+
 **Goal**: Core utilities and simple algorithms
 
 1. **Data Utilities** (Priority: Critical)
@@ -225,6 +232,7 @@ Objective functions for training:
 ---
 
 ### **Phase ML-2: Activation & Loss Functions** (Estimated: 1-2 weeks)
+
 **Goal**: Building blocks for neural networks
 
 1. **Basic Activations** (Priority: High)
@@ -244,6 +252,7 @@ Objective functions for training:
 ---
 
 ### **Phase ML-3: Optimizers** (Estimated: 1-2 weeks)
+
 **Goal**: Training algorithms for neural networks
 
 1. **Basic Optimizers** (Priority: High)
@@ -260,6 +269,7 @@ Objective functions for training:
 ---
 
 ### **Phase ML-4: Neural Networks** (Estimated: 3-4 weeks)
+
 **Goal**: Implement feed-forward and autoencoder models
 
 1. **Neural Network Core** (Priority: High)
@@ -278,6 +288,7 @@ Objective functions for training:
 ---
 
 ### **Phase ML-5: Support Vector Machines** (Estimated: 2-3 weeks)
+
 **Goal**: SVM for classification and regression
 
 1. **Kernel Functions** (Priority: High)
@@ -293,6 +304,7 @@ Objective functions for training:
 ---
 
 ### **Phase ML-6: Advanced Models** (Estimated: 1 week)
+
 **Goal**: Complete the ML suite
 
 1. **Remaining Models** (Priority: Medium)
@@ -306,7 +318,7 @@ Objective functions for training:
 
 ### Rust Crate Structure
 
-```
+```text
 xdl-ml/
 ├── Cargo.toml
 ├── src/
@@ -377,6 +389,7 @@ linfa = "0.7"              # Rust ML framework (optional)
 ## Implementation Complexity Analysis
 
 ### Easy (1-2 days each)
+
 - Data utilities (Partition, Shuffle)
 - Normalizers (5 functions)
 - Basic activation functions (Identity, ReLU, Sigmoid, TanH)
@@ -387,6 +400,7 @@ linfa = "0.7"              # Rust ML framework (optional)
 **Total**: ~20 functions, 2-3 weeks
 
 ### Medium (3-5 days each)
+
 - K-means clustering
 - Advanced activation functions (ELU, PReLU, etc.)
 - Advanced optimizers (Adam, RMSProp, QuickProp)
@@ -396,6 +410,7 @@ linfa = "0.7"              # Rust ML framework (optional)
 **Total**: ~15 functions, 3-4 weeks
 
 ### Hard (1-2 weeks each)
+
 - Feed-forward neural network (backpropagation, layer management)
 - Autoencoder (encoder/decoder architecture)
 - SVM classification (SMO algorithm or optimization)
@@ -423,17 +438,20 @@ With focused development and reuse of existing Rust ML libraries (smartcore, lin
 ## Success Criteria
 
 ### Functional Requirements
+
 - ✅ All 46 ML functions implemented
 - ✅ Compatible with IDL ML API
 - ✅ Comprehensive test coverage (>80%)
 - ✅ Example scripts for each model
 
 ### Performance Requirements
+
 - Training speed comparable to Python scikit-learn
 - Memory efficient for large datasets
 - Multi-threading support for training
 
 ### Documentation Requirements
+
 - API documentation for each function
 - User guide with examples
 - Migration guide from IDL ML

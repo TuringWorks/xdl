@@ -8,6 +8,7 @@
 ## Overview
 
 XDL now has native support for multi-dimensional arrays with explicit shape tracking. This enables efficient implementation of:
+
 - 2D Convolution (Conv2D)
 - Image processing
 - Matrix operations
@@ -30,6 +31,7 @@ XdlValue::MultiDimArray {
 ### Memory Layout
 
 **Row-Major Order** (C-style):
+
 - 2D Array [rows, cols]: `data[i * cols + j]` accesses element at (i, j)
 - 3D Array [depth, rows, cols]: `data[d * rows * cols + i * cols + j]`
 
@@ -74,9 +76,10 @@ Array[100x100]: [1.234, 5.678, ..., 9.012] (10000)
 ## Shape Conventions
 
 ### 2D Arrays (Matrices)
+
 `shape = [rows, cols]`
 
-```
+```text
 Example: 3x4 matrix
 shape = [3, 4]
 data = [a₀₀, a₀₁, a₀₂, a₀₃,  // row 0
@@ -85,18 +88,20 @@ data = [a₀₀, a₀₁, a₀₂, a₀₃,  // row 0
 ```
 
 ### 3D Arrays (Tensors)
+
 `shape = [depth, rows, cols]`
 
-```
+```text
 Example: 2x3x4 tensor (2 matrices of 3x4)
 shape = [2, 3, 4]
 Total elements: 24
 ```
 
 ### 4D Arrays (Batches)
+
 `shape = [batch, channels, height, width]`
 
-```
+```text
 Example: 8x3x32x32 (8 RGB images of 32x32)
 shape = [8, 3, 32, 32]
 Total elements: 24,576
@@ -312,6 +317,7 @@ fn reshape(arr: &XdlValue, new_shape: Vec<usize>) -> XdlResult<XdlValue>
 ### Forward Compatibility
 
 The design allows easy extension to:
+
 - Different data types (int, complex)
 - Strided arrays
 - Memory-mapped arrays

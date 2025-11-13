@@ -45,9 +45,9 @@ This document details the implementation status of array manipulation and statis
 | `MAX(arr)` | Maximum value | `array.rs` | ✅ | ✅ | Updated 2025-11-09 |
 | `MEAN(arr)` | Arithmetic mean | `array.rs` | ✅ | ✅ | Updated 2025-11-09 |
 | `TOTAL(arr)` | Sum all elements | `array.rs` | ✅ | ✅ | Updated 2025-11-09 |
-| `MEDIAN(arr)` | Median value | `statistics.rs` | ✅ | ❌ |
-| `VARIANCE(arr)` | Variance | `statistics.rs` | ✅ | ❌ |
-| `STDDEV(arr)` | Standard deviation | `statistics.rs` | ✅ | ❌ |
+| `MEDIAN(arr)` | Median value | `statistics.rs` | ✅ | ❌ | |
+| `VARIANCE(arr)` | Variance | `statistics.rs` | ✅ | ❌ | |
+| `STDDEV(arr)` | Standard deviation | `statistics.rs` | ✅ | ❌ | |
 
 ### Advanced Statistical Functions
 
@@ -110,12 +110,14 @@ pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 ```
 
 **Updated Functions:**
+
 - `MIN()` - Now works with 1D, 2D, and 3D arrays
 - `MAX()` - Now works with 1D, 2D, and 3D arrays
 - `MEAN()` - Now works with 1D, 2D, and 3D arrays
 - `TOTAL()` - Now works with 1D, 2D, and 3D arrays
 
 **Already Supported:**
+
 - `STDDEV()` - Already had MultiDimArray support via `VARIANCE()`
 - `VARIANCE()` - Already had MultiDimArray support
 
@@ -208,6 +210,7 @@ ENDIF
 ### Type Support
 
 All statistical functions support:
+
 - `XdlValue::Array` - 1D arrays
 - `XdlValue::MultiDimArray { data, shape }` - N-dimensional arrays
 - Scalar values (treated as single-element arrays)
@@ -215,6 +218,7 @@ All statistical functions support:
 ### Error Handling
 
 Functions return appropriate errors for:
+
 - Empty arrays
 - Type mismatches
 - Invalid dimensions
@@ -223,6 +227,7 @@ Functions return appropriate errors for:
 ## Testing
 
 Comprehensive test coverage includes:
+
 - 1D array operations
 - 2D array operations
 - 3D array operations
@@ -233,6 +238,7 @@ Comprehensive test coverage includes:
 ## Future Enhancements
 
 Potential additions:
+
 - [ ] N-dimensional WHERE support (return N-D indices)
 - [ ] Axis-specific operations (e.g., `MEAN(arr, axis=0)`)
 - [ ] Weighted statistics

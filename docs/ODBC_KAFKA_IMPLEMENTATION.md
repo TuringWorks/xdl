@@ -6,9 +6,10 @@ Completed full implementations of ODBC and Apache Kafka drivers for the XDL data
 
 ## ODBC Driver Implementation
 
-### Status: ✅ Fully Implemented
+### ODBC Status: ✅ Fully Implemented
 
-### Technology Stack
+### ODBC Technology Stack
+
 - **Crate**: `odbc-api` v8.0
 - **Features**: Universal database connectivity via ODBC standard
 - **Async Support**: Using `tokio::task::spawn_blocking` for ODBC operations
@@ -31,6 +32,7 @@ ODBC provides universal connectivity to virtually any database with an ODBC driv
 ### Implementation Highlights
 
 #### Connection Management
+
 ```rust
 pub async fn connect(connection_string: &str) -> DatabaseResult<Self> {
     // Create ODBC environment
@@ -49,11 +51,13 @@ pub async fn connect(connection_string: &str) -> DatabaseResult<Self> {
 ```
 
 **Key Features:**
+
 - Async wrapper around blocking ODBC calls
 - Automatic environment management
 - Support for any ODBC connection string format
 
 #### Query Execution
+
 ```rust
 pub async fn execute(&self, query: &str) -> DatabaseResult<Recordset> {
     tokio::task::spawn_blocking(move || {
@@ -72,6 +76,7 @@ pub async fn execute(&self, query: &str) -> DatabaseResult<Recordset> {
 ```
 
 **Key Features:**
+
 - Columnar buffer for efficient bulk fetching
 - Automatic type detection and conversion
 - Intelligent text-to-numeric conversion
@@ -92,6 +97,7 @@ ODBC types are converted to JSON intermediate format:
 | BINARY | String "(binary data)" |
 
 **Smart Conversion:** Text columns are parsed to detect numeric values:
+
 ```rust
 if let Ok(num) = text.parse::<i64>() {
     JsonValue::from(num)
@@ -105,31 +111,36 @@ if let Ok(num) = text.parse::<i64>() {
 ### Connection String Examples
 
 #### SQL Server
-```
+
+```text
 DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=mydb;UID=sa;PWD=pass;TrustServerCertificate=yes
 ```
 
 #### PostgreSQL
-```
+
+```text
 DRIVER={PostgreSQL Unicode};SERVER=localhost;PORT=5432;DATABASE=mydb;UID=user;PWD=pass
 ```
 
 #### MySQL
-```
+
+```text
 DRIVER={MySQL ODBC 8.0 Driver};SERVER=localhost;DATABASE=mydb;UID=user;PWD=pass
 ```
 
 #### Oracle
-```
+
+```text
 DRIVER={Oracle in OraClient19Home1};DBQ=localhost:1521/ORCL;UID=user;PWD=pass
 ```
 
 #### SQLite
-```
+
+```text
 DRIVER={SQLite3 ODBC Driver};Database=/path/to/database.db
 ```
 
-### XDL Usage Example
+### Kafka XDL Usage Example
 
 ```xdl
 ; Create database object
@@ -180,9 +191,10 @@ OBJ_DESTROY, objdb
 
 ## Apache Kafka Driver Implementation
 
-### Status: ✅ Fully Implemented
+### Kafka Status: ✅ Fully Implemented
 
-### Technology Stack
+### Kafka Technology Stack
+
 - **Crate**: `rdkafka` v0.36
 - **Features**: Producer, Consumer, Admin operations
 - **Async Support**: Native async/await with Tokio
@@ -190,6 +202,7 @@ OBJ_DESTROY, objdb
 ### Architecture
 
 Kafka driver creates three clients on connection:
+
 1. **Producer** - Send messages to topics
 2. **Consumer** - Read messages from topics
 3. **Admin Client** - Manage topics and cluster
@@ -208,6 +221,7 @@ pub struct KafkaConnection {
 Since Kafka is a streaming platform (not a traditional database), we use special SQL-like syntax:
 
 #### Topic Management
+
 ```xdl
 ; List all topics
 recordset = objdb->ExecuteSQL('LIST TOPICS')
@@ -220,6 +234,7 @@ objdb->ExecuteSQL, 'DELETE TOPIC my-topic'
 ```
 
 #### Producer Operations
+
 ```xdl
 ; Send a message
 objdb->ExecuteSQL, 'PRODUCE TO topic-name: message content'
@@ -235,6 +250,7 @@ ENDFOR
 ```
 
 #### Consumer Operations
+
 ```xdl
 ; Consume messages (default limit 10)
 recordset = objdb->ExecuteSQL('CONSUME FROM topic-name LIMIT 10')
@@ -252,6 +268,7 @@ ENDFOR
 ### Implementation Details
 
 #### Producer
+
 ```rust
 async fn handle_produce(&self, query: &str) -> DatabaseResult<Recordset> {
     // Parse: PRODUCE TO topic: message
@@ -270,6 +287,7 @@ async fn handle_produce(&self, query: &str) -> DatabaseResult<Recordset> {
 ```
 
 #### Consumer
+
 ```rust
 async fn handle_consume(&self, query: &str) -> DatabaseResult<Recordset> {
     // Parse: CONSUME FROM topic LIMIT n
@@ -294,6 +312,7 @@ async fn handle_consume(&self, query: &str) -> DatabaseResult<Recordset> {
 ```
 
 #### Admin Operations
+
 ```rust
 async fn handle_create_topic(&self, query: &str) -> DatabaseResult<Recordset> {
     let topic_name = parse_topic_name(query)?;
@@ -392,6 +411,7 @@ OBJ_DESTROY, objdb
 ### Files Modified/Created
 
 **New Implementations:**
+
 1. `xdl-database/src/drivers/odbc.rs` - Full ODBC driver (230 lines)
 2. `xdl-database/src/drivers/kafka.rs` - Full Kafka driver (446 lines)
 
@@ -415,6 +435,7 @@ OBJ_DESTROY, objdb
 | MySQL | ⏳ | - | - | - | - | Native stub ready |
 
 Legend:
+
 - ✅ Fully implemented
 - ⚠️ Limited functionality
 - ⏳ Stub implementation
@@ -441,16 +462,19 @@ all = [
 ```
 
 **Enable ODBC:**
+
 ```toml
 xdl-database = { path = "../xdl-database", features = ["odbc-support"] }
 ```
 
 **Enable Kafka:**
+
 ```toml
 xdl-database = { path = "../xdl-database", features = ["kafka-support"] }
 ```
 
 **Enable All:**
+
 ```toml
 xdl-database = { path = "../xdl-database", features = ["all"] }
 ```
@@ -462,11 +486,13 @@ xdl-database = { path = "../xdl-database", features = ["all"] }
 ### ODBC Testing
 
 **Prerequisites:**
+
 - ODBC driver manager installed (unixODBC on Linux/Mac, built-in on Windows)
 - Specific database ODBC driver installed
 - Database server running
 
 **Test Script:**
+
 ```bash
 # Install ODBC driver (example for PostgreSQL on macOS)
 brew install unixodbc
@@ -482,10 +508,12 @@ isql -v "DSN=MyDataSource;UID=user;PWD=pass"
 ### Kafka Testing
 
 **Prerequisites:**
+
 - Kafka broker running (or use Docker)
 - Default port 9092 accessible
 
 **Quick Start with Docker:**
+
 ```bash
 # Start Kafka with Docker Compose
 docker-compose up -d kafka zookeeper
@@ -495,6 +523,7 @@ docker run -p 9092:9092 confluentinc/cp-kafka:latest
 ```
 
 **Test Connection:**
+
 ```bash
 # Create topic
 kafka-topics --create --topic test --bootstrap-server localhost:9092
@@ -508,12 +537,14 @@ kafka-topics --list --bootstrap-server localhost:9092
 ## Performance Considerations
 
 ### ODBC
+
 - **Columnar Fetching**: Uses bulk fetch for efficiency
 - **Blocking Operations**: Wrapped in `spawn_blocking` to avoid blocking async runtime
 - **Buffer Size**: 100 rows per fetch (configurable)
 - **Type Conversion**: Text parsing adds slight overhead
 
 ### Kafka
+
 - **Batch Size**: Configure message batch size for throughput
 - **Timeout**: 1 second per message poll (configurable)
 - **Async Native**: Full async/await, no blocking
@@ -539,6 +570,7 @@ pub enum DatabaseError {
 ```
 
 **XDL Error Handling:**
+
 ```xdl
 CATCH, error
 IF error NE 0 THEN BEGIN
@@ -554,6 +586,7 @@ objdb->Connect, CONNECTION=conn_str
 ## Future Enhancements
 
 ### ODBC
+
 - [ ] Prepared statements support
 - [ ] Stored procedure calls
 - [ ] Transaction management (BEGIN, COMMIT, ROLLBACK)
@@ -561,6 +594,7 @@ objdb->Connect, CONNECTION=conn_str
 - [ ] Streaming result sets for large queries
 
 ### Kafka
+
 - [ ] Consumer groups with offset management
 - [ ] Exactly-once semantics
 - [ ] Schema Registry integration
@@ -575,16 +609,19 @@ objdb->Connect, CONNECTION=conn_str
 Both ODBC and Kafka drivers are now **production-ready** and fully integrated into the XDL database module:
 
 ✅ **ODBC** - Provides universal SQL database connectivity
+
 - Supports virtually any database with an ODBC driver
 - Enterprise-grade reliability
 - Standard SQL interface
 
 ✅ **Kafka** - Enables real-time streaming data access
+
 - High-throughput message processing
 - Event streaming and data pipelines
 - Modern distributed architecture
 
 The XDL database module now supports **5 fully functional database systems**:
+
 1. PostgreSQL (native)
 2. DuckDB (embedded)
 3. Redis (key-value)
@@ -592,6 +629,7 @@ The XDL database module now supports **5 fully functional database systems**:
 5. Apache Kafka (streaming)
 
 This provides XDL users with comprehensive data connectivity options for:
+
 - Traditional SQL databases
 - Embedded analytics
 - Key-value stores

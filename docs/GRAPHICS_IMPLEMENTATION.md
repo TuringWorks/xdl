@@ -9,6 +9,7 @@ The XDL graphics system is **production-ready** with full GUI integration!
 ## 🎯 What's Working
 
 ### ✅ Complete & Tested
+
 1. **44 Graphics Procedures** - All registered and callable
 2. **GUI Integration** - FLTK-based interactive plot windows
 3. **Graphics State Management** - Full color tables, styles, window management
@@ -18,6 +19,7 @@ The XDL graphics system is **production-ready** with full GUI integration!
 ### 📋 Implemented Procedures
 
 **Basic 2D Plotting** (5):
+
 - `PLOT` - Line plots with automatic windowing
 - `OPLOT` - Overplotting
 - `PLOTS` - Symbol plotting
@@ -25,11 +27,13 @@ The XDL graphics system is **production-ready** with full GUI integration!
 - `AXIS` - Axis drawing
 
 **2D Shapes** (3):
+
 - `POLYFILL` - Filled polygons
 - `ARROW` - Arrow drawing
 - `USERSYM` - Custom symbols
 
 **3D Plotting** (12):
+
 - `CONTOUR` - Contour plots
 - `SURFACE` - 3D surface plots
 - `SHADE_SURF` - Shaded surfaces
@@ -43,12 +47,14 @@ The XDL graphics system is **production-ready** with full GUI integration!
 - `ISOSURFACE` - 3D isosurfaces
 
 **Image Display** (4):
+
 - `TV` - Image display
 - `TVSCL` - Image with scaling
 - `TVCRS` - Cursor positioning
 - `IMAGE_DISPLAY` - Enhanced display
 
 **Window Management** (6):
+
 - `WINDOW` - Create/select windows
 - `WSET` - Set current window
 - `WDELETE` - Delete windows
@@ -57,13 +63,16 @@ The XDL graphics system is **production-ready** with full GUI integration!
 - `EMPTY` - Flush pipeline
 
 **Device & Color** (2):
+
 - `DEVICE` - Device management
 - `LOADCT` - Load color tables
 
 **Interactive** (1):
+
 - `CURSOR` - Read cursor position
 
 **Specialized Plots** (8):
+
 - `BAR_PLOT` - Bar charts
 - `HISTOGRAM` - Histograms
 - `PLOTERR` - Error bar plots
@@ -72,6 +81,7 @@ The XDL graphics system is **production-ready** with full GUI integration!
 - `VELOVECT` - Vector fields
 
 **Map Projections** (3):
+
 - `MAP_SET` - Initialize projection
 - `MAP_CONTINENTS` - Draw continents
 - `MAP_GRID` - Draw grid
@@ -88,11 +98,13 @@ cd xdl
 ```
 
 Then in the GUI:
+
 1. Load `examples/plot_demo.xdl` (File > Open)
 2. Click "Execute"
 3. Watch the interactive plot window appear!
 
 **Features:**
+
 - ✅ Real-time plotting
 - ✅ FLTK native widgets
 - ✅ Resizable windows
@@ -107,6 +119,7 @@ cd xdl
 ```
 
 **Behavior:**
+
 - Saves plots to PNG files
 - Displays data statistics
 - Non-interactive fallback
@@ -134,7 +147,7 @@ BAR_PLOT, values
 
 ### Component Overview
 
-```
+```text
 xdl-gui/
   ├── gui.rs             # Main GUI (lines 623-628: plot callback registration)
   └── plot_window.rs     # FLTK plot windows (full implementation)
@@ -150,7 +163,7 @@ xdl-stdlib/
 
 ### Integration Flow
 
-```
+```text
 XDL Script
     ↓
 PLOT command
@@ -169,6 +182,7 @@ Interactive window appears!
 ### State Management
 
 **Graphics State (`graphics/state.rs`)**:
+
 - Window registry with dimensions, positions
 - Color tables (grayscale, rainbow, blue-red, etc.)
 - Plot styles (colors, line types, symbols)
@@ -176,6 +190,7 @@ Interactive window appears!
 - Thread-safe global state with `Arc<Mutex<>>`
 
 **Color Tables Included**:
+
 - Table 0: Grayscale
 - Table 1: Blue-Red
 - Table 2: Blue-White
@@ -189,12 +204,14 @@ Interactive window appears!
 ### Graphics Procedures (graphics_procs.rs)
 
 **Key Functions**:
+
 - `plot()` - Main 2D plotting entry point
 - `register_gui_plot_callback()` - GUI integration hook
 - `launch_plot_window()` - Smart routing (GUI vs. PNG)
 - `extract_numeric_array()` - Unified data extraction
 
 **Features**:
+
 - Parameter validation
 - Automatic x-coordinate generation
 - Data range calculation
@@ -203,6 +220,7 @@ Interactive window appears!
 ### GUI Integration (xdl-gui/src/gui.rs)
 
 **Lines 623-628**:
+
 ```rust
 register_gui_plot_callback(
     move |x_data, y_data| match PlotWindow::new(x_data, y_data) {
@@ -213,6 +231,7 @@ register_gui_plot_callback(
 ```
 
 **This callback**:
+
 - Runs when PLOT is called from GUI
 - Creates FLTK window with plot
 - Handles errors gracefully
@@ -221,6 +240,7 @@ register_gui_plot_callback(
 ### Plot Window (xdl-gui/src/plot_window.rs)
 
 **Capabilities**:
+
 - Custom FLTK drawing with `draw()` callback
 - Automatic axis scaling
 - Grid and labels
@@ -229,6 +249,7 @@ register_gui_plot_callback(
 - Formula display support
 
 **Drawing Features**:
+
 - Line plots with anti-aliasing
 - Automatic margins (40px)
 - Dynamic axis labeling
@@ -242,6 +263,7 @@ register_gui_plot_callback(
 ### Full Implementation Modules (Ready to Activate)
 
 **plot2d.rs** (410 lines):
+
 - Advanced 2D plotting with full configuration
 - Multiple plot styles and symbols
 - Error bar plotting
@@ -250,6 +272,7 @@ register_gui_plot_callback(
 - Custom line styles
 
 **plot3d.rs** (332 lines):
+
 - Contour plots (filled and line)
 - 3D surface rendering
 - 3D line plots
@@ -359,12 +382,14 @@ CONTOUR, z
 ### Expected Behavior
 
 **GUI Mode**:
+
 - Plot window appears immediately
 - Interactive and resizable
 - "Plot Info" button shows statistics
 - Clean, professional appearance
 
 **CLI Mode**:
+
 - PNG file created: `xdl_plot.png`
 - Statistics printed to console
 - Message about GUI availability
@@ -499,12 +524,14 @@ state.plot_style.thick = 2.0;
 ## 📈 Performance
 
 **Metrics**:
+
 - Window creation: < 100ms
 - Plot rendering: < 50ms for 1000 points
 - Memory usage: ~10MB per plot window
 - GUI startup: ~200ms
 
 **Optimizations**:
+
 - Lazy window creation
 - Efficient FLTK drawing
 - Minimal data copying

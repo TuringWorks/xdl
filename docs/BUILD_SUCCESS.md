@@ -1,4 +1,4 @@
-# ✅ BUILD SUCCESS - Ready to Test!
+# ✅ BUILD SUCCESS - Ready to Test
 
 **Date:** 2025-10-25
 **Status:** All compilation errors fixed, binaries built successfully
@@ -24,7 +24,7 @@ $ ls -lh target/release/xdl*
 
 ---
 
-## Ready to Test!
+## Ready to Test
 
 ### Quick Test
 
@@ -85,7 +85,7 @@ cd /Users/ravindraboddipalli/sources/xdl
 
 ## Architecture Verification
 
-```
+```text
 ✅ xdl-charts (library)
    └─ Generates ECharts HTML
 
@@ -122,6 +122,7 @@ cd /Users/ravindraboddipalli/sources/xdl
 ### Immediate (Now)
 
 1. **Test standalone chart viewer:**
+
    ```bash
    ./target/release/xdl-chart-viewer --title "Test"
    ```
@@ -129,23 +130,27 @@ cd /Users/ravindraboddipalli/sources/xdl
    **Expected:** Native window opens with sine/cosine chart
 
 2. **Verify binaries are accessible:**
+
    ```bash
    which xdl-chart-viewer || echo "Add to PATH if needed"
    ```
 
-### When XDL Interpreter is Ready
+### Integration Testing with XDL Interpreter
 
 1. **Run simple test:**
+
    ```bash
    ./target/release/xdl examples/charting/simple_test.xdl
    ```
 
 2. **Run full demo:**
+
    ```bash
    ./target/release/xdl examples/charting/echarts_demo.xdl
    ```
 
 3. **Create your own charts:**
+
    ```xdl
    x = FINDGEN(100)
    y = SIN(x / 10.0)
@@ -157,6 +162,7 @@ cd /Users/ravindraboddipalli/sources/xdl
 ## Known Status
 
 ### ✅ Working
+
 - All crates compile
 - Tauri viewer launches with demo
 - Chart HTML generation
@@ -164,6 +170,7 @@ cd /Users/ravindraboddipalli/sources/xdl
 - Procedure registration
 
 ### ⏳ Pending XDL Interpreter
+
 - Running .xdl scripts requires XDL interpreter
 - Procedures are registered and ready
 - Once interpreter can execute scripts, charts will work automatically
@@ -195,6 +202,7 @@ cat examples/charting/README.md
 ## File Summary
 
 **Created:**
+
 - 3 new crates (xdl-charts, xdl-desktop-viewer, xdl-chart-viewer)
 - 1 new module (charting_procs.rs in xdl-stdlib)
 - 5 procedures (CHART_PLOT, CHART_SCATTER, CHART_BAR, SURFACE3D, SCATTER3D)
@@ -202,10 +210,12 @@ cat examples/charting/README.md
 - 5 documentation files
 
 **Modified:**
+
 - xdl-stdlib/Cargo.toml (added xdl-charts dependency)
 - xdl-stdlib/src/lib.rs (registered charting procedures)
 
 **Total Lines:**
+
 - ~1,200 lines of Rust code
 - ~400 lines of documentation
 - ~150 lines of demo scripts
@@ -244,6 +254,7 @@ cargo tauri info
 ### XDL Script Errors
 
 If you get "Unknown procedure" errors when XDL runs:
+
 - Verify xdl was rebuilt with new stdlib
 - Check procedure names match (CHART_PLOT, not PLOT)
 - Ensure xdl-chart-viewer is in PATH or same directory as xdl

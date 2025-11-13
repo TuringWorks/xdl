@@ -453,6 +453,17 @@ impl StandardLibrary {
             // LSTM Layer (Phase ML-11)
             "XDLML_LSTM" => ml::xdlml_lstm(args),
 
+            // Additional ML Functions (Tier 1 & 2)
+            "XDLML_AVERAGEPOOLING2D" => ml::xdlml_averagepooling2d(args),
+            "XDLML_CONFUSIONMATRIX" => ml::xdlml_confusionmatrix(args),
+            "XDLML_LINEARREGRESSION" => ml::xdlml_linearregression(args),
+            "XDLML_LOGISTICREGRESSION" => ml::xdlml_logisticregression(args),
+            "XDLML_PCA" => ml::xdlml_pca(args),
+            "XDLML_NAIVEBAYES" => ml::xdlml_naivebayes(args),
+            "XDLML_ONEHOTENCODER" => ml::xdlml_onehotencoder(args),
+            "XDLML_LABELENCODER" => ml::xdlml_labelencoder(args),
+            "XDLML_LAYERNORMALIZATION" => ml::xdlml_layernormalization(args),
+
             _ => Err(xdl_core::XdlError::FunctionNotFound(name.to_string())),
         }
     }

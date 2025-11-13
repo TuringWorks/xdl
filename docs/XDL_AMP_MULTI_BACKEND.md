@@ -13,6 +13,7 @@ October 25, 2025
 ### 1. Apple Platforms (macOS/iOS)
 
 #### Metal Performance Shaders (MPS) ✅ **Default on macOS**
+
 - **Status**: Fully implemented
 - **Features**: Optimized math operations using Apple's MPS framework
 - **Hardware**: All Apple GPUs (M1/M2/M3, Intel Macs)
@@ -20,6 +21,7 @@ October 25, 2025
 - **Use Cases**: General compute, linear algebra
 
 #### Metal ✅
+
 - **Status**: Fully implemented
 - **Features**: Low-level GPU compute via Metal Shading Language
 - **Hardware**: All Apple GPUs
@@ -27,6 +29,7 @@ October 25, 2025
 - **Use Cases**: Custom kernels, graphics integration
 
 #### CoreML ✅
+
 - **Status**: Implemented (CPU fallback)
 - **Features**: Apple Neural Engine acceleration
 - **Hardware**: ANE on A14+, M1+
@@ -36,6 +39,7 @@ October 25, 2025
 ### 2. NVIDIA Platforms
 
 #### cuDNN ✅
+
 - **Status**: Implemented (CPU fallback)
 - **Features**: Deep learning primitives
 - **Hardware**: NVIDIA GPUs (Compute Capability 3.5+)
@@ -43,6 +47,7 @@ October 25, 2025
 - **Use Cases**: Training/inference, convolutions, RNNs
 
 #### CUDA ✅
+
 - **Status**: Implemented (stub with fallback)
 - **Features**: General GPU compute
 - **Hardware**: NVIDIA GPUs
@@ -52,15 +57,17 @@ October 25, 2025
 ### 3. AMD Platforms
 
 #### ROCm ✅
+
 - **Status**: Implemented (CPU fallback)
 - **Features**: GPU compute and ML acceleration
 - **Hardware**: AMD GPUs (Vega, RDNA, CDNA)
 - **Advantages**: Open-source, good performance on AMD
 - **Use Cases**: HPC, ML on AMD GPUs
 
-### 4. Windows
+### 4. Windows DirectML/DirectX
 
 #### DirectML ✅
+
 - **Status**: Implemented (CPU fallback)
 - **Features**: DirectX-based ML acceleration
 - **Hardware**: Any DirectX 12 capable GPU
@@ -68,6 +75,7 @@ October 25, 2025
 - **Use Cases**: ML inference on any Windows GPU
 
 #### DirectX 12 ✅
+
 - **Status**: Implemented (stub)
 - **Features**: Compute shaders
 - **Hardware**: DirectX 12 capable GPUs
@@ -77,6 +85,7 @@ October 25, 2025
 ### 5. Cross-Platform
 
 #### ONNX Runtime ✅
+
 - **Status**: Integrated (v2.0.0-rc.10)
 - **Features**: ML model inference with multiple execution providers
 - **Hardware**: CPU, CUDA, DirectML, CoreML
@@ -84,6 +93,7 @@ October 25, 2025
 - **Use Cases**: Deploying models from PyTorch/TensorFlow
 
 #### OpenCL ✅
+
 - **Status**: Implemented (stub with fallback)
 - **Features**: Cross-platform GPU compute
 - **Hardware**: NVIDIA, AMD, Intel GPUs
@@ -93,17 +103,20 @@ October 25, 2025
 ## Backend Priority Order
 
 ### macOS
+
 1. **Metal Performance Shaders** (default) - Best performance
 2. Metal - Low-level control
 3. CoreML - ML-specific workloads
 
-### Windows
+### Windows Requirements
+
 1. **cuDNN** (if NVIDIA GPU) - Best for ML
 2. CUDA (if NVIDIA GPU) - General NVIDIA compute
 3. DirectML - ML on any GPU
 4. DirectX 12 - Fallback
 
 ### Linux
+
 1. **cuDNN** (if NVIDIA GPU) - Best for ML
 2. CUDA (if NVIDIA GPU) - NVIDIA compute
 3. ROCm (if AMD GPU) - AMD compute
@@ -128,15 +141,15 @@ October 25, 2025
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │              XDL Applications                       │
-│         (xdl-stdlib, user code)                    │
+│         (xdl-stdlib, user code)                     │
 └─────────────────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────┐
-│             GpuContext (Automatic Selection)         │
+│             GpuContext (Automatic Selection)        │
 │  Priority: MPS > cuDNN > CUDA > ROCm > Others       │
 └─────────────────────────────────────────────────────┘
                          │
@@ -221,19 +234,22 @@ features = ["all-backends"]  # Everything (large binary)
 
 ## Building for Different Platforms
 
-### macOS (Default: MPS)
+### macOS Build (Default: MPS)
+
 ```bash
 cargo build -p xdl-amp --release
 # Uses Metal Performance Shaders by default
 ```
 
 ### macOS with All Apple Features
+
 ```bash
 cargo build -p xdl-amp --release --features all-apple
 # Includes MPS, Metal, CoreML
 ```
 
 ### Linux with NVIDIA
+
 ```bash
 cargo build -p xdl-amp --release --features all-nvidia
 # Includes CUDA and cuDNN
@@ -241,25 +257,29 @@ cargo build -p xdl-amp --release --features all-nvidia
 ```
 
 ### Linux with AMD
+
 ```bash
 cargo build -p xdl-amp --release --features all-amd
 # Includes ROCm and OpenCL
 # Requires: ROCm 5.0+
 ```
 
-### Windows with NVIDIA
+### Windows Build with NVIDIA
+
 ```bash
 cargo build -p xdl-amp --release --features all-nvidia
 # Includes CUDA, cuDNN
 ```
 
-### Windows Generic
+### Windows with Generic GPU
+
 ```bash
 cargo build -p xdl-amp --release --features directml
 # Works on any DirectX 12 GPU
 ```
 
 ### Cross-Platform (ONNX Runtime)
+
 ```bash
 cargo build -p xdl-amp --release --features onnx
 # ML inference anywhere
@@ -269,17 +289,20 @@ cargo build -p xdl-amp --release --features onnx
 
 ### Backend Performance Tiers
 
-**Tier 1 - Optimal Performance**
+#### Tier 1 - Optimal Performance
+
 - MPS (Apple Silicon)
 - cuDNN (NVIDIA ML workloads)
 - Metal (Apple GPUs, custom kernels)
 
-**Tier 2 - Good Performance**
+#### Tier 2 - Good Performance
+
 - CUDA (NVIDIA general compute)
 - ROCm (AMD GPUs)
 - DirectML (Windows ML)
 
-**Tier 3 - Acceptable Performance**
+#### Tier 3 - Acceptable Performance
+
 - DirectX 12 (Windows general)
 - ONNX Runtime (depends on EP)
 - OpenCL (universal fallback)
@@ -301,7 +324,8 @@ cargo build -p xdl-amp --release --features onnx
 
 ## Installation Requirements
 
-### macOS
+### macOS Requirements
+
 ```bash
 # Xcode Command Line Tools (includes Metal)
 xcode-select --install
@@ -311,6 +335,7 @@ xcode-select --install
 ```
 
 ### Windows
+
 ```bash
 # Visual Studio 2019/2022 with C++ tools
 
@@ -320,6 +345,7 @@ xcode-select --install
 ```
 
 ### Linux (Ubuntu/Debian)
+
 ```bash
 # For NVIDIA
 sudo apt install nvidia-cuda-toolkit
@@ -346,18 +372,21 @@ sudo apt install ocl-icd-opencl-dev opencl-headers
 ### Planned Enhancements
 
 #### Short Term (Q1 2026)
+
 - [ ] Optimized GEMM for all backends
 - [ ] Reduction operations on GPU
 - [ ] Batch operations API
 - [ ] Performance benchmarks
 
 #### Medium Term (Q2-Q3 2026)
+
 - [ ] Double precision (f64) support
 - [ ] Complex number operations
 - [ ] Async/streaming API
 - [ ] Multi-GPU support
 
 #### Long Term (Q4 2026+)
+
 - [ ] Auto-tuning for operation dispatch
 - [ ] Tensor cores support (NVIDIA)
 - [ ] Custom kernel API
@@ -381,7 +410,7 @@ cargo run -p xdl-amp --example basic_ops --release
 
 ### Verification Results (macOS M-series)
 
-```
+```text
 ✓ GPU Backend: Metal Performance Shaders
 ✓ All mathematical operations working
 ✓ Trigonometric functions accurate
@@ -402,11 +431,13 @@ Priority areas for contribution:
 ## Dependencies
 
 ### Core
+
 - `ndarray` ^0.15 - Array operations
 - `bytemuck` ^1.14 - Type casting
 - `thiserror` ^1.0 - Error handling
 
 ### Platform-Specific
+
 - `metal` ^0.29 (macOS)
 - `core-foundation` ^0.9 (macOS)
 - `core-graphics` ^0.23 (macOS)

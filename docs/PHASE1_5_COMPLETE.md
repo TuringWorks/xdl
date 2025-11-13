@@ -27,6 +27,7 @@ Successfully implemented comprehensive file I/O functionality including file ope
 **Location**: `xdl-stdlib/src/io.rs`
 
 **Architecture**:
+
 ```rust
 struct FileHandle {
     reader: Option<BufReader<File>>,
@@ -42,6 +43,7 @@ enum FileMode {
 ```
 
 **Features**:
+
 - ✅ Thread-safe global file handle storage using lazy_static
 - ✅ Automatic LUN allocation starting from 10
 - ✅ Persistent BufReader/BufWriter for position maintenance
@@ -52,39 +54,46 @@ enum FileMode {
 ### Function Details
 
 #### GET_LUN()
+
 - Returns next available logical unit number
 - Starts from LUN 10 and increments
 - Thread-safe counter
 
 #### OPENR, lun, filename
+
 - Opens file for reading only
 - Creates BufReader for efficient line-by-line reading
 - Maintains file position across multiple READF calls
 - Error if file doesn't exist
 
 #### OPENW, lun, filename
+
 - Opens/creates file for writing
 - Truncates existing file
 - Creates BufWriter for efficient writing
 - Auto-flushes on each WRITEF
 
 #### OPENU, lun, filename
+
 - Opens file for read/write
 - Creates file if doesn't exist
 - Currently optimized for writing (limitation noted)
 
 #### CLOSE, lun
+
 - Closes file and releases handle
 - Removes LUN from handle map
 - Error if LUN not open
 
 #### READF(lun)
+
 - Reads one line from file
 - Returns line as string (newlines removed)
 - Returns empty string on EOF
 - Maintains position for sequential reads
 
-#### WRITEF, lun, data...
+#### WRITEF, lun, data
+
 - Writes data to file (space-separated)
 - Appends newline automatically
 - Flushes buffer after write
@@ -113,6 +122,7 @@ CLOSE, lun2
 ```
 
 **All tests passed:**
+
 - ✅ LUN allocation
 - ✅ File writing (OPENW + WRITEF)
 - ✅ File reading (OPENR + READF)
@@ -142,17 +152,21 @@ CLOSE, lun2
 ## Technical Highlights
 
 ### Position Maintenance
+
 The key innovation is storing BufReader/BufWriter in the FileHandle:
+
 - Each READF call uses the same BufReader instance
 - File position is automatically maintained
 - No need to manually track position
 
 ### Buffer Management
+
 - Read operations use BufReader for efficient line reading
 - Write operations use BufWriter for efficient buffering
 - Automatic flushing after each WRITEF ensures data persistence
 
 ### Thread Safety
+
 - FILE_HANDLES protected by Mutex
 - LUN_COUNTER protected by Mutex
 - Safe concurrent access from multiple contexts
@@ -160,12 +174,15 @@ The key innovation is storing BufReader/BufWriter in the FileHandle:
 ## Known Limitations
 
 ### OPENU Mode
+
 Currently, OPENU (update mode) creates a writer but not a reader:
+
 - Can write to file opened with OPENU
 - Cannot read from same handle (would need separate file descriptor)
 - Future enhancement: support true bidirectional I/O
 
 ### Format Specifications
+
 - READF/WRITEF don't support FORMAT keywords yet
 - Simple space-separated output
 - Line-based input
@@ -174,6 +191,7 @@ Currently, OPENU (update mode) creates a writer but not a reader:
 ## Compatibility
 
 ### GDL/IDL Compatibility
+
 - ✅ LUN management compatible
 - ✅ OPENR/OPENW/OPENU syntax compatible
 - ✅ READF/WRITEF basic functionality compatible
@@ -190,6 +208,7 @@ Currently, OPENU (update mode) creates a writer but not a reader:
 ## Example Usage
 
 ### Write Data
+
 ```xdl
 lun = GET_LUN()
 OPENW, lun, 'output.dat'
@@ -200,6 +219,7 @@ CLOSE, lun
 ```
 
 ### Read Data
+
 ```xdl
 lun = GET_LUN()
 OPENR, lun, 'input.dat'
@@ -211,6 +231,7 @@ PRINT, 'Header:', header
 ```
 
 ### Sequential Processing
+
 ```xdl
 lun = GET_LUN()
 OPENR, lun, 'data.txt'
@@ -231,6 +252,7 @@ Ready to proceed to **Phase 1.6: FFT Function** - the final task in Phase 1.
 ---
 
 **Implementation Quality**: ⭐⭐⭐⭐⭐
+
 - Complete file I/O functionality
 - Proper handle management
 - Position maintenance working perfectly

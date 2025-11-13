@@ -9,9 +9,11 @@
 ## What Was Successfully Built
 
 ### ✅ 1. xdl-charts Crate (Complete)
+
 **Location:** `xdl-charts/`
 
 **Features:**
+
 - Chart types: Line, Scatter, Bar, Area, Heatmap, Scatter3D, Surface3D, Bar3D
 - ECharts JSON configuration builders for 2D and 3D charts
 - HTML template generation with embedded ECharts
@@ -19,11 +21,13 @@
 - Customizable themes, colors, and styling
 
 **Files:**
+
 - `src/lib.rs` - Public API and data structures
 - `src/echarts.rs` - ECharts option builders (272 lines)
 - `src/templates.rs` - HTML generation (150 lines)
 
 **Usage Example:**
+
 ```rust
 use xdl_charts::{ChartConfig, ChartType, Series2D, generate_2d_chart};
 
@@ -46,9 +50,11 @@ let html = generate_2d_chart(&config, &series)?;
 ```
 
 ### ✅ 2. xdl-desktop-viewer Crate (Complete - Library)
+
 **Location:** `xdl-desktop-viewer/`
 
 **Features:**
+
 - Window configuration API
 - Pending window queue for batch processing
 - Integration hooks for Tauri apps
@@ -56,9 +62,11 @@ let html = generate_2d_chart(&config, &series)?;
 **Status:** Library code complete, needs integration with actual Tauri app
 
 ### 🚧 3. xdl-chart-viewer Binary (90% Complete)
+
 **Location:** `xdl-chart-viewer/`
 
 **Features Implemented:**
+
 - Tauri 2.1 desktop application
 - Command-line interface (HTML file or content input)
 - Dynamic window creation
@@ -66,11 +74,13 @@ let html = generate_2d_chart(&config, &series)?;
 - WebView-based rendering
 
 **Current Issue:**
+
 - Icon loading error in Tauri runtime
 - Icons are generated and valid (verified with `file` command)
 - Issue is in Tauri's icon processing during app initialization
 
 **Files:**
+
 - `src/main.rs` - Main Tauri app (275 lines)
 - `tauri.conf.json` - Tauri configuration
 - `build.rs` - Build script
@@ -78,12 +88,14 @@ let html = generate_2d_chart(&config, &series)?;
 - `Cargo.toml` - Dependencies configured
 
 **What Works:**
+
 - ✅ Compiles successfully
 - ✅ Icons generated properly (32x32, 64x64, 128x128, 256x256, 512x512, .icns, .ico)
 - ✅ HTML rendering logic implemented
 - ✅ Command-line argument parsing
 
 **What Needs Fixing:**
+
 - ❌ Runtime icon loading (Tauri v2 configuration issue)
 
 ---
@@ -95,17 +107,20 @@ let html = generate_2d_chart(&config, &series)?;
 **Time Estimate:** 1-2 hours
 
 **Steps:**
+
 1. Update Tauri configuration to use different icon format
 2. Or: Disable window decoration and use frameless window
 3. Or: Update to latest Tauri nightly with fix
 4. Test with minimal Tauri example first
 
 **Benefit:**
+
 - Native window experience
 - No browser dependency
 - Better integration with xdl-gui
 
 **Command to Test Fix:**
+
 ```bash
 cd /Users/ravindraboddipalli/sources/xdl
 ./target/debug/xdl-chart-viewer --title "Test"
@@ -117,6 +132,7 @@ cd /Users/ravindraboddipalli/sources/xdl
 **Time Estimate:** 2-3 hours
 
 **Steps:**
+
 1. Add `xdl-charts` dependency to `xdl-stdlib`
 2. Create `xdl-stdlib/src/charting_procs.rs`
 3. Reuse `xdl-viz3d-web` HTTP server (already working!)
@@ -124,11 +140,13 @@ cd /Users/ravindraboddipalli/sources/xdl
 5. Test with example `.xdl` script
 
 **Benefit:**
+
 - Works immediately (proven pattern)
 - No new dependencies
 - Can add Tauri later as enhancement
 
 **XDL Usage (Target API):**
+
 ```xdl
 ; Simple scatter plot
 x = FINDGEN(100)
@@ -146,16 +164,59 @@ SURFACE3D, z, TITLE='Wave'
 
 ## Recommended Next Steps
 
-###  Immediate: Browser-First (Today)
+### Immediate: Browser-First (Today)
 
-1. **Add dependency** to `xdl-stdlib/Cargo.toml`:
+- **Add dependency** to `xdl-stdlib/Cargo.toml`:
+
+   ```toml
+   [dependencies]
+   xdl-charts = { path = "../xdl-charts" }
+   xdl-viz3d-web = { path = "../xdl-viz3d-web" }
+   ```
+
+- **Create** `xdl-stdlib/src/charting_procs.rs`:
+
+   ```rust
+
 ```toml
 [dependencies]
 xdl-charts = { path = "../xdl-charts" }
 xdl-viz3d-web = { path = "../xdl-viz3d-web" }
 ```
 
-2. **Create** `xdl-stdlib/src/charting_procs.rs`:
+- **Create** `xdl-stdlib/src/charting_procs.rs`:
+
+   ```rust
+   use xdl_charts::{ChartConfig, ChartType, Series2D, generate_2d_chart};
+   use xdl_viz3d_web::launch_browser_visualization;
+
+   pub fn plot(args: &[Value]) -> Result<Value> {
+       // Extract X, Y arrays from args
+       let x_data = extract_array(&args[0])?;
+       let y_data = extract_array(&args[1])?;
+
+       // Build chart
+       let config = ChartConfig {
+           chart_type: ChartType::Line,
+           title: "XDL Plot".to_string(),
+           ..Default::default()
+       };
+
+       let series = vec![Series2D {
+           name: "Data".to_string(),
+           x_data,
+           y_data,
+       }];
+
+       let html = generate_2d_chart(&config, &series)?;
+       launch_browser_visualization(html)?;
+
+       Ok(Value::None)
+   }
+   ```
+
+- **Register** in `xdl-stdlib/src/lib.rs`:
+
 ```rust
 use xdl_charts::{ChartConfig, ChartType, Series2D, generate_2d_chart};
 use xdl_viz3d_web::launch_browser_visualization;
@@ -185,7 +246,8 @@ pub fn plot(args: &[Value]) -> Result<Value> {
 }
 ```
 
-3. **Register** in `xdl-stdlib/src/lib.rs`:
+- **Register** in `xdl-stdlib/src/lib.rs`:
+
 ```rust
 pub mod charting_procs;
 
@@ -195,7 +257,8 @@ pub mod charting_procs;
 "SURFACE3D" => charting_procs::surface3d(args),
 ```
 
-4. **Test** with example script:
+- **Test** with example script:
+
 ```bash
 ./target/release/xdl examples/charting/scatter_demo.xdl
 # Opens browser with chart
@@ -221,7 +284,7 @@ pub mod charting_procs;
 
 ### Architecture
 
-```
+```text
 XDL Script
     ↓
 xdl-interpreter
@@ -257,16 +320,19 @@ xdl-stdlib::charting_procs
 ## Files Created
 
 ### New Crates
+
 1. `xdl-charts/` - ECharts integration library
 2. `xdl-desktop-viewer/` - Tauri window management library
 3. `xdl-chart-viewer/` - Standalone Tauri app binary
 
 ### Documentation
+
 1. `CHARTING_WEBGL_INVESTIGATION.md` - Initial proposal
 2. `CHARTING_IMPLEMENTATION_STATUS.md` - Implementation plan
 3. `CHARTING_FINAL_STATUS.md` - This document
 
 ### Examples (Placeholder)
+
 1. `examples/charting/scatter_demo.xdl` - Scatter plot demo
 
 ---
@@ -285,6 +351,7 @@ cargo build -p xdl-chart-viewer    # ✅ Builds (runtime icon issue)
 ## Testing the Components
 
 ### Test xdl-charts (Rust)
+
 ```rust
 use xdl_charts::*;
 
@@ -301,6 +368,7 @@ std::fs::write("test_chart.html", html).unwrap();
 ```
 
 ### Test xdl-chart-viewer (Once Fixed)
+
 ```bash
 # With HTML file
 ./target/debug/xdl-chart-viewer -f test_chart.html --title "My Chart"
@@ -333,14 +401,17 @@ std::fs::write("test_chart.html", html).unwrap();
 **Decision Point:** Which path to take?
 
 **Option 1 (Recommended):** Implement browser-first ASAP
+
 - Get working charts in XDL today
 - Add Tauri later as polish
 
 **Option 2:** Debug Tauri icon issue first
+
 - Better UX when done
 - Higher risk (unknown time to fix)
 
 **My Recommendation:** Path 1 (Browser-First)
+
 - Proven pattern (viz3d-web works great)
 - Can ship today
 - Tauri becomes enhancement, not blocker
@@ -350,6 +421,7 @@ std::fs::write("test_chart.html", html).unwrap();
 ## Next Command to Run
 
 **For Browser-First Approach:**
+
 ```bash
 # 1. Add charting procedures to stdlib
 cd /Users/ravindraboddipalli/sources/xdl
@@ -364,6 +436,7 @@ cargo build --release
 ```
 
 **For Tauri Debug:**
+
 ```bash
 # Simplify Tauri config to minimal
 # Remove all icon references, test with default

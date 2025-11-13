@@ -18,7 +18,7 @@ Successfully implemented Three.js-based volume rendering for XDL as an alternati
 
 Complete WebGL-based volume rendering library:
 
-```
+```text
 xdl-viz3d-threejs/
 ├── Cargo.toml
 └── src/
@@ -29,6 +29,7 @@ xdl-viz3d-threejs/
 ```
 
 **Key Features:**
+
 - Custom GLSL raycasting shader with ray-box intersection
 - Data3DTexture for 3D volume data
 - Colormap texture lookups
@@ -50,6 +51,7 @@ pub enum Viz3DBackend {
 ```
 
 **Environment Variables:**
+
 ```bash
 VIZ3D_BACKEND=threejs   # Force Three.js
 VIZ3D_BACKEND=webgpu    # Force native WebGPU
@@ -58,6 +60,7 @@ VIZ3D_BACKEND=auto      # Auto-detect (default)
 ```
 
 **Selection Logic:**
+
 - Default: Three.js (better compatibility)
 - GUI mode → Browser (can't block)
 - VIZ3D_BROWSER=1 → Browser (explicit)
@@ -66,6 +69,7 @@ VIZ3D_BACKEND=auto      # Auto-detect (default)
 ### 3. Integration with Tauri
 
 Reuses existing `xdl-chart-viewer` infrastructure:
+
 - Consistent window management
 - Same temp file approach (no argument limits)
 - Native desktop windows
@@ -78,10 +82,12 @@ Reuses existing `xdl-chart-viewer` infrastructure:
 ### Volume Rendering Shader
 
 **Vertex Shader:**
+
 - Passes position and normal to fragment shader
 - Standard MVP transformation
 
 **Fragment Shader:**
+
 - Ray-box intersection for bounding box
 - Ray marching with 256 steps
 - Volume texture sampling (Data3DTexture)
@@ -92,6 +98,7 @@ Reuses existing `xdl-chart-viewer` infrastructure:
 ### Colormap Generation
 
 Implemented 6 scientific colormaps:
+
 1. **VIRIDIS** - Perceptually uniform (default)
 2. **RAINBOW** - Full spectrum
 3. **PLASMA** - Warm, perceptually uniform
@@ -104,6 +111,7 @@ Each colormap generates 256 RGB entries for smooth gradients.
 ### HTML Template
 
 Complete single-file HTML with:
+
 - Three.js r161 via CDN (importmap)
 - OrbitControls for camera
 - lil-gui for parameter controls
@@ -180,7 +188,7 @@ See: `examples/viz3d/threejs_simple_test.xdl`
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │         XDL Script (VIZ3D_* calls)          │
 └───────────────┬─────────────────────────────┘
@@ -190,21 +198,21 @@ See: `examples/viz3d/threejs_simple_test.xdl`
 │  ┌──────────────────────────────────────┐   │
 │  │ Viz3DBackend::from_env().resolve()   │   │
 │  └──────────────┬───────────────────────┘   │
-│                 │                            │
+│                 │                           │
 │     ┌───────────┼───────────┐               │
 │     │           │           │               │
-│  ┌──▼───┐   ┌──▼────┐   ┌─▼─────┐         │
-│  │Three │   │WebGPU │   │Browser│         │
-│  │  JS  │   │Native │   │ WebGPU│         │
-│  └──┬───┘   └──┬────┘   └─┬─────┘         │
-└─────┼─────────┼───────────┼───────────────┘
-      │         │           │
-┌─────▼───┐ ┌───▼────┐ ┌────▼─────────┐
+│  ┌──▼───┐   ┌──▼────┐   ┌─▼─────┐           │
+│  │Three │   │WebGPU │   │Browser│           │
+│  │  JS  │   │Native │   │ WebGPU│           │
+│  └──┬───┘   └──┬────┘   └─┬─────┘           │
+└─────┼─────────-┼──────────┼───────────────--┘
+      │          │          │
+┌─────▼───┐ ┌──-─▼───┐ ┌────▼─────────┐
 │xdl-viz3d│ │xdl-viz3│ │xdl-viz3d-web │
 │-threejs │ │d       │ │              │
 │(WebGL)  │ │(wgpu)  │ │(axum+wgpu)   │
 └────┬────┘ └───┬────┘ └────┬─────────┘
-     │          │            │
+     │          │           │
 ┌────▼────┐ ┌───▼────┐ ┌────▼─────────┐
 │  Tauri  │ │ winit  │ │   Browser    │
 │ Window  │ │ Window │ │   Server     │
@@ -231,6 +239,7 @@ See: `examples/viz3d/threejs_simple_test.xdl`
 ## Files Changed
 
 **New Files (7):**
+
 1. `docs/VIZ3D_THREEJS_PLAN.md` - Implementation plan
 2. `examples/viz3d/threejs_simple_test.xdl` - Test script
 3. `xdl-viz3d-threejs/Cargo.toml` - Package manifest
@@ -240,11 +249,13 @@ See: `examples/viz3d/threejs_simple_test.xdl`
 7. `xdl-viz3d-threejs/src/templates.rs` - HTML generation
 
 **Modified Files (3):**
+
 1. `Cargo.toml` - Added workspace member
 2. `xdl-stdlib/Cargo.toml` - Added dependency
 3. `xdl-stdlib/src/viz3d.rs` - Backend selection logic
 
 **Total Changes:**
+
 - 10 files changed
 - 1,119 insertions(+)
 - 14 deletions(-)
@@ -278,18 +289,21 @@ See: `examples/viz3d/threejs_simple_test.xdl`
 As outlined in `VIZ3D_THREEJS_PLAN.md`:
 
 ### Advanced Features
+
 1. **Transfer Functions** - Custom opacity curves
 2. **Isosurface Extraction** - Marching cubes + mesh rendering
 3. **Lighting** - Phong shading, multiple lights
 4. **Optimizations** - Adaptive sampling, LOD
 
 ### Additional Testing
+
 1. Larger volumes (32³, 64³, 128³)
 2. Performance benchmarking vs WebGPU
 3. Browser compatibility (Chrome, Firefox, Safari)
 4. Memory usage profiling
 
 ### Documentation
+
 1. User guide for backend selection
 2. Performance tuning guide
 3. Shader customization examples
@@ -299,6 +313,7 @@ As outlined in `VIZ3D_THREEJS_PLAN.md`:
 ## Conclusion
 
 **Phase 1 is complete and merged to master.** The Three.js VIZ3D backend is now the default visualization method, providing:
+
 - Better compatibility than WebGPU
 - Consistent experience with other chart types
 - Full volume rendering capabilities
@@ -307,6 +322,7 @@ As outlined in `VIZ3D_THREEJS_PLAN.md`:
 Users can now visualize 3D volumes with a simple `VIZ3D_RENDER, /INTERACTIVE` call, and XDL will automatically use the most appropriate backend.
 
 **Estimated Timeline:**
+
 - Phase 1: ✅ Complete (1 day)
 - Phase 2: 📋 Planned (1-2 weeks)
 - Phase 3: 📋 Optimization (ongoing)

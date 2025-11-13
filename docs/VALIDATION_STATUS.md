@@ -14,7 +14,9 @@
 ## Completed Fixes
 
 ### FOR Loop Syntax (11 files) ✅
+
 All now use `ENDFOR` instead of `END`:
+
 1. examples/charting/minimal_for_test.xdl
 2. examples/demo/rayleigh_taylor.xdl
 3. examples/demo/viz3d_browser_test.xdl
@@ -30,11 +32,13 @@ All now use `ENDFOR` instead of `END`:
 ## Parser Limitations Blocking Progress
 
 ### 1. Wildcard Array Assignment
+
 **Issue**: `array[*, *, *] = value` not supported
 **Affected Files**: All 6 scientific workflow demos
 **Workaround**: Requires manual rewrite or parser enhancement
 
 **Example**:
+
 ```idl
 ❌ Not supported:
 ct_volume[*, *, *] = -1000.0
@@ -44,13 +48,16 @@ ct_volume = FLTARR(nx, ny, nz) - 1000.0
 ```
 
 ### 2. Inline FUNCTION Definitions
+
 **Issue**: FUNCTION definitions inside scripts cause parse errors
 **Affected Files**:
+
 - data_loading_utils.xdl
 - fluid_dynamics_demo.xdl
 - molecular_structure_demo.xdl
 
 **Example**:
+
 ```idl
 ❌ Parse error:
 FUNCTION MY_FUNC, arg1, arg2
@@ -63,8 +70,10 @@ value = MY_FUNC(5, 10)
 ```
 
 ### 3. Complex IF/ENDIF Nesting
+
 **Issue**: Ambiguous END/ENDIF matching in nested structures
 **Affected Files**:
+
 - mandelbrot_demo.xdl
 - advanced_viz_demo.xdl
 - Multiple ML test files
@@ -72,11 +81,13 @@ value = MY_FUNC(5, 10)
 ## VIZ3D Backend Status
 
 ### Current Configuration ✅
+
 - **Default Backend**: Three.js (Tauri)
 - **Set via**: `VIZ3D_BACKEND` environment variable or auto-detect
 - **Auto-detect priority**: ThreeJS > Browser > WebGPU
 
 ### Backend Resolution (from viz3d.rs)
+
 ```rust
 Self::Auto => {
     if std::env::var("XDL_GUI_MODE").is_ok() ||
@@ -89,6 +100,7 @@ Self::Auto => {
 ```
 
 ### Usage
+
 ```bash
 # Use Three.js (default - no action needed)
 xdl my_viz_script.xdl
@@ -105,7 +117,9 @@ xdl my_viz_script.xdl
 ## Files Requiring Parser Enhancements
 
 ### High Priority (6 files)
+
 Scientific workflow demos - all have wildcard syntax:
+
 1. examples/scientific/comparison_tool_demo.xdl
 2. examples/scientific/data_loading_utils.xdl
 3. examples/scientific/fluid_dynamics_demo.xdl
@@ -114,11 +128,13 @@ Scientific workflow demos - all have wildcard syntax:
 6. examples/scientific/molecular_structure_demo.xdl
 
 **Required Parser Features**:
+
 - Wildcard array indexing with assignment
 - Inline FUNCTION definitions
 - Better ENDIF/END disambiguation
 
 ### Medium Priority (3 files)
+
 Complex demo files:
 7. examples/demo/mandelbrot_demo.xdl
 8. examples/demo/advanced_viz_demo.xdl
@@ -127,17 +143,20 @@ Complex demo files:
 **Required**: Better nested structure tracking
 
 ### Low Priority (17+ files)
+
 ML tests and duplicate files - many have similar issues or are superseded
 
 ## Recommended Actions
 
 ### Immediate (Can do now)
+
 1. ✅ DONE: Fix FOR loop syntax errors
 2. ✅ DONE: Document GDL/IDL syntax rules
 3. ✅ DONE: Create validation report
 4. ⏭️ SKIP: Remove duplicate/obsolete files (wait for parser fixes)
 
 ### Short Term (Parser enhancements needed)
+
 1. **Add wildcard indexing support** to parser
    - Syntax: `array[*, i, *]`, `array[*, *, *]`
    - Use case: Assigning values to entire array or slices
@@ -151,6 +170,7 @@ ML tests and duplicate files - many have similar issues or are superseded
    - More context-aware parsing
 
 ### Long Term
+
 1. Full IDL/GDL compatibility testing
 2. Automated syntax migration tool
 3. Extended standard library functions
@@ -169,6 +189,7 @@ ML tests and duplicate files - many have similar issues or are superseded
 ## Files Safe to Remove
 
 These are duplicates or superseded:
+
 1. examples/xdl/rayleigh_taylor.xdl (duplicate of demo version)
 2. examples/xdl/sample_script.xdl (generic test)
 3. tests/simple_test.xdl (superseded)
@@ -177,12 +198,14 @@ These are duplicates or superseded:
 
 ## Next Steps
 
-**Option A: Wait for Parser Enhancements**
+### Option A: Wait for Parser Enhancements
+
 - Keep scientific demos as documentation/examples
 - Mark them as "requires parser v2.0"
 - Focus on fixing files that CAN work with current parser
 
-**Option B: Manual Rewrite**
+#### Option B: Manual Rewrite
+
 - Rewrite scientific demos to avoid problematic syntax
 - More verbose but compatible with current parser
 - Time-intensive
@@ -192,6 +215,7 @@ These are duplicates or superseded:
 ## Conclusion
 
 Good progress made:
+
 - ✅ 11 files fixed and working
 - ✅ Documentation complete
 - ✅ Three.js backend confirmed as default

@@ -11,11 +11,13 @@ The XDL MATLAB transpiler now supports `tiledlayout`, `nexttile`, and `comet3` c
 Creates a tiled layout grid for subplots.
 
 **MATLAB:**
+
 ```matlab
 tiledlayout(1, 2);  % 1 row, 2 columns
 ```
 
 **Transpiles to:**
+
 ```xdl
 ; tiledlayout(1, 2) - creating 2 subplots
 ```
@@ -27,6 +29,7 @@ The transpiler tracks the grid dimensions and uses this information for subseque
 Moves to the next tile in the layout.
 
 **MATLAB:**
+
 ```matlab
 ax1 = nexttile;  % Move to tile 1
 % ... plotting commands ...
@@ -34,6 +37,7 @@ ax2 = nexttile;  % Move to tile 2
 ```
 
 **Transpiles to:**
+
 ```xdl
 ; ax = nexttile - now plotting to tile 1
 ; ... plotting commands ...
@@ -47,11 +51,13 @@ The transpiler increments an internal tile counter and adds comments to track wh
 3D comet plot (animated trail plot in MATLAB, static 3D line in XDL).
 
 **MATLAB:**
+
 ```matlab
 comet3(ax1, xvec, yvec, zvec);
 ```
 
 **Transpiles to:**
+
 ```xdl
 PLOT3D, xvec, yvec, zvec, filename='tile1_plot.png'
 ```
@@ -86,6 +92,7 @@ comet3(ax2, yvec, xvec, zvec);
 ### Transpiler State Management
 
 The transpiler maintains internal state:
+
 - `subplot_rows`: Number of rows in the layout
 - `subplot_cols`: Number of columns in the layout
 - `current_tile`: Which tile is currently active (1-indexed)
@@ -93,6 +100,7 @@ The transpiler maintains internal state:
 ### Plot File Naming
 
 When `current_tile > 0`, plots are named:
+
 - `tile1_plot.png`
 - `tile2_plot.png`
 - `tile3_plot.png`
@@ -103,6 +111,7 @@ When no tiledlayout is active, the default `xdl_plot.png` is used.
 ### 3D Plotting
 
 `comet3` commands are mapped to `PLOT3D`:
+
 - XDL's PLOT3D handles 3D line plots
 - The "comet trail" animation is not preserved (static plot)
 - Axis handles are detected and stripped from arguments
@@ -120,12 +129,14 @@ When no tiledlayout is active, the default `xdl_plot.png` is used.
 ## Limitations
 
 ### What's Preserved
+
 - Grid dimensions tracked
 - Tile order maintained
 - 3D data plotted correctly
 - Multiple plots generated
 
 ### What's Not Preserved
+
 - **No visual tiling**: Plots are separate PNG files, not arranged in a grid
 - **No animation**: Comet trails are static 3D lines
 - **No shared axes**: Each plot is independent
@@ -134,6 +145,7 @@ When no tiledlayout is active, the default `xdl_plot.png` is used.
 ### Workarounds
 
 Since plots are separate files, you can:
+
 1. View them side-by-side manually
 2. Use image editing tools to combine them
 3. Generate HTML/markdown to display them together
@@ -203,6 +215,7 @@ Generated tile1_plot.png and tile2_plot.png
 **File:** `xdl-matlab/src/transpiler.rs`
 
 **Added:**
+
 - Subplot state fields (`subplot_rows`, `subplot_cols`, `current_tile`)
 - `tiledlayout` command handler
 - `nexttile` command handler (standalone and assignment forms)
@@ -222,6 +235,7 @@ Generated tile1_plot.png and tile2_plot.png
 ## Future Enhancements
 
 Possible improvements:
+
 - Actual multi-panel image generation (combine plots into one PNG)
 - Support for `subplot()` command (older MATLAB style)
 - Preserved animation frames for comet plots

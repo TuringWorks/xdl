@@ -3,17 +3,20 @@
 ## Date: October 22, 2025
 
 ## Overview
+
 Completed full 3D plotting with PNG generation AND GUI window display support. All 3D plots now automatically open in interactive windows when using xdl-gui.
 
 ## ✅ Features Implemented
 
 ### 1. PNG File Generation
+
 - All 3D plots save to PNG files
 - High-quality output with plotters library
 - Automatic coordinate generation
 - Height-based coloring
 
 ### 2. GUI Window Display
+
 - **NEW**: Automatic image window display in xdl-gui
 - Images load in resizable FLTK windows
 - Proper scaling for large images (max 1200x900)
@@ -25,13 +28,15 @@ Completed full 3D plotting with PNG generation AND GUI window display support. A
 ### New Components
 
 **ImageWindow Module** (`xdl-gui/src/image_window.rs`)
+
 - Loads PNG images using FLTK's PngImage
 - Auto-scales large images to fit screen
 - Centered display with padding
 - Close button handling
 - Event loop for window interaction
 
-**Callback System**
+### Callback System
+
 - `GUI_IMAGE_CALLBACK` - Global callback for image display
 - `register_gui_image_callback()` - Registration function
 - Called automatically after PNG generation
@@ -55,11 +60,13 @@ Completed full 3D plotting with PNG generation AND GUI window display support. A
 ## Usage
 
 ### With GUI (Recommended)
+
 ```bash
 cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 ```
 
 **Behavior:**
+
 1. Script executes
 2. PNG file generated (e.g., `xdl_surface.png`)
 3. Image window opens automatically
@@ -67,11 +74,13 @@ cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 5. Close window to continue to next plot
 
 ### Without GUI (CLI)
+
 ```bash
 cargo run --release --bin xdl examples/plot3d_demo.xdl
 ```
 
 **Behavior:**
+
 1. Script executes
 2. PNG files generated
 3. No window display (files saved to disk)
@@ -93,6 +102,7 @@ SURFACE, z
 ## Window Titles
 
 Each plot type has a descriptive window title:
+
 - **SURFACE** → "XDL Surface Plot"
 - **CONTOUR** → "XDL Contour Plot"
 - **SHADE_SURF** → "XDL Shaded Surface"
@@ -110,22 +120,26 @@ Each plot type has a descriptive window title:
 ## Technical Details
 
 ### Image Loading
+
 - Uses FLTK's `PngImage::load()`
 - Error handling for missing/corrupt files
 - Automatic format detection
 
 ### Window Sizing
+
 - Base size: image dimensions + 40px padding
 - Maximum: 1200x900 (scaled proportionally)
 - Window title bar: +30px height
 - Always maintains aspect ratio
 
 ### Event Handling
+
 - Close button properly handled
 - Event loop runs until window closed
 - Clean window disposal
 
 ### Thread Safety
+
 - Callback uses `Arc<dyn Fn>` for thread safety
 - `Mutex` protection for global callback
 - Safe to call from any thread
@@ -151,18 +165,21 @@ Each plot type has a descriptive window title:
 ## Testing
 
 ### Test Script
+
 ```bash
 # Run the demo
 cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 ```
 
 ### Expected Results
+
 - 5 image windows open in sequence
 - Each shows a different 3D visualization
 - Windows can be closed to proceed
 - All PNG files saved to current directory
 
 ### Verification
+
 ```bash
 # Check generated files
 ls -lh xdl_*.png
@@ -201,6 +218,7 @@ open xdl_surface.png  # macOS
 ## Future Enhancements
 
 ### Potential Improvements
+
 1. **Interactive 3D** - Real 3D rendering with rotation
 2. **Multiple Windows** - Show all plots simultaneously
 3. **Export Options** - Save as PDF, SVG, etc.
@@ -208,6 +226,7 @@ open xdl_surface.png  # macOS
 5. **Comparison View** - Side-by-side plot comparison
 
 ### Advanced Features
+
 1. **Animation** - Rotate 3D plots in window
 2. **Real-time Updates** - Live plot updates
 3. **Custom Views** - Change perspective angles
@@ -216,6 +235,7 @@ open xdl_surface.png  # macOS
 ## Conclusion
 
 3D plotting is now fully integrated with the GUI:
+
 - ✅ PNG generation works
 - ✅ GUI window display works
 - ✅ CLI fallback works
@@ -227,23 +247,29 @@ open xdl_surface.png  # macOS
 ## Quick Reference
 
 ### Run with GUI
+
 ```bash
 cargo run --release --bin xdl-gui <script>.xdl
 ```
+
 - Plots open in windows automatically
 - Close windows to continue execution
 
 ### Run without GUI
+
 ```bash
 cargo run --release --bin xdl <script>.xdl
 ```
+
 - Plots saved as PNG files
 - No windows displayed
 
 ### Test Demo
+
 ```bash
 cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 ```
+
 - See all 3D plot types
 - Interactive window display
 - Professional visualization quality

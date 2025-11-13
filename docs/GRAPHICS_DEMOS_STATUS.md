@@ -1,19 +1,23 @@
 # XDL Graphics Demos Status
 
 ## Overview
+
 The XDL graphics system includes procedure registrations and partial implementations for plotting functionality.
 
 ## Working Demos
 
 ### 1. `plot_demo.xdl` ✅ WORKING
+
 **Status:** Fully functional
 **Features:**
+
 - Simple 2D line plotting with PLOT procedure
 - Uses FINDGEN for array generation
 - Works with GUI (xdl-gui) for interactive plotting
 - Falls back to PNG file generation in CLI mode
 
 **Run:**
+
 ```bash
 # With GUI (recommended)
 cargo run --release --bin xdl-gui examples/plot_demo.xdl
@@ -23,6 +27,7 @@ cargo run --release --bin xdl examples/plot_demo.xdl
 ```
 
 **Code:**
+
 ```xdl
 x = FINDGEN(50) / 5.0
 y = SIN(x)
@@ -32,14 +37,17 @@ PLOT, y, x
 ## Working Demos (Continued)
 
 ### 2. `plot3d_demo.xdl` ✅ WORKING
+
 **Status:** Procedures connected, data parsing functional
 **Features:**
+
 - SURFACE, CONTOUR, SHADE_SURF, PLOT3D now accept and validate nested array data
 - Uses nested arrays for 2D data: `z = [[1,2,3], [4,5,6]]`
 - Data structures are properly extracted and validated
 - Currently outputs acknowledgment messages (file rendering not yet implemented)
 
 **Procedures that need implementation:**
+
 - `SURFACE` - 3D wireframe surfaces
 - `CONTOUR` - 2D contour plots
 - `SHADE_SURF` - 3D shaded surfaces
@@ -50,8 +58,10 @@ PLOT, y, x
 - `T3D`, `SCALE3`, `SHOW3` - 3D transformations
 
 ### 3. `plot_working_demo.xdl` ✅ WORKING
+
 **Status:** All 5 tests pass successfully
 **Features:**
+
 - Tests sine, cosine, combined waves, exponential decay, and parabola plots
 - Array operations (division, negation) work correctly
 - Math functions (SIN, COS, EXP) support array inputs
@@ -60,6 +70,7 @@ PLOT, y, x
 ## Implementation Status
 
 ### ✅ Fully Implemented
+
 - **PLOT** - 2D line plotting
   - GUI integration with callback system
   - PNG fallback for CLI mode
@@ -72,34 +83,43 @@ PLOT, y, x
 - **Array operations** - Division and unary negation work on arrays
 
 ### 🔧 Registered but Stubbed
+
 These procedures are registered in `xdl-stdlib/src/lib.rs` but return "not yet implemented":
 
 **Basic 2D:**
+
 - OPLOT, PLOTS, XYOUTS, AXIS
 - POLYFILL, ARROW, USERSYM
 
 **3D Plotting:**
+
 - CONTOUR, SURFACE, SHADE_SURF, SHADE_SURF_IRR
 - SURFR, SHOW3, T3D, SCALE3
 - PLOT3D, ISOCONTOUR, ISOSURFACE
 
 **Image Display:**
+
 - TV, TVSCL, TVCRS, IMAGE_DISPLAY
 
 **Window Management:**
+
 - WINDOW, WSET, WDELETE, WSHOW, ERASE, EMPTY
 
 **Device & Color:**
+
 - DEVICE, LOADCT
 
 **Interactive:**
+
 - CURSOR
 
 **Specialized Plots:**
+
 - BAR_PLOT, HISTOGRAM, PLOTERR, ERRPLOT
 - VEL, VELOVECT
 
 **Map Projections:**
+
 - MAP_SET, MAP_CONTINENTS, MAP_GRID
 
 ## Architecture
@@ -144,6 +164,7 @@ To make 3D demos work:
 ## Testing
 
 ### Manual Testing
+
 ```bash
 # Test 2D plotting (works)
 cargo run --release --bin xdl-gui examples/plot_demo.xdl
@@ -153,23 +174,26 @@ cargo run --release --bin xdl examples/plot3d_demo.xdl
 ```
 
 ### Expected Behavior
+
 - **plot_demo.xdl**: Opens interactive plot window with sine wave
 - **plot3d_demo.xdl**: Currently fails with "SURFACE not yet implemented"
 
 ## Documentation
 
 See also:
+
 - `GRAPHICS_IMPLEMENTATION.md` - Comprehensive implementation guide
 - `QUICKSTART_GRAPHICS.md` - Quick start guide for graphics
 - `docs/GDL_XDL_PORTING_STATUS.md` - Overall porting status
 
 ## Recent Fixes (Oct 22, 2025)
 
-### Fixed Issues:
+### Fixed Issues
+
 1. ✅ **Array operations in math functions** - Added array support to COS, EXP, SQRT
 2. ✅ **Unary negation for arrays** - Fixed `-array` to negate all elements
 3. ✅ **3D procedure connections** - SURFACE, CONTOUR, SHADE_SURF, PLOT3D now parse nested arrays
-4. ✅ **2D array extraction** - Helper function to convert nested arrays to Vec<Vec<f64>>
+4. ✅ **2D array extraction** - Helper function to convert nested arrays to Vec<Vec< f64>>
 
 ## Summary
 

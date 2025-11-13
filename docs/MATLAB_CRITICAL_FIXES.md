@@ -12,11 +12,13 @@ All 6 critical issues with MATLAB plotting examples have been fixed! Complex MAT
 **Solution:** Map `pi` → `!PI` and `e` → `!E` throughout the transpiler
 
 **Example:**
+
 ```matlab
 x = 2 * pi;  % Now works!
 ```
 
 Transpiles to:
+
 ```xdl
 x = 2 * !PI
 ```
@@ -27,11 +29,13 @@ x = 2 * !PI
 **Solution:** Convert to XDL equivalent using FINDGEN
 
 **Example:**
+
 ```matlab
 x = linspace(0, 2*pi, 100);
 ```
 
 Transpiles to:
+
 ```xdl
 x = FINDGEN(100) * ((2 * !PI) - (0)) / (100 - 1) + (0)
 ```
@@ -44,6 +48,7 @@ This correctly generates 100 evenly spaced points from 0 to 2π.
 **Solution:** Already works! XDL supports array operations natively
 
 **Example:**
+
 ```matlab
 x = linspace(0, pi, 10);
 y = sin(x);  % Works!
@@ -57,12 +62,14 @@ The transpiler preserves array operations, and XDL's SIN function handles arrays
 **Solution:** Gracefully ignore with explanatory comments
 
 **Example:**
+
 ```matlab
 figure;
 hold on;
 ```
 
 Transpiles to:
+
 ```xdl
 ; (figure management command ignored)
 ; (hold command ignored - XDL doesn't support hold on/off)
@@ -76,6 +83,7 @@ No errors, code continues executing.
 **Solution:** Ignore with helpful comment about using PLOT keywords
 
 **Example:**
+
 ```matlab
 xlabel('X Axis');
 ylabel('Y Axis');
@@ -83,6 +91,7 @@ title('My Plot');
 ```
 
 Transpiles to:
+
 ```xdl
 ; (xlabel command - use PLOT keywords: title=, xtitle=, ytitle=)
 ; (ylabel command - use PLOT keywords: title=, xtitle=, ytitle=)
@@ -95,12 +104,14 @@ Transpiles to:
 **Solution:** Special handling in PLOT command to detect and skip line styles
 
 **Example:**
+
 ```matlab
 plot(x, y1, 'b-');
 plot(x, y2, 'r--*');
 ```
 
 Transpiles to:
+
 ```xdl
 PLOT, x, y1
 PLOT, x, y2
@@ -172,12 +183,14 @@ All tests completed!
 ## Impact
 
 ### Before Fixes
+
 - ❌ Most MATLAB plotting examples failed
 - ❌ `pi` constant caused errors
 - ❌ `linspace()` not implemented
 - ❌ Graphics commands caused errors
 
 ### After Fixes
+
 - ✅ Complex MATLAB plotting code works
 - ✅ Standard MATLAB constants recognized
 - ✅ `linspace()` fully functional

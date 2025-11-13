@@ -3,6 +3,7 @@
 ## Date: October 22, 2025
 
 ## Overview
+
 Successfully implemented full 3D plotting functionality with PNG output for all major 3D procedures.
 
 ## ✅ Implemented Features
@@ -32,17 +33,22 @@ Successfully implemented full 3D plotting functionality with PNG output for all 
 ## Implementation Details
 
 ### Modules Enabled
+
 - `xdl-stdlib/src/graphics/plot3d.rs` - 3D plotting core functions
 - `xdl-stdlib/src/graphics/plot2d.rs` - 2D plotting utilities
 
 ### API Fixes
+
 Fixed plotters crate API compatibility issues:
+
 - Used `ShapeStyle::from(&color)` instead of calling methods on RGBColor directly
 - Proper use of `.stroke_width()` and `.filled()` on ShapeStyle
 - Added `#[derive(Clone)]` to Plot2DConfig
 
 ### Procedure Connections
+
 All 3D procedures now:
+
 1. Extract and validate nested array data
 2. Generate default coordinates if not provided
 3. Create appropriate configuration objects
@@ -56,32 +62,38 @@ All 3D procedures now:
 
 Running: `cargo run --release --bin xdl examples/plot3d_demo.xdl`
 
-**Test 1: Simple Surface Plot**
+#### Test 1: Simple Surface Plot
+
 - Input: 5x5 nested array (pyramid shape)
 - Output: ✅ `xdl_surface.png` (66 KB)
 - Status: PASS
 
-**Test 2: Contour Plot**
+#### Test 2: Contour Plot
+
 - Input: 5x5 nested array (peak shape)
 - Output: ✅ `xdl_contour.png` (105 KB)
 - Status: PASS
 
-**Test 3: Shaded Surface Plot**
+#### Test 3: Shaded Surface Plot
+
 - Input: 5x5 nested array (saddle shape)
 - Output: ✅ `xdl_shade_surf.png` (69 KB)
 - Status: PASS
 
-**Test 4: 3D Line Plot**
+#### Test 4: 3D Line Plot
+
 - Input: 20-point parametric spiral (x, y, z arrays)
 - Output: ✅ `xdl_plot3d.png` (98 KB)
 - Status: PASS
 
-**Test 5: Wavy Surface**
+#### Test 5: Wavy Surface
+
 - Input: 5x5 nested array (wave pattern)
 - Output: ✅ `xdl_surface.png` (66 KB)
 - Status: PASS
 
 ### Files Generated
+
 ```bash
 $ ls -lh xdl_*.png
 -rw-r--r--  xdl_contour.png     (105 KB)
@@ -113,6 +125,7 @@ $ ls -lh xdl_*.png
 ## Usage Examples
 
 ### Surface Plot
+
 ```xdl
 ; Create a simple surface
 z = [[1, 2, 3, 2, 1],
@@ -125,6 +138,7 @@ SURFACE, z
 ```
 
 ### Contour Plot
+
 ```xdl
 ; Create a peak
 z = [[1, 2, 3, 2, 1],
@@ -137,6 +151,7 @@ CONTOUR, z
 ```
 
 ### Shaded Surface
+
 ```xdl
 ; Create a saddle
 z = [[5, 4, 3, 4, 5],
@@ -149,6 +164,7 @@ SHADE_SURF, z
 ```
 
 ### 3D Line Plot
+
 ```xdl
 ; Create a spiral
 t = FINDGEN(50) / 5.0
@@ -162,18 +178,22 @@ PLOT3D, x, y, z
 ## Features
 
 ### Automatic Coordinate Generation
+
 - If x/y coordinates not provided, automatically generates 0, 1, 2, ...
 - Simplifies usage for regular grids
 
 ### Height-Based Coloring
+
 - Surface and shaded surface plots use color gradient based on z-values
 - Blue (low) to red (high) color mapping
 
 ### 3D Rotation
+
 - Default viewing angles (ax=30°, az=30°)
 - Provides good perspective on 3D structures
 
 ### Configurable Options
+
 - SurfaceConfig: rotation angles, shading on/off
 - ContourConfig: number of levels, fill option
 - All with sensible defaults
@@ -181,12 +201,14 @@ PLOT3D, x, y, z
 ## Technical Details
 
 ### Plotters Library Integration
+
 - Uses plotters 0.3.x 3D Cartesian coordinate system
 - BitMapBackend for PNG output
 - ChartBuilder for chart configuration
 - Polygon and PathElement for 3D rendering
 
 ### Data Structures
+
 - `Vec<Vec<f64>>` for 2D surface data
 - `Vec<f64>` for 1D line data
 - Validation ensures rectangular arrays
@@ -195,16 +217,19 @@ PLOT3D, x, y, z
 ## Next Steps (Optional Enhancements)
 
 ### GUI Integration
+
 - Add callback system for 3D plots (like 2D PLOT has)
 - Display PNG in FLTK window or use native 3D rendering
 
 ### Advanced Features
+
 - Support for irregular grids (SHADE_SURF_IRR)
 - 3D transformations (T3D, SCALE3, SHOW3)
 - Isosurface rendering (ISOCONTOUR, ISOSURFACE)
 - Custom color tables and lighting
 
 ### Performance
+
 - Optimize for larger datasets (>100x100)
 - Add progress indicators for complex plots
 - Batch rendering support
@@ -212,11 +237,13 @@ PLOT3D, x, y, z
 ## Build & Test
 
 ### Build
+
 ```bash
 cargo build --release
 ```
 
 ### Test
+
 ```bash
 # CLI mode (PNG output)
 cargo run --release --bin xdl examples/plot3d_demo.xdl
@@ -226,6 +253,7 @@ cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 ```
 
 ### Verify Output
+
 ```bash
 ls -lh xdl_*.png
 open xdl_surface.png      # View on macOS

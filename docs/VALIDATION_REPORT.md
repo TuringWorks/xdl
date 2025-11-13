@@ -13,16 +13,19 @@
 ## MATLAB Compatibility Status ✅
 
 ### Transpilation Tests
+
 - ✅ **28/28 MATLAB transpilation unit tests passing**
 - ✅ **MATLAB lexer and parser working correctly**
 - ✅ **Function mapping table functional (~80 functions mapped)**
 
 ### Execution Tests
+
 - ✅ **Direct .m file execution working**
 - ✅ **Basic MATLAB constructs supported** (variables, arrays, functions, simple control flow)
 - ✅ **XDL CLI integration complete** (automatic .m file detection and transpilation)
 
 ### Test Infrastructure
+
 - ✅ **Comprehensive test suite created** (5 major test files)
 - ✅ **Automated test runner** (`tests/test_all.sh`)
 - ✅ **MATLAB execution verification** (`tests/test_matlab_execution.sh`)
@@ -35,17 +38,20 @@
 These files parse and execute successfully:
 
 **Examples - Charting** (3):
+
 - examples/charting/minimal_for_test.xdl
 - examples/charting/scatter_demo.xdl
 - examples/charting/simple_for_test.xdl
 - examples/charting/test_nested_for.xdl
 
 **Examples - Demo** (3):
+
 - examples/demo/convol_demo.xdl
 - examples/demo/rayleigh_taylor_simple.xdl
 - examples/demo/viz3d_test_simple.xdl
 
 **Examples - XDL** (17):
+
 - examples/xdl/01_hello_world.xdl
 - examples/xdl/02_arrays_and_loops.xdl *(fixed)*
 - examples/xdl/04_trigonometry.xdl
@@ -64,6 +70,7 @@ These files parse and execute successfully:
 - examples/xdl/test_python_arrays.xdl
 
 **Tests** (18):
+
 - tests/numpy_simple_test.xdl
 - tests/pandas_test.xdl
 - tests/python_constants_test.xdl
@@ -88,11 +95,13 @@ These files parse and execute successfully:
 These files have parsing or runtime errors:
 
 **Examples - Demo** (3):
+
 - examples/demo/advanced_viz_demo.xdl - *Parse error with nested structures*
 - examples/demo/comprehensive_control_flow_demo.xdl - *Unknown error*
 - examples/demo/mandelbrot_demo.xdl - *Parse error with nested FOR/IF*
 
 **Examples - Scientific** (6):
+
 - examples/scientific/comparison_tool_demo.xdl - *Parse error with wildcards*
 - examples/scientific/data_loading_utils.xdl - *Parse error with FUNCTION*
 - examples/scientific/fluid_dynamics_demo.xdl - *Parse error with FUNCTION*
@@ -101,6 +110,7 @@ These files have parsing or runtime errors:
 - examples/scientific/molecular_structure_demo.xdl - *Parse error*
 
 **Examples - XDL** (17):
+
 - examples/xdl/05_bezier_surface.xdl - *Complex nested structures*
 - examples/xdl/advanced_viz_simple.xdl - *Parse error*
 - examples/xdl/control_flow_simple.xdl - *Parse error*
@@ -121,6 +131,7 @@ These files have parsing or runtime errors:
 - examples/xdl/xdl_showcase_demo.xdl - *Parse error*
 
 **Tests** (12):
+
 - tests/advanced_control_flow_tests.xdl - *Parse error*
 - tests/control_flow_tests.xdl - *Parse error*
 - tests/gui_test.xdl - *GUI dependency*
@@ -138,12 +149,14 @@ These files have parsing or runtime errors:
 These files execute but take >3 seconds (likely visualization demos):
 
 **Examples - Charting** (3):
+
 - examples/charting/echarts_demo.xdl
 - examples/charting/simple_test.xdl
 - examples/charting/test_contour.xdl
 - examples/charting/test_plot_surface.xdl
 
 **Examples - Demo** (13):
+
 - examples/demo/math_demo.xdl
 - examples/demo/plot3d_demo.xdl
 - examples/demo/plot_demo.xdl
@@ -159,16 +172,19 @@ These files execute but take >3 seconds (likely visualization demos):
 - examples/demo/volume_render_simple.xdl
 
 **Examples - Viz3D** (2):
+
 - examples/viz3d/threejs_advanced_demo.xdl
 - examples/viz3d/threejs_simple_test.xdl
 
 **Examples - XDL** (4):
+
 - examples/xdl/03_plotting_basics.xdl
 - examples/xdl/06_sine_cosine_plot.xdl
 - examples/xdl/math2.xdl
 - examples/xdl/simple_plot_test.xdl
 
 **Tests** (5):
+
 - tests/test_graphics.xdl
 - tests/test_plot.xdl
 - tests/test_plot_keywords.xdl
@@ -177,9 +193,11 @@ These files execute but take >3 seconds (likely visualization demos):
 ## Common Issues Identified
 
 ### 1. FOR Loop Closure Syntax
+
 **Issue**: Using `END` instead of `ENDFOR` for FOR loops with BEGIN blocks
 **Status**: ✅ Fixed in 10 files
 **Example**:
+
 ```idl
 ❌ Wrong:
 FOR i=0,n DO BEGIN
@@ -193,27 +211,32 @@ ENDFOR
 ```
 
 ### 2. Wildcard Array Assignment
+
 **Issue**: Parser doesn't support `array[*, *, *] = value` syntax
 **Affected**: Scientific workflow demos
 **Workaround**: Use explicit loops or REFORM
 
 ### 3. FUNCTION Definitions in Scripts
+
 **Issue**: Parser may not handle inline FUNCTION definitions correctly
 **Affected**: data_loading_utils.xdl, fluid_dynamics_demo.xdl
 **Status**: Needs parser enhancement
 
 ### 4. Nested FOR/IF Structures
+
 **Issue**: Complex nesting causes ambiguous END/ENDFOR matching
 **Affected**: mandelbrot_demo.xdl, advanced_viz_demo.xdl
 **Status**: Requires manual review and fix
 
 ### 5. Visualization Timeouts
+
 **Issue**: 3D rendering demos take >3s to initialize
 **Status**: Expected behavior - not errors
 
 ## Files Requiring Manual Review
 
 **High Priority** (Core functionality broken):
+
 1. examples/scientific/*.xdl - All 6 scientific workflow demos
 2. examples/demo/mandelbrot_demo.xdl
 3. examples/demo/advanced_viz_demo.xdl
@@ -233,6 +256,7 @@ ENDFOR
 ## Files with Minimal Use / Can Be Removed
 
 **Candidates for Removal**:
+
 1. **examples/xdl/rayleigh_taylor.xdl** - Duplicate of demo/rayleigh_taylor.xdl
 2. **examples/xdl/sample_script.xdl** - Generic test file
 3. **tests/simple_test.xdl** - Superseded by specific tests
@@ -242,23 +266,27 @@ ENDFOR
 ## Recommendations
 
 ### Immediate Actions
+
 1. ✅ **DONE**: Fix FOR loop syntax in 10 files
 2. ✅ **DONE**: Document GDL/IDL syntax rules
 3. **TODO**: Fix scientific workflow demos (wildcard syntax)
 4. **TODO**: Fix nested FOR/IF in mandelbrot demos
 
 ### Parser Enhancements Needed
+
 1. Support wildcard array assignment: `arr[*, *, *] = value`
 2. Better handling of inline FUNCTION definitions
 3. Improved nested structure tracking for END/ENDFOR matching
 4. Line continuation with `$` in complex expressions
 
 ### Documentation Updates
+
 1. Add troubleshooting section to README
 2. Document known limitations
 3. Create migration guide from IDL/GDL
 
 ### Cleanup Recommendations
+
 - Remove duplicate rayleigh_taylor.xdl
 - Archive superseded test files
 - Consolidate ML test files

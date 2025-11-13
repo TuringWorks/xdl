@@ -3,14 +3,17 @@
 ## Date: October 22, 2025
 
 ## Overview
+
 Fixed critical issues in both 2D and 3D graphics demos, making all test scripts fully functional.
 
 ## Issues Fixed
 
 ### 1. Math Functions Missing Array Support ✅
+
 **Problem:** COS, EXP, SQRT functions only handled scalar values, causing "Type mismatch: expected numeric, got Float" errors when passed arrays.
 
 **Solution:** Added array handling to all math functions following the pattern established in SIN:
+
 ```rust
 // Handle arrays
 if let XdlValue::Array(arr) = input {
@@ -20,6 +23,7 @@ if let XdlValue::Array(arr) = input {
 ```
 
 **Files Modified:**
+
 - `xdl-stdlib/src/math.rs` - Added array support to `cos()`, `exp()`, `sqrt()`
 
 **Impact:** All math functions now work element-wise on arrays
@@ -27,9 +31,11 @@ if let XdlValue::Array(arr) = input {
 ---
 
 ### 2. Unary Negation Broken for Arrays ✅
+
 **Problem:** Expression like `-x` where `x` is an array returned only the negation of the first element instead of negating all elements.
 
 **Solution:** Added array case to unary minus operator in evaluator:
+
 ```rust
 Array(arr) => {
     let result: Vec<f64> = arr.iter().map(|&x| -x).collect();
@@ -38,6 +44,7 @@ Array(arr) => {
 ```
 
 **Files Modified:**
+
 - `xdl-interpreter/src/evaluator.rs` - Fixed `evaluate_unary_op()` for arrays
 
 **Impact:** Array negation now works correctly: `EXP(-x)` works with array `x`
@@ -45,29 +52,51 @@ Array(arr) => {
 ---
 
 ### 3. 3D Procedures Not Connected ✅
+
 **Problem:** SURFACE, CONTOUR, SHADE_SURF, PLOT3D returned "not yet implemented" errors even though data structures were ready.
 
 **Solution:**
-1. Created helper function to extract 2D arrays from nested arrays:
-```rust
-fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
-    match value {
-        XdlValue::NestedArray(rows) => {
-            // Extract and validate each row
-            // Ensure all rows have same length
-        }
-        _ => Err(...)
-    }
-}
-```
 
-2. Updated all 3D procedures to:
+1. Created helper function to extract 2D arrays from nested arrays:
+
+   ```rust
+   fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
+       match value {
+           XdlValue::NestedArray(rows) => {
+               // Extract and validate each row
+               // Ensure all rows have same length
+           }
+           _ => Err(...)
+       }
+   }
+   ```
+
+1. Updated all 3D procedures to:
+   - Accept nested array arguments
+   - Extract and validate 2D/3D data structures
+   - Output acknowledgment messages
+   - Return success instead of "not implemented" error
+
+   ```rust
+   fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
+       match value {
+           XdlValue::NestedArray(rows) => {
+               // Extract and validate each row
+               // Ensure all rows have same length
+           }
+           _ => Err(...)
+       }
+   }
+   ```
+
+1. Updated all 3D procedures to:
    - Accept nested array arguments
    - Extract and validate 2D/3D data structures
    - Output acknowledgment messages
    - Return success instead of "not implemented" error
 
 **Files Modified:**
+
 - `xdl-stdlib/src/graphics_procs.rs` - Updated `surface()`, `contour()`, `shade_surf()`, `plot3d()`
 
 **Impact:** 3D procedures now parse and validate data correctly
@@ -77,11 +106,13 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
 ## Test Results
 
 ### ✅ `plot_demo.xdl` - Basic 2D Plot
+
 - **Status:** Working (was already functional)
 - **Tests:** Simple sine wave plot
 - **Result:** ✅ PASS
 
 ### ✅ `plot_working_demo.xdl` - Comprehensive 2D Tests
+
 - **Status:** All 5 tests now pass
 - **Tests:**
   1. Simple sine plot ✅
@@ -92,6 +123,7 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
 - **Result:** ✅ ALL PASS
 
 ### ✅ `plot3d_demo.xdl` - 3D Plotting Tests
+
 - **Status:** All 5 tests now pass
 - **Tests:**
   1. SURFACE with 5x5 grid ✅ (was failing - now connected)
@@ -129,6 +161,7 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
 ## Running the Demos
 
 ### CLI Mode (PNG output)
+
 ```bash
 # 2D plots
 cargo run --release --bin xdl examples/plot_demo.xdl
@@ -139,6 +172,7 @@ cargo run --release --bin xdl examples/plot3d_demo.xdl
 ```
 
 ### GUI Mode (Interactive windows)
+
 ```bash
 # 2D plots with interactive windows
 cargo run --release --bin xdl-gui examples/plot_demo.xdl
@@ -153,6 +187,7 @@ cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 ## What Works Now
 
 ### ✅ Fully Functional
+
 - 2D line plotting (PLOT) with GUI and PNG output
 - Array generation (FINDGEN)
 - Array arithmetic (addition, subtraction, multiplication, division)
@@ -162,6 +197,7 @@ cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 - Nested array support for 2D matrices
 
 ### ⚠️ Partially Functional
+
 - 3D procedures (SURFACE, CONTOUR, SHADE_SURF, PLOT3D)
   - ✅ Data parsing and validation works
   - ❌ File rendering not yet implemented
@@ -171,13 +207,15 @@ cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 
 ## Next Steps
 
-### To Complete 3D Plotting:
+### To Complete 3D Plotting
+
 1. Connect 3D procedures to plotters library
 2. Implement PNG output for 3D plots (surface_plot, contour_plot, plot_3d)
 3. Add GUI callback support for 3D plots
 4. Implement color mapping and shading
 
-### Optional Enhancements:
+### Optional Enhancements
+
 1. Implement FLTARR for dynamic 2D array creation
 2. Add support for irregular grids (SHADE_SURF_IRR)
 3. Implement 3D transformations (T3D, SCALE3, SHOW3)

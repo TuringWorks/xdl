@@ -15,15 +15,18 @@ Successfully implemented the Fast Fourier Transform (FFT) function using the `ru
 **Location**: `xdl-stdlib/src/math.rs`
 
 **Signature**:
+
 ```rust
 pub fn fft(args: &[XdlValue]) -> XdlResult<XdlValue>
 ```
 
 **Parameters**:
+
 - `array`: Input array (real values)
 - `direction`: Optional. Positive (1) for forward FFT, negative (-1) for inverse FFT
 
 **Features Implemented**:
+
 - ✅ Forward FFT (frequency domain transform)
 - ✅ Inverse FFT with 1/N normalization
 - ✅ Complex output as interleaved real/imaginary array
@@ -34,12 +37,14 @@ pub fn fft(args: &[XdlValue]) -> XdlResult<XdlValue>
 ### Algorithm
 
 **Forward FFT**:
+
 1. Convert real input to complex numbers (imaginary part = 0)
 2. Use rustfft FftPlanner for optimal algorithm selection
 3. Perform forward FFT
 4. Return interleaved complex result [re0, im0, re1, im1, ...]
 
 **Inverse FFT**:
+
 1. Take complex input (already in interleaved format)
 2. Use rustfft inverse FFT
 3. Normalize by 1/N (matching IDL/GDL convention)
@@ -48,6 +53,7 @@ pub fn fft(args: &[XdlValue]) -> XdlResult<XdlValue>
 ### Output Format
 
 FFT returns complex numbers as interleaved real/imaginary pairs:
+
 - Input size: N elements
 - Output size: 2N elements
 - Format: `[real[0], imag[0], real[1], imag[1], ..., real[N-1], imag[N-1]]`
@@ -83,6 +89,7 @@ FFT(FINDGEN(100))  ; Works (not power of 2)
 ```
 
 **All tests passed:**
+
 - ✅ Forward FFT produces correct complex output
 - ✅ Output size = 2 × input size (complex numbers)
 - ✅ DC signal FFT shows correct DC component
@@ -109,19 +116,23 @@ FFT(FINDGEN(100))  ; Works (not power of 2)
 ## Technical Highlights
 
 ### RustFFT Library
+
 - Pure Rust implementation (no external C dependencies)
 - Automatically selects optimal algorithm based on size
 - Supports arbitrary sizes (Bluestein's algorithm for non-power-of-2)
 - High performance with SIMD optimizations
 
 ### Complex Number Representation
+
 XDL uses interleaved format for compatibility:
+
 - Matches IDL/GDL complex array format
 - Easy to extract real/imaginary parts
 - `real[k] = result[2*k]`
 - `imag[k] = result[2*k+1]`
 
 ### Normalization
+
 - Forward FFT: No normalization (sum preserved)
 - Inverse FFT: Divide by N (standard convention)
 - Matches IDL/GDL behavior
@@ -136,6 +147,7 @@ XDL uses interleaved format for compatibility:
 ## Compatibility
 
 ### GDL/IDL Compatibility
+
 - ✅ FFT syntax compatible
 - ✅ Complex output format compatible (interleaved)
 - ✅ Inverse FFT normalization compatible
@@ -143,6 +155,7 @@ XDL uses interleaved format for compatibility:
 - ⚠️ Advanced keywords not yet implemented (DIMENSION, DOUBLE, OVERWRITE)
 
 ### Future Enhancements
+
 - `/INVERSE` keyword support (currently use -1 parameter)
 - `/DOUBLE` keyword for double precision
 - `/CENTER` keyword for zero-frequency at center
@@ -152,6 +165,7 @@ XDL uses interleaved format for compatibility:
 ## Example Usage
 
 ### Frequency Analysis
+
 ```xdl
 ; Generate signal with multiple frequencies
 n = 128
@@ -175,6 +189,7 @@ PRINT, 'Peak frequencies:', WHERE(magnitudes GT 10)
 ```
 
 ### Signal Filtering
+
 ```xdl
 ; Apply FFT, filter, inverse FFT
 data = RANDOMU(seed, 256)
@@ -191,6 +206,7 @@ filtered = FFT(fft_data, -1)
 ```
 
 ### Power Spectrum
+
 ```xdl
 ; Compute power spectral density
 signal = READ_DATA('signal.dat')
@@ -210,6 +226,7 @@ PLOT, power
 ## Known Limitations
 
 ### Current Limitations
+
 1. **Complex Input**: Currently assumes real input (imaginary part = 0)
    - Future: Support Complex/DComplex input types
 
@@ -225,6 +242,7 @@ PLOT, power
 ## Mathematical Properties
 
 FFT satisfies key properties:
+
 - **Linearity**: FFT(aX + bY) = a·FFT(X) + b·FFT(Y)
 - **Parseval's Theorem**: Energy preserved (with normalization)
 - **Symmetry**: Real input → Hermitian symmetric output
@@ -246,6 +264,7 @@ Phase 1.6 is complete! All Phase 1 critical foundational tasks are now finished:
 ---
 
 **Implementation Quality**: ⭐⭐⭐⭐⭐
+
 - Clean, efficient implementation
 - Proper normalization
 - Works with arbitrary sizes

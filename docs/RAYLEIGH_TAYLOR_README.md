@@ -7,12 +7,14 @@ This demonstration showcases XDL's advanced scientific visualization capabilitie
 ## What is Rayleigh-Taylor Instability?
 
 The Rayleigh-Taylor (RT) instability occurs when:
+
 - A heavier fluid is positioned above a lighter fluid
 - Small perturbations at the interface grow exponentially
 - The heavy fluid "falls" through the light fluid in finger-like plumes
 - Beautiful, turbulent mixing patterns emerge
 
 This phenomenon is observed in:
+
 - **Supernovae** - when stellar material is accelerated outward
 - **Inertial Confinement Fusion** - affecting fuel compression
 - **Oceanography** - thermocline mixing
@@ -24,27 +26,32 @@ This phenomenon is observed in:
 This demo showcases:
 
 ### 1. **Multiple Perceptually Uniform Colormaps**
+
 - **Viridis** - Default, excellent for scientific data
 - **Plasma** - Purple to yellow gradient
 - **Turbo** - Improved rainbow colormap
 - **Inferno** - Black through orange to white
 
 ### 2. **Density Field Visualization**
+
 - High-resolution (200x200 grid) fluid simulation
 - Real-time evolution of mixing interface
 - Color-coded density values
 
 ### 3. **Vector Field Visualization**
+
 - Velocity field quiver plots (arrows)
 - Color-coded by velocity magnitude
 - Subsampled for clarity
 
 ### 4. **Multi-Frame Time Series**
+
 - 6 timesteps: 0, 50, 100, 200, 400, 800 steps
 - Shows instability growth over time
 - Captures transition from smooth interface to turbulent mixing
 
 ### 5. **Side-by-Side Comparisons**
+
 - 4-panel colormap comparison images
 - Demonstrates advantages of perceptually uniform colormaps
 - Shows same data with different color schemes
@@ -53,7 +60,8 @@ This demo showcases:
 
 The demo generates 30 images total:
 
-### Per Timestep (6 timesteps × 5 images = 30 images):
+### Per Timestep (6 timesteps × 5 images = 30 images)
+
 1. **`rt_viridis_XXXX.png`** - Density field with Viridis colormap
 2. **`rt_plasma_XXXX.png`** - Density field with Plasma colormap
 3. **`rt_turbo_XXXX.png`** - Density field with Turbo colormap
@@ -61,6 +69,7 @@ The demo generates 30 images total:
 5. **`rt_comparison_XXXX.png`** - 4-panel colormap comparison
 
 Plus:
+
 - **`rt_initial_comparison.png`** - Initial state comparison
 
 ## Running the Demo
@@ -83,7 +92,7 @@ cargo run --release --example rayleigh_taylor_viz
 
 ### Expected Output
 
-```
+```text
 Rayleigh-Taylor Instability Visualization Demo
 ================================================
 
@@ -121,6 +130,7 @@ The Rayleigh-Taylor instability demonstrates:
 ## Simulation Details
 
 ### Physics
+
 - **Grid**: 200 × 200 cells
 - **Time step**: 0.01
 - **Gravity**: 0.1
@@ -129,13 +139,16 @@ The Rayleigh-Taylor instability demonstrates:
 - **Initial perturbation**: 4-wavelength sinusoidal disturbance
 
 ### Numerical Method
+
 - **Advection**: Semi-Lagrangian scheme with bilinear interpolation
 - **Diffusion**: Explicit finite difference (Laplacian)
 - **Boundary conditions**: No-slip walls
 - **Buoyancy**: Density-driven force proportional to local density gradient
 
 ### Simplifications
+
 This is a *demonstrative* simulation, not a full Navier-Stokes solver:
+
 - Simplified pressure solve (omitted for demo)
 - No vorticity confinement
 - Basic viscous diffusion
@@ -172,22 +185,26 @@ This is a *demonstrative* simulation, not a full Navier-Stokes solver:
 ### Colormap Comparison
 
 **Viridis vs. Rainbow/Jet:**
+
 - Viridis maintains perceptual uniformity
 - Features remain visible across full range
 - No artificial "bands" or "hot spots"
 - Better for quantitative analysis
 
 **Plasma:**
+
 - Excellent contrast
 - Good for highlighting fine structures
 - Purple-yellow gradient intuitive for hot/cold
 
 **Turbo:**
+
 - Improved rainbow
 - More perceptually uniform than classic jet
 - Good for presentations
 
 **Inferno:**
+
 - Black-body radiation inspired
 - Excellent for high dynamic range
 - Good for printing
@@ -195,7 +212,8 @@ This is a *demonstrative* simulation, not a full Navier-Stokes solver:
 ## Technical Implementation
 
 ### File Structure
-```
+
+```text
 examples/
 ├── rayleigh_taylor_demo.rs      # Simulation engine (241 lines)
 ├── rayleigh_taylor_viz.rs       # Visualization driver (309 lines)
@@ -205,12 +223,14 @@ examples/
 ### Key Components
 
 **Simulation (`rayleigh_taylor_demo.rs`):**
+
 - `RTSimulation` struct with density and velocity fields
 - `step()` - Evolve one timestep
 - `simulate(n)` - Run n timesteps
 - `density_stats()` - Get min/max/average density
 
 **Visualization (`rayleigh_taylor_viz.rs`):**
+
 - `render_density_field()` - Render with any colormap
 - `render_velocity_field()` - Quiver plot of velocities
 - `render_comparison()` - 4-panel comparison image
@@ -246,6 +266,7 @@ This demo illustrates:
 ### Modifications to Try
 
 1. **Different Initial Conditions:**
+
    ```rust
    // In RTSimulation::new(), modify:
    let wavelength = width as f64 / 6.0;  // More wavelengths
@@ -253,6 +274,7 @@ This demo illustrates:
    ```
 
 2. **Different Parameters:**
+
    ```rust
    viscosity: 0.01,      // More viscous fluid
    gravity: 0.2,         // Stronger gravity
@@ -260,11 +282,13 @@ This demo illustrates:
    ```
 
 3. **Higher Resolution:**
+
    ```rust
    let mut sim = RTSimulation::new(400, 400);  // 4x more grid points
    ```
 
 4. **More Timesteps:**
+
    ```rust
    let timesteps = [0, 25, 50, 100, 200, 400, 600, 800, 1000, 1200];
    ```
@@ -278,12 +302,14 @@ This demo illustrates:
 ## Performance
 
 **On a typical modern laptop:**
+
 - Initialization: < 0.1 seconds
 - Per timestep: ~10ms (200×200 grid)
 - Per visualization: ~0.5 seconds
 - Total runtime: ~20-30 seconds
 
 **Scaling:**
+
 - Simulation: O(N²) per step
 - Visualization: O(N²) per frame
 - Memory: ~10 MB for 200×200 grid
@@ -291,18 +317,21 @@ This demo illustrates:
 ## Scientific Accuracy
 
 **What's Accurate:**
+
 - Qualitative RT instability behavior
 - Growth of perturbations
 - Mushroom structure formation
 - Velocity field patterns
 
 **What's Simplified:**
+
 - No incompressibility constraint (divergence-free velocity)
 - No pressure solve
 - Basic boundary conditions
 - 2D instead of 3D
 
 **For Research-Grade Simulations, Consider:**
+
 - Full Navier-Stokes solver (e.g., using XDL's Python integration with PyFR, Basilisk, or ATHENA)
 - Higher-order numerical schemes
 - Adaptive mesh refinement
@@ -318,6 +347,7 @@ This demo illustrates:
 ## Support
 
 For questions or issues:
+
 - Check XDL documentation: `docs/SCIENTIFIC_VISUALIZATION_GUIDE.md`
 - Review examples: `examples/`
 - Report bugs: XDL issue tracker

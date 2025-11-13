@@ -7,19 +7,24 @@ The XDL-GUI now fully supports the new control flow features through real interp
 ## What Changed
 
 ### Before
+
 The GUI was using a **simulation mode** that only recognized basic statements like:
+
 - Variable assignments (`x = 10`)
 - Function calls (`findgen(100)`, `plot(x, y)`)
 - Print statements
 
 It **could NOT** execute:
+
 - IF/THEN/ELSE statements
 - FOR/WHILE loops
 - BREAK/CONTINUE
 - Any nested control structures
 
 ### After
+
 The GUI now uses the **real XDL interpreter** with full parsing support, which means it can execute:
+
 - ✅ All control flow constructs (IF, FOR, WHILE, FOREACH, REPEAT)
 - ✅ Nested loops and conditions
 - ✅ BREAK and CONTINUE statements
@@ -31,10 +36,12 @@ The GUI now uses the **real XDL interpreter** with full parsing support, which m
 
 ### Files Modified
 
-**xdl-gui/Cargo.toml**
+#### xdl-gui/Cargo.toml
+
 - Added `xdl-parser` dependency to enable parsing
 
-**xdl-gui/src/gui.rs**
+#### xdl-gui/src/gui.rs
+
 - Updated `execute_xdl_code()` to use real interpreter
 - Added `execute_fallback_simulation()` for backward compatibility
 - Integrated `xdl_parser::tokenize()` and `parse_program()`
@@ -52,6 +59,7 @@ The GUI now uses the **real XDL interpreter** with full parsing support, which m
 ### Fallback Behavior
 
 If parsing fails (e.g., syntax errors), the GUI automatically falls back to simulation mode:
+
 - Shows parse error messages
 - Attempts to execute simple statements in simulation mode
 - Allows partial execution of valid code
@@ -59,6 +67,7 @@ If parsing fails (e.g., syntax errors), the GUI automatically falls back to simu
 ## Supported Features in GUI
 
 ### Control Flow
+
 ```xdl
 ; IF/THEN/ELSE
 if x gt 10 then
@@ -101,6 +110,7 @@ endfor
 You can now run complete XDL programs in the GUI, such as:
 
 **Factorial Calculation:**
+
 ```xdl
 n = 5
 factorial = 1
@@ -116,6 +126,7 @@ print, "Final:", n, "! =", factorial
 ```
 
 **Prime Number Finder:**
+
 ```xdl
 print, "Prime numbers from 2 to 20:"
 
@@ -142,6 +153,7 @@ endfor
 ### Manual Testing
 
 1. **Start the GUI:**
+
    ```bash
    cargo run --bin xdl-gui
    ```
@@ -196,6 +208,7 @@ The following test files work perfectly in the GUI:
 ## Performance
 
 The GUI maintains good performance even with complex control flow:
+
 - Parsing is fast (microseconds for typical programs)
 - Execution is native Rust speed
 - No noticeable lag for loops up to 1000+ iterations
@@ -204,12 +217,14 @@ The GUI maintains good performance even with complex control flow:
 ## Error Handling
 
 The GUI gracefully handles errors:
+
 - **Parse errors**: Show error message, fall back to simulation
 - **Execution errors**: Display error in output window
 - **Runtime errors**: Caught and displayed (e.g., division by zero)
 
 Example error display:
-```
+
+```text
 === Executing my_script.xdl ===
 Parse error: Expected 'endif' to close if statement, got EOF at line 1, column 123
 Using fallback simulation mode

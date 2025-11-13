@@ -14,6 +14,7 @@ This guide helps you optimize Three.js volume rendering performance based on you
 ## Key Parameters
 
 ### 1. Step Size (`u_stepSize`)
+
 **Default:** `0.01`
 
 Controls the distance between ray samples. Smaller = better quality, slower performance.
@@ -29,11 +30,13 @@ Controls the distance between ray samples. Smaller = better quality, slower perf
 **Formula:** `stepSize ≈ 1.0 / (volumeDim × desiredSamples)`
 
 Example for 64³ volume:
+
 - High quality: `1.0 / (64 × 4) = 0.0039`
 - Medium: `1.0 / (64 × 2) = 0.0078`
 - Fast: `1.0 / (64 × 1) = 0.0156`
 
 ### 2. Max Steps (`u_maxSteps`)
+
 **Default:** `256`
 
 Maximum number of ray samples per pixel.
@@ -46,12 +49,15 @@ Maximum number of ray samples per pixel.
 | 512 | High | Slow | High-quality rendering |
 
 **Auto-calculation:**
-```
+
+```text
 maxSteps = ceil(sqrt(3) / stepSize)
 ```
+
 This ensures rays can traverse the volume diagonal.
 
 ### 3. Threshold (`u_threshold`)
+
 **Default:** `0.1`
 
 Filters out low-density voxels.
@@ -63,6 +69,7 @@ Filters out low-density voxels.
 **Performance Impact:** Higher thresholds can improve performance by 2-5x by skipping empty space.
 
 ### 4. Lighting (`u_enableLighting`)
+
 **Default:** `true`
 
 Gradient-based Phong lighting.
@@ -71,6 +78,7 @@ Gradient-based Phong lighting.
 **Visual Benefit:** Much better depth perception and structure visibility
 
 **Recommendation:**
+
 - Disable for fast interaction
 - Enable for final visualization
 
@@ -132,16 +140,19 @@ threshold: 0.3
 
 ### GPU Performance Tiers
 
-**High-End (e.g., NVIDIA RTX 4080, Apple M3 Max)**
+#### High-End (e.g., NVIDIA RTX 4080, Apple M3 Max)
+
 - Can handle large volumes at default settings
 - Increase maxSteps to 512 for better quality
 - Reduce stepSize to 0.005 for maximum detail
 
-**Mid-Range (e.g., NVIDIA GTX 1660, Apple M1)**
+#### Mid-Range (e.g., NVIDIA GTX 1660, Apple M1)
+
 - Use recommended settings above
 - May need to reduce quality for volumes > 64³
 
-**Low-End (e.g., Integrated graphics)**
+#### Low-End (e.g., Integrated graphics)
+
 - Reduce stepSize to 0.02
 - Reduce maxSteps to 128
 - Disable lighting
@@ -149,15 +160,18 @@ threshold: 0.3
 
 ### Browser Performance
 
-**Chrome/Edge (Chromium)**
+#### Chrome/Edge (Chromium)
+
 - Best WebGL performance
 - Use default settings
 
-**Firefox**
+#### Firefox
+
 - ~10-15% slower than Chrome
 - Reduce maxSteps by 25% if needed
 
-**Safari**
+#### Safari
+
 - ~20-30% slower than Chrome
 - Use more aggressive performance settings
 
@@ -259,6 +273,7 @@ function animate() {
 ### Problem: Low FPS (< 15)
 
 **Solutions:**
+
 1. Increase stepSize to 0.02
 2. Reduce maxSteps to 128
 3. Disable lighting
@@ -268,6 +283,7 @@ function animate() {
 ### Problem: Blocky/Pixelated Appearance
 
 **Solutions:**
+
 1. Reduce stepSize (more samples)
 2. Increase maxSteps
 3. Enable lighting for better structure
@@ -276,6 +292,7 @@ function animate() {
 ### Problem: Empty/Black Window
 
 **Solutions:**
+
 1. Lower threshold to 0.0
 2. Check volume data range (normalize to [0, 1])
 3. Increase opacity
@@ -284,6 +301,7 @@ function animate() {
 ### Problem: Browser Crashes
 
 **Solutions:**
+
 1. Reduce volume size
 2. Reduce maxSteps significantly (< 128)
 3. Check available GPU memory

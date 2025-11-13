@@ -15,11 +15,13 @@ Implemented the REFORM function for array reshaping. TRANSPOSE is documented wit
 **Location**: `xdl-stdlib/src/array.rs`
 
 **Signature**:
+
 ```rust
 pub fn reform_func(args: &[XdlValue]) -> XdlResult<XdlValue>
 ```
 
 **Features Implemented**:
+
 - ✅ Reshape 1D arrays to multi-dimensional
 - ✅ Reshape multi-dimensional arrays to different shapes
 - ✅ Reshape back to 1D
@@ -29,24 +31,28 @@ pub fn reform_func(args: &[XdlValue]) -> XdlResult<XdlValue>
 - ✅ Supports arbitrary dimension counts
 
 **Behavior**:
+
 - Takes an array and new dimension arguments
 - Validates that new dimensions have same total element count
 - Returns reshaped array (data preserved in flat representation)
-- In current flat Vec<f64> implementation, dimensions are implicit
+- In current flat Vec< f64> implementation, dimensions are implicit
 
 ### Function 2: TRANSPOSE(array [, permutation])
 
 **Status**: Limitation Documented
 
 **Current Implementation**:
+
 - Returns error message explaining limitation
-- Current array representation (Vec<f64>) lacks dimension metadata
+- Current array representation (Vec< f64>) lacks dimension metadata
 - Cannot transpose without knowing original dimensions
 
 **Helper Function Provided**:
+
 ```rust
 pub fn transpose_2d(arr: &[f64], nrows: usize, ncols: usize) -> XdlResult<Vec<f64>>
 ```
+
 - Works when dimensions are explicitly known
 - Properly transposes 2D matrices
 - Row-major to column-major transformation
@@ -89,6 +95,7 @@ reformed5 = REFORM(arr5, 3, 4)  ; 10 != 12
 ### Test Results
 
 All REFORM tests passed:
+
 - ✅ 1D to 2D reshape
 - ✅ 1D to 3D reshape
 - ✅ Multi-D to 1D reshape
@@ -113,6 +120,7 @@ All REFORM tests passed:
 ### Current Array Representation
 
 XDL currently uses `Vec<f64>` for arrays without dimension metadata:
+
 - Arrays are stored as flat vectors
 - Dimension information is implicit, not stored
 - Functions like TRANSPOSE need explicit dimensions
@@ -133,6 +141,7 @@ XDL currently uses `Vec<f64>` for arrays without dimension metadata:
 To fully support TRANSPOSE and other dimension-aware operations:
 
 **Option 1**: Add dimension metadata to XdlValue::Array
+
 ```rust
 struct ArrayWithDims {
     data: Vec<f64>,
@@ -141,6 +150,7 @@ struct ArrayWithDims {
 ```
 
 **Option 2**: Use the existing GdlArray type from xdl-core
+
 ```rust
 pub struct GdlArray<T> {
     data: ArrayD<T>,
@@ -152,11 +162,13 @@ pub struct GdlArray<T> {
 ## Compatibility Notes
 
 ### REFORM
+
 - ✅ Fully compatible with GDL/IDL REFORM behavior
 - Validates dimension product matches element count
 - Preserves data order
 
 ### TRANSPOSE
+
 - ⚠️ Partial compatibility
 - Documents limitation clearly
 - Provides path forward with helper function
@@ -165,11 +177,13 @@ pub struct GdlArray<T> {
 ## Performance
 
 **REFORM**:
+
 - O(1) operation (returns clone of array)
 - No data reorganization needed in flat representation
 - Dimension validation is O(k) where k = number of dimensions
 
 **TRANSPOSE (helper)**:
+
 - O(n) operation where n = array size
 - Proper row-column swap for 2D matrices
 - Cache-friendly access pattern
@@ -177,6 +191,7 @@ pub struct GdlArray<T> {
 ## Example Usage
 
 ### REFORM Examples
+
 ```xdl
 ; Create 1D array
 data = FINDGEN(12)  ; [0, 1, 2, ..., 11]
@@ -192,6 +207,7 @@ flat = REFORM(tensor, 12)
 ```
 
 ### TRANSPOSE Status
+
 ```xdl
 ; Current implementation
 arr = FINDGEN(12)
@@ -210,6 +226,7 @@ Ready to proceed to **Phase 1.5: Basic File I/O** for file reading/writing opera
 ---
 
 **Implementation Quality**: ⭐⭐⭐⭐
+
 - REFORM: fully working ⭐⭐⭐⭐⭐
 - TRANSPOSE: limitation documented ⭐⭐⭐
 - Clear path for future enhancement

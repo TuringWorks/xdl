@@ -79,21 +79,25 @@ Once the browser opens:
 ## 🔧 Advanced Options
 
 ### Non-Interactive Mode (No Browser)
+
 ```xdl
 VIZ3D_RENDER  ; Without /INTERACTIVE
 ```
 
 ### Custom Window Size
+
 ```xdl
 VIZ3D_INIT, WINDOW_SIZE=[1920, 1080]
 ```
 
 ### Camera Position
+
 ```xdl
 VIZ3D_CAMERA, POSITION=[x, y, z], TARGET=[0, 0, 0], FOV=45.0
 ```
 
 ### Fallback to Native Window
+
 ```bash
 VIZ3D_BROWSER=0 ./target/release/xdl your_script.xdl
 ```
@@ -119,15 +123,18 @@ VIZ3D_BROWSER=0 ./target/release/xdl your_script.xdl
 ## ❓ Common Issues
 
 **Browser doesn't open?**
+
 - Look for URL in console: `http://localhost:XXXXX`
 - Manually open that URL
 
 **Black screen in browser?**
+
 - Check volume data isn't all zeros
 - Try a different colormap
 - Open browser DevTools (F12) for errors
 
 **"WebGPU not supported" error?**
+
 - Update browser to Chrome 113+
 - Or enable WebGPU in browser flags
 

@@ -7,12 +7,14 @@ The traditional `PLOT` and `SURFACE` procedures have been enhanced to use the mo
 ## What Changed
 
 ### Before
+
 - `PLOT` and `SURFACE` generated static PNG images
 - Required GUI callbacks for interactive display
 - Limited interactivity
 - 2D surface rendering for 3D plots
 
 ### After
+
 - **Default**: Interactive Tauri windows with ECharts rendering
 - **Fallback**: Original PNG generation if Tauri unavailable
 - Full 3D interactivity with rotation, zoom, pan
@@ -52,6 +54,7 @@ SURFACE, z
 ## Fallback Behavior
 
 If xdl-chart-viewer is not available or fails to launch:
+
 - Logs a message to stderr: `"PLOT: xdl-charts unavailable (...), using fallback renderer"`
 - Automatically uses original graphics::plot_2d/surface_plot
 - Generates PNG files as before
@@ -59,7 +62,7 @@ If xdl-chart-viewer is not available or fails to launch:
 
 ## Architecture
 
-```
+```text
 PLOT/SURFACE procedure
   ↓
 try_chart_plot / try_surface3d (xdl-charts)
@@ -76,6 +79,7 @@ Generate PNG file → Try GUI callbacks → Return
 ## Implementation Details
 
 ### Code Locations
+
 - **Main procedures**: `xdl-stdlib/src/graphics_procs.rs`
   - `plot_with_keywords()` - Enhanced PLOT procedure
   - `surface()` - Enhanced SURFACE procedure
@@ -88,12 +92,14 @@ Generate PNG file → Try GUI callbacks → Return
 
 ### Key Functions
 
-**try_chart_plot(x_data, y_data, title) -> Result<(), XdlError>**
+#### try_chart_plot(x_data, y_data, title) -> Result<(), XdlError>
+
 - Converts arrays to XdlValue
 - Calls charting_procs::plot()
 - Returns error if unavailable (triggers fallback)
 
-**try_surface3d(z_data, title) -> Result<(), XdlError>**
+#### try_surface3d(z_data, title) -> Result<(), XdlError>
+
 - Converts 2D array to XdlValue
 - Calls charting_procs::surface3d()
 - Returns error if unavailable (triggers fallback)
@@ -101,11 +107,13 @@ Generate PNG file → Try GUI callbacks → Return
 ## Testing
 
 Run the test script:
+
 ```bash
 ./target/release/xdl examples/charting/test_plot_surface.xdl
 ```
 
 Expected output:
+
 - 3 Tauri windows open (2 line plots, 1 surface plot)
 - Interactive charts with zoom, pan, rotation
 - No fallback messages (if xdl-chart-viewer is available)
@@ -113,6 +121,7 @@ Expected output:
 ## Future Enhancements
 
 Potential improvements:
+
 1. Support keyword arguments (TITLE, XTITLE, YTITLE) in xdl-charts
 2. Add CONTOUR procedure support
 3. Multi-series plotting in single window
@@ -130,6 +139,7 @@ Potential improvements:
 ## Related Procedures
 
 New charting procedures that use xdl-charts directly:
+
 - `CHART_PLOT` - Direct access to ECharts line plotting
 - `CHART_SCATTER` - Scatter plots
 - `CHART_BAR` - Bar charts

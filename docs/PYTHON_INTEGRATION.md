@@ -5,6 +5,7 @@ This document describes the Python integration capabilities in XDL using Python 
 ## Overview
 
 XDL provides seamless integration with Python 3.13.0 through the PyO3 library, allowing you to:
+
 - Import Python modules
 - Call Python functions and methods
 - Pass data between XDL and Python
@@ -22,9 +23,11 @@ PYO3_PYTHON = "/Users/ravindraboddipalli/.pyenv/shims/python3"
 ## Available Functions
 
 ### `PYTHON_IMPORT(module_name)`
+
 Imports a Python module and returns a module handle.
 
 Example:
+
 ```xdl
 math_module = python_import("math")
 sys_module = python_import("sys")
@@ -32,9 +35,11 @@ numpy_module = python_import("numpy")
 ```
 
 ### `PYTHON_CALL(module_handle, function_name, args...)`
+
 Calls a Python function with the given arguments.
 
 Example:
+
 ```xdl
 ; Import math module
 math_mod = python_import("math")
@@ -46,9 +51,11 @@ result3 = python_call(math_mod, "pi")            ; Returns π
 ```
 
 ### `PYTHON_CALL_KW(module_handle, function_name, args..., kwargs...)`
+
 Calls a Python function with both positional and keyword arguments.
 
 Example:
+
 ```xdl
 ; Call with keyword arguments
 result = python_call_kw(numpy_mod, "linspace", 0, 10, "num=50")
@@ -69,6 +76,7 @@ XDL automatically converts between XDL types and Python types:
 ## Examples
 
 ### Basic Math Operations
+
 ```xdl
 print, "=== Python Math Integration ==="
 math_mod = python_import("math")
@@ -83,6 +91,7 @@ print, "sin(π/2) =", sin_pi_2
 ```
 
 ### System Information
+
 ```xdl
 print, "=== Python System Info ==="
 sys_mod = python_import("sys")
@@ -91,6 +100,7 @@ print, "Python version:", version
 ```
 
 ### Working with Built-ins
+
 ```xdl
 print, "=== Python Built-ins ==="
 builtins_mod = python_import("builtins")
@@ -101,6 +111,7 @@ print, "abs(-42) =", abs_val
 ## Error Handling
 
 If a Python operation fails, XDL will return an appropriate error:
+
 - Module import failures
 - Function call errors
 - Type conversion errors
@@ -114,6 +125,7 @@ If a Python operation fails, XDL will return an appropriate error:
 ## Testing
 
 Run the test script to verify Python integration:
+
 ```bash
 cargo run --bin xdl test_python_integration.xdl
 ```
@@ -127,6 +139,7 @@ cargo run --bin xdl test_python_integration.xdl
 ## Future Enhancements
 
 Planned improvements include:
+
 - NumPy array support
 - Pandas DataFrame integration
 - Matplotlib plotting integration

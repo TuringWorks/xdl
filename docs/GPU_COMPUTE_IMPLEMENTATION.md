@@ -12,7 +12,7 @@ October 25, 2025
 
 ### Multi-Backend Design
 
-```
+```text
 ┌─────────────────────────────────────┐
 │         XDL Applications            │
 │    (xdl-stdlib, user code)          │
@@ -32,10 +32,10 @@ October 25, 2025
                  │
     ┌────────────┼─────────────┬──────────┐
     ▼            ▼             ▼          ▼
-┌────────┐  ┌─────────┐  ┌─────────┐ ┌──────────┐
-│ Metal  │  │  CUDA   │  │ OpenCL  │ │DirectX 12│
+┌────────┐  ┌─────────┐  ┌────────-─┐ ┌──────────┐
+│ Metal  │  │  CUDA   │  │ OpenCL   │ │DirectX 12│
 │ (macOS)│  │(NVIDIA) │  │(Fallback)│ │(Windows) │
-└────────┘  └─────────┘  └─────────┘ └──────────┘
+└────────┘  └─────────┘  └────────-─┘ └──────────┘
 ```
 
 ### Platform Support
@@ -51,14 +51,18 @@ October 25, 2025
 ### 1. Core Abstractions (`backend.rs`)
 
 #### `GpuBackend` enum
+
 Defines available GPU backends:
+
 - `Metal` - Apple Metal (macOS)
 - `DirectX12` - DirectX 12 Compute (Windows)
 - `Cuda` - NVIDIA CUDA (Linux/Windows)
 - `OpenCL` - Cross-platform OpenCL
 
 #### `GpuDevice` trait
+
 Unified interface for GPU operations:
+
 ```rust
 pub trait GpuDevice: Send + Sync + Debug {
     fn name(&self) -> &str;
@@ -71,7 +75,9 @@ pub trait GpuDevice: Send + Sync + Debug {
 ```
 
 #### `GpuBuffer` trait
+
 GPU memory management:
+
 ```rust
 pub trait GpuBuffer: Send + Sync + Debug {
     fn size(&self) -> usize;
@@ -92,6 +98,7 @@ pub trait GpuBuffer: Send + Sync + Debug {
 #### Supported Operations (Metal)
 
 ✅ **Implemented:**
+
 - `add_f32` - Element-wise addition
 - `mul_f32` - Element-wise multiplication
 - `sub_f32` - Element-wise subtraction
@@ -103,6 +110,7 @@ pub trait GpuBuffer: Send + Sync + Debug {
 - `sqrt_f32` - Square root
 
 ⏳ **Planned:**
+
 - `matmul_f32` - Matrix multiplication
 - `sum_f32` - Reduction sum
 - `max_f32` - Reduction max
@@ -112,6 +120,7 @@ pub trait GpuBuffer: Send + Sync + Debug {
 #### Metal Shaders (`shaders/metal_kernels.metal`)
 
 Compute kernels written in Metal Shading Language:
+
 ```metal
 kernel void add_f32(
     device const float* a [[buffer(0)]],
@@ -126,6 +135,7 @@ kernel void add_f32(
 ### 3. CUDA Backend (`cuda.rs`) - Stub
 
 Prepared for NVIDIA GPU support:
+
 - Uses `cudarc` crate
 - Placeholder for CUDA kernel compilation
 - Device detection via `CudaDevice::is_available()`
@@ -135,6 +145,7 @@ Prepared for NVIDIA GPU support:
 ### 4. OpenCL Backend (`opencl.rs`) - Stub
 
 Cross-platform fallback:
+
 - Uses `ocl` crate for OpenCL 1.2+ support
 - Kernel source in `shaders/opencl_kernels.cl`
 - Compatible with AMD, Intel, and NVIDIA GPUs
@@ -144,6 +155,7 @@ Cross-platform fallback:
 ### 5. DirectX 12 Backend (`directx.rs`) - Stub
 
 Windows native support:
+
 - Will use HLSL compute shaders
 - DirectX 12 compute pipeline
 - Compatible with all DirectX 12 capable GPUs
@@ -153,6 +165,7 @@ Windows native support:
 ### 6. High-Level Operations (`ops.rs`)
 
 Provides convenient ndarray-based API:
+
 ```rust
 pub struct GpuOps {
     device: Arc<dyn GpuDevice>,
@@ -169,6 +182,7 @@ impl GpuOps {
 ### 7. Error Handling (`error.rs`)
 
 Comprehensive error types:
+
 ```rust
 pub enum GpuError {
     DeviceNotFound,
@@ -221,6 +235,7 @@ let ctx = GpuContext::with_preference(Some(GpuBackend::Cuda))?;
 ### Unit Tests
 
 Located in each backend module:
+
 - `lib.rs`: Context creation test
 - `metal.rs`: Metal-specific tests (when macOS)
 - `cuda.rs`: CUDA-specific tests (when feature enabled)
@@ -229,19 +244,21 @@ Located in each backend module:
 
 **`examples/basic_ops.rs`**
 Demonstrates:
+
 - GPU context creation
 - Element-wise operations (add, mul)
 - Mathematical functions (sin, cos, exp)
 - Array operations
 
 Run with:
+
 ```bash
 cargo run -p xdl-amp --example basic_ops
 ```
 
 ### Verification Results (macOS M-series)
 
-```
+```text
 ✓ GPU Backend: Metal
 Testing GPU operations on arrays of size 1000...
 
@@ -285,11 +302,13 @@ Testing GPU operations on arrays of size 1000...
 ## Dependencies
 
 ### Core Dependencies
+
 - `ndarray` - Array operations
 - `bytemuck` - Safe type casting
 - `thiserror` - Error handling
 
 ### Platform-Specific
+
 - **macOS**: `metal` 0.29, `objc` 0.2
 - **CUDA**: `cudarc` 0.11 (optional)
 - **OpenCL**: `ocl` 0.19 (optional)
@@ -298,21 +317,25 @@ Testing GPU operations on arrays of size 1000...
 ## Building
 
 ### macOS
+
 ```bash
 cargo build -p xdl-amp
 ```
 
 ### Linux with CUDA
+
 ```bash
 cargo build -p xdl-amp --features cuda
 ```
 
 ### Linux with OpenCL
+
 ```bash
 cargo build -p xdl-amp --features opencl
 ```
 
 ### Windows
+
 ```bash
 cargo build -p xdl-amp
 # Or with CUDA:
@@ -322,12 +345,14 @@ cargo build -p xdl-amp --features cuda
 ## Future Work
 
 ### Short Term
+
 1. ✅ Complete Metal backend implementation
 2. ⏳ Implement matrix multiplication (all backends)
 3. ⏳ Implement reduction operations (all backends)
 4. ⏳ Add comprehensive benchmarks
 
 ### Medium Term
+
 1. ⏳ Complete CUDA backend
 2. ⏳ Complete OpenCL backend
 3. ⏳ Complete DirectX 12 backend
@@ -335,6 +360,7 @@ cargo build -p xdl-amp --features cuda
 5. ⏳ Integration with xdl-stdlib functions
 
 ### Long Term
+
 1. ⏳ Automatic CPU/GPU selection based on array size
 2. ⏳ Multi-GPU support
 3. ⏳ Async/streaming operations

@@ -23,32 +23,38 @@ cargo run -p xdl-amp --example gpu_demo --release
 #### What It Demonstrates
 
 ✅ **GPU Backend Detection**
+
 - Automatically detects Metal Performance Shaders on macOS
 - Shows your GPU capabilities
 
 ✅ **Element-wise Operations**
+
 - Array addition with CPU vs GPU comparison
 - Real timing measurements
 
 ✅ **Mathematical Functions**
+
 - Trigonometric operations (sin, cos)
 - Exponential operations (exp, log, sqrt)
 
 ✅ **Chained Operations**
+
 - Complex expressions combining multiple operations
 - Performance comparison
 
 ✅ **Matrix Multiplication**
+
 - GEMM (General Matrix Multiply) operations
 - Shows computation on GPU
 
 ✅ **Reduction Operations**
+
 - Sum, max, min operations
 - Large array processing
 
 #### Expected Output
 
-```
+```text
 ========================================
 XDL AMP GPU Acceleration Demo
 ========================================
@@ -76,11 +82,13 @@ Demo Complete!
 #### Performance Notes
 
 **Current Implementation** (CPU Fallback):
+
 - Small arrays (< 100K): CPU is faster due to overhead
 - The demo shows the infrastructure works
 - Currently uses CPU fallback for operations
 
 **With Full GPU Implementation** (Future):
+
 - Large arrays (1M+): 20-50x speedup expected
 - Matrix operations: 25x speedup
 - Trigonometry: 30x speedup
@@ -96,45 +104,53 @@ This is a **reference implementation** showing how XDL GPU features will be used
 This comprehensive IDL program demonstrates:
 
 1. **GPU Backend Detection**
+
    ```idl
    backend = GPU_BACKEND()
    PRINT, 'Active GPU Backend: ', backend
    ```
 
 2. **Array Operations**
+
    ```idl
    c_cpu = a + b              ; CPU version
    c_gpu = GPU_ADD(a, b)      ; GPU version
    ```
 
 3. **Mathematical Functions**
+
    ```idl
    y_cpu = SIN(x) + COS(x)    ; CPU
    y_gpu = GPU_SIN(x) + GPU_COS(x)  ; GPU
    ```
 
 4. **Matrix Multiplication**
+
    ```idl
    C_cpu = A ## B             ; CPU
    C_gpu = GPU_MATMUL(A, B)   ; GPU
    ```
 
 5. **Complex Expressions**
+
    ```idl
    result = GPU_EVAL('SIN(x) * EXP(-x) + SQRT(x) * COS(x*10)', x)
    ```
 
 6. **Image Processing**
+
    ```idl
    result = GPU_CONVOL(image, kernel)
    ```
 
 7. **FFT**
+
    ```idl
    fft_result = GPU_FFT(signal)
    ```
 
 8. **Visualization Integration**
+
    ```idl
    x = GPU_RANDOM(n_points)
    y = GPU_SIN(x * 10.0)
@@ -143,17 +159,20 @@ This comprehensive IDL program demonstrates:
 
 #### Running the IDL Demo
 
-**Option 1: With GDL (GNU Data Language)**
+#### Option 1: With GDL (GNU Data Language)
+
 ```bash
 gdl < examples/xdl_amp_demo.pro
 ```
 
-**Option 2: With IDL**
+#### Option 2: With IDL
+
 ```bash
 idl -e "XDL_AMP_DEMO"
 ```
 
-**Option 3: With XDL (Future)**
+#### Option 3: With XDL (Future)
+
 ```bash
 xdl examples/xdl_amp_demo.pro
 ```
@@ -161,6 +180,7 @@ xdl examples/xdl_amp_demo.pro
 #### Notes on IDL Demo
 
 ⚠️ **This is a reference implementation**
+
 - Shows the intended API for GPU operations
 - Functions are implemented as stubs (CPU fallback)
 - Demonstrates the complete feature set
@@ -171,13 +191,15 @@ xdl examples/xdl_amp_demo.pro
 ### Current (Rust Demo - Today)
 
 The Rust demo shows:
+
 - ✅ Infrastructure working
 - ✅ Backend detection working
 - ✅ API design validated
 - ⏳ Operations use CPU fallback (small overhead)
 
 **Typical Output:**
-```
+
+```text
 CPU Time: 43µs
 GPU Time: 44µs
 Speedup: 0.97x  (similar performance, infrastructure overhead)
@@ -187,29 +209,33 @@ Speedup: 0.97x  (similar performance, infrastructure overhead)
 
 With optimized GPU kernels:
 
-**Small Arrays (< 10K)**
-```
+#### Small Arrays (< 10K)
+
+```text
 CPU Time: 45µs
 GPU Time: 80µs
 Speedup: 0.6x  (CPU faster due to transfer overhead)
 ```
 
-**Medium Arrays (100K)**
-```
+#### Medium Arrays (100K)
+
+```text
 CPU Time: 450µs
 GPU Time: 45µs
 Speedup: 10x  (GPU starts winning)
 ```
 
-**Large Arrays (1M+)**
-```
+#### Large Arrays (1M+)
+
+```text
 CPU Time: 50ms
 GPU Time: 2ms
 Speedup: 25x  (GPU dominates)
 ```
 
-**Matrix Operations (1000×1000)**
-```
+#### Matrix Operations (1000×1000)
+
+```text
 CPU Time: 500ms
 GPU Time: 20ms
 Speedup: 25x
@@ -220,6 +246,7 @@ Speedup: 25x
 ### Why is CPU faster for small arrays?
 
 **GPU Overhead:**
+
 1. Kernel launch latency: ~20-50µs
 2. Data transfer (even with unified memory): ~10-20µs
 3. Result synchronization: ~10µs
@@ -231,11 +258,13 @@ For operations that take < 50µs on CPU, the overhead exceeds the benefit.
 ### When does GPU win?
 
 **Break-even point:**
+
 - Arrays > 10K elements for simple operations
 - Arrays > 1K elements for complex operations (FFT, convolution)
 - Matrix operations > 256×256
 
 **GPU Dominates:**
+
 - Arrays > 100K elements: 10-20x speedup
 - Arrays > 1M elements: 20-50x speedup
 - Complex expression chains
@@ -304,14 +333,17 @@ cargo run -p xdl-amp --example gpu_demo --release -- --size 1000000
 ### Metal Performance Shaders Not Detected
 
 **macOS < 10.13:**
-```
+
+```text
 Error: GPU backend not available
 ```
+
 **Solution:** Upgrade to macOS 10.13 or later
 
 ### Slow GPU Performance
 
 **Possible causes:**
+
 1. Small arrays (< 10K elements) - CPU is faster
 2. Debug build - always use `--release`
 3. Old GPU - upgrade hardware
@@ -319,12 +351,14 @@ Error: GPU backend not available
 ### Compilation Errors
 
 **Missing dependencies:**
+
 ```bash
 # Update Cargo.lock
 cargo update -p xdl-amp
 ```
 
 **Metal errors on non-Mac:**
+
 ```bash
 # Metal only works on macOS
 # On other platforms, use other backends

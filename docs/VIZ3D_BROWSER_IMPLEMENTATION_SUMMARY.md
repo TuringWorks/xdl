@@ -40,7 +40,8 @@ Successfully implemented **browser-based WebGPU visualization** for XDL, complet
 ## Problems Solved
 
 ### Before: Native Window Issues ❌
-```
+
+```text
 1. Single window per process (winit limitation)
 2. Event loop crashes after first use
 3. macOS winit warnings in console
@@ -51,7 +52,8 @@ Successfully implemented **browser-based WebGPU visualization** for XDL, complet
 ```
 
 ### After: Browser Solution ✅
-```
+
+```text
 1. Unlimited windows (browser tabs)
 2. No crashes - each tab is independent
 3. No warnings - clean execution
@@ -67,17 +69,17 @@ Successfully implemented **browser-based WebGPU visualization** for XDL, complet
 
 ### Architecture
 
-```
+```text
 XDL Script (examples/demo/viz3d_showcase.xdl)
     ↓
 VIZ3D_RENDER procedure
     ↓
 xdl-viz3d-web::launch_browser_visualization()
     ↓
-┌─────────────────────────┐
-│ HTTP Server (tiny_http) │ ← Background thread
+┌────────────────────────-─┐
+│ HTTP Server (tiny_http)  │ ← Background thread
 │ Port: Random (e.g. 61480)│
-└─────────────────────────┘
+└─────────────────────────-┘
     ↓
 HTML Page with:
 - Embedded volume data (Base64)
@@ -91,12 +93,14 @@ Browser renders at 60 FPS
 ### Data Flow
 
 1. **Volume Creation** (XDL)
+
    ```xdl
    volume = FLTARR(64, 64, 64)
    ; Fill with data...
    ```
 
 2. **Encoding** (Rust)
+
    ```rust
    let data_bytes: Vec<u8> = volume_data
        .iter()
@@ -106,6 +110,7 @@ Browser renders at 60 FPS
    ```
 
 3. **HTML Generation** (Rust)
+
    ```rust
    let html = format!(r#"
        <script>
@@ -116,6 +121,7 @@ Browser renders at 60 FPS
    ```
 
 4. **WebGPU Rendering** (JavaScript)
+
    ```javascript
    const volumeTexture = device.createTexture({
        size: [64, 64, 64],
@@ -127,7 +133,7 @@ Browser renders at 60 FPS
 
 ### File Structure
 
-```
+```text
 xdl/
 ├── xdl-viz3d-web/          # NEW: Browser visualization crate
 │   ├── src/
@@ -167,7 +173,7 @@ xdl/
 | viz3d_test_simple.xdl | ✅ PASS | < 1s | 0 (non-interactive) |
 | rayleigh_taylor_simple.xdl | ✅ PASS | ~2s | 0 (non-interactive) |
 
-**Pass Rate: 100% (4/4)**
+#### Pass Rate: 100% (4/4)
 
 ### Performance Metrics
 
@@ -237,6 +243,7 @@ VIZ3D_BROWSER=0 ./target/release/xdl your_script.xdl
 ### For Existing Scripts: **ZERO**
 
 All existing VIZ3D scripts work without modification:
+
 - ✅ viz3d_showcase.xdl - No changes
 - ✅ viz3d_test_simple.xdl - No changes
 - ✅ rayleigh_taylor_simple.xdl - No changes
@@ -246,6 +253,7 @@ Browser rendering is now the **default behavior**.
 ### For New Scripts
 
 Same API as before:
+
 ```xdl
 VIZ3D_INIT
 VIZ3D_COLORMAP, 'colormap_name'
@@ -311,6 +319,7 @@ Ok(url)
 ### Planned (Next Phase)
 
 1. **Standalone HTML Export**
+
    ```rust
    VIZ3D_EXPORT_HTML, 'output.html'
    // Generates self-contained HTML file
@@ -324,6 +333,7 @@ Ok(url)
    - Add camera matrix transformations
 
 3. **WebSocket for Live Updates**
+
    ```xdl
    FOR frame = 0, 99 DO BEGIN
        volume = compute_frame(frame)

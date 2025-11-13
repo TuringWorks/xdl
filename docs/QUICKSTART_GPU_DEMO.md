@@ -9,7 +9,7 @@ cargo run -p xdl-amp --example gpu_demo --release
 
 ## What You'll See
 
-```
+```text
 ========================================
 XDL AMP GPU Acceleration Demo
 ========================================
@@ -54,6 +54,7 @@ cargo run -p xdl-amp --example basic_ops --release
 ## Next Steps
 
 See `examples/README_XDL_AMP_DEMO.md` for:
+
 - Detailed explanations
 - Performance expectations
 - Integration examples

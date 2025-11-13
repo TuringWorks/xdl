@@ -8,7 +8,7 @@ This document describes the implementation of the XDL database connectivity modu
 
 ### Module Structure
 
-```
+```text
 xdl-database/
 ├── Cargo.toml                  # Dependencies and features
 ├── README.md                   # User documentation
@@ -59,6 +59,7 @@ xdl-database/
 Main database object that users interact with from XDL.
 
 **Key Methods:**
+
 ```rust
 pub async fn connect(&mut self, connection_string: &str) -> XdlResult<()>
 pub async fn disconnect(&mut self) -> XdlResult<()>
@@ -68,6 +69,7 @@ pub fn is_connected(&self) -> bool
 ```
 
 **Features:**
+
 - Automatic database type detection from connection string
 - Connection state management
 - Error tracking and reporting
@@ -78,12 +80,14 @@ pub fn is_connected(&self) -> bool
 Global registry for object lifecycle management.
 
 **Purpose:**
+
 - Maps XDL object IDs to database instances
 - Thread-safe with RwLock
 - Manages both databases and recordsets
 - Enables XDL's OBJ_NEW/OBJ_DESTROY pattern
 
 **Implementation:**
+
 ```rust
 pub struct DatabaseRegistry {
     databases: RwLock<HashMap<usize, Arc<RwLock<XDLDatabase>>>>,
@@ -97,6 +101,7 @@ pub struct DatabaseRegistry {
 Enum wrapper providing unified interface to all drivers.
 
 **Pattern:**
+
 ```rust
 pub enum DatabaseConnection {
     #[cfg(feature = "postgres-support")]
@@ -110,6 +115,7 @@ pub enum DatabaseConnection {
 ```
 
 **Benefits:**
+
 - Single API for all databases
 - Feature-gated compilation
 - Type-safe driver dispatch
@@ -120,6 +126,7 @@ pub enum DatabaseConnection {
 Container for query results with XDL-compatible access methods.
 
 **Key Features:**
+
 - Column metadata (names, types, ordinals)
 - Row-based and column-based data access
 - Automatic type conversion to XdlValue
@@ -127,6 +134,7 @@ Container for query results with XDL-compatible access methods.
 - Structure-like data access
 
 **Data Formats:**
+
 ```rust
 // Nested array (row-major)
 pub fn get_data(&self) -> XdlResult<XdlValue>
@@ -143,6 +151,7 @@ pub fn get_column(&self, column_name: &str) -> XdlResult<Vec<XdlValue>>
 Comprehensive error types using thiserror.
 
 **Error Categories:**
+
 - Connection errors
 - Query errors
 - Type conversion errors
@@ -150,6 +159,7 @@ Comprehensive error types using thiserror.
 - Generic errors
 
 **Design:**
+
 ```rust
 #[derive(Error, Debug)]
 pub enum DatabaseError {
@@ -171,12 +181,14 @@ pub enum DatabaseError {
 **Status:** ✅ Fully Implemented
 
 **Technology Stack:**
+
 - `tokio-postgres` - Async PostgreSQL client
 - `deadpool-postgres` - Connection pooling (ready)
 
 **Key Implementation Details:**
 
 1. **Connection:**
+
 ```rust
 pub async fn connect(connection_string: &str) -> DatabaseResult<Self> {
     let config: Config = connection_string.parse()?;
@@ -193,7 +205,8 @@ pub async fn connect(connection_string: &str) -> DatabaseResult<Self> {
 }
 ```
 
-2. **Query Execution:**
+1. **Query Execution:**
+
 ```rust
 pub async fn execute(&self, query: &str) -> DatabaseResult<Recordset> {
     let rows = self.client.as_ref()?.query(query, &[]).await?;
@@ -222,7 +235,8 @@ pub async fn execute(&self, query: &str) -> DatabaseResult<Recordset> {
 }
 ```
 
-3. **Type Conversion:**
+1. **Type Conversion:**
+
 - Handles all PostgreSQL types (INT, FLOAT, TEXT, etc.)
 - Converts to JSON intermediate format
 - JSON converts to XdlValue
@@ -232,16 +246,19 @@ pub async fn execute(&self, query: &str) -> DatabaseResult<Recordset> {
 **Status:** ✅ Fully Implemented
 
 **Technology Stack:**
+
 - `duckdb` - Embedded analytical database
 - Features: bundled (includes DuckDB binary)
 
 **Advantages:**
+
 - In-process analytics
 - No server required
 - Fast analytical queries
 - Parquet/CSV support
 
 **Implementation Highlights:**
+
 ```rust
 pub async fn connect(connection_string: &str) -> DatabaseResult<Self> {
     let path = connection_string
@@ -258,15 +275,18 @@ pub async fn connect(connection_string: &str) -> DatabaseResult<Self> {
 **Status:** ✅ Fully Implemented
 
 **Technology Stack:**
+
 - `redis` crate with async support
 - Connection manager for reliability
 
 **Usage Pattern:**
+
 - Key-value operations via ExecuteCommand
 - GET/SET/DEL commands
 - Not traditional SQL
 
 **Example:**
+
 ```xdl
 objdb->ExecuteCommand, 'SET mykey myvalue'
 objdb->ExecuteCommand, 'DEL mykey'
@@ -277,6 +297,7 @@ objdb->ExecuteCommand, 'DEL mykey'
 **Status:** ⏳ Stub Implementations Ready
 
 These drivers have stub implementations that:
+
 - Define the interface
 - Return appropriate errors
 - Are ready for full implementation
@@ -303,6 +324,7 @@ These drivers have stub implementations that:
 ### Object System Integration
 
 XDL's object system uses:
+
 - `OBJ_NEW('ClassName')` - Creates object, returns ID
 - `object->Method, ARGS` - Calls method on object
 - `OBJ_DESTROY, object` - Destroys object
@@ -366,7 +388,7 @@ pub async fn call_method(
 }
 ```
 
-2. **Evaluator Integration** (xdl-interpreter)
+1. **Evaluator Integration** (xdl-interpreter)
 
 Update evaluator to handle database method calls:
 
@@ -390,11 +412,13 @@ Expression::MethodCall { object, method, args, keywords, .. } => {
 ### Database → JSON → XDL
 
 **Flow:**
+
 1. Database driver returns native types
 2. Convert to `serde_json::Value` (intermediate)
 3. Convert JSON to `XdlValue`
 
 **Rationale:**
+
 - JSON is universal interchange format
 - Easy to extend for new types
 - JSON handles NULL consistently
@@ -441,6 +465,7 @@ all = [
 ```
 
 **Benefits:**
+
 - Reduce binary size
 - Only compile needed databases
 - Easy to add new databases
@@ -495,6 +520,7 @@ Test complete integration from XDL scripts (see examples/ directory).
 ### Async/Await
 
 All database operations are async:
+
 - Non-blocking I/O
 - High concurrency
 - Efficient resource usage
@@ -502,6 +528,7 @@ All database operations are async:
 ### Connection Pooling
 
 Ready for connection pooling:
+
 ```rust
 // Future enhancement
 use deadpool_postgres::{Config, Pool};
@@ -514,6 +541,7 @@ pub struct PostgresConnectionPool {
 ### Streaming Results
 
 For large datasets, can add streaming:
+
 ```rust
 pub async fn execute_stream(&self, query: &str) -> impl Stream<Item = Row> {
     // Stream results without loading all into memory
@@ -527,6 +555,7 @@ pub async fn execute_stream(&self, query: &str) -> impl Stream<Item = Row> {
 **Current:** String concatenation (user must sanitize)
 
 **Future:** Prepared statements
+
 ```xdl
 stmt = objdb->Prepare('SELECT * FROM users WHERE id = ?')
 recordset = stmt->Execute([user_id])
@@ -543,6 +572,7 @@ recordset = stmt->Execute([user_id])
 ### Adding a New Database
 
 1. **Add Dependency:**
+
 ```toml
 [dependencies]
 mydb = { version = "1.0", optional = true }
@@ -551,7 +581,8 @@ mydb = { version = "1.0", optional = true }
 mydb-support = ["mydb"]
 ```
 
-2. **Create Driver:**
+1. **Create Driver:**
+
 ```rust
 // src/drivers/mydb.rs
 pub struct MyDBConnection {
@@ -571,7 +602,8 @@ impl MyDBConnection {
 }
 ```
 
-3. **Add to Connection Enum:**
+1. **Add to Connection Enum:**
+
 ```rust
 pub enum DatabaseConnection {
     #[cfg(feature = "mydb-support")]
@@ -580,7 +612,8 @@ pub enum DatabaseConnection {
 }
 ```
 
-4. **Update DatabaseType:**
+1. **Update DatabaseType:**
+
 ```rust
 pub enum DatabaseType {
     MyDB,
@@ -597,7 +630,8 @@ impl DatabaseType {
 }
 ```
 
-5. **Document and Test:**
+1. **Document and Test:**
+
 - Add README section
 - Create example script
 - Write unit tests
@@ -625,6 +659,7 @@ impl DatabaseType {
 ## Future Roadmap
 
 ### Short Term
+
 - [x] PostgreSQL support
 - [x] DuckDB support
 - [x] Redis support
@@ -634,6 +669,7 @@ impl DatabaseType {
 - [ ] Transaction support
 
 ### Medium Term
+
 - [ ] Connection pooling
 - [ ] Streaming results
 - [ ] Snowflake support
@@ -641,6 +677,7 @@ impl DatabaseType {
 - [ ] Complete Kafka implementation
 
 ### Long Term
+
 - [ ] Query builder DSL
 - [ ] ORM-like features
 - [ ] Migration tools
@@ -665,8 +702,8 @@ The module is production-ready for PostgreSQL, DuckDB, and Redis, with a clear p
 
 - **XDL Core:** `xdl-core/src/types.rs`
 - **Database Drivers:**
-  - PostgreSQL: https://docs.rs/tokio-postgres
-  - DuckDB: https://docs.rs/duckdb
-  - Redis: https://docs.rs/redis
-- **Async Runtime:** https://docs.rs/tokio
-- **Error Handling:** https://docs.rs/thiserror
+  - PostgreSQL: <https://docs.rs/tokio-postgres>
+  - DuckDB: <https://docs.rs/duckdb>
+  - Redis: <https://docs.rs/redis>
+- **Async Runtime:** <https://docs.rs/tokio>
+- **Error Handling:** <https://docs.rs/thiserror>

@@ -1,0 +1,234 @@
+================================================================================
+                    XDL DATABASE CONNECTIVITY ARCHITECTURE
+================================================================================
+
+HIGH-LEVEL FLOW:
+================
+
+    XDL Script/User Code
+            |
+            v
+    XDLDatabase::connect()
+            |
+            v
+    DatabaseType::from_connection_string()  [Auto-detection]
+            |
+            v
+    DatabaseConnection::new()  [Factory]
+            |
+        +-----------------------+
+        |                       |
+        v                       v
+    Match DB Type ---------> Spawn appropriate driver
+        |
+        +-- PostgreSQL ----> PostgresConnection (tokio-postgres)
+        |
+        +-- MySQL ---------> MySQLConnection (mysql_async)
+        |
+        +-- DuckDB -- -----> DuckDBConnection (duckdb)
+        |
+        +-- SQLite [TODO] -> SQLiteConnection (rusqlite/sqlx)
+        |
+        +-- ODBC ----------> ODBCConnection (odbc-api)
+        |
+        +-- Redis ---------> RedisConnection (redis)
+        |
+        +-- Kafka ---------> KafkaConnection (rdkafka)
+
+
+COMPONENT INTERACTION DIAGRAM:
+==============================
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          XDL APPLICATION                                 │
+│                                                                          │
+│  let db = XDLDatabase::new();                                            │
+│  db.connect("postgresql://localhost/mydb").await?;                       │
+│  let recordset = db.execute_sql("SELECT * FROM users").await?;           │
+└─────────────────────────────────┬───-------------────────────────────────┘
+                                  │
+                                  v
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        LIB.RS (Main API)                                 │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │ XDLDatabase {                                                      │  │
+│  │   connection: Arc<RwLock<DatabaseConnection>>,                     │  │
+│  │   db_type: DatabaseType,                                           │  │
+│  │   connection_string: String,                                       │  │
+│  │   last_error: Option<String>                                       │  │
+│  │ }                                                                  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  DatabaseType::from_connection_string() → Auto-detect DB type            │
+│                                                                          │
+│  GLOBAL_DB_REGISTRY → Object system integration (ID mapping)             │
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                   │
+                                   v
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    CONNECTION.RS (Dispatcher)                            │
+│                                                                          │
+│  pub enum DatabaseConnection {                                           │
+│      #[cfg(feature = "postgres-support")]                                │
+│      PostgreSQL(PostgresConnection),                                     │
+│      #[cfg(feature = "mysql-support")]                                   │
+│      MySQL(MySQLConnection),                                             │
+│      #[cfg(feature = "duckdb-support")]                                  │
+│      DuckDB(DuckDBConnection),                                           │
+│      #[cfg(feature = "sqlite-support")]                                  │
+│      SQLite(SQLiteConnection),  ← WILL BE ADDED                          │
+│      #[cfg(feature = "odbc-support")]                                    │
+│      ODBC(ODBCConnection),                                               │
+│      #[cfg(feature = "redis-support")]                                   │
+│      Redis(RedisConnection),                                             │
+│      #[cfg(feature = "kafka-support")]                                   │
+│      Kafka(KafkaConnection),                                             │
+│  }                                                                       │
+│                                                                          │
+│  All implement unified interface:                                        │
+│  - async fn execute(query) -> Recordset                                  │
+│  - async fn execute_command(cmd) -> u64                                  │
+│  - async fn close() -> Result<()>                                        │
+│  - async fn is_connected() -> bool                                       │
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                   │
+        ┌──────────────────────────┼──────────────────────────┐
+        │                          │                          │
+        v                          v                          v
+┌────────────────-─┐      ┌──────────────────┐      ┌──────────────────┐
+│ POSTGRES DRIVER  │      │  MYSQL DRIVER    │      │   DUCKDB DRIVER  │
+├───────────────── ┤      ├──────────────────┤      ├──────────────────┤
+│ tokio-postgres   │      │  mysql_async     │      │  duckdb crate    │
+│ deadpool-postgres|      │  Connection      │      │  Synchronous     │
+│ Async, async pool|      │  pooling         │      │  In .db files    │
+│ Type-safe rows   │      │                  │      │                  │
+└─────────────────-┘      └──────────────────┘      └──────────────────┘
+
+        │                          │                          │
+        v                          v                          v
+┌─────────────────┐      ┌──────────────────┐      ┌──────────────────┐
+│  ODBC DRIVER    │      │  REDIS DRIVER    │      │  SQLITE DRIVER   │
+├─────────────────┤      ├──────────────────┤      ├──────────────────┤
+│ odbc-api        │      │  redis crate     │      │  rusqlite (0.31) │
+│ ODBC-compatible │      │  Async client    │      │  File-based DB   │
+│ Many backends   │      │  Key-value store │      │  [TO BE ADDED]   │
+└─────────────────┘      └──────────────────┘      └──────────────────┘
+
+        │                          │
+        v                          v
+┌─────────────────┐      ┌──────────────────┐
+│  KAFKA DRIVER   │      │  (Future?)       │
+├─────────────────┤      ├──────────────────┤
+│ rdkafka         │      │                  │
+│ Streaming       │      │                  │
+│ Producer/Sub    │      │                  │
+└─────────────────┘      └──────────────────┘
+
+
+EXECUTION FLOW (Query -> Recordset):
+====================================
+
+1. User calls: db.execute_sql("SELECT * FROM table")
+
+2. XDLDatabase::execute_sql()
+   └─> Acquires lock on DatabaseConnection
+       └─> Calls conn.execute(query)
+
+3. DatabaseConnection::execute() [match statement]
+   └─> Dispatches to specific driver's execute()
+
+4. Driver's execute(query)
+   └─> Connects to database (if needed)
+   └─> Prepares statement
+   └─> Executes query
+   └─> Iterates rows
+   └─> Converts each row to Vec<JsonValue>
+   └─> Collects column metadata (ColumnInfo)
+   └─> Returns Recordset
+
+5. Recordset {
+     columns: Vec<ColumnInfo>,
+     rows: Vec<Vec<JsonValue>>,
+     current_row: usize
+   }
+
+6. User accesses data via:
+   - recordset.get_data() → XdlValue
+   - recordset.get_column(name) → Vec<XdlValue>
+   - recordset.current_row() → HashMap<String, JsonValue>
+
+
+FEATURE FLAGS:
+==============
+
+[features]
+default = ["postgres-support", "duckdb-support", "redis-support"]
+
+# Individual database support
+postgres-support = ["tokio-postgres", "deadpool-postgres"]
+mysql-support = ["mysql_async"]
+duckdb-support = ["duckdb"]
+odbc-support = ["odbc-api"]
+redis-support = ["redis"]
+kafka-support = ["rdkafka"]
+sqlite-support = ["rusqlite"]  ← TO BE ADDED
+
+# Enable all databases
+all = [
+    "postgres-support",
+    "mysql-support",
+    "duckdb-support",
+    "odbc-support",
+    "redis-support",
+    "kafka-support",
+    "sqlite-support"  ← TO BE ADDED
+]
+
+
+FILE LAYOUT:
+============
+
+xdl-database/
+├── Cargo.toml                  [Dependencies & features]
+└── src/
+    ├── lib.rs                  [Main API, XDLDatabase, DatabaseType detection]
+    ├── connection.rs           [DatabaseConnection enum dispatcher]
+    ├── error.rs                [Error types & conversions]
+    ├── recordset.rs            [Result representation]
+    └── drivers/
+        ├── mod.rs              [Driver module declarations]
+        ├── postgres.rs         [PostgreSQL implementation]
+        ├── mysql.rs            [MySQL implementation]
+        ├── duckdb.rs           [DuckDB implementation]
+        ├── sqlite.rs           [SQLite - TO BE ADDED]
+        ├── odbc.rs             [ODBC implementation]
+        ├── redis_driver.rs     [Redis implementation]
+        └── kafka.rs            [Kafka implementation]
+
+
+TYPE CONVERSIONS:
+=================
+
+Database Values → JsonValue → XdlValue
+
+Examples:
+- NULL ──────────> JsonValue::Null ────────────> XdlValue::Undefined
+- 42 (integer)───> JsonValue::Number(42) ──────> XdlValue::Long(42)
+- 3.14 (float)───> JsonValue::Number(3.14)──--─> XdlValue::Double(3.14)
+- "text" ────────> JsonValue::String("text")─-─> XdlValue::String(...)
+- [1,2,3] ─────-─> JsonValue::Array([...])──--─> XdlValue::NestedArray(...)
+
+
+CONNECTION STRINGS:
+===================
+
+PostgreSQL:  "postgresql://user:pass@host:5432/db"
+MySQL:       "mysql://user:pass@host:3306/db"
+DuckDB:      "duckdb:///path/to/db.duckdb" or "*.duckdb"
+Redis:       "redis://localhost:6379"
+Kafka:       "kafka://broker1:9092,broker2:9092"
+ODBC:        "DRIVER={PostgreSQL};SERVER=localhost"
+SQLite:      "sqlite:///path/to/db.sqlite" [TO BE ADDED]
+             "sqlite://:memory:" [in-memory]
+
+================================================================================

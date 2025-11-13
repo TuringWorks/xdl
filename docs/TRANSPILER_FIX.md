@@ -9,18 +9,21 @@ MATLAB `.m` files were not displaying output in the xdl-gui results pane. While 
 The MATLAB-to-XDL transpiler was converting MATLAB function calls incorrectly:
 
 ### Before Fix
+
 ```matlab
 disp('Hello');
 disp(x);
 ```
 
 Was transpiled to:
+
 ```xdl
 PRINT ( 'Hello' )
 PRINT ( x )
 ```
 
 This syntax is **invalid** in XDL. XDL procedures require comma-separated arguments:
+
 ```xdl
 PRINT, 'Hello'
 PRINT, x
@@ -44,12 +47,14 @@ In the `collect_expression_until_newline()` function:
 4. **Result**: Proper XDL procedure syntax with correct function names
 
 ### After Fix
+
 ```matlab
 disp('Hello');
 disp(x);
 ```
 
 Now correctly transpiles to:
+
 ```xdl
 PRINT, 'Hello'
 PRINT, x
@@ -64,6 +69,7 @@ disp(log(10));  % MATLAB
 ```
 
 Correctly transpiles to:
+
 ```xdl
 PRINT, ALOG(10)  ; XDL with proper function mapping
 ```
@@ -82,6 +88,7 @@ disp(x);
 ```
 
 ### CLI Test
+
 ```bash
 $ xdl examples/matlab/test_gui_output.m
 Testing GUI output capture
@@ -90,6 +97,7 @@ The answer is:
 ```
 
 ### GUI Test
+
 1. Open `xdl-gui`
 2. File > Open... > `examples/matlab/test_gui_output.m`
 3. Click Execute
@@ -110,6 +118,7 @@ The answer is:
 ## Future Improvements
 
 The same technique can be extended to handle other XDL procedures that may need comma syntax:
+
 - PLOT
 - Other output procedures
 - User-defined procedures (if added)
