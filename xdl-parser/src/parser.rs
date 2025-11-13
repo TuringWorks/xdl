@@ -312,6 +312,14 @@ impl<'a> Parser<'a> {
             args.push(self.parse_expression()?);
         }
 
+        // Check if this is OBJ_DESTROY
+        if name.to_uppercase() == "OBJ_DESTROY" {
+            return Ok(Statement::ObjectDestroy {
+                objects: args,
+                location: Location::unknown(),
+            });
+        }
+
         Ok(Statement::ProcedureCall {
             name,
             args,
@@ -468,6 +476,16 @@ impl<'a> Parser<'a> {
             });
         };
 
+        // Check if this is a class definition (ends with __define)
+        if name.ends_with("__define") {
+            return self.parse_class_definition_body(name);
+        }
+
+        // Check if this is a method definition (contains ::)
+        if name.contains("::") {
+            return self.parse_method_definition_body(name, false); // false = procedure
+        }
+
         // Parse parameters and keywords
         let mut params = Vec::new();
         let mut keywords = Vec::new();
@@ -557,6 +575,11 @@ impl<'a> Parser<'a> {
             });
         };
 
+        // Check if this is a method definition (contains ::)
+        if name.contains("::") {
+            return self.parse_method_definition_body(name, true); // true = function
+        }
+
         // Parse parameters (simplified)
         let params = Vec::new(); // TODO: implement parameter parsing
         let keywords = Vec::new(); // TODO: implement keyword parsing
@@ -574,6 +597,148 @@ impl<'a> Parser<'a> {
 
         Ok(Statement::FunctionDef {
             name,
+            params,
+            keywords,
+            body,
+            location: Location::unknown(),
+        })
+    }
+
+    /// Parse class definition body (PRO ClassName__define)
+    fn parse_class_definition_body(&mut self, full_name: String) -> XdlResult<Statement> {
+        // Extract class name by removing __define suffix
+        let class_name = full_name.trim_end_matches("__define").to_string();
+
+        // Skip parameters/keywords if any (usually class definitions don't have params)
+        while matches!(self.peek(), Token::Comma) {
+            self.advance();
+            if matches!(self.peek(), Token::Identifier(_)) {
+                self.advance(); // skip parameter
+            }
+        }
+
+        // Skip until newline
+        while matches!(self.peek(), Token::Comma | Token::Newline) {
+            self.advance();
+        }
+
+        // Parse body until ENDPRO
+        let mut body = Vec::new();
+        while !matches!(self.peek(), Token::Endpro | Token::EOF) {
+            body.push(self.parse_statement()?);
+        }
+
+        self.consume(Token::Endpro, "Expected 'endpro' to close class definition")?;
+
+        Ok(Statement::ClassDefinition {
+            name: class_name,
+            body,
+            location: Location::unknown(),
+        })
+    }
+
+    /// Parse method definition body (PRO/FUNCTION ClassName::MethodName)
+    fn parse_method_definition_body(
+        &mut self,
+        full_name: String,
+        is_function: bool,
+    ) -> XdlResult<Statement> {
+        // Split on :: to get class name and method name
+        let parts: Vec<&str> = full_name.split("::").collect();
+        if parts.len() != 2 {
+            return Err(XdlError::ParseError {
+                message: format!(
+                    "Invalid method name format '{}'. Expected ClassName::MethodName",
+                    full_name
+                ),
+                line: 1,
+                column: self.current,
+            });
+        }
+
+        let class_name = parts[0].to_string();
+        let method_name = parts[1].to_string();
+
+        // Parse parameters and keywords (same as regular procedure/function)
+        let mut params = Vec::new();
+        let mut keywords = Vec::new();
+
+        if self.check(&Token::Comma) {
+            self.advance(); // consume first comma
+
+            loop {
+                if matches!(self.peek(), Token::Newline | Token::EOF) {
+                    break;
+                }
+
+                let param_name = if let Token::Identifier(name) = self.peek() {
+                    name.clone()
+                } else {
+                    break;
+                };
+
+                self.advance();
+
+                if self.check(&Token::Assign) {
+                    self.advance(); // consume '='
+                    keywords.push(KeywordDecl {
+                        name: param_name,
+                        by_reference: false,
+                        location: Location::unknown(),
+                    });
+                } else {
+                    params.push(Parameter {
+                        name: param_name,
+                        by_reference: false,
+                        optional: false,
+                        location: Location::unknown(),
+                    });
+                }
+
+                if !self.check(&Token::Comma) {
+                    break;
+                }
+                self.advance();
+            }
+        }
+
+        // Skip remaining tokens until body
+        while matches!(self.peek(), Token::Comma | Token::Newline) {
+            self.advance();
+        }
+
+        // Parse body
+        let mut body = Vec::new();
+
+        while !self.is_at_end() {
+            // Check for end token
+            if is_function && self.check(&Token::Endfunction) {
+                break;
+            }
+            if !is_function && self.check(&Token::Endpro) {
+                break;
+            }
+
+            body.push(self.parse_statement()?);
+        }
+
+        // Consume the appropriate end token
+        if is_function {
+            self.consume(
+                Token::Endfunction,
+                "Expected 'endfunction' to close method definition",
+            )?;
+        } else {
+            self.consume(
+                Token::Endpro,
+                "Expected 'endpro' to close method definition",
+            )?;
+        }
+
+        Ok(Statement::MethodDefinition {
+            class_name,
+            method_name,
+            is_function,
             params,
             keywords,
             body,
@@ -1004,12 +1169,50 @@ impl<'a> Parser<'a> {
 
                     self.consume(Token::RightParen, "Expected ')' after function arguments")?;
 
-                    Ok(Expression::FunctionCall {
-                        name,
-                        args,
-                        keywords: Vec::new(), // TODO: implement keyword arguments
-                        location: Location::unknown(),
-                    })
+                    // Check if this is OBJ_NEW
+                    if name.to_uppercase() == "OBJ_NEW" {
+                        // First argument should be the class name (string literal)
+                        let class_name = if !args.is_empty() {
+                            match &args[0] {
+                                Expression::Literal {
+                                    value: XdlValue::String(s),
+                                    ..
+                                } => s.clone(),
+                                _ => {
+                                    // If not a string literal, we'll handle this at runtime
+                                    return Err(XdlError::ParseError {
+                                        message: "OBJ_NEW requires a string literal class name as first argument".to_string(),
+                                        line: 1,
+                                        column: self.current,
+                                    });
+                                }
+                            }
+                        } else {
+                            // Empty OBJ_NEW() returns NULL object
+                            String::new()
+                        };
+
+                        // Remaining arguments are constructor arguments
+                        let constructor_args = if args.len() > 1 {
+                            args[1..].to_vec()
+                        } else {
+                            Vec::new()
+                        };
+
+                        Ok(Expression::ObjectNew {
+                            class_name,
+                            args: constructor_args,
+                            keywords: Vec::new(), // TODO: implement keyword arguments
+                            location: Location::unknown(),
+                        })
+                    } else {
+                        Ok(Expression::FunctionCall {
+                            name,
+                            args,
+                            keywords: Vec::new(), // TODO: implement keyword arguments
+                            location: Location::unknown(),
+                        })
+                    }
                 } else {
                     Ok(Expression::Variable {
                         name,
