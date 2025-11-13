@@ -32,6 +32,7 @@ XDL provides five moving average implementations, each suited for different use 
 ## SMOOTH - Simple Moving Average
 
 **Syntax:**
+
 ```xdl
 result = SMOOTH(array, window_size)
 ```
@@ -40,6 +41,7 @@ result = SMOOTH(array, window_size)
 Computes a simple moving average (boxcar smoothing) with edge reflection. This is the XDL equivalent to IDL's SMOOTH function.
 
 **Parameters:**
+
 - `array`: Input array (required)
 - `window_size`: Size of the smoothing window (optional, default: 3)
 
@@ -47,6 +49,7 @@ Computes a simple moving average (boxcar smoothing) with edge reflection. This i
 Uses reflection at boundaries to maintain output size equal to input size.
 
 **Examples:**
+
 ```xdl
 ; Basic usage
 data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
@@ -58,6 +61,7 @@ smoothed_default = smooth(data)
 ```
 
 **Use Cases:**
+
 - General signal smoothing
 - Noise reduction in measurements
 - Preparation for visualization
@@ -68,6 +72,7 @@ smoothed_default = smooth(data)
 ## MOVING_AVERAGE - Configurable Edge Handling
 
 **Syntax:**
+
 ```xdl
 result = MOVING_AVERAGE(array, window_size, edge_mode)
 ```
@@ -76,6 +81,7 @@ result = MOVING_AVERAGE(array, window_size, edge_mode)
 Computes moving average with configurable edge handling modes for advanced control.
 
 **Parameters:**
+
 - `array`: Input array (required)
 - `window_size`: Size of the moving window (required)
 - `edge_mode`: Edge handling mode (optional, default: 2)
@@ -85,6 +91,7 @@ Computes moving average with configurable edge handling modes for advanced contr
   - `3`: **PAD_WITH_MEAN** - Use array mean for out-of-bounds values
 
 **Examples:**
+
 ```xdl
 data = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0]
 
@@ -106,6 +113,7 @@ ma_mean = moving_average(data, 3, 3)
 ```
 
 **Use Cases:**
+
 - Time series analysis with specific boundary requirements
 - Periodic signals (use WRAP mode)
 - Valid-only analysis (use TRUNCATE mode)
@@ -116,6 +124,7 @@ ma_mean = moving_average(data, 3, 3)
 ## WMA - Weighted Moving Average
 
 **Syntax:**
+
 ```xdl
 result = WMA(array, window_size)
 ```
@@ -124,16 +133,19 @@ result = WMA(array, window_size)
 Computes weighted moving average with linearly increasing weights. Most recent values have the highest weight.
 
 **Parameters:**
+
 - `array`: Input array (required)
 - `window_size`: Size of the moving window (required)
 
 **Weighting Scheme:**
 Linear weights from 1 to `window_size`:
+
 - For window_size = 3: weights are [1, 2, 3]
 - For window_size = 5: weights are [1, 2, 3, 4, 5]
 
 **Formula:**
-```
+
+```text
 WMA[i] = (1*x[i] + 2*x[i+1] + 3*x[i+2] + ... + n*x[i+n-1]) / (1+2+3+...+n)
 ```
 
@@ -141,6 +153,7 @@ WMA[i] = (1*x[i] + 2*x[i+1] + 3*x[i+2] + ... + n*x[i+n-1]) / (1+2+3+...+n)
 `n - window_size + 1` (no edge padding)
 
 **Examples:**
+
 ```xdl
 prices = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]
 
@@ -155,6 +168,7 @@ wma5 = wma(prices, 5)
 ```
 
 **Use Cases:**
+
 - Financial technical analysis
 - Trend following
 - When recent data is more important
@@ -165,6 +179,7 @@ wma5 = wma(prices, 5)
 ## EMA - Exponential Moving Average
 
 **Syntax:**
+
 ```xdl
 result = EMA(array, alpha)
 ```
@@ -173,6 +188,7 @@ result = EMA(array, alpha)
 Computes exponential moving average using recursive formula with smoothing factor alpha.
 
 **Parameters:**
+
 - `array`: Input array (required)
 - `alpha`: Smoothing factor, range (0, 1] (required)
   - Higher alpha: More weight on recent values (faster response)
@@ -180,18 +196,21 @@ Computes exponential moving average using recursive formula with smoothing facto
   - Common conversion: `alpha = 2 / (N + 1)` for N-period EMA
 
 **Formula:**
-```
+
+```text
 EMA[0] = array[0]
 EMA[i] = alpha * array[i] + (1 - alpha) * EMA[i-1]
 ```
 
 **Common Alpha Values:**
+
 - `alpha = 0.5`: ~3-period equivalent
 - `alpha = 0.25`: ~7-period equivalent
 - `alpha = 0.1818`: 10-period equivalent (2/(10+1))
 - `alpha = 0.1`: ~19-period equivalent
 
 **Examples:**
+
 ```xdl
 prices = [100.0, 110.0, 105.0, 115.0, 120.0, 118.0, 125.0, 130.0]
 
@@ -209,6 +228,7 @@ ema_smooth = ema(prices, 0.1)
 ```
 
 **Use Cases:**
+
 - Stock price analysis
 - Trading indicators (MACD, RSI calculations)
 - Real-time signal filtering
@@ -220,6 +240,7 @@ ema_smooth = ema(prices, 0.1)
 ## CUMULATIVE_AVERAGE - Expanding Window
 
 **Syntax:**
+
 ```xdl
 result = CUMULATIVE_AVERAGE(array)
 ```
@@ -228,14 +249,17 @@ result = CUMULATIVE_AVERAGE(array)
 Computes cumulative (expanding window) moving average. Each element is the mean of all values from the start up to and including that position.
 
 **Parameters:**
+
 - `array`: Input array (required)
 
 **Formula:**
-```
+
+```text
 CUMAVG[i] = (sum of array[0] to array[i]) / (i + 1)
 ```
 
 **Examples:**
+
 ```xdl
 data = [5.0, 15.0, 10.0, 20.0, 25.0, 30.0]
 cumavg = cumulative_average(data)
@@ -251,6 +275,7 @@ cumavg = cumulative_average(data)
 ```
 
 **Use Cases:**
+
 - Running statistics
 - Progressive data analysis
 - Performance metrics over time
@@ -346,6 +371,7 @@ print, "Pad with mean:", pad_mean
 ### Memory Usage
 
 All functions create output arrays:
+
 - **SMOOTH**, **EMA**, **CUMULATIVE_AVERAGE**: Output size = input size
 - **MOVING_AVERAGE**: Size depends on mode (truncate mode reduces size)
 - **WMA**: Output size = `n - window + 1`
@@ -360,24 +386,28 @@ All functions create output arrays:
 ### When to Use Which Function
 
 **Use SMOOTH when:**
+
 - You need IDL compatibility
 - Simple general-purpose smoothing is sufficient
 - Output size must match input size
 - Default edge reflection is acceptable
 
 **Use MOVING_AVERAGE when:**
+
 - You need specific edge handling behavior
 - Different modes are required for different data types
 - You're working with periodic signals (wrap mode)
 - You need valid-only results (truncate mode)
 
 **Use WMA when:**
+
 - Recent values are more important
 - You're doing trend analysis
 - You need weighted importance
 - You accept reduced output size
 
 **Use EMA when:**
+
 - You need exponential decay
 - Real-time processing is required
 - Memory efficiency matters (single-pass algorithm)
@@ -385,6 +415,7 @@ All functions create output arrays:
 - You need fast response to changes
 
 **Use CUMULATIVE_AVERAGE when:**
+
 - You need running statistics
 - Progressive averaging is required
 - All historical data is equally weighted
@@ -401,6 +432,7 @@ xdl examples/test_moving_average.xdl
 ```
 
 The test suite includes:
+
 - Basic functionality tests for all functions
 - Edge case handling (empty, single element, uniform arrays)
 - Different window sizes
@@ -418,7 +450,7 @@ All tests verify correctness with known inputs and expected outputs.
 
 ### Edge Reflection (SMOOTH and MOVING_AVERAGE mode 2)
 
-```
+```text
 Input:  [1, 2, 3, 4, 5]
          ↓  Reflect at edges
 Virtual:[1, 2, 1, 2, 3, 4, 5, 4, 3]
@@ -426,7 +458,7 @@ Virtual:[1, 2, 1, 2, 3, 4, 5, 4, 3]
 
 ### Wrap Mode (MOVING_AVERAGE mode 1)
 
-```
+```text
 Input:  [1, 2, 3, 4, 5]
          ↓  Wrap around
 Virtual:[4, 5, 1, 2, 3, 4, 5, 1, 2]
@@ -435,6 +467,7 @@ Virtual:[4, 5, 1, 2, 3, 4, 5, 1, 2]
 ### EMA Convergence
 
 EMA converges to recent values with decay factor `(1 - alpha)`:
+
 - After 3 periods: ~95% weight on recent data (alpha=0.5)
 - After 10 periods: ~89% weight on recent data (alpha=0.1)
 

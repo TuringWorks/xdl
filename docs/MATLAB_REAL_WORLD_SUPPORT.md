@@ -11,18 +11,21 @@ The XDL MATLAB transpiler now supports a wide range of real-world MATLAB pattern
 ### 1. Range Operators in Expressions
 
 **MATLAB Code:**
+
 ```matlab
 t = (0:L-1)*T;        % Create range from 0 to L-1, multiply by T
 x = (1:2:10);         % Create range with step: 1, 3, 5, 7, 9
 ```
 
 **XDL Equivalent:**
+
 ```idl
 t = FINDGEN(L) * T
 x = (FINDGEN(((10)-(1))/(2) +1) * (2)) + (1)
 ```
 
 **How It Works:**
+
 - The transpiler detects colon operators `:` inside parentheses
 - Converts `(start:end)` to `FINDGEN((end)-(start)+1) + (start)`
 - Optimizes `(0:N-1)` to simply `FINDGEN(N)`
@@ -31,6 +34,7 @@ x = (FINDGEN(((10)-(1))/(2) +1) * (2)) + (1)
 ### 2. Array Slicing with Ranges
 
 **MATLAB Code:**
+
 ```matlab
 arr = (0:19);
 slice = arr(1:50);     % Get elements 1 through 50
@@ -38,6 +42,7 @@ subset = arr(5:10);    % Get elements 5 through 10
 ```
 
 **How It Works:**
+
 - Array indexing with range expressions `arr(start:end)` is fully supported
 - Automatically converts MATLAB's 1-based indexing to XDL's 0-based indexing
 - Handles both numeric indices and variable-based ranges
@@ -45,6 +50,7 @@ subset = arr(5:10);    % Get elements 5 through 10
 ### 3. Random Number Generation
 
 **MATLAB Code:**
+
 ```matlab
 r = rand(size(t));         % Uniform random with same size as t
 r = randn(size(data));     % Normal random with same size as data
@@ -52,6 +58,7 @@ r = rand(10, 20);          % Uniform 10x20 array (falls back to RANDOMU)
 ```
 
 **XDL Equivalent:**
+
 ```idl
 r = RANDOMU(1, N_ELEMENTS(t))
 r = RANDOMU(1, N_ELEMENTS(data))
@@ -59,6 +66,7 @@ r = RANDOMU(1, 10, 20)
 ```
 
 **How It Works:**
+
 - Special handling for `rand(size(x))` and `randn(size(x))` patterns
 - Converts `size(x)` to `N_ELEMENTS(x)` for RANDOMU/RANDOMN
 - Both `rand` and `randn` currently map to `RANDOMU` (normal distribution to be added later)
@@ -67,6 +75,7 @@ r = RANDOMU(1, 10, 20)
 ### 4. Statistical Functions
 
 **Supported Functions:**
+
 - `mean(x)` → `MEAN(x)`
 - `std(x)` → `STDDEV(x)`
 - `min(x)` → `MIN(x)`
@@ -78,6 +87,7 @@ r = RANDOMU(1, 10, 20)
 ### 5. Mathematical Functions with Arrays
 
 **Element-wise Operations:**
+
 ```matlab
 X = A .* B;      % Element-wise multiply
 Y = A ./ B;      % Element-wise divide
@@ -85,6 +95,7 @@ Z = A .^ B;      % Element-wise power
 ```
 
 **Array Functions:**
+
 ```matlab
 y = sin(x);      % Sine (operates on arrays)
 y = cos(x);      % Cosine
@@ -99,6 +110,7 @@ All math functions work seamlessly with both scalar and array inputs.
 ### 6. Advanced Plotting
 
 **Line Styles:**
+
 ```matlab
 plot(x, y, 'b-');     % Blue solid line
 plot(x, y, 'r--');    % Red dashed line
@@ -108,6 +120,7 @@ plot(x, y, 'g:');     % Green dotted line
 Line style strings are detected and gracefully ignored (XDL doesn't support line styles yet).
 
 **Multiple Plots:**
+
 ```matlab
 figure;
 plot(x, y1, 'b-');
@@ -120,6 +133,7 @@ ylabel('Y axis');
 ```
 
 **Tiled Layouts:**
+
 ```matlab
 tiledlayout(2, 2);
 nexttile;
@@ -131,6 +145,7 @@ plot(x2, y2);
 Converts to tile-specific plot files: `tile1_plot.png`, `tile2_plot.png`, etc.
 
 **3D Plots:**
+
 ```matlab
 comet3(x, y, z);      % 3D animated comet plot
 plot3(x, y, z);       % 3D line plot
@@ -141,10 +156,12 @@ Converts to `PLOT3D` with appropriate filenames.
 ### 7. Constants
 
 **Built-in Constants:**
+
 - `pi` → `!PI`
 - `e` → `!E`
 
 Example:
+
 ```matlab
 x = linspace(0, 2*pi, 100);
 y = sin(x);
@@ -155,6 +172,7 @@ Transpiles correctly with `pi` mapped to `!PI`.
 ## Tested Real-World Examples
 
 ### Example 1: Noisy Signal Analysis
+
 ```matlab
 % Generate sample data
 n = 100;
@@ -174,6 +192,7 @@ title('Noisy Sine Wave');
 ✅ **Works perfectly**
 
 ### Example 2: Multi-panel Plots
+
 ```matlab
 tiledlayout(2, 2);
 
@@ -191,6 +210,7 @@ title('Cosine');
 ✅ **Works perfectly** - generates separate plot files for each tile
 
 ### Example 3: Array Operations
+
 ```matlab
 x = (0:99) * 0.1;      % Range with scaling
 y = sin(x);             % Function on array
@@ -204,26 +224,31 @@ z = y(10:50);           % Array slicing
 ### Currently Not Supported
 
 1. **Multiple Return Values:**
+
    ```matlab
    [X, Y] = meshgrid(-5:0.25:5);  % Not supported
    ```
 
 2. **Anonymous Functions:**
+
    ```matlab
    f = @(x) x^2 + 2*x + 1;  % Not supported
    ```
 
 3. **ODE Solvers:**
+
    ```matlab
    [t, y] = ode45(@func, [0 10], [1 1 1]);  % Not supported
    ```
 
 4. **FFT and Advanced Signal Processing:**
+
    ```matlab
    Y = fft(X);  % FFT function exists but complex number handling needs work
    ```
 
 5. **Surface/Mesh Plots:**
+
    ```matlab
    surf(X, Y, Z);  % Needs surface plotting support
    meshgrid(...);  % Needs 2D array generation
@@ -287,6 +312,7 @@ xdl /tmp/comprehensive_matlab_test.m
 ```
 
 This tests:
+
 - Range operators (0:9, 1:2:10)
 - Array slicing
 - Random number generation
@@ -297,6 +323,7 @@ This tests:
 ## Conclusion
 
 The XDL MATLAB transpiler now supports a substantial subset of real-world MATLAB code, particularly for:
+
 - Numerical computation with arrays
 - Statistical analysis
 - Signal generation and processing

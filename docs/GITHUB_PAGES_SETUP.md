@@ -36,6 +36,7 @@ The documentation is set up in the `/docs` folder with:
 ### Jekyll Theme
 
 The documentation uses the **Cayman** theme, which provides:
+
 - Clean, professional design
 - Responsive layout for mobile devices
 - Syntax highlighting for code blocks
@@ -44,6 +45,7 @@ The documentation uses the **Cayman** theme, which provides:
 ### GitHub Actions Workflow
 
 A workflow has been created at `.github/workflows/pages.yml` that:
+
 - Automatically builds and deploys documentation on every push to master
 - Uses Jekyll to process the markdown files
 - Deploys to GitHub Pages
@@ -59,6 +61,7 @@ theme: jekyll-theme-minimal  # or other supported themes
 ```
 
 Supported themes:
+
 - `jekyll-theme-cayman` (current)
 - `jekyll-theme-minimal`
 - `jekyll-theme-slate`

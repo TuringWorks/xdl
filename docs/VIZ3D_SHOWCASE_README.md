@@ -55,6 +55,7 @@ cargo build --release
 ### What to Expect
 
 The demo will:
+
 1. Generate each 64³ volume procedurally (~10 seconds per volume)
 2. Open an interactive 3D window for each visualization
 3. Display beautiful ray-marched volume rendering
@@ -89,16 +90,19 @@ On Apple M4 (tested configuration):
 You can modify the demo by editing `viz3d_showcase.xdl`:
 
 ### Change Resolution
+
 ```xdl
 grid = 64  ; Try 32 (faster) or 128 (higher quality)
 ```
 
 ### Modify Colormaps
+
 ```xdl
 VIZ3D_COLORMAP, 'RAINBOW'  ; Change to VIRIDIS, PLASMA, INFERNO, TURBO, GRAYSCALE
 ```
 
 ### Adjust Camera
+
 ```xdl
 VIZ3D_CAMERA, POSITION=[0.0, 0.0, 3.0], TARGET=[0.0, 0.0, 0.0], FOV=45.0
 ```
@@ -155,6 +159,7 @@ Metal/Vulkan/DirectX 12
 ### 1. Gaussian Blob
 
 **Mathematical Function:**
+
 ```
 ρ(x,y,z) = exp(-(dx² + dy² + dz²) / (2σ²))
 ```
@@ -164,6 +169,7 @@ Shows a smooth 3D Gaussian distribution, perfect for demonstrating basic volume 
 ### 2. Torus
 
 **Distance Function:**
+
 ```
 d = √((√(x² + y²) - R)² + z²) - r
 ρ = exp(-|d| / 3)
@@ -174,6 +180,7 @@ Uses signed distance field to create a perfect donut shape. Demonstrates the ren
 ### 3. Turbulent Flow
 
 **Multi-scale Turbulence:**
+
 ```
 T = 0.5·sin(3x)cos(3y)sin(3z)
   + 0.3·sin(7x)cos(7y)sin(7z)
@@ -186,6 +193,7 @@ Simulates turbulent flow with multiple spatial frequencies. The Plasma colormap 
 ### 4. Spiral Galaxy
 
 **Galaxy Structure:**
+
 ```
 ρ = disk_density × thickness × spiral_arms + bulge
 
@@ -219,14 +227,17 @@ Creates a realistic-looking spiral galaxy with 3 arms, a disk, and a central bul
 ## Troubleshooting
 
 ### Window doesn't appear
+
 - Check that you're running the **CLI** version: `./target/release/xdl` (not xdl-gui)
 - Ensure WebGPU drivers are available (automatic on macOS with Metal)
 
 ### Slow performance
+
 - Reduce grid size: `grid = 32` instead of `64`
 - Close other GPU-intensive applications
 
 ### Want to skip a demo
+
 - Press ESC or close the window to proceed immediately
 
 ## Future Enhancements
@@ -249,7 +260,7 @@ Potential additions to this showcase:
 - API reference: `docs/VIZ3D_IMPLEMENTATION.md`
 - Source code: `xdl-viz3d/` directory
 
-## Share Your Results!
+## Share Your Results
 
 Created something cool with VIZ3D? We'd love to see it! The system is designed to be a platform for scientific visualization and creative exploration.
 

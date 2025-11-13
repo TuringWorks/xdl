@@ -3,19 +3,25 @@
 ## Available Demo Scripts
 
 ### 1. `plot_demo.xdl` - Simple 2D Plot
+
 Basic sine wave demonstration.
+
 ```bash
 cargo run --release --bin xdl-gui examples/plot_demo.xdl
 ```
 
 ### 2. `plot_working_demo.xdl` - Comprehensive 2D Tests
+
 Tests all 2D plotting features with 5 different plots.
+
 ```bash
 cargo run --release --bin xdl-gui examples/plot_working_demo.xdl
 ```
 
 ### 3. `plot3d_demo.xdl` - 3D Plotting Tests
+
 Tests 3D data structures with SURFACE, CONTOUR, SHADE_SURF, and PLOT3D.
+
 ```bash
 cargo run --release --bin xdl examples/plot3d_demo.xdl
 ```
@@ -23,6 +29,7 @@ cargo run --release --bin xdl examples/plot3d_demo.xdl
 ## Quick Examples
 
 ### 2D Line Plot
+
 ```xdl
 x = FINDGEN(50) / 5.0
 y = SIN(x)
@@ -30,12 +37,14 @@ PLOT, y, x
 ```
 
 ### 3D Surface Plot
+
 ```xdl
 z = [[1, 2, 3, 2, 1], [2, 4, 6, 4, 2], [3, 6, 9, 6, 3]]
 SURFACE, z
 ```
 
 ### Array Math
+
 ```xdl
 x = FINDGEN(10)
 y = COS(x * 2.0)       ; Array multiplication and COS
@@ -46,6 +55,7 @@ w = x + SIN(x)          ; Array addition
 ## Supported Procedures
 
 ### ✅ Fully Working
+
 - `PLOT` - 2D line plots with GUI/PNG output
 - `SURFACE` - Parses 2D arrays for 3D surfaces
 - `CONTOUR` - Parses 2D arrays for contours
@@ -53,6 +63,7 @@ w = x + SIN(x)          ; Array addition
 - `PLOT3D` - Parses 3 1D arrays for 3D lines
 
 ### ⚠️ Registered (Stubs)
+
 See `GRAPHICS_DEMOS_STATUS.md` for complete list of 40+ registered procedures.
 
 ## Supported Math Functions (with Array Support)
@@ -67,6 +78,7 @@ See `GRAPHICS_DEMOS_STATUS.md` for complete list of 40+ registered procedures.
 ## Array Operations
 
 ### Arithmetic
+
 ```xdl
 a = [1, 2, 3]
 b = [4, 5, 6]
@@ -76,12 +88,14 @@ e = a / 2.0      ; [0.5, 1.0, 1.5]
 ```
 
 ### Unary
+
 ```xdl
 x = [1, 2, 3]
 neg_x = -x       ; [-1, -2, -3]
 ```
 
 ### Element-wise Functions
+
 ```xdl
 angles = FINDGEN(10) * 0.1
 sines = SIN(angles)      ; Sin of each element
@@ -107,6 +121,7 @@ SURFACE, matrix
 ## Common Patterns
 
 ### Plotting Waves
+
 ```xdl
 t = FINDGEN(100) / 10.0
 y = SIN(t)
@@ -114,6 +129,7 @@ PLOT, y, t
 ```
 
 ### Exponential Decay
+
 ```xdl
 t = FINDGEN(50) / 5.0
 y = EXP(-t)
@@ -121,6 +137,7 @@ PLOT, y, t
 ```
 
 ### Combined Functions
+
 ```xdl
 x = FINDGEN(80) / 8.0
 y = SIN(x) + COS(x * 2.0)
@@ -128,6 +145,7 @@ PLOT, y, x
 ```
 
 ### 3D Parametric Curves
+
 ```xdl
 t = FINDGEN(50) / 5.0
 x = COS(t)
@@ -147,7 +165,9 @@ PLOT3D, x, y, z
 ## Troubleshooting
 
 ### "Unknown procedure: PLOT"
+
 Make sure you're running the correct binary:
+
 ```bash
 # GUI mode
 cargo run --release --bin xdl-gui script.xdl
@@ -157,10 +177,13 @@ cargo run --release --bin xdl script.xdl
 ```
 
 ### "Type mismatch" errors
+
 Check that math functions are using correct types. All should work with arrays now.
 
 ### "Expected a 2D nested array"
+
 For SURFACE/CONTOUR/SHADE_SURF, use nested array literals:
+
 ```xdl
 z = [[1,2,3], [4,5,6], [7,8,9]]  ; Correct
 z = FLTARR(3, 3)                  ; Not yet implemented

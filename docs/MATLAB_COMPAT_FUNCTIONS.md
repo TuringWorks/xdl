@@ -17,22 +17,26 @@ XDL now includes a comprehensive set of MATLAB-compatible functions implemented 
 Generate linearly spaced vector between two values.
 
 **Syntax:**
+
 ```xdl
 result = LINSPACE(start, stop, n)
 ```
 
 **Parameters:**
+
 - `start` - Starting value
 - `stop` - Ending value (inclusive)
 - `n` - Number of points (optional, default: 100)
 
 **Example:**
+
 ```xdl
 x = LINSPACE(0, 10, 11)
 ; Result: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
 **MATLAB Equivalent:**
+
 ```matlab
 x = linspace(0, 10, 11);
 ```
@@ -44,22 +48,26 @@ x = linspace(0, 10, 11);
 Generate logarithmically spaced vector from 10^start to 10^stop.
 
 **Syntax:**
+
 ```xdl
 result = LOGSPACE(start, stop, n)
 ```
 
 **Parameters:**
+
 - `start` - Starting exponent (10^start)
 - `stop` - Ending exponent (10^stop)
 - `n` - Number of points (optional, default: 50)
 
 **Example:**
+
 ```xdl
 x = LOGSPACE(0, 3, 4)
 ; Result: [1, 10, 100, 1000]
 ```
 
 **MATLAB Equivalent:**
+
 ```matlab
 x = logspace(0, 3, 4);
 ```
@@ -71,21 +79,25 @@ x = logspace(0, 3, 4);
 Create 2D coordinate matrices from coordinate vectors.
 
 **Syntax:**
+
 ```xdl
 result = MESHGRID(x_vec, y_vec)
 ; Returns [X, Y] as nested array
 ```
 
 **Parameters:**
+
 - `x_vec` - 1D array for x-coordinates
 - `y_vec` - 1D array for y-coordinates
 
 **Returns:**
+
 - Nested array containing [X, Y] where:
   - X is nx×ny matrix with rows = x_vec
   - Y is nx×ny matrix with columns = y_vec
 
 **Example:**
+
 ```xdl
 x = [1.0, 2.0, 3.0]
 y = [4.0, 5.0]
@@ -95,6 +107,7 @@ grids = MESHGRID(x, y)
 ```
 
 **MATLAB Equivalent:**
+
 ```matlab
 [X, Y] = meshgrid([1, 2, 3], [4, 5]);
 ```
@@ -108,20 +121,24 @@ grids = MESHGRID(x, y)
 Generate N-D coordinate arrays (matrix indexing convention).
 
 **Syntax:**
+
 ```xdl
 result = NDGRID(x_vec, y_vec)
 ```
 
 **Parameters:**
+
 - `x_vec` - 1D array for first dimension
 - `y_vec` - 1D array for second dimension
 
 **Returns:**
+
 - Nested array containing [X, Y] where:
   - X varies along columns
   - Y varies along rows (transpose of MESHGRID)
 
 **Example:**
+
 ```xdl
 x = [1.0, 2.0]
 y = [3.0, 4.0, 5.0]
@@ -129,6 +146,7 @@ grids = NDGRID(x, y)
 ```
 
 **MATLAB Equivalent:**
+
 ```matlab
 [X, Y] = ndgrid([1, 2], [3, 4, 5]);
 ```
@@ -142,16 +160,19 @@ grids = NDGRID(x, y)
 Replicate array m times vertically and n times horizontally.
 
 **Syntax:**
+
 ```xdl
 result = REPMAT(array, m, n)
 ```
 
 **Parameters:**
+
 - `array` - Input array to replicate
 - `m` - Number of vertical replications
 - `n` - Number of horizontal replications
 
 **Example:**
+
 ```xdl
 a = [1.0, 2.0]
 b = REPMAT(a, 2, 3)
@@ -159,6 +180,7 @@ b = REPMAT(a, 2, 3)
 ```
 
 **MATLAB Equivalent:**
+
 ```matlab
 a = [1, 2];
 b = repmat(a, 2, 3);
@@ -171,19 +193,23 @@ b = repmat(a, 2, 3);
 Remove dimensions of size 1 from multi-dimensional array.
 
 **Syntax:**
+
 ```xdl
 result = SQUEEZE(array)
 ```
 
 **Parameters:**
+
 - `array` - Multi-dimensional array with singleton dimensions
 
 **Returns:**
+
 - Array with singleton dimensions removed
 - Converts to scalar if all dimensions were 1
 - Converts to 1D if reduced to single dimension
 
 **Example:**
+
 ```xdl
 ; Assuming arr is 5x1x3 array
 ; squeezed = SQUEEZE(arr)
@@ -191,6 +217,7 @@ result = SQUEEZE(array)
 ```
 
 **MATLAB Equivalent:**
+
 ```matlab
 squeezed = squeeze(arr);
 ```
@@ -202,20 +229,24 @@ squeezed = squeeze(arr);
 Perform 1D linear interpolation.
 
 **Syntax:**
+
 ```xdl
 result = INTERP1(x, y, xi, [method])
 ```
 
 **Parameters:**
+
 - `x` - Known x-coordinates (monotonic)
 - `y` - Known y-values corresponding to x
 - `xi` - Query points for interpolation
 - `method` - Interpolation method (optional, currently only 'linear')
 
 **Returns:**
+
 - Array of interpolated values at xi
 
 **Example:**
+
 ```xdl
 xp = [0.0, 1.0, 2.0, 3.0]
 yp = [0.0, 1.0, 4.0, 9.0]
@@ -225,6 +256,7 @@ yi = INTERP1(xp, yp, xi)
 ```
 
 **MATLAB Equivalent:**
+
 ```matlab
 xp = [0, 1, 2, 3];
 yp = [0, 1, 4, 9];
@@ -233,6 +265,7 @@ yi = interp1(xp, yp, xi);
 ```
 
 **Features:**
+
 - Linear interpolation between points
 - Extrapolation: Uses last value beyond range
 - Handles exact matches
@@ -262,6 +295,7 @@ yi = INTERP1(x_data, y_data, xi)
 The MATLAB transpiler automatically converts MATLAB function calls to these XDL functions:
 
 **MATLAB Code:**
+
 ```matlab
 x = linspace(0, 10, 11);
 y = logspace(0, 3, 4);
@@ -269,6 +303,7 @@ y = logspace(0, 3, 4);
 ```
 
 **Transpiled XDL Code:**
+
 ```xdl
 x = LINSPACE(0, 10, 11)
 y = LOGSPACE(0, 3, 4)
@@ -312,6 +347,7 @@ Functions are registered in `xdl-stdlib/src/lib.rs`:
 ### Type Support
 
 All functions support:
+
 - `XdlValue::Array` - 1D arrays
 - `XdlValue::MultiDimArray` - Multi-dimensional arrays (where applicable)
 - `XdlValue::Double`, `XdlValue::Float` - Scalar values (where applicable)
@@ -331,7 +367,8 @@ cargo test --lib -p xdl-stdlib matlab_compat
 ```
 
 **Test Results:**
-```
+
+```text
 running 3 tests
 test matlab_compat::tests::test_linspace ... ok
 test matlab_compat::tests::test_logspace ... ok
@@ -349,7 +386,8 @@ Test file: `/tmp/test_matlab_compat.xdl`
 ```
 
 **Output:**
-```
+
+```text
 Testing LINSPACE...
 LINSPACE(0, 10, 11):
 [0.000000, 1.000000, ..., 10.000000] (11)
@@ -386,6 +424,7 @@ These functions **extend beyond** standard IDL/GDL capabilities:
 | INTERP1 | Partial | ✅ | Enhanced MATLAB-style implementation |
 
 **IDL/GDL Workarounds:**
+
 - IDL uses `FINDGEN` + arithmetic for linspace
 - IDL uses `REBIN` for some repmat operations
 - IDL uses nested loops for meshgrid
@@ -454,6 +493,7 @@ These functions provide a cleaner, more intuitive MATLAB-compatible API while ma
 | `interp1()` | `INTERP1()` | ⚠️ Partial | Linear only, cubic/spline planned |
 
 **Legend:**
+
 - ✅ Full: Complete compatibility with MATLAB
 - ⚠️ Partial: Core functionality works, advanced features planned
 - ❌ None: Not yet implemented
@@ -503,9 +543,11 @@ data_2d = SQUEEZE(data_4d)  ; Result: 10x20 array
 ## Files Modified
 
 ### New Files
+
 - `xdl-stdlib/src/matlab_compat.rs` - MATLAB compatibility function implementations
 
 ### Modified Files
+
 - `xdl-stdlib/src/lib.rs` - Module declaration and function registration
 - `README.md` - Documentation update
 - `docs/index.md` - Documentation index update

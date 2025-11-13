@@ -8,18 +8,21 @@
 ### 1. Main README.md Updates
 
 #### Project Status Section
+
 - **Changed**: Status from "Feature Complete ✅" to "Active Development - Beta 🚧"
 - **Added**: Accurate project statistics (~196,000 lines of Rust code, 145 source files)
 - **Added**: Specific feature counts (100+ built-in functions, 50+ ML functions, 50+ graphics procedures)
 - **Added**: Compatibility estimate (60-70% IDL/GDL compatible)
 
 #### Architecture Section
+
 - **Updated**: Workspace crates list to match actual Cargo.toml workspace members
 - **Added**: Line counts for major crates (e.g., xdl-stdlib: ~13,199 lines)
 - **Separated**: Non-workspace modules (xdl-matlab, xdl-desktop-viewer) into separate section
 - **Clarified**: xdl-matlab exists but is not in workspace (~83,000 line transpiler)
 
 #### Features Section
+
 - **Expanded**: Built-in functions list with specific categories and function names
 - **Added**: Specific counts (100+ functions, 50+ ML functions, 50+ graphics procedures)
 - **Detailed**: Machine learning capabilities (neural networks, K-means, SVM, cross-validation, activation functions, optimizers)
@@ -27,33 +30,40 @@
 - **Clarified**: MATLAB transpilation works for "basic to moderate complexity .m files"
 
 #### Language Features Section
+
 - **Added**: Explicit list of supported control flow (IF/THEN/ELSE, FOR, WHILE, REPEAT, FOREACH, BREAK, CONTINUE, RETURN)
 - **Added**: "Not yet supported" note for PRO/ENDPRO and GOTO/labels
 
 #### New Section: Known Limitations
+
 Added comprehensive "Known Limitations" section with subsections:
 
 **Language Features:**
+
 - User-defined procedures (PRO/ENDPRO) - marked as critical missing feature
 - GOTO statements not implemented
 - Complex numbers - partial support with type conversion issues
 - Advanced array indexing edge cases
 
 **Compatibility:**
+
 - 60-70% IDL/GDL compatibility estimate
 - MATLAB transpiler fragility with advanced features
 - ~64% example pass rate
 
 **Testing & Quality:**
+
 - Test runner (xdl test) is a stub
 - Various edge cases need handling
 - Error messages could be improved
 
 **Performance:**
+
 - Optimization is ongoing
 - GPU acceleration implementation depth varies
 
 #### Roadmap Section
+
 - **Updated**: Phase 5 marked as "Current Focus" instead of just 🚧
 - **Added**: Specific missing features (PRO/ENDPRO, complete complex number support, GOTO)
 - **Added**: Notes to clarify partial completion (e.g., "basic to moderate" for MATLAB, "60-70% compatible" for IDL)
@@ -61,10 +71,12 @@ Added comprehensive "Known Limitations" section with subsections:
 ### 2. Documentation Index (docs/index.md) Updates
 
 #### Status Banner
+
 - **Changed**: From "Phase 8 Complete - GPU Acceleration" to "Active Development - Beta Release"
 - **Added**: Feature highlights (100+ functions, 50+ ML features, GPU acceleration, 60-70% IDL compatibility)
 
 #### Project Status Table
+
 - **Added**: Phase 9 marked as ✅ Complete (Machine Learning with 50+ functions)
 - **Added**: Phase 10 as 🚧 Current Focus: "Compatibility & Bug Fixes"
 - **Added**: Phase 11 as 📋 Planned: "Performance Optimization"
@@ -80,6 +92,7 @@ Added comprehensive "Known Limitations" section with subsections:
 ## Accuracy Improvements
 
 ### Before Updates
+
 - Claimed "Feature Complete ✅" status
 - Listed xdl-matlab and xdl-desktop-viewer as workspace members (incorrect)
 - Vague "complete XDL/IDL language implementation" claim
@@ -87,6 +100,7 @@ Added comprehensive "Known Limitations" section with subsections:
 - Roadmap checkmarks suggested everything complete
 
 ### After Updates
+
 - Honest "Active Development - Beta" status
 - Accurate workspace member list matching Cargo.toml
 - Specific compatibility percentage (60-70%)
@@ -150,6 +164,7 @@ Added comprehensive "Known Limitations" section with subsections:
 ## Impact
 
 These updates provide:
+
 - **Transparency**: Users know what works and what doesn't
 - **Realistic expectations**: 60-70% compatibility clearly stated
 - **Contribution opportunities**: Known Limitations section shows what needs work

@@ -1,12 +1,15 @@
 # MATLAB 3D Plotting Support Fix
 
 ## Problem
+
 The file `06_3d_surface_plot.m` was failing with parse errors:
-```
+
+```text
 Parse error: Unexpected token: RightBracket at line 1, column 4
 ```
 
 The transpiled code was malformed:
+
 ```xdl
 X , Y ] = meshgrid (...)  # Missing opening bracket!
 ```
@@ -14,7 +17,9 @@ X , Y ] = meshgrid (...)  # Missing opening bracket!
 ## Root Causes
 
 ### Issue 1: Multiple Output Assignment Not Recognized
+
 **File:** `/Users/ravindraboddipalli/sources/xdl/examples/matlab/06_3d_surface_plot.m:7`
+
 ```matlab
 [X, Y] = meshgrid(-2:0.2:2);
 ```
@@ -22,16 +27,19 @@ X , Y ] = meshgrid (...)  # Missing opening bracket!
 The transpiler was treating `[X, Y]` as an array literal instead of recognizing it as a multiple output assignment pattern.
 
 ### Issue 2: Unsupported 3D Functions
+
 - `meshgrid()` - MATLAB function to create coordinate matrices, not available in XDL
 - `surf()` - MATLAB 3D surface plot, not directly supported in XDL
-- `.` element-wise operators - `.* ` and `.^` need conversion
+- `.` element-wise operators - `.*` and `.^` need conversion
 
 ## Fixes Applied
 
 ### Fix 1: Multiple Output Assignment Detection
+
 **File:** `xdl-matlab/src/transpiler.rs:860-894`
 
 Added lookahead logic to detect pattern `[id, id, ...] = ...`:
+
 ```rust
 let is_multiple_output = if expr.is_empty() {
     let mut check_pos = self.position + 1;
@@ -54,9 +62,11 @@ let is_multiple_output = if expr.is_empty() {
 Now properly outputs `[X, Y]` instead of `X , Y ]`.
 
 ### Fix 2: meshgrid Handling
+
 **File:** `xdl-matlab/src/transpiler.rs:860-899`
 
 Added detection and comment generation for `meshgrid`:
+
 ```rust
 if has_meshgrid {
     // Skip the entire line and emit helpful comments
@@ -70,9 +80,11 @@ if has_meshgrid {
 ```
 
 ### Fix 3: 3D Surface Plot Handling
+
 **File:** `xdl-matlab/src/transpiler.rs:607-627`
 
 Added handling for `surf`, `mesh`, `surfc`, `meshc`:
+
 ```rust
 "surf" | "mesh" | "surfc" | "meshc" => {
     let func_name = name.clone();
@@ -84,13 +96,17 @@ Added handling for `surf`, `mesh`, `surfc`, `meshc`:
 ```
 
 ### Fix 4: Added zlabel Mapping
+
 **File:** `xdl-matlab/src/function_map.rs:58`
+
 ```rust
 map.insert("zlabel", "ZTITLE"); // Z-axis label
 ```
 
 ### Fix 5: Updated Special Handling List
+
 **File:** `xdl-matlab/src/function_map.rs:99`
+
 ```rust
 pub fn needs_special_handling(matlab_func: &str) -> bool {
     matches!(
@@ -103,14 +119,16 @@ pub fn needs_special_handling(matlab_func: &str) -> bool {
 ## Test Results
 
 ### Before Fix
-```
+
+```text
 === Executing 06_3d_surface_plot.m ===
 ✓ Transpiled MATLAB to XDL
 ✗ Parse error: Unexpected token: RightBracket at line 1, column 4
 ```
 
 ### After Fix
-```
+
+```text
 === Executing 06_3d_surface_plot.m ===
 ✓ Transpiled MATLAB to XDL
 ✓ Executing with XDL interpreter
@@ -154,7 +172,8 @@ The following MATLAB 3D features are not yet supported in XDL and will be commen
 
 ## Workarounds for Users
 
-### Instead of meshgrid:
+### Instead of meshgrid
+
 ```matlab
 % MATLAB
 [X, Y] = meshgrid(-2:0.2:2);
@@ -168,7 +187,8 @@ X = x_vals # REPLICATE(1, 21)  ; Expand to 2D matrix
 Y = TRANSPOSE(y_vals # REPLICATE(1, 21))
 ```
 
-### Instead of surf:
+### Instead of surf
+
 ```matlab
 % MATLAB
 surf(X, Y, Z);
@@ -190,6 +210,7 @@ CONTOUR, Z  ; Contour plot
 ## Testing
 
 ### Test Command
+
 ```bash
 cargo run --bin xdl-gui
 # File > Open > examples/matlab/06_3d_surface_plot.m
@@ -197,6 +218,7 @@ cargo run --bin xdl-gui
 ```
 
 ### Expected Result
+
 - ✅ No parse errors
 - ✅ Comments explaining unsupported features
 - ✅ Helpful conversion instructions
@@ -205,6 +227,7 @@ cargo run --bin xdl-gui
 ## Impact on Other Files
 
 This fix does NOT break any existing functionality:
+
 - ✅ All other MATLAB files still work
 - ✅ 2D plotting still works
 - ✅ Basic MATLAB syntax still transpiles correctly
@@ -212,6 +235,7 @@ This fix does NOT break any existing functionality:
 ## Future Enhancements
 
 To fully support 3D plotting:
+
 1. Implement `meshgrid()` conversion to XDL array operations
 2. Add SURFACE procedure support in xdl-stdlib
 3. Implement 3D visualization backend
@@ -220,6 +244,7 @@ To fully support 3D plotting:
 ## Summary
 
 The MATLAB transpiler now gracefully handles 3D plotting functions by:
+
 1. ✅ Properly parsing multiple output assignments
 2. ✅ Commenting out unsupported functions
 3. ✅ Providing helpful conversion instructions

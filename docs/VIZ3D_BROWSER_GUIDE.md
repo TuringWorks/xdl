@@ -86,6 +86,7 @@ All three will open in separate browser tabs simultaneously!
 - `VIZ3D_BROWSER=0` - Use native window rendering (fallback)
 
 Example:
+
 ```bash
 # Use native rendering instead
 VIZ3D_BROWSER=0 ./target/release/xdl examples/demo/viz3d_showcase.xdl
@@ -123,6 +124,7 @@ WebGPU must be enabled (it's on by default in modern browsers).
 ### Browser Doesn't Open
 
 If the browser doesn't auto-open:
+
 1. Look for the URL in the console output
 2. Manually open: `http://localhost:<port>`
 3. The port is randomly assigned (e.g., `http://localhost:54321`)
@@ -130,11 +132,13 @@ If the browser doesn't auto-open:
 ### "WebGPU Not Supported" Error
 
 Update your browser:
+
 - Chrome/Edge 113+
 - Firefox 113+
 - Safari 17+ (macOS Sonoma+)
 
 Or enable WebGPU in browser flags:
+
 - Chrome: `chrome://flags/#enable-unsafe-webgpu`
 - Firefox: `about:config` → `dom.webgpu.enabled`
 
@@ -148,6 +152,7 @@ Or enable WebGPU in browser flags:
 ### Server Port Already in Use
 
 The server auto-selects a random available port. If all ports are busy:
+
 ```bash
 # Find and kill old XDL processes
 ps aux | grep xdl
@@ -217,7 +222,7 @@ END
 
 ### Architecture
 
-```
+```text
 XDL Script
     ↓
 VIZ3D_RENDER
@@ -234,12 +239,14 @@ Browser Rendering
 ### Data Transfer
 
 Volume data is:
+
 1. Encoded as Base64 in Rust
 2. Embedded directly in HTML
 3. Decoded to Float32Array in JavaScript
 4. Uploaded to GPU as 3D texture
 
 For a 64³ volume (262,144 floats):
+
 - Raw size: 1 MB
 - Base64 size: ~1.4 MB
 - Transfer time: < 100ms
@@ -247,6 +254,7 @@ For a 64³ volume (262,144 floats):
 ### Shader Reuse
 
 The browser uses the **exact same optimized WGSL shader** as native rendering:
+
 - Adaptive step sizing
 - Conditional gradient computation
 - Early ray termination
@@ -257,6 +265,7 @@ This ensures identical visual quality and performance characteristics.
 ## Migration from Native Rendering
 
 ### Old Code (Native)
+
 ```xdl
 VIZ3D_RENDER, /INTERACTIVE
 ; Blocks until window closed
@@ -264,6 +273,7 @@ VIZ3D_RENDER, /INTERACTIVE
 ```
 
 ### New Code (Browser)
+
 ```xdl
 VIZ3D_RENDER, /INTERACTIVE
 ; Opens browser tab immediately
@@ -296,6 +306,7 @@ A: Yes, edit `xdl-viz3d-web/src/template.rs` and rebuild.
 ## Future Enhancements
 
 Planned features:
+
 - [ ] Export to standalone HTML (no server needed)
 - [ ] WebSocket for live updates (animate without reloading)
 - [ ] VR/AR support (WebXR)
@@ -306,8 +317,9 @@ Planned features:
 ## Support
 
 For issues or questions:
+
 1. Check browser console (F12) for WebGPU errors
-2. Verify WebGPU support: https://webgpureport.org/
+2. Verify WebGPU support: <https://webgpureport.org/>
 3. Try the test script: `./target/release/xdl examples/demo/viz3d_browser_test.xdl`
 
 ---

@@ -49,26 +49,30 @@ XDL currently supports:
 **License:** BSD 3-Clause
 **Size:** ~280 KB (minified)
 
-#### Strengths
+#### D3.js Strengths
+
 - Industry standard for data visualization
 - Extremely flexible and composable
 - SVG-based (scalable, crisp rendering)
 - Rich ecosystem (d3-geo, d3-scale, d3-axis, etc.)
 - Excellent for custom visualizations
 
-#### Weaknesses
+#### D3.js Weaknesses
+
 - Steep learning curve
 - Performance issues with large datasets (>10K points)
 - Requires significant JavaScript knowledge
 - No built-in 3D support
 
-#### Use Cases in XDL
+#### D3.js Use Cases in XDL
+
 - **Scientific plots**: Scatter, line, area charts with custom axes
 - **Geospatial**: Map projections, choropleth maps
 - **Network graphs**: Force-directed layouts for molecular structures
 - **Custom visualizations**: Parallel coordinates, Sankey diagrams
 
-#### Integration Strategy
+#### D3.js Integration Strategy
+
 ```rust
 // xdl-stdlib: Generate D3 visualization
 fn d3_chart(data: &Array2<f64>, chart_type: &str, output: &str) {
@@ -92,26 +96,30 @@ fn d3_chart(data: &Array2<f64>, chart_type: &str, output: &str) {
 **License:** MIT
 **Size:** ~600 KB (minified)
 
-#### Strengths
+#### Three.js Strengths
+
 - WebGL-based (GPU-accelerated)
 - Rich 3D primitives and materials
 - Excellent documentation and community
 - Built-in camera controls, lights, shadows
 - Supports GLTF, OBJ, STL formats
 
-#### Weaknesses
+#### Three.js Weaknesses
+
 - Large bundle size
 - Not specialized for scientific visualization
 - Requires 3D graphics knowledge
 - Overhead for simple 2D charts
 
-#### Use Cases in XDL
+#### Three.js Use Cases in XDL
+
 - **3D surface plots**: Mesh geometries with height maps
 - **Molecular visualization**: Ball-and-stick models
 - **Volume rendering**: Alternative to current WebGPU implementation
 - **Particle systems**: Large-scale point clouds (millions of particles)
 
-#### Integration Strategy
+#### Three.js Integration Strategy
+
 ```rust
 // xdl-stdlib: Three.js surface plot
 fn threejs_surface(z_data: &Array2<f64>, output: &str) {
@@ -140,7 +148,8 @@ fn threejs_surface(z_data: &Array2<f64>, output: &str) {
 **License:** Apache 2.0
 **Size:** ~350 KB (minified)
 
-#### Strengths
+#### ECharts Strengths
+
 - **Best for XDL**: Balance of power and ease-of-use
 - Declarative configuration (JSON-based)
 - WebGL renderer built-in (echarts-gl extension)
@@ -148,18 +157,21 @@ fn threejs_surface(z_data: &Array2<f64>, output: &str) {
 - Rich chart types (50+ built-in)
 - Scientific features: 3D scatter, surface, bar3D
 
-#### Weaknesses
+#### ECharts Weaknesses
+
 - Chinese-first documentation (though English is good)
 - Less flexible than D3 for custom visualizations
 - Some advanced features require extensions
 
-#### Use Cases in XDL
+#### ECharts Use Cases in XDL
+
 - **Time series**: Multi-axis, zoomable charts
 - **Scientific plots**: Scatter, heatmaps, contours
 - **3D plots**: Surface plots, 3D scatter, 3D bar charts
 - **Dashboards**: Multi-chart layouts with linked interactions
 
-#### Integration Strategy (Recommended)
+#### ECharts Integration Strategy (Recommended)
+
 ```rust
 // xdl-stdlib: ECharts visualization
 fn echarts_render(config: &EChartsConfig, output: &str) {
@@ -192,6 +204,7 @@ fn echarts_render(config: &EChartsConfig, output: &str) {
 ### Current WebGPU Implementation
 
 XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal for:
+
 - Volume ray marching
 - Compute-heavy shaders
 - Low-level GPU control
@@ -220,6 +233,7 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
 ### Phase 1: Prototyping (2-3 weeks)
 
 **Deliverables:**
+
 1. ✅ **Branch created**: `investigate-charting-webgl`
 2. 📋 **Three prototype implementations:**
    - D3.js: Interactive scatter plot with brush selection
@@ -239,6 +253,7 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
 ### Phase 2: Evaluation (1 week)
 
 **Deliverables:**
+
 1. 📋 **Technical comparison matrix:**
    - Performance scores
    - Feature coverage
@@ -258,6 +273,7 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
 ### Phase 3: Implementation (3-4 weeks, if approved)
 
 **Deliverables:**
+
 1. 📋 **New crate: xdl-charts**
    - Chart configuration structs
    - Template generator
@@ -265,6 +281,7 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
    - Server integration (reuse xdl-viz3d-web server)
 
 2. 📋 **XDL procedures:**
+
    ```xdl
    CHART_INIT, TYPE='scatter', TITLE='My Chart'
    CHART_DATA, x_values, y_values, LABEL='Series 1'
@@ -401,6 +418,7 @@ webbrowser = "1.0"        # Already in xdl-viz3d-web
 ### Recommended: Tauri Integration
 
 **Why Tauri over Electron:**
+
 - Written in Rust (fits XDL's stack)
 - 20-40x smaller bundle size
 - Uses system WebView (no bundled Chromium)
@@ -408,6 +426,7 @@ webbrowser = "1.0"        # Already in xdl-viz3d-web
 - Active development, growing ecosystem
 
 **Implementation:**
+
 ```toml
 # New crate: xdl-desktop-viewer
 [dependencies]
@@ -416,6 +435,7 @@ tauri-plugin-window = "2.0"  # Window management
 ```
 
 **Usage Pattern:**
+
 ```rust
 // xdl-stdlib: Launch in desktop window or browser
 fn render_chart(html: &str, mode: RenderMode) {
@@ -427,6 +447,7 @@ fn render_chart(html: &str, mode: RenderMode) {
 ```
 
 **User Control:**
+
 ```xdl
 ; Use desktop window (if available)
 CHART_RENDER, 'output.html', /DESKTOP
@@ -441,6 +462,7 @@ CHART_RENDER, 'output.html'  ; Uses desktop if xdl-desktop-viewer installed
 ### Phase 1 Addition: Desktop Window Prototype
 
 **Additional Deliverable:**
+
 - 📋 **Tauri POC**: Simple desktop window displaying ECharts
   - Basic Tauri app (~100 lines Rust)
   - Opens chart in native window
@@ -448,6 +470,7 @@ CHART_RENDER, 'output.html'  ; Uses desktop if xdl-desktop-viewer installed
   - Measure resource usage
 
 **Decision Criteria:**
+
 - If users prefer desktop UX → Add Tauri support in Phase 3
 - If browser is sufficient → Keep browser-only (simpler)
 - Offer both options (feature flag: `--features desktop-viewer`)
@@ -460,6 +483,7 @@ CHART_RENDER, 'output.html'  ; Uses desktop if xdl-desktop-viewer installed
 
 1. ✅ Create branch: `investigate-charting-webgl`
 2. 📋 **Set up prototype directory:**
+
    ```bash
    mkdir -p prototypes/charting
    mkdir -p prototypes/charting/d3js

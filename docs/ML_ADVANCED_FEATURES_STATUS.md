@@ -36,13 +36,15 @@
    - Computationally expensive but unbiased
    - Each sample used once as validation
 
-### Testing Status
+### Cross-Validation Testing Status
+
 - ✅ All functions tested and working
 - ✅ Validated fold proportions
 - ✅ Verified stratification maintains distribution
 - ✅ Confirmed LOO single-sample validation
 
-### Example Usage
+### Example Usage: Cross-Validation
+
 ```idl
 ; 5-fold cross-validation
 folds = XDLML_KFOLD(100, 5, 42, 1)
@@ -86,7 +88,8 @@ folds_loo = XDLML_LEAVEONEOUT(50)
    - Reproducible with seeds
    - Scaling: `1 / (1 - dropout_rate)` maintains expected sum
 
-### Testing Status
+### Regularization Testing Status
+
 - ✅ Batch Normalization training mode verified
 - ✅ Batch Normalization inference mode verified
 - ✅ Gamma/Beta parameters working correctly
@@ -95,6 +98,7 @@ folds_loo = XDLML_LEAVEONEOUT(50)
 - ✅ Inverted dropout scaling validated
 
 ### Example Usage
+
 ```idl
 ; Batch normalization in training
 normalized = XDLML_BATCHNORMALIZATION(activations, 1.0, 0.0, 0)
@@ -133,6 +137,7 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
    - For sequence/time-series data
 
 ### Technical Requirements
+
 - **2D Array Support**: Need to extend XdlValue for multi-dim arrays
 - **Memory Layout**: Row-major or column-major decision
 - **Shape Tracking**: Dimensions metadata for operations
@@ -155,6 +160,7 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
    - Simplified alternative to LSTM
 
 ### Technical Requirements
+
 - **Sequence Support**: Handle 3D arrays (batch, time, features)
 - **State Management**: Hidden state persistence
 - **Backpropagation Through Time**: Temporal gradients
@@ -191,6 +197,7 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
 | **Total** | **62-64** | **55 done** | **~86%** |
 
 ### Lines of Code
+
 - **ML Module**: ~3,700+ lines (ml.rs)
 - **Test Scripts**: 3 comprehensive test files
 - **Documentation**: Complete API reference + status docs
@@ -200,11 +207,13 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
 ## 🎯 Key Achievements
 
 ### Regularization & Training Enhancements
+
 ✅ **Cross-Validation**: Robust model evaluation
 ✅ **Batch Normalization**: Stable training dynamics
 ✅ **Dropout**: Effective overfitting prevention
 
 ### Code Quality
+
 ✅ **Zero Compilation Errors**: Clean builds
 ✅ **Comprehensive Testing**: All functions validated
 ✅ **Production-Ready**: Proper error handling & edge cases
@@ -215,18 +224,21 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
 ## 🚀 Next Steps
 
 ### Immediate (Phase 3)
+
 1. Design 2D array support in XdlValue
 2. Implement Conv2D with basic kernels
 3. Add MaxPooling2D and AveragePooling2D
 4. Test with simple CNN use cases
 
 ### Short-Term (Phase 4)
+
 1. Extend to 3D arrays for sequences
 2. Implement RNN cell with backprop through time
 3. Add LSTM with gate mechanisms
 4. Test on sequence classification tasks
 
 ### Long-Term (Phase 5)
+
 1. Build complete CNN model function
 2. Build complete RNN/LSTM model function
 3. Add advanced layers (attention, etc.)
@@ -239,16 +251,19 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
 ### Design Decisions
 
 **Why Start with Cross-Validation & Regularization?**
+
 - Don't require multi-dimensional array support
 - High value for model evaluation and training
 - Can be implemented with current 1D array infrastructure
 
 **Next: Why Convolutional Layers?**
+
 - Require 2D support which benefits other areas
 - CNNs are widely used and well-understood
 - Foundation for more complex architectures
 
-**Multi-Dimensional Arrays**
+### Multi-Dimensional Arrays
+
 - Critical for Conv2D and RNN layers
 - Need to decide on memory layout (row/column major)
 - May need new XdlValue variant or metadata system
@@ -258,12 +273,14 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
 ## 🧪 Testing Coverage
 
 ### Test Files Created
+
 1. `ml_cv_simple_test.xdl` - Cross-validation validation
 2. `ml_reg_simple_test.xdl` - Regularization layer tests
 3. `ml_advanced_models_test.xdl` - Neural network & SVM tests
 4. `ml_comprehensive_test.xdl` - Core ML function suite
 
 ### Validation Metrics
+
 - ✅ Fold proportions and distributions
 - ✅ Normalization mean/variance correctness
 - ✅ Dropout rate adherence
@@ -275,16 +292,19 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
 ## 📚 References
 
 ### Batch Normalization
+
 - Ioffe & Szegedy (2015). "Batch Normalization: Accelerating Deep Network Training"
 - Reduces internal covariate shift
 - Allows higher learning rates (10-30x)
 
 ### Dropout
+
 - Srivastava et al. (2014). "Dropout: A Simple Way to Prevent Neural Networks from Overfitting"
 - Reduces co-adaptation of neurons
 - Ensemble effect during inference
 
 ### Cross-Validation
+
 - Kohavi (1995). "A Study of Cross-Validation and Bootstrap"
 - Essential for reliable model evaluation
 - Stratified variants for imbalanced data
@@ -297,5 +317,3 @@ output = XDLML_DROPOUT(activations, 0.5, 0)
 **Test Status**: ✅ All passing
 
 ---
-
-*Last Updated: January 22, 2025*

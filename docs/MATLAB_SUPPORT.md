@@ -48,6 +48,7 @@ The MATLAB transpiler is a work in progress and has some limitations:
 ## Example
 
 ### MATLAB Code (test_simple.m)
+
 ```matlab
 % Simple calculation
 x = 5;
@@ -56,6 +57,7 @@ disp(y);
 ```
 
 ### Execution
+
 ```bash
 $ xdl test_simple.m
 10
@@ -64,11 +66,13 @@ $ xdl test_simple.m
 ## Implementation Details
 
 ### CLI Integration
+
 - File: `xdl-cli/src/main.rs`
 - Function: `execute_file()`
 - The function checks the file extension and calls `xdl_matlab::transpile_matlab_to_xdl()` for `.m` files
 
 ### GUI Integration
+
 - File: `xdl-gui/src/gui.rs`
 - Location: File Open dialog callback
 - The GUI detects `.m` files and transpiles them before loading into the editor

@@ -13,6 +13,7 @@ The XDL AMP (Accelerated Math Processing) multi-backend GPU implementation provi
 ### 1.1 Array Operations
 
 **Before (CPU only)**:
+
 ```xdl
 ; Matrix multiplication of 1000x1000 matrices
 IDL> a = RANDOMU(seed, 1000, 1000)
@@ -21,6 +22,7 @@ IDL> c = a # b  ; Takes ~500ms on CPU
 ```
 
 **After (GPU-accelerated with MPS)**:
+
 ```xdl
 ; Same operation on GPU
 IDL> a = RANDOMU(seed, 1000, 1000)
@@ -54,6 +56,7 @@ IDL> y = SIN(x) * COS(x) + EXP(-x/1000)
 ```
 
 **Supported GPU-accelerated operations:**
+
 - ✅ Arithmetic: `+`, `-`, `*`, `/`, `^`
 - ✅ Trigonometry: `SIN`, `COS`, `TAN`, `ASIN`, `ACOS`, `ATAN`
 - ✅ Exponential: `EXP`, `LOG`, `LOG10`, `SQRT`
@@ -158,6 +161,7 @@ IDL> CONTOUR, z, /FILL, NLEVELS=50
 ### 3.1 Volume Rendering (xdl-viz3d-web)
 
 **Current Implementation:**
+
 - Uses **WebGPU** (cutting-edge, most performant)
 - Ray marching on GPU
 - Real-time interaction (60 FPS)
@@ -276,10 +280,12 @@ let config = ChartConfig {
 ### 4.2 Multi-Chart Dashboards
 
 **Before (static images):**
+
 - 4 charts × 250ms each = 1000ms total
 - No interaction
 
 **After (WebGL-accelerated):**
+
 - 4 charts × 15ms each = 60ms total
 - Full interactivity: pan, zoom, linked brushing
 - **16x faster rendering**
@@ -374,7 +380,7 @@ pub fn render_surface_threejs(z_data: &Array2<f32>) -> Result<()> {
 
 **Performance Advantage:**
 
-```
+```text
 Traditional Flow:
 CPU data → Compute on CPU → Copy to GPU → WebGL render
     100ms +    500ms      +    50ms     +    8ms     = 658ms
@@ -395,6 +401,7 @@ GPU data → Compute on GPU → WebGL render (already in GPU)
 **Apple Silicon Advantages:**
 
 1. **Unified Memory**: Zero-copy between CPU and GPU
+
    ```xdl
    ; Data stays in shared memory
    IDL> a = GPU_ARRAY([1000, 1000])
@@ -422,11 +429,13 @@ GPU data → Compute on GPU → WebGL render (already in GPU)
 ### 6.2 Windows/Linux Comparison
 
 **NVIDIA GPU (CUDA/cuDNN)**:
+
 - Better raw compute (RTX 4090: 82 TFLOPS)
 - Requires explicit memory transfers
 - Excellent for batch processing
 
 **AMD GPU (ROCm)**:
+
 - Good open-source support
 - Competitive performance
 - Best for Linux HPC
@@ -492,14 +501,14 @@ IDL> VIZ3D_VOLUME, cube, /WEBGPU
 
 **Traditional Workflow (Data Ping-Pong):**
 
-```
+```text
 CPU → GPU (50ms) → Process (10ms) → CPU (50ms) → Display
 Total: 110ms, mostly transfers!
 ```
 
 **With XDL AMP (Data Stays on GPU):**
 
-```
+```text
 CPU → GPU (50ms) → Process (10ms) → Display (direct) → ...
 Total: 60ms first time, then 10ms per operation
 ```
@@ -565,21 +574,25 @@ export XDL_GPU_VERBOSE=1
 ## 10. Future Performance Roadmap
 
 ### Q1 2026
+
 - [ ] Optimized GEMM for all backends (50% more performance)
 - [ ] GPU-accelerated FFT (30x speedup)
 - [ ] Batch operation API (reduce overhead)
 
 ### Q2 2026
+
 - [ ] Double precision (f64) support
 - [ ] Multi-GPU support (2-4x more performance)
 - [ ] Async/streaming API (overlap compute and transfer)
 
 ### Q3 2026
+
 - [ ] Tensor cores support (NVIDIA) - 10x for ML
 - [ ] Custom kernel API for advanced users
 - [ ] Auto-tuning (automatically find fastest backend)
 
 ### 2027+
+
 - [ ] Distributed GPU computing
 - [ ] Remote GPU acceleration
 - [ ] WebGPU compute shaders in browser
@@ -616,21 +629,25 @@ IDL> PRINT, 'Speedup:', t_cpu/t_gpu
 The XDL AMP multi-backend GPU acceleration provides:
 
 ### ✅ **Numerical Performance**
+
 - **20-50x speedup** for large array operations
 - **10-30x** for mathematical functions
 - **Real-time processing** previously impossible on CPU
 
 ### ✅ **2D Visualization**
+
 - **60 FPS** for up to 100K points (WebGL)
 - **14x faster** chart rendering
 - **Smooth** pan/zoom on large datasets
 
 ### ✅ **3D Visualization**
+
 - **60 FPS** volume rendering (WebGPU)
 - **45-60 FPS** surface plots (WebGL)
 - **20-100x speedup** for isosurface extraction
 
 ### ✅ **On Your macOS System (MPS)**
+
 - **Unified memory** = no copy overhead
 - **Highly optimized** for Apple Silicon
 - **Production ready** today

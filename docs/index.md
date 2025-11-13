@@ -7,6 +7,7 @@ permalink: /
 ---
 
 # XDL - Extended Data Language
+
 {: .fs-9 }
 
 A modern Rust implementation of the Extended Data Language (XDL), providing IDL-compatible data analysis and visualization capabilities with GPU acceleration.
@@ -22,7 +23,8 @@ A modern Rust implementation of the Extended Data Language (XDL), providing IDL-
 
 ## 🚀 Getting Started
 
-<div class="code-example" markdown="1">
+< div class="code-example" markdown="1">
+
 ### Installation
 
 ```bash
@@ -40,6 +42,7 @@ x = findgen(100)
 y = sin(x * !pi / 50)
 plot, x, y, title='XDL Plot'
 ```
+
 </div>
 
 [Installation Guide →](getting-started/installation){: .btn .btn-outline }
@@ -51,6 +54,7 @@ plot, x, y, title='XDL Plot'
 ## 📚 Documentation Sections
 
 ### Getting Started
+
 {: .text-delta }
 
 Essential resources to begin using XDL
@@ -64,6 +68,7 @@ Essential resources to begin using XDL
 - [Examples](README) - Sample code and tutorials
 
 ### Core Features
+
 {: .text-delta }
 
 Language implementation and core functionality
@@ -75,11 +80,13 @@ Language implementation and core functionality
 - [Keyword Arguments](KEYWORD_ARGS_IMPLEMENTATION) - Function keyword arguments
 
 ### Graphics & Visualization
+
 {: .text-delta }
 
 Comprehensive 2D and 3D graphics capabilities
 
 #### 2D Graphics
+
 - [Graphics Overview](GRAPHICS_IMPLEMENTATION) - 2D graphics implementation
 - [Graphics Quick Reference](GRAPHICS_QUICK_REF) - Command reference
 - [Charting Status](CHARTING_FINAL_STATUS) - Chart and plot features
@@ -87,6 +94,7 @@ Comprehensive 2D and 3D graphics capabilities
 - [Bezier Curves](BEZIER_IMPLEMENTATION_SUMMARY) - Curve drawing features
 
 #### 3D Visualization
+
 - [3D Visualization Complete](VIZ3D_COMPLETE_FINAL) - Full 3D guide
 - [3D Browser Rendering](VIZ3D_BROWSER_GUIDE) - Browser-based 3D
 - [Three.js Integration](VIZ3D_THREEJS_COMPLETE) - Three.js backend
@@ -94,6 +102,7 @@ Comprehensive 2D and 3D graphics capabilities
 - [Scientific Visualization](SCIENTIFIC_VISUALIZATION_GUIDE) - Scientific plotting
 
 ### GPU Acceleration
+
 {: .text-delta }
 
 High-performance GPU computing features
@@ -104,17 +113,20 @@ High-performance GPU computing features
 - [GPU Demo Guide](README_XDL_AMP_DEMO) - GPU examples and tutorials
 
 ### Compatibility
+
 {: .text-delta }
 
 IDL/GDL and MATLAB compatibility layers
 
 #### IDL/GDL Compatibility
+
 - [IDL Command Status](IDL_COMMAND_STATUS) - Supported IDL commands
 - [GDL/IDL Compatibility](GDL_IDL_COMPATIBILITY) - Compatibility layer
 - [GDL/IDL Syntax](GDL_IDL_SYNTAX) - Syntax reference
 - [Gap Analysis](GDL_XDL_GAP_ANALYSIS) - Feature comparison
 
 #### MATLAB Compatibility
+
 - [MATLAB Support](MATLAB_SUPPORT) - MATLAB compatibility overview
 - [MATLAB Plotting](MATLAB_PLOTTING_GUIDE) - MATLAB plot functions
 - [MATLAB Compatibility Functions](MATLAB_3D_PLOT_FIX) - LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
@@ -122,6 +134,7 @@ IDL/GDL and MATLAB compatibility layers
 - [Tiled Layout](MATLAB_TILEDLAYOUT) - Tiled layout support
 
 ### Advanced Topics
+
 {: .text-delta }
 
 Machine learning, Python integration, and more
@@ -133,6 +146,7 @@ Machine learning, Python integration, and more
 - [Rayleigh-Taylor Demo](README_RAYLEIGH_TAYLOR) - Physics simulation
 
 ### Development
+
 {: .text-delta }
 
 Contributing and building XDL
@@ -147,18 +161,22 @@ Contributing and building XDL
 ## ✨ Key Features
 
 ### Memory Safety
+
 {: .text-delta }
 Leveraging Rust's ownership system for safe memory management
 
 ### Performance
+
 {: .text-delta }
 Native code performance with zero-cost abstractions and GPU acceleration
 
 ### Concurrency
+
 {: .text-delta }
 Safe parallelism using Rust's async/await and threading primitives
 
 ### Interoperability
+
 {: .text-delta }
 FFI interfaces to existing scientific libraries and Python 3.13 integration
 
@@ -201,6 +219,7 @@ XDL is structured as a Cargo workspace with the following crates:
 | Phase 11 | 📋 Planned | Performance Optimization |
 
 **Current Focus (Phase 10):**
+
 - User-defined procedures (PRO/ENDPRO) - critical missing feature
 - Complex number edge cases
 - Advanced array indexing improvements

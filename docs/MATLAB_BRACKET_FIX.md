@@ -3,17 +3,20 @@
 ## Problem
 
 When transpiling MATLAB code with multiple output assignments like:
+
 ```matlab
 [X, Y] = meshgrid(-2:0.2:2);
 ```
 
 The transpiled XDL output was missing the opening bracket:
+
 ```xdl
 X , Y ] = MESHGRID(...)  ❌
 ```
 
 This caused a parse error:
-```
+
+```text
 Parse error: Unexpected token: RightBracket at line 1, column 4
 ```
 
@@ -49,6 +52,7 @@ The `collect_expression_until_newline()` function had logic to detect and handle
 **File:** `xdl-matlab/src/transpiler.rs:117`
 
 **Before:**
+
 ```rust
 TokenKind::Identifier(_) => {
     self.transpile_statement()?;
@@ -56,6 +60,7 @@ TokenKind::Identifier(_) => {
 ```
 
 **After:**
+
 ```rust
 TokenKind::Identifier(_) | TokenKind::LeftBracket => {
     self.transpile_statement()?;
@@ -69,11 +74,13 @@ TokenKind::Identifier(_) | TokenKind::LeftBracket => {
 **File:** `xdl-matlab/src/transpiler.rs:936`
 
 **Before:**
+
 ```rust
 let is_multiple_output = if expr.is_empty() {
 ```
 
 **After:**
+
 ```rust
 let is_multiple_output = if expr.trim().is_empty() {
 ```
@@ -83,6 +90,7 @@ let is_multiple_output = if expr.trim().is_empty() {
 ### Debug Logging Added
 
 Added debug output to trace the lookahead logic (lines 957-962):
+
 ```rust
 eprintln!("DEBUG: LeftBracket at expr.is_empty()={}, found_ids={}, found_bracket={}, found_assign={}",
     expr.trim().is_empty(), found_ids, found_bracket, found_assign);
@@ -132,9 +140,11 @@ This can be removed after verification or left for future debugging.
 ## Testing
 
 ### Test File
+
 `examples/matlab/06_3d_surface_plot.m`
 
 ### MATLAB Input
+
 ```matlab
 [X, Y] = meshgrid(-2:0.2:2);
 Z = X .* exp(-X.^2 - Y.^2);
@@ -142,6 +152,7 @@ surf(X, Y, Z);
 ```
 
 ### Expected XDL Output
+
 ```xdl
 [X, Y] = MESHGRID(FINDGEN(21) * 0.2 + -2)
 Z = X * EXP(- X ^ 2 - Y ^ 2)
@@ -150,13 +161,15 @@ SURFACE, Z
 ```
 
 ### Before Fix
-```
+
+```text
 Parse error: Unexpected token: RightBracket at line 1, column 4
 ❌ Execution failed
 ```
 
 ### After Fix
-```
+
+```text
 ✓ Transpiled successfully
 ✓ Parse successful
 ✓ (May still have runtime issues, but syntax is correct)
@@ -165,6 +178,7 @@ Parse error: Unexpected token: RightBracket at line 1, column 4
 ## Additional Benefits
 
 This fix also enables proper handling of:
+
 - Any statement starting with `[`
 - Array assignments like `[a, b, c] = deal(1, 2, 3)`
 - Nested array structures at statement level
@@ -173,16 +187,19 @@ This fix also enables proper handling of:
 ## Impact Analysis
 
 ### Risk: Low
+
 - Minimal change (added one token kind to existing case)
 - Leverages existing, well-tested multiple output logic
 - No changes to core parsing logic
 
 ### Compatibility
+
 - ✅ Existing MATLAB files continue to work
 - ✅ New pattern now supported
 - ✅ No breaking changes
 
 ### Performance
+
 - ✅ No performance impact
 - ✅ Same number of function calls
 - ✅ Lookahead already existed, just now properly reached
@@ -190,17 +207,22 @@ This fix also enables proper handling of:
 ## Lessons Learned
 
 ### Key Insight
+
 **Token dispatch at the top level is critical.** If a token kind isn't explicitly handled at the top level, it gets skipped, and all downstream logic becomes irrelevant.
 
 ### Testing Strategy
+
 When debugging transpilation issues:
+
 1. **Start from the top** - check `transpile()` function first
 2. **Trace the token** - follow the exact path each token takes
 3. **Verify assumptions** - don't assume functions are being called just because they exist
 4. **Add debug output** - eprintln! is your friend during transpiler debugging
 
 ### Prevention
+
 Future transpiler additions should:
+
 - Document which token kinds are handled at each level
 - Add explicit cases for all statement-starting tokens
 - Consider a more general "expression statement" case

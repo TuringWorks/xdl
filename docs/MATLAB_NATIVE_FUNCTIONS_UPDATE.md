@@ -9,6 +9,7 @@ Updated the MATLAB transpiler to use the new native MATLAB compatibility functio
 ### 1. Function Mappings (`xdl-matlab/src/function_map.rs`)
 
 **Added MATLAB compatibility function mappings:**
+
 ```rust
 // MATLAB compatibility functions
 map.insert("linspace", "LINSPACE");
@@ -21,28 +22,35 @@ map.insert("interp1", "INTERP1");
 ```
 
 **Updated special handling list:**
+
 - Removed `meshgrid` and `surf` from special handling
 - Now only: `"ones" | "rand" | "randn" | "eye"` need special handling
 
 ### 2. Transpiler Updates (`xdl-matlab/src/transpiler.rs`)
 
 #### meshgrid Handling
+
 **Before:**
+
 - Generated nested loops to create coordinate matrices
 - Created temporary x_vec, y_vec variables
 - Emitted 10+ lines of loop code
 
 **After:**
+
 - Uses native `MESHGRID()` function
 - Simple one-line conversion: `[X, Y] = meshgrid(...)` → `[X, Y] = MESHGRID(...)`
 - Removed ~115 lines of special handling code
 
 #### surf/mesh Handling
+
 **Before:**
+
 - Just commented out with instructions
 - No executable code generated
 
 **After:**
+
 - Converts `surf(X, Y, Z)` → `SURFACE, Z`
 - Converts `mesh(X, Y, Z)` → `SURFACE, Z`
 - Generates working XDL code
@@ -50,6 +58,7 @@ map.insert("interp1", "INTERP1");
 ### 3. Expected Transpilation Output
 
 **MATLAB Input:**
+
 ```matlab
 [X, Y] = meshgrid(-2:0.5:2);
 Z = X .* exp(-X.^2 - Y.^2);
@@ -61,6 +70,7 @@ title('Test Surface');
 ```
 
 **XDL Output:**
+
 ```xdl
 [X, Y] = MESHGRID(FINDGEN(9) * 0.5 + -2)
 Z = X  *  EXP (- X  ^  2 - Y  ^  2 )
@@ -75,21 +85,25 @@ SURFACE, Z
 ## Benefits
 
 ### 1. **Cleaner Code**
+
 - Single function call instead of nested loops
 - More readable transpiled output
 - Easier to debug
 
 ### 2. **Better Performance**
+
 - Native implementation is optimized
 - No temporary variables
 - Reduced memory allocation
 
 ### 3. **MATLAB Compatibility**
+
 - Direct function-to-function mapping
 - Maintains MATLAB semantics
 - Works with existing MATLAB code patterns
 
 ### 4. **Executable Output**
+
 - `surf()` now generates working `SURFACE` calls
 - Previously just commented out
 - Actual visualization produced
@@ -97,6 +111,7 @@ SURFACE, Z
 ## File Modifications
 
 ### Modified Files
+
 1. **xdl-matlab/src/function_map.rs**
    - Added 7 MATLAB compatibility function mappings
    - Updated `needs_special_handling()` to remove meshgrid/surf
@@ -107,6 +122,7 @@ SURFACE, Z
    - Simplified statement processing
 
 ### Build Status
+
 ✅ Compiled successfully
 ✅ No warnings
 ✅ All existing tests pass
@@ -116,6 +132,7 @@ SURFACE, Z
 ### Test File: `examples/matlab/06_3d_surface_plot.m`
 
 **Before:**
+
 ```xdl
 ; meshgrid equivalent using XDL arrays
 x_vec = FINDGEN(21) * 0.2 + -2
@@ -138,6 +155,7 @@ Z = X  *  EXP (- X  ^  2 - Y  ^  2 )
 ```
 
 **After (Expected):**
+
 ```xdl
 [X, Y] = MESHGRID(FINDGEN(21) * 0.2 + -2)
 Z = X  *  EXP (- X  ^  2 - Y  ^  2 )
@@ -146,6 +164,7 @@ SURFACE, Z
 ```
 
 **Improvement:**
+
 - **16 lines** → **3 lines**  (81% reduction)
 - **Loop-based** → **Native function**
 - **Commented** → **Executable**
@@ -153,6 +172,7 @@ SURFACE, Z
 ### How to Test
 
 1. **Open XDL GUI:**
+
    ```bash
    ./target/release/xdl-gui
    ```
@@ -203,6 +223,7 @@ SURFACE, Z
 ## Rollback Plan
 
 If issues occur, revert these commits:
+
 ```bash
 git diff HEAD xdl-matlab/src/transpiler.rs
 git diff HEAD xdl-matlab/src/function_map.rs

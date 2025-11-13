@@ -188,12 +188,14 @@ pip install cartopy geopandas
 ## Documentation
 
 For full GIS API documentation, see:
+
 - `docs/SCIENTIFIC_VISUALIZATION_GUIDE.md` - Complete guide
 - `xdl-stdlib/src/graphics/gis.rs` - Source code with examples
 
 ## Support
 
 If you encounter issues:
+
 1. Verify PROJ installation: `proj --version`
 2. Check pkg-config: `pkg-config --modversion proj`
 3. Ensure PROJ >= 9.2.0 is installed

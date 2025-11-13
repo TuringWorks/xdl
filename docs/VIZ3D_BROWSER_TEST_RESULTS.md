@@ -26,7 +26,7 @@ Browser-based visualization has been successfully implemented and tested across 
 
 ### 1. viz3d_browser_test.xdl ✅
 
-```
+```text
 Status: SUCCESS
 Time: < 1 second
 Browser opened: Yes
@@ -34,13 +34,15 @@ Tabs created: 1
 ```
 
 **Output:**
-```
+
+```text
 ✓ Test complete!
   The visualization is now running in your browser.
   You can close this XDL script, but the browser tab will remain active.
 ```
 
 **Features Verified:**
+
 - ✅ Volume data encoding (32³ = 32,768 voxels)
 - ✅ Browser auto-open
 - ✅ Server starts on random port
@@ -51,7 +53,7 @@ Tabs created: 1
 
 ### 2. viz3d_showcase.xdl ✅
 
-```
+```text
 Status: SUCCESS
 Time: ~60 seconds (volume computation)
 Browser tabs opened: 1 (Demo 1)
@@ -59,7 +61,8 @@ Demos 2-4: Non-interactive (as designed)
 ```
 
 **Output:**
-```
+
+```text
 ✓ Demo 1 complete!
 ✓ Demo 2 complete! (To view interactively, run: ...)
 ✓ Demo 3 complete! (To view interactively, run: ...)
@@ -75,6 +78,7 @@ Demonstrated capabilities:
 ```
 
 **Features Verified:**
+
 - ✅ Multiple visualizations in sequence
 - ✅ Different colormaps per visualization
 - ✅ 64³ volumes (262,144 voxels each)
@@ -86,14 +90,15 @@ Demonstrated capabilities:
 
 ### 3. viz3d_test_simple.xdl ✅
 
-```
+```text
 Status: SUCCESS
 Time: < 1 second
 Mode: Non-interactive (by design)
 ```
 
 **Output:**
-```
+
+```text
 === VIZ3D Test ===
 VIZ3D: Initialized (800x600)
 VIZ3D: Set colormap to VIRIDIS
@@ -107,6 +112,7 @@ Test complete!
 ```
 
 **Features Verified:**
+
 - ✅ Non-interactive mode works
 - ✅ Small volume (4³ = 64 voxels)
 - ✅ Initialization without browser launch
@@ -116,14 +122,15 @@ Test complete!
 
 ### 4. rayleigh_taylor_simple.xdl ✅
 
-```
+```text
 Status: SUCCESS
 Time: ~2 seconds
 Mode: Non-interactive
 ```
 
 **Output:**
-```
+
+```text
 === Rayleigh-Taylor Instability Demo ===
 
 Grid size: 32 x 32 x 32
@@ -142,6 +149,7 @@ VIZ3D framework is ready and working!
 ```
 
 **Features Verified:**
+
 - ✅ Scientific simulation visualization
 - ✅ Rainbow colormap
 - ✅ 32³ volume
@@ -174,6 +182,7 @@ VIZ3D framework is ready and working!
 ## Key Features Verified
 
 ### ✅ Core Functionality
+
 - [x] Volume data Base64 encoding
 - [x] HTTP server on random port
 - [x] Browser auto-open
@@ -182,6 +191,7 @@ VIZ3D framework is ready and working!
 - [x] Server thread management
 
 ### ✅ Visualization Features
+
 - [x] 6 colormaps (Viridis, Rainbow, Plasma, Inferno, Turbo, Grayscale)
 - [x] Interactive camera controls
 - [x] Mouse rotation and zoom
@@ -190,6 +200,7 @@ VIZ3D framework is ready and working!
 - [x] Volume info display
 
 ### ✅ Integration
+
 - [x] Works with xdl CLI
 - [x] Compatible with xdl-gui
 - [x] Backward compatible (native fallback with VIZ3D_BROWSER=0)
@@ -200,7 +211,8 @@ VIZ3D framework is ready and working!
 ## Known Issues (None Critical)
 
 ### 1. volume_render_simple.xdl - Parse Error
-```
+
+```text
 Error: Parse error: Unexpected token: Endfor
 ```
 
@@ -209,6 +221,7 @@ Error: Parse error: Unexpected token: Endfor
 **Workaround:** Use viz3d_showcase.xdl or viz3d_browser_test.xdl
 
 ### 2. Server Thread Lifecycle
+
 **Behavior:** Server threads continue running after script completes
 **Impact:** Browsers can still access visualizations after XDL exits
 **Is this a problem?:** No - this is actually a feature! Users can keep browser tabs open.
@@ -218,7 +231,8 @@ Error: Parse error: Unexpected token: Endfor
 ## Comparison: Before vs After
 
 ### Before (Native Window)
-```
+
+```text
 ❌ Single window per process
 ❌ Event loop crashes
 ❌ macOS winit warnings
@@ -228,7 +242,8 @@ Error: Parse error: Unexpected token: Endfor
 ```
 
 ### After (Browser)
-```
+
+```text
 ✅ Unlimited windows (tabs)
 ✅ No crashes
 ✅ No warnings
@@ -267,6 +282,7 @@ VIZ3D_BROWSER=0 ./target/release/xdl examples/demo/viz3d_browser_test.xdl
 ✅ **Browser-based visualization is production-ready**
 
 All critical functionality has been tested and verified. The implementation:
+
 - Solves all previous limitations (event loop, multi-window)
 - Provides superior performance (60 FPS)
 - Offers better UX (interactive controls, DevTools)

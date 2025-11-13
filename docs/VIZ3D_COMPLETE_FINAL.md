@@ -7,6 +7,7 @@ Successfully implemented a complete 3D volume visualization system for XDL with 
 ## Features Implemented
 
 ### ✅ 3D Visualization (VIZ3D)
+
 - **Window Creation**: Native windows using winit + WebGPU
 - **Volume Ray Marching**: GPU-accelerated volume rendering with WGSL shaders
 - **Interactive Camera**: Mouse rotation and zoom controls
@@ -14,16 +15,19 @@ Successfully implemented a complete 3D volume visualization system for XDL with 
 - **Multi-dimensional Data**: Full support for 3D array visualization
 
 ### ✅ Parser Enhancements
+
 1. **Nested IF/THEN/ELSE/END blocks** - Proper handling of BEGIN...END
 2. **Nested FOR/END loops** - Support for complex loop nesting
 3. **/KEYWORD syntax** - Boolean flags like `/INTERACTIVE`
 
 ### ✅ Multi-Dimensional Arrays
+
 - **FLTARR(nx, ny, nz)** - Creates true 3D arrays
 - **N-D indexing** - `arr[i, j, k]` for reading and writing
 - **Row-major layout** - C-style memory layout
 
 ### ✅ GUI Compatibility
+
 - **Environment Detection**: Uses `XDL_GUI_MODE` to detect GUI environment
 - **Graceful Degradation**: Shows message instead of blocking window in GUI
 - **CLI Support**: Full interactive 3D windows in CLI mode
@@ -78,16 +82,19 @@ VIZ3D_RENDER, /INTERACTIVE
 All three demos work correctly:
 
 ### 1. viz3d_test_simple.xdl ✅
+
 - 4³ test volume
 - Non-interactive mode
 - Tests basic VIZ3D pipeline
 
 ### 2. rayleigh_taylor_simple.xdl ✅
+
 - 32³ simplified simulation
 - Non-interactive mode
 - Shows VIZ3D with actual simulation data
 
 ### 3. rayleigh_taylor.xdl ✅
+
 - 32³ full simulation with time evolution
 - **Interactive mode** with `/INTERACTIVE`
 - Complete Rayleigh-Taylor instability simulation
@@ -96,12 +103,14 @@ All three demos work correctly:
 ## Usage
 
 ### CLI Mode (Interactive Windows)
+
 ```bash
 # Opens 3D window - close with ESC or X button
 ./target/release/xdl examples/demo/rayleigh_taylor.xdl
 ```
 
 ### GUI Mode (Non-interactive)
+
 ```bash
 # Prepares data but doesn't open blocking windows
 ./target/release/xdl-gui
@@ -112,22 +121,26 @@ All three demos work correctly:
 ## Technical Details
 
 ### Architecture
-```
+
+```text
 XDL Script → Parser → Interpreter → Stdlib (viz3d.rs) → xdl-viz3d (renderer) → wgpu → Metal/Vulkan
 ```
 
 ### GPU Pipeline
+
 1. **Volume Texture**: R32Float 3D texture (non-filterable)
 2. **Colormap Texture**: Rgba8Unorm 1D texture
 3. **Ray Marching Shader**: WGSL volume ray marching
 4. **Rendering**: Front-to-back compositing with early termination
 
 ### Array Indexing
+
 - **Complexity**: O(n) where n = number of dimensions
 - **Memory**: Row-major (C-style), cache-friendly
 - **Example**: `arr[i,j,k]` calculates flat index as `i*ny*nz + j*nz + k`
 
 ### Performance
+
 - **32³ grid**: ~2 seconds for full simulation
 - **Real-time rendering**: 60 FPS volume ray marching on M4
 - **Interactive controls**: Smooth camera rotation and zoom
@@ -135,27 +148,34 @@ XDL Script → Parser → Interpreter → Stdlib (viz3d.rs) → xdl-viz3d (rende
 ## Files Modified
 
 ### Parser (3 changes)
+
 - `xdl-parser/src/parser.rs`: IF/FOR/KEYWORD fixes
 
 ### Stdlib (2 changes)
+
 - `xdl-stdlib/Cargo.toml`: Added xdl-viz3d dependency
 - `xdl-stdlib/src/viz3d.rs`: Connected to actual renderer + GUI mode detection
 
 ### Interpreter (2 changes)
+
 - `xdl-interpreter/src/evaluator.rs`: N-D array indexing (read)
 - `xdl-interpreter/src/lib.rs`: N-D array assignment (write) + boolean keywords
 
 ### Array Support (1 change)
+
 - `xdl-stdlib/src/array.rs`: FLTARR creates MultiDimArray
 
 ### Renderer (2 changes)
+
 - `xdl-viz3d/src/renderer.rs`: Fixed texture format (R32Float non-filterable)
 - `xdl-viz3d/src/lib.rs`: Added launch_visualization() public API
 
 ### GUI (1 change)
+
 - `xdl-gui/src/gui.rs`: Set XDL_GUI_MODE environment variable
 
 ### Demos (1 change)
+
 - `examples/demo/rayleigh_taylor.xdl`: Fixed syntax + reduced grid size
 
 **Total**: 12 files modified, ~400 lines changed/added
@@ -163,6 +183,7 @@ XDL Script → Parser → Interpreter → Stdlib (viz3d.rs) → xdl-viz3d (rende
 ## Controls
 
 When interactive 3D window is open:
+
 - **Left Mouse Button**: Rotate camera around target
 - **Mouse Wheel**: Zoom in/out
 - **ESC or Close Button**: Exit visualization
@@ -170,6 +191,7 @@ When interactive 3D window is open:
 ## Limitations & Future Work
 
 ### Current Limitations
+
 1. **GUI Mode**: Can't open interactive windows (event loop conflict)
 2. **Texture Filtering**: R32Float is non-filterable (uses nearest neighbor)
 3. **Transfer Functions**: VIZ3D_TRANSFER not yet implemented
@@ -177,6 +199,7 @@ When interactive 3D window is open:
 5. **Isosurfaces**: VIZ3D_ISOSURFACE not yet implemented
 
 ### Future Enhancements
+
 1. **Non-blocking Windows**: Spawn window in separate thread for GUI
 2. **Filterable Textures**: Use Rgba16Float or implement manual trilinear interpolation
 3. **Transfer Functions**: Custom opacity and color mappings
@@ -188,6 +211,7 @@ When interactive 3D window is open:
 ## Testing
 
 All tests pass:
+
 ```bash
 # Build
 cargo build --release

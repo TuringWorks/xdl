@@ -8,7 +8,7 @@ XDL provides C-compatible Foreign Function Interface (FFI) bindings that allow y
 
 ## Architecture
 
-```
+```text
 Your Application (Python/JavaScript/C++)
          ↓
     XDL C API (libxdl_ffi)
@@ -37,6 +37,7 @@ cargo build --release --package xdl-ffi
 ```
 
 The compiled library will be in `target/release/`:
+
 - `libxdl_ffi.dylib` (macOS)
 - `libxdl_ffi.so` (Linux)
 - `xdl_ffi.dll` (Windows)
@@ -72,9 +73,9 @@ lib.xdl_cleanup(context)
 
 ## Language-Specific Guides
 
-### .NET/C#
+### .NET/'C#'
 
-#### Setup
+#### .NET/C# Setup
 
 1. Build the XDL FFI library as shown above
 2. Add the library to your project directory or system PATH
@@ -122,13 +123,15 @@ Console.WriteLine($"XDL time: {stopwatch.ElapsedMilliseconds}ms");
 
 ### Java
 
-#### Setup
+#### Java Setup
 
 1. Build the XDL FFI library as shown above
 2. Set `java.library.path` to include the library directory:
+
    ```bash
    java -Djava.library.path=/path/to/xdl/library YourApp
    ```
+
 3. Use the provided `XdlWrapper.java` class
 
 #### Basic Usage
@@ -173,7 +176,7 @@ try {
 
 ### Go
 
-#### Setup
+#### Go Setup
 
 1. Build the XDL FFI library as shown above
 2. Ensure the library is in the system library path or current directory
@@ -236,7 +239,7 @@ fmt.Printf("XDL time: %v\n", elapsed)
 
 ### Python
 
-#### Installation
+#### Python Installation
 
 1. Build the XDL FFI library as shown above
 2. Copy the library file to your Python project
@@ -282,6 +285,7 @@ print(f"Sum of 1M elements: {sum_val}")
 #### Setup
 
 1. Compile XDL to WebAssembly:
+
 ```bash
 # Install wasm-pack
 cargo install wasm-pack
@@ -291,6 +295,7 @@ wasm-pack build --target web --out-dir pkg xdl-ffi
 ```
 
 2. Include in your web application:
+
 ```html
 <script type="module">
     import init, { xdl_init, xdl_call_function, xdl_cleanup } from './pkg/xdl_ffi.js';
@@ -398,6 +403,7 @@ ccall(xdl_cleanup, Cvoid, (Ptr{Cvoid},), context)
 All functions listed below are available through the FFI interface and work across all supported languages (Python, JavaScript, .NET/C#, Java, Go, C/C++).
 
 ### Mathematical Functions
+
 - `sin(x)` - Sine function
 - `cos(x)` - Cosine function
 - `tan(x)` - Tangent function
@@ -411,6 +417,7 @@ All functions listed below are available through the FFI interface and work acro
 - `pow(x, y)` - Power function
 
 ### Statistical Functions
+
 - `mean(array)` - Arithmetic mean
 - `stddev(array)` - Standard deviation
 - `variance(array)` - Variance
@@ -419,7 +426,9 @@ All functions listed below are available through the FFI interface and work acro
 - `total(array)` - Sum of elements
 
 ### GPU-Accelerated Functions
+
 Functions marked with ⚡ have GPU acceleration available:
+
 - ⚡ `min(array)` - GPU-accelerated minimum
 - ⚡ `max(array)` - GPU-accelerated maximum
 - ⚡ `mean(array)` - GPU-accelerated mean
@@ -572,6 +581,7 @@ See the `examples/embedding/` directory for complete examples:
 **Error**: `Could not find XDL library`
 
 **Solution**:
+
 - Ensure the library is built: `cargo build --release --package xdl-ffi`
 - Check library path and platform-specific naming
 - Set `LD_LIBRARY_PATH` (Linux) or `DYLD_LIBRARY_PATH` (macOS)
@@ -581,6 +591,7 @@ See the `examples/embedding/` directory for complete examples:
 **Error**: `Function X not available`
 
 **Solution**:
+
 - Check function name spelling
 - Verify function is implemented in current XDL version
 - Some functions may require specific build features
@@ -590,6 +601,7 @@ See the `examples/embedding/` directory for complete examples:
 **Error**: `Segmentation fault` or memory corruption
 
 **Solution**:
+
 - Ensure proper context lifecycle management
 - Check array bounds and data types
 - Verify thread safety (XDL contexts are not thread-safe)
@@ -599,6 +611,7 @@ See the `examples/embedding/` directory for complete examples:
 **Warning**: `GPU acceleration not available`
 
 **Solution**:
+
 - Check GPU drivers and Metal/CUDA installation
 - Falls back to CPU automatically
 - Performance will be reduced but functionality preserved
@@ -616,4 +629,4 @@ To add new FFI bindings:
 
 XDL embedding follows the same MIT license as the main project.</content>
 </xai:function_call name="write">
-<parameter name="filePath">examples/embedding/python/scientific_demo.py
+< parameter name="filePath">examples/embedding/python/scientific_demo.py

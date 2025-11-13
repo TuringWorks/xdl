@@ -1,6 +1,7 @@
 # XDL Machine Learning Phase ML-11: Advanced Deep Learning Operations
 
 ## Overview
+
 Phase ML-11 introduces foundational deep learning operations for building Convolutional Neural Networks (CNNs), Recurrent Neural Networks (RNNs), and other advanced neural architectures. This phase adds matrix operations, 2D convolutional layers, and LSTM support.
 
 **Status: ✅ Complete**
@@ -14,6 +15,7 @@ Phase ML-11 introduces foundational deep learning operations for building Convol
 ### 1. Matrix Operations
 
 #### XDLML_MATMUL - Matrix Multiplication
+
 ```gdl
 result = XDLML_MATMUL(A, B)
 ```
@@ -22,13 +24,16 @@ result = XDLML_MATMUL(A, B)
 Performs matrix multiplication: C = A × B
 
 **Parameters:**
+
 - `A`: First matrix (1D array treated as row vector, or 2D MultiDimArray)
 - `B`: Second matrix (1D array treated as column vector, or 2D MultiDimArray)
 
 **Returns:**
+
 - Result of multiplication with appropriate shape
 
 **Example:**
+
 ```gdl
 ; 2x3 × 3x2 = 2x2
 A_data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
@@ -39,6 +44,7 @@ C = XDLML_MATMUL(A, B)  ; Shape: [2, 2]
 ```
 
 **Key Features:**
+
 - Supports 1D vectors and 2D matrices
 - Automatic dimension inference
 - Proper dimension validation
@@ -47,6 +53,7 @@ C = XDLML_MATMUL(A, B)  ; Shape: [2, 2]
 ---
 
 #### XDLML_RESHAPE - Array Reshaping
+
 ```gdl
 reshaped = XDLML_RESHAPE(array, new_shape)
 ```
@@ -55,19 +62,23 @@ reshaped = XDLML_RESHAPE(array, new_shape)
 Changes array shape without modifying data order (row-major layout).
 
 **Parameters:**
+
 - `array`: Input array (1D or MultiDimArray)
 - `new_shape`: Array of new dimensions
 
 **Returns:**
+
 - MultiDimArray with new shape
 
 **Example:**
+
 ```gdl
 data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
 reshaped = XDLML_RESHAPE(data, [2, 3])  ; 2x3 matrix
 ```
 
 **Key Features:**
+
 - Validates total element count
 - Preserves data order
 - Supports arbitrary dimensions
@@ -75,6 +86,7 @@ reshaped = XDLML_RESHAPE(data, [2, 3])  ; 2x3 matrix
 ---
 
 #### XDLML_TRANSPOSE - Matrix Transpose
+
 ```gdl
 transposed = XDLML_TRANSPOSE(matrix)
 ```
@@ -83,12 +95,15 @@ transposed = XDLML_TRANSPOSE(matrix)
 Swaps rows and columns of a 2D matrix.
 
 **Parameters:**
+
 - `matrix`: 2D input matrix (MultiDimArray)
 
 **Returns:**
+
 - Transposed matrix with swapped dimensions
 
 **Example:**
+
 ```gdl
 ; [[1, 2, 3],      [[1, 4],
 ;  [4, 5, 6]]  =>   [2, 5],
@@ -98,6 +113,7 @@ AT = XDLML_TRANSPOSE(A)  ; Shape: [3, 2]
 ```
 
 **Key Features:**
+
 - Requires 2D input
 - Efficient in-place transposition
 - Preserves data integrity
@@ -107,6 +123,7 @@ AT = XDLML_TRANSPOSE(A)  ; Shape: [3, 2]
 ### 2. Convolutional Operations
 
 #### XDLML_CONV2D - 2D Convolution
+
 ```gdl
 output = XDLML_CONV2D(input, kernel [, stride, padding])
 ```
@@ -115,15 +132,18 @@ output = XDLML_CONV2D(input, kernel [, stride, padding])
 Applies 2D convolution to input tensor: output[i,j] = sum(input[region] * kernel)
 
 **Parameters:**
+
 - `input`: Input tensor [height, width] (MultiDimArray)
 - `kernel`: Convolution kernel [kh, kw] (MultiDimArray)
 - `stride`: Stride for convolution (default 1)
 - `padding`: Padding to add (default 0)
 
 **Returns:**
+
 - Convolved output tensor
 
 **Example:**
+
 ```gdl
 ; 4x4 image with 3x3 edge detection kernel
 img = MultiDimArray(img_data, [4, 4])
@@ -132,18 +152,21 @@ out = XDLML_CONV2D(img, kernel, 1, 0)  ; Output: [2, 2]
 ```
 
 **Output Size Formula:**
-```
+
+```text
 output_h = (input_h + 2*padding - kernel_h) / stride + 1
 output_w = (input_w + 2*padding - kernel_w) / stride + 1
 ```
 
 **Key Features:**
+
 - Configurable stride and padding
 - Zero-padding support
 - Efficient sliding window implementation
 - Single-channel convolution (extensible to multi-channel)
 
 **Common Use Cases:**
+
 - Edge detection
 - Feature extraction
 - Image filtering
@@ -152,6 +175,7 @@ output_w = (input_w + 2*padding - kernel_w) / stride + 1
 ---
 
 #### XDLML_MAXPOOLING2D - 2D Max Pooling
+
 ```gdl
 pooled = XDLML_MAXPOOLING2D(input [, pool_size, stride])
 ```
@@ -160,14 +184,17 @@ pooled = XDLML_MAXPOOLING2D(input [, pool_size, stride])
 Applies 2D max pooling: takes maximum value in each pooling window.
 
 **Parameters:**
+
 - `input`: Input tensor [height, width] (MultiDimArray)
 - `pool_size`: Size of pooling window (default 2)
 - `stride`: Stride for pooling (default = pool_size)
 
 **Returns:**
+
 - Downsampled output tensor
 
 **Example:**
+
 ```gdl
 ; [[1,2,3,4],      [[6,  8],
 ;  [5,6,7,8],   =>  [14, 16]]
@@ -178,12 +205,14 @@ pooled = XDLML_MAXPOOLING2D(feature_map, 2, 2)  ; Output: [2, 2]
 ```
 
 **Output Size Formula:**
-```
+
+```text
 output_h = (input_h - pool_size) / stride + 1
 output_w = (input_w - pool_size) / stride + 1
 ```
 
 **Key Features:**
+
 - Reduces spatial dimensions
 - Provides translation invariance
 - Reduces computational load
@@ -194,6 +223,7 @@ output_w = (input_w - pool_size) / stride + 1
 ### 3. Recurrent Operations
 
 #### XDLML_LSTM - Long Short-Term Memory Layer
+
 ```gdl
 output = XDLML_LSTM(input, hidden_size, weights)
 ```
@@ -202,14 +232,17 @@ output = XDLML_LSTM(input, hidden_size, weights)
 Applies LSTM to sequential input with gating mechanisms. This is a simplified implementation suitable for demonstration.
 
 **Parameters:**
+
 - `input`: Input sequence [seq_len, input_size] (MultiDimArray)
 - `hidden_size`: Number of hidden units
 - `weights`: Dictionary with weight matrices (placeholder in current implementation)
 
 **Returns:**
+
 - Output sequence [seq_len, hidden_size]
 
 **Example:**
+
 ```gdl
 ; 10 timesteps, 5 features each
 seq = MultiDimArray(data, [10, 5])
@@ -217,12 +250,14 @@ lstm_out = XDLML_LSTM(seq, 20, weights)  ; Output: [10, 20]
 ```
 
 **LSTM Components (Standard Architecture):**
+
 - **Forget Gate**: Decides what to forget from cell state
 - **Input Gate**: Decides what new information to store
 - **Cell State**: Long-term memory
 - **Output Gate**: Decides what to output
 
 **Current Implementation:**
+
 - Simplified placeholder version
 - Returns zero-initialized output for demonstration
 - Full implementation requires:
@@ -238,7 +273,9 @@ lstm_out = XDLML_LSTM(seq, 20, weights)  ; Output: [10, 20]
 ## Technical Architecture
 
 ### Multi-Dimensional Array Support
+
 All functions leverage the XDL `MultiDimArray` variant:
+
 ```rust
 pub enum XdlValue {
     // ... other variants
@@ -250,6 +287,7 @@ pub enum XdlValue {
 ```
 
 **Key Methods:**
+
 - `from_multidim(data, shape)`: Create MultiDimArray with validation
 - `shape()`: Get array dimensions
 - `as_slice()`: Access underlying data
@@ -258,6 +296,7 @@ pub enum XdlValue {
 ### Implementation Details
 
 **Matrix Multiplication Algorithm:**
+
 ```rust
 for i in 0..rows_A {
     for j in 0..cols_B {
@@ -269,16 +308,19 @@ for i in 0..rows_A {
     }
 }
 ```
+
 - Time Complexity: O(n³) for n×n matrices
 - Space Complexity: O(n²)
 
 **Convolution Algorithm:**
+
 - Sliding window approach
 - Zero-padding support
 - Row-major data layout
 - Time Complexity: O(H·W·Kh·Kw) where H,W are output dimensions
 
 **Pooling Algorithm:**
+
 - Non-overlapping or overlapping windows
 - Maximum value selection
 - Efficient single-pass implementation
@@ -288,9 +330,11 @@ for i in 0..rows_A {
 ## Testing
 
 ### Test Script
+
 Location: `tests/test_ml_advanced.xdl`
 
 **Test Coverage:**
+
 1. Matrix multiplication with various dimensions
 2. Array reshaping validation
 3. Matrix transpose verification
@@ -299,6 +343,7 @@ Location: `tests/test_ml_advanced.xdl`
 6. LSTM interface validation
 
 ### Running Tests
+
 ```bash
 cd xdl
 cargo build --release
@@ -306,7 +351,8 @@ cargo build --release
 ```
 
 **Expected Output:**
-```
+
+```text
 === Testing Advanced ML Features (Phase ML-11) ===
 
 Test 1: XDLML_MATMUL - Matrix Multiplication
@@ -335,6 +381,7 @@ All Phase ML-11 functions complete!
 ## Building Deep Learning Architectures
 
 ### Example: Simple CNN Architecture
+
 ```gdl
 ; Input: 28x28 image
 input = MultiDimArray(image_data, [28, 28])
@@ -366,6 +413,7 @@ flattened = XDLML_RESHAPE(pool2, [25])
 ```
 
 ### Example: RNN for Sequence Processing
+
 ```gdl
 ; Input sequence: 50 timesteps, 10 features
 sequence = MultiDimArray(seq_data, [50, 10])
@@ -385,7 +433,8 @@ predictions = XDLML_FEEDFORWARDNEURALNETWORK(last_output, weights)
 ## Integration with Existing ML Framework
 
 ### Dependency Chain
-```
+
+```text
 Phase ML-11 (Deep Learning Operations)
     ↓
 Phase ML-9 (Conv1D, Pooling1D)
@@ -406,6 +455,7 @@ Phase ML-1 (Utilities, K-Means)
 ```
 
 ### Compatible Functions
+
 - **Activations**: All XDLMLAF_* functions work with MultiDimArray
 - **Loss Functions**: Compatible for output layers
 - **Optimizers**: Can optimize convolution/LSTM weights
@@ -417,6 +467,7 @@ Phase ML-1 (Utilities, K-Means)
 ## Performance Considerations
 
 ### Optimization Opportunities
+
 1. **SIMD Instructions**: Vectorize matrix operations
 2. **Parallel Processing**: Multi-threaded convolution
 3. **Memory Layout**: Cache-friendly access patterns
@@ -424,6 +475,7 @@ Phase ML-1 (Utilities, K-Means)
 5. **Quantization**: INT8 for inference speedup
 
 ### Memory Usage
+
 - Matrix Multiplication: O(M×N + N×P) for M×N and N×P matrices
 - Convolution: O(H×W + Kh×Kw + Oh×Ow)
 - Pooling: O(H×W + Oh×Ow)
@@ -433,6 +485,7 @@ Phase ML-1 (Utilities, K-Means)
 ## Future Enhancements
 
 ### Planned Features
+
 1. **Multi-channel Convolution**: RGB images, feature maps
 2. **Full LSTM Implementation**: Complete gate mechanisms
 3. **GRU Layer**: Gated Recurrent Units
@@ -443,6 +496,7 @@ Phase ML-1 (Utilities, K-Means)
 8. **Layer Fusion**: Optimize conv+bn+relu patterns
 
 ### Extended Architectures
+
 - ResNet blocks (skip connections)
 - U-Net (encoder-decoder)
 - Transformer layers
@@ -454,10 +508,12 @@ Phase ML-1 (Utilities, K-Means)
 ## File Locations
 
 ### Implementation
+
 - **Core Functions**: `xdl/xdl-stdlib/src/ml.rs` (lines 3700-4161)
 - **Registration**: `xdl/xdl-stdlib/src/lib.rs` (lines 253-263)
 
 ### Documentation
+
 - **This Document**: `docs/ML_PHASE_11_ADVANCED_DEEPLEARNING.md`
 - **Test Script**: `tests/test_ml_advanced.xdl`
 
@@ -474,7 +530,8 @@ Phase ML-11 provides the essential building blocks for deep learning in XDL:
 
 These functions enable researchers and developers to build sophisticated neural network architectures within the XDL environment, bridging the gap between scientific computing and modern deep learning.
 
-**Total ML Functions Implemented: 61**
+### Total ML Functions Implemented: 61
+
 - Phase ML-1: 7 functions
 - Phase ML-2: 22 functions
 - Phase ML-3: 5 functions
@@ -489,4 +546,4 @@ These functions enable researchers and developers to build sophisticated neural 
 
 ---
 
-*XDL Machine Learning Framework - Building the Future of Scientific Computing*
+### XDL Machine Learning Framework - Building the Future of Scientific Computing

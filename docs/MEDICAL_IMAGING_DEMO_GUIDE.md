@@ -7,6 +7,7 @@ The medical imaging demo (`examples/scientific/medical_imaging_demo.xdl`) demons
 ## Features
 
 ### Data Generation
+
 - **3D CT Volume**: 64×64×32 voxels (configurable)
 - **Anatomical Structures**:
   - Skull (cortical bone)
@@ -73,7 +74,9 @@ VIZ3D_BACKEND=threejs xdl examples/scientific/medical_imaging_demo.xdl
 ## Workflow Steps
 
 ### Step 1: Generate Synthetic CT Data
+
 Creates a 64×64×32 volume with:
+
 - Air-filled background (-1000 HU)
 - Skull shell (bone: 1400-1600 HU)
 - Brain tissue (20-45 HU):
@@ -81,53 +84,68 @@ Creates a 64×64×32 volume with:
   - White matter (inner): ~30 HU
 
 ### Step 2: Tissue Segmentation
+
 Segments volume into three tissue classes:
+
 - **Air**: HU < -500 (~55% of volume)
 - **Soft tissue**: -100 ≤ HU < 200 (~33% of volume)
 - **Bone**: HU ≥ 200 (~12% of volume)
 
 ### Step 3-5: Multi-Planar Reconstruction
+
 Extracts representative slices in three orthogonal planes:
+
 - **Axial**: At z = 16 (mid-head level)
 - **Coronal**: At y = 32 (mid-frontal)
 - **Sagittal**: At x = 32 (mid-lateral)
 
 ### Step 6: CT Windowing Presets
+
 Defines standard clinical window settings:
 
 **Brain Window**:
+
 - Center: 40 HU
 - Width: 80 HU
 - Range: 0-80 HU
 - Purpose: Optimize gray/white matter contrast
 
 **Bone Window**:
+
 - Center: 500 HU
 - Width: 2000 HU
 - Range: -500 to 1500 HU
 - Purpose: Visualize skull fractures and bone detail
 
 ### Step 7: Volume Statistics
+
 Computes comprehensive statistics:
+
 - Mean HU value (~-351 HU, air-dominated)
 - Standard deviation (~837 HU)
 - HU range: -1000 to +1600 HU
 - Total voxels: 131,072 (64×64×32)
 
 ### Step 8: Tissue-Specific Statistics
+
 Calculates mean HU for each tissue type:
+
 - **Bone**: ~1500 HU
 - **Soft tissue**: ~38 HU (brain)
 - **Air**: -1000 HU (exact)
 
 ### Step 9: Image Quality Metrics
+
 Assesses scan quality:
+
 - Signal-to-noise ratio (SNR)
 - Dynamic range: ~2600 HU
 - Voxel count and dimensions
 
 ### Step 10: 3D Volume Visualization ✨
+
 **Interactive 3D rendering** of the CT head scan:
+
 - **Window**: 1280×720 HD display
 - **Colormap**: Grayscale (medical imaging standard)
 - **Camera**: Positioned for optimal head viewing
@@ -137,31 +155,37 @@ Assesses scan quality:
 ## 3D Visualization Controls
 
 ### Mouse Controls
+
 - **Left Click + Drag**: Rotate camera around head
 - **Mouse Wheel**: Zoom in/out
 - **Right Click + Drag**: Pan camera
 
 ### GUI Controls
+
 The viewer includes sliders for:
 
 **Threshold Slider** (key control for medical imaging):
+
 - **Minimum (-1000 HU)**: Shows everything (air + tissue + bone)
 - **-500 HU**: Remove air, show tissue + bone
 - **200 HU**: Show only bone (skull)
 - **500 HU**: Show dense bone only
 
 **Opacity Slider**:
+
 - Adjust transparency of entire volume
 - Lower values: See through structures
 - Higher values: Solid rendering
 
 **Usage Tips**:
+
 1. Start with threshold at minimum to see full volume
 2. Increase threshold to ~-500 to remove air and see head outline
 3. Increase to ~200 to visualize skull structure
 4. Adjust opacity to see internal/external features
 
 ### Keyboard Shortcuts
+
 - **ESC**: Close viewer
 - **R**: Reset camera to default position
 - **Space**: Pause/resume auto-rotation (if enabled)
@@ -171,23 +195,26 @@ The viewer includes sliders for:
 Use threshold settings to simulate clinical views:
 
 **Soft Tissue View** (threshold: -500 HU):
+
 - Shows brain tissue and skull
 - Removes air background
 - Good for overall anatomy
 
 **Bone View** (threshold: 200 HU):
+
 - Shows skull only
 - Useful for fracture detection
 - Visualize bone structure
 
 **Dense Bone View** (threshold: 500 HU):
+
 - Shows only cortical bone
 - Highest density structures
 - Clear skull outline
 
 ## Output Example
 
-```
+```text
 > Step 10: Launching 3D visualization...
 
 VIZ3D: Initialized (1280x720)
@@ -222,7 +249,7 @@ Controls:
 
 Typical output from the demo:
 
-```
+```text
 Key Findings:
   • Volume size:  64 x 64 x 32
   • Mean HU:  -351 HU
@@ -242,17 +269,20 @@ Tissue-Specific Mean HU:
 ### Anatomical Features
 
 **Skull Structure**:
+
 - Ellipsoidal shell representing cranium
 - Cortical bone with realistic HU values (1400-1600)
 - Shell thickness: ~3 voxels (realistic for skull)
 
 **Brain Tissue**:
+
 - Gray matter (outer): ~40 HU (typical)
 - White matter (inner): ~30 HU (typical)
 - Realistic tissue differentiation
 - Spherical geometry inside skull
 
 **Air Spaces**:
+
 - Surrounding volume: -1000 HU (air density)
 - Represents extracranial space
 - Useful for windowing demonstration
@@ -284,7 +314,9 @@ This demo simulates workflows for:
 ## Technical Implementation
 
 ### Array Operations
+
 Uses XDL's multi-dimensional array support:
+
 ```xdl
 ct_volume = FLTARR(nx, ny, nz)  ; 3D array
 min_hu = MIN(ct_volume)         ; Works on entire volume
@@ -294,6 +326,7 @@ stddev_hu = STDDEV(ct_volume)   ; Statistical function
 ```
 
 ### VIZ3D Functions Used
+
 ```xdl
 VIZ3D_INIT, WINDOW_SIZE=[w, h], TITLE='...'
 VIZ3D_COLORMAP, 'GRAYSCALE'
@@ -303,6 +336,7 @@ VIZ3D_RENDER, /INTERACTIVE, TITLE='...'
 ```
 
 ### Performance
+
 - **Generation**: ~1-2 seconds for 64³ volume
 - **Segmentation**: ~0.5 seconds
 - **Rendering**: Real-time (60fps) with Three.js
@@ -311,6 +345,7 @@ VIZ3D_RENDER, /INTERACTIVE, TITLE='...'
 ## Customization
 
 ### Change Volume Size
+
 ```xdl
 ; Higher resolution (more detail)
 nx = 128
@@ -324,6 +359,7 @@ nz = 16
 ```
 
 ### Modify Anatomical Features
+
 ```xdl
 ; Larger skull
 skull_outer_radius = 30.0  ; instead of 28.0
@@ -337,6 +373,7 @@ white_matter = 35.0  ; instead of 30.0
 ```
 
 ### Different Colormap
+
 ```xdl
 VIZ3D_COLORMAP, 'VIRIDIS'  ; Color instead of grayscale
 VIZ3D_COLORMAP, 'TURBO'    ; Rainbow-like medical colormap
@@ -393,6 +430,7 @@ To extend the demo:
 ## Troubleshooting
 
 ### Visualization doesn't appear
+
 ```bash
 # Verify backend
 VIZ3D_BACKEND=threejs xdl examples/scientific/medical_imaging_demo.xdl
@@ -402,11 +440,13 @@ RUST_LOG=debug xdl examples/scientific/medical_imaging_demo.xdl
 ```
 
 ### Poor visualization quality
+
 - Increase volume size (nx, ny, nz)
 - Adjust threshold to focus on structures of interest
 - Use appropriate windowing (brain vs bone)
 
 ### Performance issues
+
 - Reduce volume size
 - Lower opacity setting
 - Close other GPU-intensive applications
@@ -414,6 +454,7 @@ RUST_LOG=debug xdl examples/scientific/medical_imaging_demo.xdl
 ## Clinical Context
 
 ### Hounsfield Scale Reference
+
 - **Air**: -1000 HU
 - **Lung**: -500 HU
 - **Fat**: -100 to -50 HU
@@ -426,6 +467,7 @@ RUST_LOG=debug xdl examples/scientific/medical_imaging_demo.xdl
 - **Bone**: 700-3000 HU
 
 ### Standard CT Windows
+
 - **Brain**: C=40, W=80
 - **Subdural**: C=75, W=215
 - **Stroke**: C=40, W=40

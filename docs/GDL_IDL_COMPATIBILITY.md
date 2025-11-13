@@ -17,6 +17,7 @@ In GDL/IDL, when using `BEGIN...END` blocks, the explicit loop/conditional termi
 **XDL now supports both styles:**
 
 #### FOR Loops
+
 ```idl
 ; Style 1: Single statement (no ENDFOR, no BEGIN...END)
 for i=0,9 do a[i] = i * 2
@@ -33,7 +34,8 @@ end
 endfor
 ```
 
-#### WHILE Loops
+#### WHILE Loop Syntax
+
 ```idl
 ; Single statement (no ENDWHILE)
 while count lt 10 do count = count + 1
@@ -50,7 +52,8 @@ end
 endwhile
 ```
 
-#### IF-THEN-ELSE
+#### Conditional Statements (IF-THEN-ELSE)
+
 ```idl
 ; Single statement (no ENDIF)
 if x gt 0 then print, 'positive'
@@ -107,6 +110,7 @@ All standard *INDGEN family functions are now available:
 | `L64INDGEN(n)` | 64-bit Long | `l64 = l64indgen(100)` ✅ NEW |
 
 **Example Usage:**
+
 ```idl
 ; Generate array indices
 nx = 100
@@ -139,7 +143,8 @@ s = STRARR(5)            ; String array
 
 **Fully compatible with GDL/IDL syntax:**
 
-#### FOR Loops
+#### FOR Loop Syntax
+
 ```idl
 for i=0, n-1 do statement
 for i=start, end, step do statement
@@ -147,12 +152,14 @@ for i=0, 9 do begin ... end
 ```
 
 #### WHILE Loops
+
 ```idl
 while condition do statement
 while condition do begin ... end
 ```
 
 #### REPEAT-UNTIL Loops
+
 ```idl
 repeat begin
   ; statements
@@ -160,6 +167,7 @@ end until condition
 ```
 
 #### IF-THEN-ELSE
+
 ```idl
 if condition then statement
 if condition then begin ... end
@@ -167,6 +175,7 @@ if condition then begin ... end else begin ... end
 ```
 
 #### BREAK and CONTINUE
+
 ```idl
 for i=0,100 do begin
   if condition then break
@@ -179,7 +188,9 @@ end
 ## 🟡 Partially Compatible Features
 
 ### 1. CASE Statements
+
 **Status:** Not yet implemented
+
 ```idl
 ; Not yet supported
 case value of
@@ -190,7 +201,9 @@ endcase
 ```
 
 ### 2. FOREACH Loops
+
 **Status:** Parser support exists, needs testing
+
 ```idl
 foreach element, array, index do begin
   ; Process element
@@ -202,19 +215,23 @@ end
 ## ❌ Not Yet Implemented
 
 ### 1. .pro File Batch Execution
+
 ```idl
 ; Not yet supported
 @myprogram    ; Execute myprogram.pro
 ```
+
 **Workaround:** Use `xdl myprogram.pro` from command line
 
 ### 2. SIZE Function
+
 ```idl
 ; Critical for array introspection - not yet implemented
 dims = SIZE(array)
 ```
 
 ### 3. GOTO and Labels
+
 ```idl
 ; Not recommended anyway, but not supported
 label1:
@@ -242,6 +259,7 @@ When porting GDL/IDL code to XDL:
 ## 🔬 Example: Porting Scientific Code
 
 ### Original GDL/IDL Code
+
 ```idl
 ; Generate data
 nx = 100
@@ -262,6 +280,7 @@ plot, x, y
 ```
 
 ### XDL (100% Compatible!)
+
 The above code runs **without modification** in XDL!
 
 ---

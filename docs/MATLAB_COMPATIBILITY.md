@@ -7,6 +7,7 @@ We've implemented a **MATLAB to XDL compatibility layer** that enables loading a
 ### ✅ Completed Components
 
 #### 1. **MATLAB Lexer** (`xdl-matlab/src/lexer.rs`)
+
 - Tokenizes MATLAB syntax
 - Handles `%` comments
 - Supports element-wise operators (`.*, ./, .^`)
@@ -15,24 +16,30 @@ We've implemented a **MATLAB to XDL compatibility layer** that enables loading a
 - 500+ lines of robust lexing code
 
 #### 2. **Function Mapping Table** (`xdl-matlab/src/function_map.rs`)
+
 **~80 MATLAB functions mapped to XDL:**
 
 **Array Creation:**
+
 - `zeros` → `FLTARR`
 - `ones` → `FLTARR` (with special handling)
 - `rand`/`randn` → `RANDOMU`/`RANDOMN`
 
 **Math Functions:**
+
 - `sin, cos, tan, exp, log, sqrt, abs, floor, ceil, round`
 - All mapped 1:1 to XDL equivalents
 
 **Statistics:**
+
 - `mean, median, std, var, min, max, sum`
 
 **Linear Algebra:**
+
 - `transpose, inv, det`
 
 **Plotting:**
+
 - `plot, xlabel, ylabel, title, figure, hold, clf`
 
 **And more...**
@@ -40,6 +47,7 @@ We've implemented a **MATLAB to XDL compatibility layer** that enables loading a
 #### 3. **MATLAB to XDL Transpiler** (`xdl-matlab/src/transpiler.rs`)
 
 **Syntax Conversions:**
+
 - **Comments**: `%` → `;`
 - **Indexing**: 1-based `x(1)` → 0-based `x[0]`
 - **Loops**: `for i = 1:10` → `for i = 0, 9`
@@ -69,7 +77,7 @@ mean_x = MEAN ( x )
 
 ## Architecture
 
-```
+```text
 ┌─────────────────┐
 │   .m file       │
 │  (MATLAB code)  │
@@ -156,6 +164,7 @@ xdl --transpile script.m > script.xdl
 ## Testing
 
 ### Unit Tests ✅
+
 The crate includes comprehensive unit tests:
 
 ```bash
@@ -163,10 +172,12 @@ cargo test -p xdl-matlab
 ```
 
 **Test Results:**
+
 - ✅ **28/28 tests passing** (100% success rate)
 - **Coverage**: Lexer, transpiler, function mapping, control flow, arrays, math
 
 ### Integration Tests ✅
+
 MATLAB .m files can be executed directly:
 
 ```bash
@@ -179,6 +190,7 @@ xdl examples/matlab/02_trigonometry.m
 ```
 
 **Verified Working:**
+
 - ✅ Basic arithmetic and variables
 - ✅ Array operations and indexing
 - ✅ Function calls (sin, cos, sqrt, etc.)
@@ -187,7 +199,7 @@ xdl examples/matlab/02_trigonometry.m
 
 ## Files Created
 
-```
+```text
 xdl-matlab/
 ├── src/
 │   ├── lib.rs              # Main library interface

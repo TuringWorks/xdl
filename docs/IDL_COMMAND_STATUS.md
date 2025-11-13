@@ -5,6 +5,7 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 **Last Updated**: 2025-10-25
 
 ## Legend
+
 - ✅ Fully implemented
 - 🟡 Partially implemented / Placeholder
 - ❌ Not implemented
@@ -13,7 +14,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 📊 ARRAY MANIPULATION
 
-### ✅ Implemented
+### ✅ Implemented (Array Manipulation)
+
 - ✅ **BYTARR** - Create byte array
 - ✅ **INTARR** - Create integer array
 - ✅ **LONARR** - Create long integer array
@@ -48,8 +50,10 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🔢 MATHEMATICS
 
-### ✅ Implemented
+### ✅ Implemented (Mathematics)
+
 **Basic Math:**
+
 - ✅ **ABS** - Absolute value
 - ✅ **FLOOR** - Round down
 - ✅ **CEIL** - Round up
@@ -60,15 +64,18 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **ALOG10** - Base 10 log
 
 **Trigonometry:**
+
 - ✅ **SIN, COS, TAN** - Trig functions
 - ✅ **ASIN, ACOS, ATAN** - Inverse trig
 - ✅ **ATAN2** - Two-argument arctangent
 - ✅ **SINH, COSH, TANH** - Hyperbolic trig
 
 **Other:**
+
 - ✅ **NCHOOSEK** - Binomial coefficient
 
 **Special Functions:**
+
 - ✅ **GAMMA** - Gamma function
 - ✅ **LNGAMMA** - Log gamma
 - ✅ **ERF** - Error function
@@ -83,7 +90,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **POLY** - Polynomial evaluation
 - ✅ **BINOMIAL** - Binomial coefficient
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Mathematics)
+
 - ❌ **BESSEL_Y, BESSEL_I, BESSEL_K** - Other Bessel functions
 - ❌ **EXPINT** - Exponential integral
 - ❌ **PRIME** - Prime number generation
@@ -93,7 +101,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 📈 STATISTICS
 
-### ✅ Implemented
+### ✅ Implemented (Statistics)
+
 - ✅ **VARIANCE** - Variance
 - ✅ **STDDEV** - Standard deviation
 - ✅ **MEDIAN** - Median value
@@ -114,7 +123,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **RANDOMN** - Normal/Gaussian random numbers
 - ✅ **RANDOM_POISSON** - Poisson random numbers
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Statistics)
+
 - ❌ **C_CORRELATE** - Cross-correlation
 - ❌ **A_CORRELATE** - Auto-correlation
 - ❌ **R_CORRELATE** - Rank correlation
@@ -127,8 +137,10 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🎨 GRAPHICS & PLOTTING
 
-### ✅ Implemented
+### ✅ Implemented (Graphics & Plotting)
+
 **2D Plotting:**
+
 - ✅ **PLOT** - Line plots
 - ✅ **OPLOT** - Overplot
 - ✅ **PLOTS** - Plot points
@@ -143,6 +155,7 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **ERRPLOT** - Error plot
 
 **3D Plotting:**
+
 - ✅ **SURFACE** - 3D surface
 - ✅ **CONTOUR** - Contour plot
 - ✅ **SHADE_SURF** - Shaded surface
@@ -152,12 +165,14 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **ISOSURFACE** - Iso-surface
 
 **Image Display:**
+
 - ✅ **TV** - Display image
 - ✅ **TVSCL** - Scaled image display
 - ✅ **TVCRS** - Cursor positioning
 - ✅ **IMAGE_DISPLAY** - Enhanced image display
 
 **Window Management:**
+
 - ✅ **WINDOW** - Create window
 - ✅ **WSET** - Set active window
 - ✅ **WDELETE** - Delete window
@@ -166,18 +181,22 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **EMPTY** - Empty graphics buffer
 
 **Device & Color:**
+
 - ✅ **DEVICE** - Device control
 - ✅ **LOADCT** - Load color table
 
 **Interactive:**
+
 - ✅ **CURSOR** - Read cursor position
 
 **Maps:**
+
 - ✅ **MAP_SET** - Set up map
 - ✅ **MAP_CONTINENTS** - Draw continents
 - ✅ **MAP_GRID** - Draw map grid
 
 **Specialized:**
+
 - ✅ **VEL** - Velocity vectors
 - ✅ **VELOVECT** - Vector field
 - ✅ **QUIVER** - Quiver plot
@@ -185,7 +204,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **DEM_RENDER** - Digital elevation model
 - ✅ **HILLSHADE** - Hillshade rendering
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Graphics & Plotting)
+
 - ❌ **PLOTXY** - Advanced XY plotting
 - ❌ **PLOTSYM** - Plot symbols
 - ❌ **XYOUTPS** - PostScript text
@@ -209,7 +229,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🔤 STRING OPERATIONS
 
-### ✅ Implemented
+### ✅ Implemented (String Operations)
+
 - ✅ **STRLEN** - String length
 - ✅ **STRPOS** - Find substring
 - ✅ **STRMID** - Extract substring
@@ -223,7 +244,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **STRMATCH** - Pattern matching
 - ✅ **STRING** - Convert to string
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (String Operations)
+
 - ❌ **STRREPLACE** - Replace substring
 - ❌ **STRPUT** - Put string
 - ❌ **STRGET** - Get string
@@ -238,7 +260,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 📁 FILE I/O
 
-### ✅ Implemented
+### ✅ Implemented (File I/O)
+
 - ✅ **OPENR** - Open for reading
 - ✅ **OPENW** - Open for writing
 - ✅ **OPENU** - Open for update
@@ -258,7 +281,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - 🟡 **ASSOC** - Associate array (basic)
 - ✅ **FILEPATH** - File path construction
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (File I/O)
+
 - ❌ **PRINT** (full formatting)
 - ❌ **READ** - Console read
 - ❌ **READS** - String read
@@ -281,6 +305,7 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ❌ **FINDFILE** - Find files
 
 ### Image I/O
+
 - 🟡 **READ_JPEG** - Read JPEG (placeholder)
 - ❌ **WRITE_JPEG** - Write JPEG
 - ❌ **READ_PNG** - Read PNG
@@ -298,7 +323,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🎲 SIGNAL PROCESSING
 
-### ✅ Implemented
+### ✅ Implemented (Signal Processing)
+
 - ✅ **FFT** - Fast Fourier Transform
 - ✅ **CONVOL** - Convolution
 - ✅ **SMOOTH** - Smoothing
@@ -306,7 +332,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **WMA** - Weighted moving average
 - ✅ **EMA** - Exponential moving average
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Signal Processing)
+
 - ❌ **FFT** (advanced modes, 2D/3D)
 - ❌ **CONVOL** (advanced modes)
 - ❌ **DECONVOL** - Deconvolution
@@ -333,7 +360,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🔢 LINEAR ALGEBRA
 
-### ✅ Implemented
+### ✅ Implemented (Linear Algebra)
+
 - ✅ **IDENTITY** - Identity matrix
 - ✅ **INVERT** - Matrix inversion
 - ✅ **DETERM** - Determinant
@@ -343,7 +371,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **DIAGONAL** - Extract diagonal
 - ✅ **TRACE** - Matrix trace
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Linear Algebra)
+
 - ❌ **SVDC** - SVD decomposition
 - ❌ **SVDFIT** - SVD fitting
 - ❌ **LUDC** - LU decomposition
@@ -361,10 +390,12 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🖼️ IMAGE PROCESSING
 
-### ✅ Implemented
+### ✅ Implemented (Image Processing)
+
 - ✅ **CONVOL** - Convolution (basic)
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Image Processing)
+
 - ❌ **DILATE** - Morphological dilation
 - ❌ **ERODE** - Morphological erosion
 - ❌ **MORPH_OPEN** - Morphological opening
@@ -394,12 +425,14 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🕐 TIME & DATE
 
-### ✅ Implemented
+### ✅ Implemented (Time & Date)
+
 - ✅ **SYSTIME** - System time
 - ✅ **JULDAY** - Julian day
 - ✅ **CALDAT** - Calendar date
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Time & Date)
+
 - ❌ **BIN_DATE** - Binary date
 - ❌ **DATE_CONV** - Date conversion
 - ❌ **DT_STRING** - Date/time string
@@ -414,7 +447,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🔧 TYPE CONVERSION
 
-### ✅ Implemented
+### ✅ Implemented (Type Conversion)
+
 - ✅ **BYTE** - Convert to byte
 - ✅ **FIX/INT** - Convert to integer
 - ✅ **LONG** - Convert to long
@@ -423,7 +457,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ **STRING** - Convert to string
 - ✅ **COMPLEX** - Create complex
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Type Conversion)
+
 - ❌ **UINT** - Unsigned integer
 - ❌ **ULONG** - Unsigned long
 - ❌ **LONG64** - 64-bit long
@@ -442,10 +477,12 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 💾 DATA STRUCTURES
 
-### 🟡 Partially Implemented
+### 🟡 Partially Implemented (Data Structures)
+
 - 🟡 **HASH** - Hash table (placeholder)
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Data Structures)
+
 - ❌ **LIST** - List structure
 - ❌ **ORDEREDHASH** - Ordered hash
 - ❌ **DICTIONARY** - Dictionary
@@ -460,13 +497,15 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🔄 COMPLEX NUMBERS
 
-### ✅ Implemented
+### ✅ Implemented (Complex Numbers)
+
 - ✅ **COMPLEX** - Create complex
 - ✅ **REAL** - Real part
 - ✅ **IMAGINARY/IMAG** - Imaginary part
 - ✅ **CONJ** - Complex conjugate
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (Complex Numbers)
+
 - ❌ **DCOMPLEX** - Double complex
 - ❌ **COMPLEXARR** - Complex array
 - ❌ **DCOMPLEXARR** - Double complex array
@@ -475,7 +514,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🖥️ SYSTEM & CONTROL
 
-### ✅ Implemented
+### ✅ Implemented (System & Control)
+
 - ✅ **HELP** - Help system
 - ✅ **CD** - Change directory
 - ✅ **SPAWN** - Spawn process
@@ -484,7 +524,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - 🟡 **CALL_PROCEDURE** - Call procedure (placeholder)
 - 🟡 **DEFSYSV** - Define system variable (placeholder)
 
-### ❌ Not Implemented
+### ❌ Not Yet Implemented (System & Control)
+
 - ❌ **MESSAGE** - Display message
 - ❌ **ON_ERROR** - Error handling
 - ❌ **STOP** - Stop execution
@@ -511,7 +552,9 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 ## 🤖 MACHINE LEARNING (XDL Extensions)
 
 ### ✅ Fully Implemented
+
 **Data Preprocessing:**
+
 - ✅ XDLML_PARTITION
 - ✅ XDLML_SHUFFLE
 - ✅ XDLML_LINEAR_NORMALIZER
@@ -522,15 +565,19 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 - ✅ XDLML_KMEANS
 
 **Activation Functions:**
+
 - ✅ 18 activation functions (IDENTITY, RELU, TANH, SOFTMAX, etc.)
 
 **Loss Functions:**
+
 - ✅ 5 loss functions (MSE, MAE, Cross-Entropy, Huber, LogCosh)
 
 **Optimizers:**
+
 - ✅ 5 optimizers (GD, Momentum, RMSProp, Adam, QuickProp)
 
 **Models:**
+
 - ✅ Neural Networks (Feedforward, Autoencoder)
 - ✅ SVM (Classification, Regression)
 - ✅ Cross-validation utilities
@@ -548,7 +595,8 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 **🟡 Partially Implemented**: ~10 commands
 **❌ Not Implemented**: ~250+ commands
 
-### Implementation by Category:
+### Implementation by Category
+
 - **Array Manipulation**: 85% complete
 - **Math Functions**: 60% complete
 - **Statistics**: 45% complete
@@ -565,21 +613,24 @@ This document tracks which IDL/GDL commands are implemented in XDL.
 
 ## 🎯 PRIORITY RECOMMENDATIONS
 
-### High Priority (Core Scientific Computing):
+### High Priority (Core Scientific Computing)
+
 1. Linear Algebra (INVERT, DETERM, LA_* functions)
 2. Advanced Statistics (CORRELATE, REGRESS, CURVEFIT)
 3. Image Processing (DILATE, ERODE, edge detection)
 4. Interpolation (INTERPOL, CONGRID)
 5. Special Functions (BESSEL, GAMMA, ERF)
 
-### Medium Priority (Enhanced Functionality):
+### Medium Priority (Enhanced Functionality)
+
 1. Advanced FFT modes (2D/3D)
 2. String regex (STREGEX)
 3. File operations (FILE_SEARCH, FILE_DELETE, etc.)
 4. Data structures (LIST, proper STRUCT)
 5. More plotting options
 
-### Low Priority (Nice to Have):
+### Low Priority (Nice to Have)
+
 1. Widget system
 2. Object-oriented features
 3. Advanced graphics modes

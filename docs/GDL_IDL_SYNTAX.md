@@ -354,6 +354,7 @@ END
 ## Summary
 
 **Key Rules:**
+
 1. **FOR loops**: Always use `ENDFOR` (never `END`)
 2. **IF with BEGIN**: Use `END` (not `ENDIF`)
 3. **IF without BEGIN**: Requires `ENDIF` for multi-line
@@ -361,6 +362,7 @@ END
 5. **Line continuation**: Use `$` or join lines
 
 **When in doubt:**
+
 - Use `BEGIN...END` blocks for clarity
 - Use proper closure keywords (ENDFOR, ENDWHILE, etc.)
 - Check working examples in `examples/` directory
@@ -369,5 +371,5 @@ END
 
 - Working examples: `examples/scientific/*.xdl`
 - Parser implementation: `xdl-parser/src/parser.rs`
-- IDL Documentation: https://www.nv5geospatialsoftware.com/docs/routines.html
-- GDL Documentation: https://github.com/gnudatalanguage/gdl
+- IDL Documentation: <https://www.nv5geospatialsoftware.com/docs/routines.html>
+- GDL Documentation: <https://github.com/gnudatalanguage/gdl>

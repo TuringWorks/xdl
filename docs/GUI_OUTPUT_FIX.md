@@ -40,7 +40,7 @@ The GUI now uses an **enhanced simulation mode** that:
 
 The enhanced simulation shows:
 
-```
+```text
 === Executing gui_test.xdl ===
 Executing with XDL simulation (enhanced mode)...
 [1] > print, "=== Testing Control Flow in GUI ==="
@@ -63,7 +63,8 @@ Executing with XDL simulation (enhanced mode)...
 ### Variable Window Updates
 
 Variables are tracked and displayed:
-```
+
+```text
 Name             Value          Type           Size
 x                10             Double         1x1
 y                20             Double         1x1
@@ -74,6 +75,7 @@ i                5              Double         1x1
 ## How to Test
 
 1. **Start the GUI:**
+
    ```bash
    cargo build --bin xdl-gui
    cargo run --bin xdl-gui
@@ -91,6 +93,7 @@ i                5              Double         1x1
 4. **Or type directly:**
    - Clear the editor
    - Type:
+
      ```xdl
      x = 10
      print, "x =", x
@@ -98,6 +101,7 @@ i                5              Double         1x1
        print, "i =", i
      endfor
      ```
+
    - Click "Execute"
 
 ## Long-term Solution (Future)
@@ -105,6 +109,7 @@ i                5              Double         1x1
 To get real interpreter output in the GUI, we need to implement **output redirection**:
 
 ### Option 1: Capture stdout
+
 ```rust
 // Redirect stdout to a string buffer
 let output = Arc::new(Mutex::new(Vec::new()));
@@ -114,6 +119,7 @@ interp.execute_program(&program)?;
 ```
 
 ### Option 2: Add output parameter to interpreter
+
 ```rust
 // Modify Interpreter to accept output sink
 struct Interpreter {
@@ -129,6 +135,7 @@ let output_text = String::from_utf8(output_buffer)?;
 ```
 
 ### Option 3: Event-based output
+
 ```rust
 // Interpreter emits events for output
 trait OutputListener {
@@ -176,6 +183,7 @@ This will show the real interpreter output in the terminal.
 ### For GUI Development
 
 Use the simulation mode for now. It provides:
+
 - ✅ Visual feedback on control flow
 - ✅ Variable tracking
 - ✅ Syntax validation

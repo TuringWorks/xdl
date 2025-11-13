@@ -15,6 +15,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ## ✅ Already Implemented in XDL
 
 ### Math Functions (15 functions)
+
 - ✅ SIN, COS, TAN, ASIN, ACOS, ATAN
 - ✅ EXP, ALOG (LN), ALOG10
 - ✅ SQRT, ABS
@@ -23,6 +24,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 - ✅ FINDGEN, INDGEN, RANDOMU
 
 ### Array Functions (16 functions)
+
 - ✅ BYTARR, FLTARR (placeholders, need full implementation)
 - ✅ N_ELEMENTS
 - ✅ WHERE (placeholder)
@@ -31,34 +33,41 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 - ✅ SMOOTH, MOVING_AVERAGE, WMA, EMA, CUMULATIVE_AVERAGE
 
 ### Statistics Functions (10 functions)
+
 - ✅ VARIANCE, STDDEV, MEDIAN
 - ✅ MOMENT, MEANABSDEV, SKEWNESS, KURTOSIS
 - ✅ GAUSS_PDF, T_PDF, CHISQR_PDF (basic placeholders)
 
 ### Graphics Procedures (11 procedures)
+
 - ✅ PLOT, OPLOT, CONTOUR, SURFACE
 - ✅ WINDOW, WSET, ERASE
 - ✅ DEVICE, LOADCT, TVSCL, AXIS
 
 ### I/O Functions (6 functions)
+
 - ✅ PRINT
 - ✅ GET_LUN, FREE_LUN
 - ✅ OPEN, CLOSE
 - ✅ FILEPATH, READ_JPEG
 
 ### String Functions (5 functions)
+
 - ✅ STRLEN, STRPOS, STRMID
 - ✅ STRUPCASE, STRLOWCASE
 
 ### System Functions (7 procedures)
+
 - ✅ HELP, CD, SPAWN
 - ✅ CALL_PROCEDURE, DEFSYSV
 - ✅ @, .COMPILE, .CONTINUE, CATCH
 
 ### Python Integration (3 functions)
+
 - ✅ PYTHON_IMPORT, PYTHON_CALL, PYTHON_CALL_KW
 
 ### Data Structures (1 function)
+
 - ✅ HASH (placeholder)
 
 **Total Implemented:** ~60 functions/procedures
@@ -70,6 +79,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 1. Array Creation Functions (PARTIALLY COMPLETE)
 
 **✅ Implemented:**
+
 - ✅ **BYTARR** - Create byte array (fully functional)
 - ✅ **INTARR** - Create integer array (fully functional)
 - ✅ **LONARR** - Create long integer array (fully functional)
@@ -78,6 +88,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 - ✅ **STRARR** - Create string array (basic - returns numeric array placeholder)
 
 **❌ Still Missing:**
+
 - ❌ **COMPLEXARR** - Create complex array
 - ❌ **DCOMPLEXARR** - Create double complex array
 - ❌ **LON64ARR** - Create 64-bit integer array
@@ -97,6 +108,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 2. Array Generation Functions
 
 **Missing:**
+
 - ❌ **DINDGEN** - Double precision index generation
 - ❌ **CINDGEN** - Complex index generation
 - ❌ **BINDGEN** - Byte index generation
@@ -116,6 +128,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 3. Array Manipulation Functions
 
 **Missing:**
+
 - ❌ **REFORM** - Change array dimensions without copying
 - ❌ **TRANSPOSE** - Transpose array
 - ❌ **ROTATE** - Rotate array
@@ -137,6 +150,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 4. Matrix/Linear Algebra Functions
 
 **Missing:**
+
 - ❌ **INVERT** - Matrix inversion
 - ❌ **DETERM** - Matrix determinant
 - ❌ **IDENTITY** - Create identity matrix
@@ -166,6 +180,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 5. Mathematical/Special Functions
 
 **Missing:**
+
 - ❌ **SINH**, **COSH**, **TANH** - Hyperbolic trig
 - ❌ **ASINH**, **ACOSH**, **ATANH** - Inverse hyperbolic
 - ❌ **ATAN** (2-argument) - Two-argument arctangent
@@ -192,6 +207,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 6. String Functions
 
 **Missing:**
+
 - ❌ **STRCOMPRESS** - Compress whitespace
 - ❌ **STRTRIM** - Trim whitespace
 - ❌ **STRJOIN** - Join strings
@@ -213,6 +229,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 7. I/O Functions and Procedures
 
 **Missing:**
+
 - ❌ **READ** - Read from terminal
 - ❌ **READF** - Read from file
 - ❌ **READS** - Read from string
@@ -241,6 +258,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 8. Image I/O Functions
 
 **Missing:**
+
 - ❌ **READ_PNG** - Read PNG image
 - ❌ **WRITE_PNG** - Write PNG image
 - ❌ **READ_TIFF** - Read TIFF image
@@ -259,6 +277,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 9. Graphics Functions (Additional)
 
 **Missing:**
+
 - ❌ **PLOTS** - Draw lines/points
 - ❌ **XYOUTS** - Draw text
 - ❌ **POLYFILL** - Fill polygon
@@ -286,6 +305,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 10. Statistical Functions (Advanced)
 
 **Missing:**
+
 - ❌ **CORRELATE** - Correlation coefficient
 - ❌ **R_CORRELATE** - Rank correlation
 - ❌ **M_CORRELATE** - Multiple correlation
@@ -313,6 +333,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 11. Signal Processing Functions
 
 **Missing:**
+
 - ❌ **FFT** - Fast Fourier Transform
 - ❌ **FFT_POWERSPEC** - FFT power spectrum
 - ❌ **CONVOL** - Convolution
@@ -342,6 +363,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 12. Interpolation Functions
 
 **Missing:**
+
 - ❌ **INTERPOL** - Linear interpolation
 - ❌ **INTERPOLATE** - Multi-dimensional interpolation
 - ❌ **BILINEAR** - Bilinear interpolation
@@ -359,6 +381,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 13. Time and Date Functions
 
 **Missing:**
+
 - ❌ **SYSTIME** - System time
 - ❌ **JULDAY** - Julian day number
 - ❌ **CALDAT** - Calendar date
@@ -373,6 +396,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 14. Type Conversion Functions
 
 **Partially Implemented:**
+
 - ✅ **FIX**, **LONG**, **FLOAT**, **DOUBLE** (basic)
 - ❌ **BYTE** - Convert to byte
 - ❌ **COMPLEX** - Create complex number
@@ -392,6 +416,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 15. Structure and Object Functions
 
 **Missing:**
+
 - ❌ **CREATE_STRUCT** - Create structure
 - ❌ **STRUCT_ASSIGN** - Assign structure
 - ❌ **TAG_NAMES** - Structure tag names
@@ -409,6 +434,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 16. Control Flow (Some Implemented)
 
 **Missing:**
+
 - ❌ **SWITCH/CASE** - Switch statement
 - ❌ **ON_ERROR** - Error handling
 - ❌ **ON_IOERROR** - I/O error handling
@@ -426,6 +452,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 17. Widgets and GUI (Minimal Implementation)
 
 **Missing:**
+
 - ❌ **WIDGET_BASE** - Create widget base
 - ❌ **WIDGET_BUTTON** - Create button
 - ❌ **WIDGET_SLIDER** - Create slider
@@ -449,6 +476,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 18. HDF/NetCDF/Scientific Data Formats
 
 **Missing:**
+
 - ❌ **HDF_SD_START** - Open HDF file
 - ❌ **HDF_SD_SELECT** - Select HDF dataset
 - ❌ **HDF_SD_GETDATA** - Read HDF data
@@ -470,6 +498,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 19. Database Functions
 
 **Missing:**
+
 - ❌ All database functionality
 - ❌ **DB_OPEN** - Open database
 - ❌ **DB_QUERY** - Query database
@@ -482,6 +511,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ### 20. Miscellaneous Functions
 
 **Missing:**
+
 - ❌ **DIALOG_MESSAGE** - Display dialog
 - ❌ **DIALOG_PICKFILE** - File picker dialog
 - ❌ **DIALOG_PRINTERSETUP** - Printer setup
@@ -543,6 +573,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 ## Recommended Implementation Order
 
 ### Phase 1: Core Functionality (Next 3-6 months)
+
 1. ✅ Implement proper array creation (INTARR, DBLARR, STRARR, etc.)
 2. ✅ Full WHERE implementation with conditional support
 3. ✅ STRING() type conversion function
@@ -550,6 +581,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 5. ✅ REFORM and TRANSPOSE
 
 ### Phase 2: Scientific Computing (6-12 months)
+
 6. ✅ Matrix operations (##, INVERT, DETERM)
 7. ✅ FFT and inverse FFT
 8. ✅ Linear algebra (SVD, LU, eigenvalues via GSL)
@@ -558,12 +590,14 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 11. ✅ HISTOGRAM
 
 ### Phase 3: Data I/O (12-18 months)
+
 12. ✅ NetCDF support (integrate xdl-ffi/netcdf.rs)
 13. ✅ HDF5 support (integrate xdl-ffi/hdf5.rs)
 14. ✅ FITS I/O
 15. ✅ Image I/O (PNG, TIFF, complete JPEG)
 
 ### Phase 4: Advanced Features (18-24 months)
+
 16. ✅ Special functions (via GSL)
 17. ✅ Curve fitting
 18. ✅ Advanced signal processing
@@ -571,6 +605,7 @@ This document identifies GDL/IDL functionality that has **not yet been ported** 
 20. ✅ Time/date functions
 
 ### Phase 5: Nice-to-Have (Future)
+
 21. ⏳ Widgets (if needed)
 22. ⏳ Object system
 23. ⏳ Structure system
@@ -606,6 +641,7 @@ These need **full implementation** before they're truly usable.
 ## Conclusion
 
 XDL has a **solid foundation** with ~60 functions implemented, covering:
+
 - ✅ Basic math and trig
 - ✅ Basic statistics
 - ✅ Array operations (min, max, mean, sort, etc.)
@@ -614,6 +650,7 @@ XDL has a **solid foundation** with ~60 functions implemented, covering:
 - ✅ Python integration
 
 **Critical gaps:**
+
 - ❌ Array creation functions don't create real arrays
 - ❌ No matrix operations or linear algebra
 - ❌ No file I/O beyond basic operations

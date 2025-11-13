@@ -24,22 +24,22 @@
 
 ### 🚧 In Progress
 
-3. **XDL Procedures in xdl-stdlib**
+1. **XDL Procedures in xdl-stdlib**
    - Need to add charting procedures
    - Integration with desktop viewer
    - Data marshalling from XDL arrays
 
 ### 📋 TODO
 
-4. **Example scripts**
-5. **Workspace configuration**
-6. **End-to-end testing**
+1. **Example scripts**
+2. **Workspace configuration**
+3. **End-to-end testing**
 
 ---
 
 ## Architecture Overview
 
-```
+```text
 XDL Script (.xdl or .m file)
     ↓
 XDL Parser/Interpreter (xdl-interpreter)
@@ -101,12 +101,14 @@ pub fn surface3d(args: &[Value]) -> Result<Value> {
 
 Since xdl-gui already uses eframe/egui, we need to decide:
 
-**Option A: Separate Tauri process** (Recommended for MVP)
+#### Option A: Separate Tauri process** (Recommended for MVP)
+
 - Launch Tauri app as separate process
 - Uses `std::process::Command`
 - Simpler integration
 
-**Option B: Embed Tauri in xdl-gui**
+#### Option B: Embed Tauri in xdl-gui
+
 - More complex, need to run Tauri event loop alongside eframe
 - Better UX but harder to implement
 
@@ -116,7 +118,7 @@ For MVP, go with Option A - separate Tauri app binary.
 
 Create `xdl-chart-viewer` binary crate:
 
-```
+```text
 xdl-chart-viewer/
 ├── Cargo.toml
 ├── src/
@@ -153,6 +155,7 @@ pub fn plot(args: &[Value]) -> Result<Value> {
 ```
 
 **Benefits:**
+
 - Works immediately (browser always available)
 - Reuses existing, tested infrastructure
 - Non-blocking execution
@@ -181,6 +184,7 @@ pub fn plot(args: &[Value]) -> Result<Value> {
 ## File Changes Required
 
 ### xdl-stdlib/Cargo.toml
+
 ```toml
 [dependencies]
 xdl-charts = { path = "../xdl-charts" }
@@ -189,6 +193,7 @@ xdl-viz3d-web = { path = "../xdl-viz3d-web" } # Reuse browser server
 ```
 
 ### xdl-stdlib/src/lib.rs
+
 ```rust
 pub mod charting_procs; // Add new module
 
@@ -230,12 +235,14 @@ PLOTSHOW  ; Display chart
 **Recommendation:** Implement browser-first version now, add Tauri later.
 
 **Rationale:**
+
 1. Faster implementation (reuse viz3d-web)
 2. Lower risk (proven technology)
 3. Works on all platforms immediately
 4. Can add Tauri as enhancement later
 
 **Action Items (This Session):**
+
 1. ✅ Create xdl-charts crate
 2. ✅ Create xdl-desktop-viewer crate (for later)
 3. 🚧 Create charting_procs.rs in xdl-stdlib

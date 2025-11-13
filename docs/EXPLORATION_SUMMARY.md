@@ -11,13 +11,15 @@ The XDL project has a well-architected **database connectivity module** (`xdl-da
 ## 1. PROJECT STRUCTURE
 
 ### Workspace Organization
+
 - **Location**: `/Users/ravindraboddipalli/sources/xdl/`
 - **Type**: Rust workspace with 17 member crates
 - **Main Branch**: master
 - **Current Branch**: develop
 
 ### Member Crates
-```
+
+```text
 xdl-core           - Core types and data structures (XdlValue, etc.)
 xdl-parser         - XDL language parser
 xdl-interpreter    - Interpreter for parsed code
@@ -50,6 +52,7 @@ xdl-amp            - Accelerated math processing
 | Kafka | rdkafka | kafka-support | Fully implemented | Streaming/Messaging |
 
 ### Not Supported
+
 - **SQLite** - Missing (most used embedded database)
 - **MongoDB** - Not implemented
 - **DynamoDB** - Not implemented
@@ -62,12 +65,14 @@ xdl-amp            - Accelerated math processing
 ### Core Components
 
 #### A. XDLDatabase (lib.rs)
+
 - Main API for user code
 - Manages connection lifecycle
 - Auto-detects database type from connection string
 - Provides `connect()`, `disconnect()`, `execute_sql()`, `execute_command()`
 
 #### B. DatabaseType Enum (lib.rs)
+
 - Automatically detects database type
 - Detection patterns:
   - PostgreSQL: `postgresql://` or `postgres://`
@@ -78,6 +83,7 @@ xdl-amp            - Accelerated math processing
   - ODBC: `DRIVER={...}`
 
 #### C. DatabaseConnection Enum (connection.rs)
+
 - Factory pattern dispatcher
 - Routes to appropriate driver based on database type
 - All drivers implement same async interface:
@@ -87,6 +93,7 @@ xdl-amp            - Accelerated math processing
   - `async fn is_connected() -> bool`
 
 #### D. Recordset (recordset.rs)
+
 - Unified result representation
 - Contains columns (metadata) and rows (data)
 - Converts all data to JsonValue
@@ -97,6 +104,7 @@ xdl-amp            - Accelerated math processing
   - Navigation: `next()`, `reset()`
 
 #### E. DatabaseRegistry (lib.rs)
+
 - Global registry for XDL object system integration
 - Maps object IDs to database/recordset instances
 - Uses lazy_static for singleton pattern
@@ -112,7 +120,8 @@ xdl-amp            - Accelerated math processing
 7. **Async/await** - All operations use Tokio for async execution
 
 ### File Structure
-```
+
+```text
 xdl-database/
 ├── Cargo.toml              # Dependencies and features
 ├── README.md               # Documentation
@@ -142,6 +151,7 @@ xdl-database/
 ## 4. CONNECTION STRING PATTERNS
 
 ### Existing Patterns
+
 - PostgreSQL: `postgresql://user:password@host:5432/dbname` or `postgres://...`
 - MySQL: `mysql://user:password@host:3306/database`
 - DuckDB: `duckdb:///path/to/db.duckdb` or `.duckdb` file
@@ -150,6 +160,7 @@ xdl-database/
 - ODBC: `DRIVER={PostgreSQL};SERVER=localhost`
 
 ### Proposed SQLite Patterns
+
 - File-based: `sqlite:///path/to/database.sqlite`
 - Relative: `sqlite://./local.db`
 - In-memory: `sqlite://:memory:`
@@ -160,6 +171,7 @@ xdl-database/
 ## 5. RECOMMENDED SQLITE IMPLEMENTATION
 
 ### Why SQLite?
+
 1. **Embedded database** - No server required, perfect for single-user/desktop apps
 2. **Widely compatible** - Works on Linux, macOS, Windows
 3. **Zero-config** - File-based, simple connection strings
@@ -167,9 +179,11 @@ xdl-database/
 5. **Lightweight** - Minimal dependencies, small footprint
 
 ### Implementation Location
+
 **Primary File**: `/Users/ravindraboddipalli/sources/xdl/xdl-database/src/drivers/sqlite.rs`
 
 ### Files to Modify
+
 1. `xdl-database/Cargo.toml` - Add rusqlite dependency
 2. `xdl-database/src/lib.rs` - Add SQLite to DatabaseType enum
 3. `xdl-database/src/connection.rs` - Add SQLite to DatabaseConnection enum
@@ -178,19 +192,23 @@ xdl-database/
 6. `xdl-database/src/drivers/sqlite.rs` - Create new driver (NEW FILE)
 
 ### Implementation Pattern
+
 Follow existing DuckDB pattern (both are synchronous):
+
 - Wrap rusqlite::Connection in Mutex
 - Implement async interface (convert to async/await)
-- Convert rows to Vec<Vec<JsonValue>>
+- Convert rows to Vec< Vec< JsonValue>>
 - Parse connection strings (detect file paths, `:memory:`, etc.)
 
 ### Key Dependencies
+
 ```toml
 rusqlite = { version = "0.31", features = ["bundled"], optional = true }
 hex = "0.4"  # For blob encoding
 ```
 
 ### Feature Flag
+
 ```toml
 sqlite-support = ["rusqlite"]
 ```
@@ -200,7 +218,9 @@ sqlite-support = ["rusqlite"]
 ## 6. EXISTING PATTERNS & ABSTRACTIONS
 
 ### Common Driver Interface
+
 Every driver implements the same 5 methods:
+
 ```rust
 pub async fn connect(connection_string: &str) -> DatabaseResult<Self>
 pub async fn execute(&self, query: &str) -> DatabaseResult<Recordset>
@@ -210,7 +230,8 @@ pub async fn is_connected(&self) -> bool
 ```
 
 ### Type Conversion Chain
-```
+
+```text
 Database Value → JsonValue → XdlValue
 
 Examples:
@@ -222,11 +243,13 @@ Examples:
 ```
 
 ### Error Handling Strategy
+
 - Unified `DatabaseError` enum with driver-specific variants
 - All errors convert to `XdlError::RuntimeError` at API boundary
 - Specific error types: ConnectionError, QueryError, ConversionError, NotConnected, etc.
 
 ### Registration Pattern (Object System)
+
 ```rust
 // Create database
 let db = XDLDatabase::new();
@@ -242,6 +265,7 @@ let id = GLOBAL_DB_REGISTRY.register_database(db).await;
 ## 7. DEPENDENCIES USED
 
 ### Core Dependencies (all databases)
+
 - `tokio` v1.0+ - Async runtime
 - `serde` & `serde_json` - Serialization
 - `thiserror` - Error types
@@ -250,6 +274,7 @@ let id = GLOBAL_DB_REGISTRY.register_database(db).await;
 - `lazy_static` - Global registry
 
 ### Database-Specific Dependencies
+
 - PostgreSQL: `tokio-postgres`, `deadpool-postgres`
 - MySQL: `mysql_async`
 - DuckDB: `duckdb` (v1.1 with bundled)
@@ -258,6 +283,7 @@ let id = GLOBAL_DB_REGISTRY.register_database(db).await;
 - Kafka: `rdkafka` (v0.36 with tokio)
 
 ### Proposed for SQLite
+
 - `rusqlite` v0.31 (with bundled feature)
 - `hex` v0.4 (optional, for blob encoding)
 
@@ -266,6 +292,7 @@ let id = GLOBAL_DB_REGISTRY.register_database(db).await;
 ## 8. KEY DESIGN OBSERVATIONS
 
 ### Strengths
+
 1. **Modular** - Each database is independently pluggable
 2. **Consistent** - All drivers implement identical interface
 3. **Type-safe** - Results converted to typed XdlValue
@@ -274,6 +301,7 @@ let id = GLOBAL_DB_REGISTRY.register_database(db).await;
 6. **Well-documented** - Examples provided for each database
 
 ### Areas for Enhancement
+
 1. **SQLite missing** - Should be added
 2. **Connection pooling** - Only PostgreSQL/MySQL have it
 3. **Type metadata** - Limited column type information
@@ -299,6 +327,7 @@ let id = GLOBAL_DB_REGISTRY.register_database(db).await;
 ## 10. USAGE EXAMPLE
 
 ### XDL Code (Once SQLite Added)
+
 ```xdl
 ; Create database object
 objdb = OBJ_NEW('XDLdbDatabase')

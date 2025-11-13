@@ -11,11 +11,13 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 **Problem**: Parser was consuming ENDIF tokens incorrectly in nested IF statements using BEGIN...END blocks.
 
 **Solution**:
+
 - When IF uses `BEGIN...END`, only pass `Token::Else` as terminator (not `Token::Endif`)
 - The `END` token closes the BEGIN block, making ENDIF optional
 - ENDIF is only required when NOT using BEGIN...END blocks
 
 **Files Modified**:
+
 - `xdl-parser/src/parser.rs` (lines 169-208)
 
 ### 2. Nested FOR/END Loops ✅
@@ -23,11 +25,13 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 **Problem**: Similar issue - nested FOR loops with BEGIN...END were incorrectly consuming ENDFOR tokens.
 
 **Solution**:
+
 - When FOR uses `BEGIN...END`, don't pass `Token::Endfor` as terminator
 - The `END` token closes the BEGIN block
 - ENDFOR is optional with BEGIN...END
 
 **Files Modified**:
+
 - `xdl-parser/src/parser.rs` (lines 260-279)
 
 ### 3. /KEYWORD Syntax Support ✅
@@ -35,10 +39,12 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 **Problem**: Boolean keyword flags like `/INTERACTIVE` were not recognized.
 
 **Solution**:
+
 - Added support in `parse_procedure_call` to recognize `/` followed by identifier
 - Creates `Keyword` with `value: None` for boolean flags
 
 **Files Modified**:
+
 - `xdl-parser/src/parser.rs` (lines 300-318)
 
 ## Multi-Dimensional Array Implementation
@@ -48,11 +54,13 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 **Problem**: FLTARR only created 1D arrays regardless of dimensions.
 
 **Solution**:
+
 - Extract shape from all dimension arguments
 - Return `XdlValue::MultiDimArray { data, shape }` for 2D+ arrays
 - Return `XdlValue::Array` for 1D arrays
 
 **Files Modified**:
+
 - `xdl-stdlib/src/array.rs` (lines 119-142)
 
 ### N-Dimensional Array Indexing (Read)
@@ -60,11 +68,13 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 **Problem**: Array indexing only supported 2D arrays.
 
 **Solution**:
+
 - Generalized `evaluate_multidim_index` to handle N dimensions
 - Calculate flat index using row-major order: `flat_index = i₀*s₁*s₂*... + i₁*s₂*s₃*... + ...`
 - Iterate dimensions in reverse order (rightmost varies fastest)
 
 **Files Modified**:
+
 - `xdl-interpreter/src/evaluator.rs` (lines 744-790)
 
 ### N-Dimensional Array Indexing (Write)
@@ -72,11 +82,13 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 **Problem**: Array assignment only supported 2D arrays.
 
 **Solution**:
+
 - Generalized `modify_array_element` to handle N dimensions
 - Uses same row-major indexing calculation as reading
 - Validates bounds for each dimension
 
 **Files Modified**:
+
 - `xdl-interpreter/src/lib.rs` (lines 479-531)
 
 ## Demo Optimizations
@@ -84,6 +96,7 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 ### Rayleigh-Taylor Demo
 
 **Changes for Performance**:
+
 - Reduced grid size from 128³ to 32³ (2M → 32K elements)
 - Reduced time steps from 50 to 10
 - Commented out unimplemented functions (VIZ3D_TRANSFER, VIZ3D_LIGHT, VIZ3D_ISOSURFACE)
@@ -92,6 +105,7 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 **Result**: Demo now completes in ~2 seconds instead of hanging
 
 **Files Modified**:
+
 - `examples/demo/rayleigh_taylor.xdl`
 
 ## Test Results
@@ -99,7 +113,8 @@ Successfully fixed three critical parser issues and implemented full multi-dimen
 All three VIZ3D demos now work correctly:
 
 ### 1. viz3d_test_simple.xdl ✅
-```
+
+```text
 === VIZ3D Test ===
 VIZ3D: Initialized (800x600)
 VIZ3D: Set colormap to VIRIDIS
@@ -109,7 +124,8 @@ Test complete!
 ```
 
 ### 2. rayleigh_taylor_simple.xdl ✅
-```
+
+```text
 === Rayleigh-Taylor Instability Demo ===
 Grid size:  32 x 32 x 32
 Created  32 x 32 x 32  volume
@@ -119,7 +135,8 @@ Demo complete!
 ```
 
 ### 3. rayleigh_taylor.xdl ✅
-```
+
+```text
 === Rayleigh-Taylor Instability Simulation ===
 Grid size:  32 x 32 x 32
 Time steps:  10
@@ -143,11 +160,13 @@ Simulation complete!
 ## Performance Characteristics
 
 ### Array Indexing Complexity
+
 - **Read**: O(n) where n is number of dimensions (for index calculation)
 - **Write**: O(n) where n is number of dimensions (for index calculation)
 - **Memory**: Row-major layout (C-style), cache-friendly for rightmost index iteration
 
 ### Example: 3D Indexing
+
 ```xdl
 arr = FLTARR(32, 32, 32)  ; Creates 32³ = 32,768 element array
 arr[5, 10, 15] = 42.0     ; Sets element at position (5, 10, 15)
@@ -155,7 +174,8 @@ val = arr[5, 10, 15]      ; Reads element at position (5, 10, 15)
 ```
 
 **Flat index calculation**:
-```
+
+```text
 flat_index = 5 * (32 * 32) + 10 * 32 + 15
            = 5 * 1024 + 320 + 15
            = 5120 + 320 + 15
@@ -173,16 +193,20 @@ flat_index = 5 * (32 * 32) + 10 * 32 + 15
 ## Files Changed
 
 **Parser**:
+
 - `xdl-parser/src/parser.rs` (3 changes)
 
 **Stdlib**:
+
 - `xdl-stdlib/src/array.rs` (1 change)
 
 **Interpreter**:
+
 - `xdl-interpreter/src/evaluator.rs` (1 change)
 - `xdl-interpreter/src/lib.rs` (1 change)
 
 **Demos**:
+
 - `examples/demo/rayleigh_taylor.xdl` (4 changes for performance and compatibility)
 
 **Total**: 7 files modified, ~200 lines changed

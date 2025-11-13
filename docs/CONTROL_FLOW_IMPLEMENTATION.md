@@ -7,12 +7,14 @@ The control flow execution in the XDL interpreter has been fully implemented and
 ## Implemented Features
 
 ### 1. Conditional Statements ✅
+
 - **IF/THEN/ELSE**: Full support for conditional execution
 - **Nested IF statements**: Proper handling of nested conditions
 - **All comparison operators**: EQ, NE, LT, GT, LE, GE
 - **Logical operators**: AND, OR, NOT
 
 ### 2. Loop Constructs ✅
+
 - **FOR loops**: With start, end, and optional step values
   - Supports positive and negative steps
   - Proper loop variable management
@@ -29,11 +31,13 @@ The control flow execution in the XDL interpreter has been fully implemented and
   - Check condition after each iteration
 
 ### 3. Loop Control ✅
+
 - **BREAK**: Exit from any loop
 - **CONTINUE**: Skip to next iteration
 - **Proper propagation**: Control flow errors propagate correctly through nested structures
 
 ### 4. Additional Features ✅
+
 - **RETURN statements**: Exit from functions/procedures with optional value
 - **Nested control flow**: All constructs can be nested arbitrarily
 - **Error handling**: Proper error propagation and messages
@@ -74,7 +78,7 @@ The control flow execution in the XDL interpreter has been fully implemented and
 
 All control flow features have been tested and verified:
 
-```
+```text
 ✅ IF/THEN/ELSE statements
 ✅ Nested IF statements
 ✅ FOR loops (basic, with step, nested)
@@ -90,6 +94,7 @@ All control flow features have been tested and verified:
 ## Example Usage
 
 ### Simple IF Statement
+
 ```xdl
 x = 10
 if x gt 5 then
@@ -98,6 +103,7 @@ endif
 ```
 
 ### FOR Loop with Step
+
 ```xdl
 for i = 0, 10, 2
   print, "i =", i
@@ -105,6 +111,7 @@ endfor
 ```
 
 ### WHILE Loop
+
 ```xdl
 count = 5
 while count gt 0
@@ -114,6 +121,7 @@ endwhile
 ```
 
 ### BREAK and CONTINUE
+
 ```xdl
 for i = 1, 10
   if i eq 5 then
@@ -127,6 +135,7 @@ endfor
 ```
 
 ### FOREACH Loop (Parser Support)
+
 ```xdl
 arr = [1, 2, 3, 4, 5]
 foreach element, arr, index
@@ -135,6 +144,7 @@ endfor
 ```
 
 ### REPEAT/UNTIL Loop (Parser Support)
+
 ```xdl
 counter = 0
 repeat
@@ -153,6 +163,7 @@ until counter gt 5
 ## Compatibility
 
 The implementation follows IDL/XDL syntax conventions:
+
 - Uses `THEN`/`ENDIF`, `ENDFOR`, `ENDWHILE` keywords
 - Comparison operators: EQ, NE, LT, GT, LE, GE
 - Logical operators: AND, OR, NOT

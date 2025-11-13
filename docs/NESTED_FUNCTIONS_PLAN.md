@@ -3,6 +3,7 @@
 ## Status: 📋 PLANNED (Not Yet Implemented)
 
 ## Overview
+
 Add support for defining functions within XDL scripts, either using MATLAB-style `function/end` syntax or GDL-style `PRO/FUNCTION/END` syntax.
 
 ## Current Limitation
@@ -28,12 +29,15 @@ END
 ## Proposed Implementation
 
 ### Phase 1: Top-Level Functions (CURRENT STATUS)
+
 ✅ **Already Implemented**: Top-level PRO/FUNCTION definitions work
+
 - Functions can be defined at the top level of scripts
 - They are registered in the context
 - Can be called from main script body
 
 ### Phase 2: Nested Function Scope
+
 **To Implement**: Allow functions defined inside other functions/procedures
 
 **Required Changes:**
@@ -101,6 +105,7 @@ impl Context {
 ```
 
 ### Phase 3: MATLAB-Style Function Syntax
+
 **To Implement**: Parse MATLAB `function` keyword
 
 **Required Changes:**
@@ -140,6 +145,7 @@ struct FunctionDef {
 ```
 
 ### Phase 4: Inline/Anonymous Functions (Future)
+
 Support MATLAB-style anonymous functions:
 
 ```matlab
@@ -148,6 +154,7 @@ y = f(5)  % Returns 26
 ```
 
 This requires:
+
 - Lambda expression support in AST
 - Closure implementation
 - Function pointer/reference type
@@ -155,6 +162,7 @@ This requires:
 ## Testing Strategy
 
 ### Test 1: Nested Helper Function
+
 ```xdl
 FUNCTION main_calc, n
     ; Define helper function inside
@@ -170,6 +178,7 @@ print, main_calc(21)  ; Should print 42
 ```
 
 ### Test 2: Scope Capture
+
 ```xdl
 FUNCTION outer, multiplier
     FUNCTION inner, x
@@ -184,6 +193,7 @@ print, outer(5)  ; Should print 50
 ```
 
 ### Test 3: MATLAB Style
+
 ```matlab
 function y = quadratic(a, b, c, x)
     y = a*x^2 + b*x + c;
@@ -230,8 +240,8 @@ ENDFOR
 
 ## References
 
-- GDL Documentation: https://gnudatalanguage.github.io/
-- MATLAB Function Documentation: https://www.mathworks.com/help/matlab/ref/function.html
+- GDL Documentation: <https://gnudatalanguage.github.io/>
+- MATLAB Function Documentation: <https://www.mathworks.com/help/matlab/ref/function.html>
 - XDL Current Implementation: `xdl-interpreter/src/lib.rs` lines 184-216
 
 ---

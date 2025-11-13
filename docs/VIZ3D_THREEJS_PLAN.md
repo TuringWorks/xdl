@@ -24,7 +24,7 @@ Port VIZ3D_* functions to use Three.js for volume rendering, leveraging the exis
 
 ## Architecture
 
-```
+```text
 XDL Script
     ↓
 VIZ3D_* procedures (xdl-stdlib)
@@ -43,7 +43,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
 
 ### Phase 1: Core Infrastructure (Week 1)
 
-#### Deliverables:
+#### Deliverables
 
 1. **Create xdl-viz3d-threejs crate**
    - Location: `/xdl-viz3d-threejs/`
@@ -55,6 +55,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
      - `launch_threejs_viewer()` - Integration with xdl-chart-viewer
 
 2. **Three.js Volume Rendering Template**
+
    ```javascript
    - Data3DTexture for volume data
    - Custom ShaderMaterial for raycasting
@@ -64,6 +65,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
    ```
 
 3. **Backend Selection Mechanism**
+
    ```rust
    // In xdl-stdlib/src/viz3d.rs
    pub enum Viz3DBackend {
@@ -73,7 +75,8 @@ Native Window              Tauri Window (xdl-chart-viewer)
    }
    ```
 
-#### Files to Create:
+#### Files to Create
+
 - `xdl-viz3d-threejs/Cargo.toml`
 - `xdl-viz3d-threejs/src/lib.rs`
 - `xdl-viz3d-threejs/src/templates.rs`
@@ -84,7 +87,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
 
 ### Phase 2: VIZ3D_* Integration (Week 1)
 
-#### Deliverables:
+#### Deliverables
 
 1. **Modify xdl-stdlib/src/viz3d.rs**
    - Add backend detection
@@ -92,6 +95,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
    - Fallback logic: ThreeJS → WebGPU → Error
 
 2. **Environment Variables**
+
    ```bash
    VIZ3D_BACKEND=threejs    # Force Three.js
    VIZ3D_BACKEND=webgpu     # Force WebGPU
@@ -99,6 +103,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
    ```
 
 3. **Function Mapping**
+
    | VIZ3D Function | Three.js Implementation |
    |----------------|-------------------------|
    | `VIZ3D_INIT` | Setup scene, camera, renderer |
@@ -110,7 +115,8 @@ Native Window              Tauri Window (xdl-chart-viewer)
    | `VIZ3D_LIGHT` | Add scene lights |
    | `VIZ3D_ISOSURFACE` | Marching cubes + Mesh |
 
-#### Files to Modify:
+#### Files to Modify
+
 - `xdl-stdlib/src/viz3d.rs`
 - `xdl-stdlib/Cargo.toml` (add xdl-viz3d-threejs dependency)
 - `Cargo.toml` (workspace member)
@@ -119,7 +125,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
 
 ### Phase 3: Advanced Features (Week 2)
 
-#### Deliverables:
+#### Deliverables
 
 1. **Transfer Functions**
    - Custom opacity curves
@@ -128,7 +134,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
 
 2. **Isosurface Extraction**
    - Implement marching cubes in JavaScript
-   - Or use library: https://github.com/mikolalysenko/isosurface
+   - Or use library: <https://github.com/mikolalysenko/isosurface>
    - Render as Three.js Mesh with lighting
 
 3. **Lighting & Shading**
@@ -141,7 +147,8 @@ Native Window              Tauri Window (xdl-chart-viewer)
    - LOD for large volumes
    - Web Workers for data processing
 
-#### Files to Create:
+#### Files to Create
+
 - `xdl-viz3d-threejs/src/isosurface.rs`
 - `xdl-viz3d-threejs/src/transfer_function.rs`
 - `xdl-viz3d-threejs/src/lighting.rs`
@@ -150,7 +157,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
 
 ### Phase 4: Testing & Benchmarking (Week 2)
 
-#### Deliverables:
+#### Deliverables
 
 1. **Test Suite**
    - Port existing VIZ3D demos to use Three.js backend
@@ -158,6 +165,7 @@ Native Window              Tauri Window (xdl-chart-viewer)
    - Test all colormaps, camera controls
 
 2. **Performance Benchmarks**
+
    | Volume Size | Backend | Load Time | FPS | Memory |
    |-------------|---------|-----------|-----|--------|
    | 32³ | WebGPU | ? | ? | ? |
@@ -172,7 +180,8 @@ Native Window              Tauri Window (xdl-chart-viewer)
    - WebGL 2.0 fallback detection
    - Graceful degradation
 
-#### Files to Create:
+#### Files to Create
+
 - `examples/viz3d/threejs_test.xdl`
 - `examples/viz3d/backend_comparison.xdl`
 - `tests/viz3d_threejs_test.sh`
@@ -295,11 +304,13 @@ void main() {
 ## Dependencies
 
 ### Rust Crates
+
 - `serde`, `serde_json` - JSON serialization
 - `xdl-core` - XDL types
 - `xdl-desktop-viewer` - Tauri window management (existing)
 
 ### JavaScript Libraries
+
 - Three.js r161+ (CDN)
 - lil-gui (for controls)
 - OrbitControls (Three.js addon)
@@ -312,6 +323,7 @@ void main() {
 
 1. **No code changes required** - Existing VIZ3D_* scripts work
 2. **Optional backend selection**:
+
    ```bash
    # Use Three.js
    VIZ3D_BACKEND=threejs ./target/release/xdl script.xdl
@@ -331,11 +343,13 @@ void main() {
 ### For Developers
 
 1. **Import xdl-viz3d-threejs**:
+
    ```rust
    use xdl_viz3d_threejs::generate_volume_html;
    ```
 
 2. **Backend-agnostic API**:
+
    ```rust
    match backend {
        Viz3DBackend::WebGPU => xdl_viz3d::launch_visualization(...),

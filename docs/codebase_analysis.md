@@ -8,7 +8,7 @@
 
 The project is organized as a **Cargo workspace** with 17 member crates:
 
-```
+```text
 xdl/
 ├── xdl-core/              # Core data structures and types (XdlValue, etc.)
 ├── xdl-parser/            # XDL language parser
@@ -34,6 +34,7 @@ xdl/
 ## Database Connectivity Implementation
 
 ### Location
+
 **Primary Module**: `/Users/ravindraboddipalli/sources/xdl/xdl-database/`
 
 ### Current Database Support
@@ -102,7 +103,7 @@ anyhow = "1.0"
 
 ### Module Structure
 
-```
+```text
 xdl-database/src/
 ├── lib.rs                 # Main module, XDLDatabase and DatabaseRegistry
 ├── connection.rs          # DatabaseConnection enum (dispatches to drivers)
@@ -123,6 +124,7 @@ xdl-database/src/
 ## Current Architecture & Patterns
 
 ### 1. **DatabaseType Enum**
+
 Located in `lib.rs`, automatically detects database type from connection string:
 
 ```rust
@@ -150,6 +152,7 @@ impl DatabaseType {
 ```
 
 ### 2. **Abstraction Pattern: DatabaseConnection Enum**
+
 Located in `connection.rs`, provides unified interface:
 
 ```rust
@@ -173,6 +176,7 @@ impl DatabaseConnection {
 ```
 
 ### 3. **Common Driver Interface**
+
 Each driver implements the same interface pattern:
 
 ```rust
@@ -190,6 +194,7 @@ impl DriverConnection {
 ```
 
 ### 4. **Recordset Structure**
+
 Unified result representation:
 
 ```rust
@@ -207,6 +212,7 @@ pub struct ColumnInfo {
 ```
 
 ### 5. **Error Handling**
+
 Unified error type with database-specific variants:
 
 ```rust
@@ -225,6 +231,7 @@ pub type DatabaseResult<T> = Result<T, DatabaseError>;
 ```
 
 ### 6. **Global Registry Pattern**
+
 For XDL object system integration:
 
 ```rust

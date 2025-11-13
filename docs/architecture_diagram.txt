@@ -16,20 +16,20 @@ HIGH-LEVEL FLOW:
             v
     DatabaseConnection::new()  [Factory]
             |
-        +-----------+
-        |           |
-        v           v
-    Match DB Type -> Spawn appropriate driver
+        +-----------------------+
+        |                       |
+        v                       v
+    Match DB Type ---------> Spawn appropriate driver
         |
-        +-- PostgreSQL ------> PostgresConnection (tokio-postgres)
+        +-- PostgreSQL ----> PostgresConnection (tokio-postgres)
         |
-        +-- MySQL -----------> MySQLConnection (mysql_async)
+        +-- MySQL ---------> MySQLConnection (mysql_async)
         |
-        +-- DuckDB ---------> DuckDBConnection (duckdb)
+        +-- DuckDB -- -----> DuckDBConnection (duckdb)
         |
-        +-- SQLite [TODO] ---> SQLiteConnection (rusqlite/sqlx)
+        +-- SQLite [TODO] -> SQLiteConnection (rusqlite/sqlx)
         |
-        +-- ODBC -----------> ODBCConnection (odbc-api)
+        +-- ODBC ----------> ODBCConnection (odbc-api)
         |
         +-- Redis ---------> RedisConnection (redis)
         |
@@ -42,67 +42,67 @@ COMPONENT INTERACTION DIAGRAM:
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                          XDL APPLICATION                                 │
 │                                                                          │
-│  let db = XDLDatabase::new();                                           │
-│  db.connect("postgresql://localhost/mydb").await?;                      │
-│  let recordset = db.execute_sql("SELECT * FROM users").await?;          │
-└──────────────────────────────────────────────┬───────────────────────────┘
-                                               │
-                                               v
+│  let db = XDLDatabase::new();                                            │
+│  db.connect("postgresql://localhost/mydb").await?;                       │
+│  let recordset = db.execute_sql("SELECT * FROM users").await?;           │
+└─────────────────────────────────┬───-------------────────────────────────┘
+                                  │
+                                  v
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                        LIB.RS (Main API)                                 │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ XDLDatabase {                                                      │ │
-│  │   connection: Arc<RwLock<DatabaseConnection>>,                    │ │
-│  │   db_type: DatabaseType,                                          │ │
-│  │   connection_string: String,                                      │ │
-│  │   last_error: Option<String>                                      │ │
-│  │ }                                                                  │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │ XDLDatabase {                                                      │  │
+│  │   connection: Arc<RwLock<DatabaseConnection>>,                     │  │
+│  │   db_type: DatabaseType,                                           │  │
+│  │   connection_string: String,                                       │  │
+│  │   last_error: Option<String>                                       │  │
+│  │ }                                                                  │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
-│  DatabaseType::from_connection_string() → Auto-detect DB type          │
+│  DatabaseType::from_connection_string() → Auto-detect DB type            │
 │                                                                          │
-│  GLOBAL_DB_REGISTRY → Object system integration (ID mapping)            │
+│  GLOBAL_DB_REGISTRY → Object system integration (ID mapping)             │
 └──────────────────────────────────┬───────────────────────────────────────┘
                                    │
                                    v
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                    CONNECTION.RS (Dispatcher)                            │
 │                                                                          │
-│  pub enum DatabaseConnection {                                          │
-│      #[cfg(feature = "postgres-support")]                               │
-│      PostgreSQL(PostgresConnection),                                    │
-│      #[cfg(feature = "mysql-support")]                                  │
-│      MySQL(MySQLConnection),                                            │
-│      #[cfg(feature = "duckdb-support")]                                 │
-│      DuckDB(DuckDBConnection),                                          │
-│      #[cfg(feature = "sqlite-support")]                                 │
-│      SQLite(SQLiteConnection),  ← WILL BE ADDED                         │
-│      #[cfg(feature = "odbc-support")]                                   │
-│      ODBC(ODBCConnection),                                              │
-│      #[cfg(feature = "redis-support")]                                  │
-│      Redis(RedisConnection),                                            │
-│      #[cfg(feature = "kafka-support")]                                  │
-│      Kafka(KafkaConnection),                                            │
-│  }                                                                      │
+│  pub enum DatabaseConnection {                                           │
+│      #[cfg(feature = "postgres-support")]                                │
+│      PostgreSQL(PostgresConnection),                                     │
+│      #[cfg(feature = "mysql-support")]                                   │
+│      MySQL(MySQLConnection),                                             │
+│      #[cfg(feature = "duckdb-support")]                                  │
+│      DuckDB(DuckDBConnection),                                           │
+│      #[cfg(feature = "sqlite-support")]                                  │
+│      SQLite(SQLiteConnection),  ← WILL BE ADDED                          │
+│      #[cfg(feature = "odbc-support")]                                    │
+│      ODBC(ODBCConnection),                                               │
+│      #[cfg(feature = "redis-support")]                                   │
+│      Redis(RedisConnection),                                             │
+│      #[cfg(feature = "kafka-support")]                                   │
+│      Kafka(KafkaConnection),                                             │
+│  }                                                                       │
 │                                                                          │
-│  All implement unified interface:                                       │
-│  - async fn execute(query) -> Recordset                                 │
-│  - async fn execute_command(cmd) -> u64                                 │
-│  - async fn close() -> Result<()>                                       │
-│  - async fn is_connected() -> bool                                      │
+│  All implement unified interface:                                        │
+│  - async fn execute(query) -> Recordset                                  │
+│  - async fn execute_command(cmd) -> u64                                  │
+│  - async fn close() -> Result<()>                                        │
+│  - async fn is_connected() -> bool                                       │
 └──────────────────────────────────┬───────────────────────────────────────┘
                                    │
         ┌──────────────────────────┼──────────────────────────┐
         │                          │                          │
         v                          v                          v
-┌─────────────────┐      ┌──────────────────┐      ┌──────────────────┐
-│ POSTGRES DRIVER │      │  MYSQL DRIVER    │      │   DUCKDB DRIVER  │
-├─────────────────┤      ├──────────────────┤      ├──────────────────┤
-│ tokio-postgres  │      │  mysql_async     │      │  duckdb crate    │
-│ deadpool-postgres      │  Connection      │      │  Synchronous     │
-│ Async, async pool      │  pooling         │      │  In .db files    │
-│ Type-safe rows │      │                  │      │                  │
-└─────────────────┘      └──────────────────┘      └──────────────────┘
+┌────────────────-─┐      ┌──────────────────┐      ┌──────────────────┐
+│ POSTGRES DRIVER  │      │  MYSQL DRIVER    │      │   DUCKDB DRIVER  │
+├───────────────── ┤      ├──────────────────┤      ├──────────────────┤
+│ tokio-postgres   │      │  mysql_async     │      │  duckdb crate    │
+│ deadpool-postgres|      │  Connection      │      │  Synchronous     │
+│ Async, async pool|      │  pooling         │      │  In .db files    │
+│ Type-safe rows   │      │                  │      │                  │
+└─────────────────-┘      └──────────────────┘      └──────────────────┘
 
         │                          │                          │
         v                          v                          v
@@ -212,11 +212,11 @@ TYPE CONVERSIONS:
 Database Values → JsonValue → XdlValue
 
 Examples:
-- NULL ────────────> JsonValue::Null ────────────> XdlValue::Undefined
-- 42 (integer)────> JsonValue::Number(42) ──────> XdlValue::Long(42)
-- 3.14 (float)────> JsonValue::Number(3.14)───> XdlValue::Double(3.14)
-- "text" ────────> JsonValue::String("text")──> XdlValue::String(...)
-- [1,2,3] ──────> JsonValue::Array([...])───> XdlValue::NestedArray(...)
+- NULL ──────────> JsonValue::Null ────────────> XdlValue::Undefined
+- 42 (integer)───> JsonValue::Number(42) ──────> XdlValue::Long(42)
+- 3.14 (float)───> JsonValue::Number(3.14)──--─> XdlValue::Double(3.14)
+- "text" ────────> JsonValue::String("text")─-─> XdlValue::String(...)
+- [1,2,3] ─────-─> JsonValue::Array([...])──--─> XdlValue::NestedArray(...)
 
 
 CONNECTION STRINGS:
