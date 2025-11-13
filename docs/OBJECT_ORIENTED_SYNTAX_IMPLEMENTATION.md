@@ -34,6 +34,7 @@ This syntax was not previously supported by the XDL parser and interpreter.
 #### 1.1 Lexer (Already Supported)
 
 The lexer already had tokens for both operators:
+
 - `Token::Arrow` for `->` (line 106 in lexer.rs)
 - `Token::Dot` for `.` (line 105 in lexer.rs)
 
@@ -47,6 +48,7 @@ These were defined but not used by the parser.
 **Changes**:
 
 1. **Added Arrow Token Handling** (lines 794-844):
+
    ```rust
    } else if self.check(&Token::Arrow) {
        // Method call: expr->method(args)
@@ -97,6 +99,7 @@ These were defined but not used by the parser.
    ```
 
 2. **Added Dot Token Handling** (lines 845-865):
+
    ```rust
    } else if self.check(&Token::Dot) {
        // Struct field access: expr.field
@@ -117,6 +120,7 @@ These were defined but not used by the parser.
    ```
 
 **Key Features**:
+
 - Supports chained method calls: `df->Filter()->GroupBy()->Sum()`
 - Supports method calls with and without parentheses: `df->Shape()` and `df->Shape`
 - Supports mixed operations: `df->Column('age')[0:10]` (method call + array indexing)
@@ -174,6 +178,7 @@ Expression::MethodCall {
 ```
 
 **Current Behavior**:
+
 - ✅ Parses method call syntax correctly
 - ✅ Handles Python.Import() special case
 - ❌ Returns "Not implemented: Method calls" for all other method calls
@@ -185,6 +190,7 @@ To fully support DataFrame methods, we need:
 **A. DataFrame Object Representation**
 
 Add to `xdl-core/src/types.rs`:
+
 ```rust
 pub enum XdlValue {
     // ... existing variants ...
@@ -199,6 +205,7 @@ pub struct DataFrameHandle {
 **B. DataFrame Storage**
 
 Add to interpreter context or create global store:
+
 ```rust
 pub struct DataFrameStore {
     dataframes: HashMap<usize, DataFrame>,
@@ -222,6 +229,7 @@ impl DataFrameStore {
 **C. Method Dispatch Implementation**
 
 Replace the "Not implemented" stub with:
+
 ```rust
 Expression::MethodCall {
     object,
@@ -315,6 +323,7 @@ fn call_dataframe_method(
 **E. Struct Field Access**
 
 Similarly for `StructRef`:
+
 ```rust
 Expression::StructRef { object, field, .. } => {
     let obj_val = self.evaluate(object, context)?;
@@ -349,6 +358,7 @@ Expression::StructRef { object, field, .. } => {
 
 The `xdl-dataframe` module already exists with DataFrame implementation.
 Need to:
+
 1. Add dependency in `xdl-stdlib/Cargo.toml`
 2. Create wrapper functions in stdlib
 3. Register functions in `call_function()` dispatcher
@@ -360,6 +370,7 @@ Need to:
 ### Test 1: Parser Verification
 
 **File**: `test_method_call.xdl`
+
 ```idl
 PRO test_method_call
     PRINT, 'Testing method call syntax'
@@ -373,6 +384,7 @@ test_method_call
 ```
 
 **Result**:
+
 ```
 ✅ Parsing: SUCCESS
 ❌ Execution: "Not implemented: Method calls"
@@ -385,6 +397,7 @@ test_method_call
 **File**: `xdl-dataframe/examples/charting_demo.xdl`
 
 **Result**:
+
 ```
 Before: "Parse error: Unexpected token: Arrow at line 1, column 186"
 After:  "Parse error: Unexpected token: Divide at line 1, column 293"
@@ -444,6 +457,7 @@ After:  "Parse error: Unexpected token: Divide at line 1, column 293"
 ## Usage Examples (When Fully Implemented)
 
 ### DataFrame Operations
+
 ```idl
 ; Load CSV
 df = XDLDATAFRAME_READ_CSV('employees.csv')
@@ -470,6 +484,7 @@ result->WriteCSV('output.csv')
 ```
 
 ### Array Methods
+
 ```idl
 arr = [1, 2, 3, 4, 5]
 sum = arr->Sum()
@@ -478,6 +493,7 @@ sorted = arr->Sort()
 ```
 
 ### String Methods
+
 ```idl
 str = "Hello World"
 upper = str->ToUpper()
@@ -490,12 +506,14 @@ contains = str->Contains('World')
 ## Files Modified
 
 ### Parser Changes
+
 - ✅ `xdl-parser/src/parser.rs` (lines 778-870)
   - Added Arrow token handling in `parse_postfix()`
   - Added Dot token handling in `parse_postfix()`
   - Full argument parsing for method calls
 
 ### Build Verification
+
 - ✅ `xdl-parser` compiles without errors
 - ✅ Full `cargo build` succeeds
 - ✅ No breaking changes to existing functionality
@@ -554,6 +572,7 @@ contains = str->Contains('World')
 ## Backward Compatibility
 
 ✅ **Fully Backward Compatible**
+
 - Existing XDL scripts continue to work
 - Arrow and Dot only used when explicitly written
 - No changes to function call syntax
@@ -566,6 +585,7 @@ contains = str->Contains('World')
 The parser implementation for object-oriented syntax is **complete and production-ready**. The Arrow (`->`) and Dot (`.`) operators are now fully supported in the XDL parser.
 
 The interpreter implementation requires ~350 additional lines of code to:
+
 1. Dispatch method calls to appropriate handlers
 2. Implement DataFrame method handlers
 3. Add DataFrame storage and handle management

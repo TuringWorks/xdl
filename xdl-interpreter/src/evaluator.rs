@@ -22,7 +22,14 @@ impl Evaluator {
         match expr {
             Expression::Literal { value, .. } => Ok(value.clone()),
 
-            Expression::Variable { name, .. } => context.get_variable(name).cloned(),
+            Expression::Variable { name, .. } => {
+                // Handle SELF as a special variable
+                if name.eq_ignore_ascii_case("SELF") {
+                    context.get_self()
+                } else {
+                    context.get_variable(name).cloned()
+                }
+            }
 
             Expression::SystemVariable { name, .. } => context.get_system_variable(name).cloned(),
 
@@ -137,12 +144,30 @@ impl Evaluator {
                 self.evaluate_array_ref(&array_val, indices, context)
             }
 
-            Expression::StructRef { object, .. } => {
-                let _obj_val = self.evaluate(object, context)?;
-                // TODO: Implement structure field access
-                Err(XdlError::NotImplemented(
-                    "Structure field access".to_string(),
-                ))
+            Expression::StructRef { object, field, .. } => {
+                let obj_val = self.evaluate(object, context)?;
+
+                match obj_val {
+                    XdlValue::Object(obj_id) => {
+                        // Get the object instance
+                        let obj_instance = context.get_object(obj_id)?;
+
+                        // Get the field value
+                        obj_instance.get_field(field).cloned().ok_or_else(|| {
+                            XdlError::RuntimeError(format!("Object has no field named '{}'", field))
+                        })
+                    }
+                    XdlValue::Struct(ref map) => {
+                        // Handle regular structs
+                        map.get(&field.to_uppercase()).cloned().ok_or_else(|| {
+                            XdlError::RuntimeError(format!("Struct has no field named '{}'", field))
+                        })
+                    }
+                    _ => Err(XdlError::TypeMismatch {
+                        expected: "object or struct".to_string(),
+                        actual: format!("{:?}", obj_val.gdl_type()),
+                    }),
+                }
             }
 
             Expression::MethodCall {
@@ -165,6 +190,9 @@ impl Evaluator {
                 match obj_val {
                     XdlValue::DataFrame(id) => {
                         self.call_dataframe_method(id, method, args, context)
+                    }
+                    XdlValue::Object(obj_id) => {
+                        self.call_user_method(obj_id, method, args, context)
                     }
                     XdlValue::Struct(ref _map) => {
                         // For structs, methods might be stored as function pointers
@@ -1203,6 +1231,98 @@ impl Evaluator {
                 method
             ))),
         }
+    }
+
+    /// Call a user-defined method on an object
+    fn call_user_method(
+        &self,
+        obj_id: usize,
+        method_name: &str,
+        args: &[Expression],
+        context: &mut Context,
+    ) -> XdlResult<XdlValue> {
+        // Get the object to find its class
+        let class_name = {
+            let obj = context.get_object(obj_id)?;
+            obj.class_name.clone()
+        };
+
+        // Get the class definition
+        let class = context.get_class(&class_name)?;
+
+        // Get the method definition
+        let method = class
+            .get_method(method_name)
+            .ok_or_else(|| {
+                XdlError::RuntimeError(format!(
+                    "Class '{}' has no method '{}'",
+                    class_name, method_name
+                ))
+            })?
+            .clone();
+
+        // Set SELF to point to this object
+        context.set_self(obj_id);
+
+        // Push new scope for method execution
+        context.push_scope();
+
+        // Evaluate arguments
+        let mut arg_values = Vec::new();
+        for arg_expr in args {
+            arg_values.push(self.evaluate(arg_expr, context)?);
+        }
+
+        // Bind parameters to arguments
+        for (i, param) in method.params.iter().enumerate() {
+            if i < arg_values.len() {
+                context.set_variable(param.name.clone(), arg_values[i].clone());
+            } else if !param.optional {
+                context.pop_scope()?;
+                context.clear_self();
+                return Err(XdlError::RuntimeError(format!(
+                    "Method '{}' requires parameter '{}'",
+                    method_name, param.name
+                )));
+            }
+        }
+
+        // Execute method body
+        let mut result = XdlValue::Undefined;
+
+        for stmt in &method.body {
+            match self.evaluate_statement_in_context(stmt, context) {
+                Ok(()) => continue,
+                Err(XdlError::Return(val)) => {
+                    result = val;
+                    break;
+                }
+                Err(e) => {
+                    context.pop_scope()?;
+                    context.clear_self();
+                    return Err(e);
+                }
+            }
+        }
+
+        // Pop method scope and clear SELF
+        context.pop_scope()?;
+        context.clear_self();
+
+        Ok(result)
+    }
+
+    /// Helper to evaluate a statement (for use in method bodies)
+    fn evaluate_statement_in_context(
+        &self,
+        _stmt: &xdl_parser::Statement,
+        _context: &mut Context,
+    ) -> XdlResult<()> {
+        // This would need access to the interpreter's execute_statement method
+        // For now, return an error indicating this needs to be implemented differently
+        Err(XdlError::NotImplemented(
+            "Statement execution in method context requires interpreter access".to_string(),
+        ))
     }
 }
 

@@ -7,6 +7,7 @@ This document describes the design and implementation of object-oriented program
 ## IDL Object-Oriented Syntax Reference
 
 ### Class Definition
+
 ```idl
 PRO ClassName__define
     ; Define structure with fields (properties)
@@ -18,6 +19,7 @@ END
 ```
 
 ### Initialization Method
+
 ```idl
 FUNCTION ClassName::Init, arg1, arg2, KEYWORD=value
     ; Initialize object fields
@@ -29,6 +31,7 @@ END
 ```
 
 ### Cleanup Method
+
 ```idl
 PRO ClassName::Cleanup
     ; Perform cleanup (free pointers, close files, etc.)
@@ -38,6 +41,7 @@ END
 ```
 
 ### Regular Methods
+
 ```idl
 FUNCTION ClassName::GetValue
     RETURN, self.field1
@@ -49,6 +53,7 @@ END
 ```
 
 ### Object Usage
+
 ```idl
 ; Create object
 obj = OBJ_NEW('ClassName', arg1, arg2, KEYWORD=value)
@@ -66,6 +71,7 @@ OBJ_DESTROY, obj
 ### 1. AST Extensions (xdl-parser)
 
 #### New Expression Types
+
 ```rust
 pub enum Expression {
     // ... existing variants ...
@@ -81,6 +87,7 @@ pub enum Expression {
 ```
 
 #### New Statement Types
+
 ```rust
 pub enum Statement {
     // ... existing variants ...
@@ -114,6 +121,7 @@ pub enum Statement {
 ### 2. Core Type System (xdl-core)
 
 #### Object Reference Type
+
 ```rust
 pub enum XdlValue {
     // ... existing variants ...
@@ -123,7 +131,8 @@ pub enum XdlValue {
 }
 ```
 
-#### Class Definition
+#### IDL Class Definition
+
 ```rust
 pub struct ClassDef {
     pub name: String,
@@ -147,6 +156,7 @@ pub struct MethodDef {
 ```
 
 #### Object Instance
+
 ```rust
 pub struct ObjectInstance {
     pub class_name: String,
@@ -195,6 +205,7 @@ impl Context {
 ### 4. Evaluator Extensions (xdl-interpreter/src/evaluator.rs)
 
 #### Object Creation (OBJ_NEW)
+
 ```rust
 fn evaluate_obj_new(
     &mut self,
@@ -238,6 +249,7 @@ fn evaluate_obj_new(
 ```
 
 #### Object Destruction (OBJ_DESTROY)
+
 ```rust
 fn evaluate_obj_destroy(
     &mut self,
@@ -273,6 +285,7 @@ fn evaluate_obj_destroy(
 ```
 
 #### Method Call Dispatch
+
 ```rust
 fn call_method(
     &mut self,
@@ -328,6 +341,7 @@ fn call_method(
 ```
 
 #### SELF Keyword Handling
+
 ```rust
 // In evaluate() method, handle SELF as a special variable
 Expression::Variable { name, .. } => {
@@ -342,6 +356,7 @@ Expression::Variable { name, .. } => {
 ```
 
 #### Field Access on SELF
+
 ```rust
 // In StructRef evaluation
 Expression::StructRef { object, field, .. } => {
@@ -366,6 +381,7 @@ Expression::StructRef { object, field, .. } => {
 ### 5. Parser Implementation
 
 #### Lexer Tokens
+
 ```rust
 pub enum Token {
     // ... existing tokens ...
@@ -376,6 +392,7 @@ pub enum Token {
 ```
 
 #### Parsing Class Definitions
+
 ```rust
 fn parse_class_definition(&mut self) -> XdlResult<Statement> {
     // Expect PRO ClassName__define
@@ -405,6 +422,7 @@ fn parse_class_definition(&mut self) -> XdlResult<Statement> {
 ```
 
 #### Parsing Method Definitions
+
 ```rust
 fn parse_method_definition(&mut self, is_function: bool) -> XdlResult<Statement> {
     // Expect ClassName::MethodName
@@ -446,6 +464,7 @@ fn parse_method_definition(&mut self, is_function: bool) -> XdlResult<Statement>
 ```
 
 #### Parsing OBJ_NEW
+
 ```rust
 // In parse_function_call, check for OBJ_NEW
 if name.to_uppercase() == "OBJ_NEW" {
@@ -461,12 +480,14 @@ if name.to_uppercase() == "OBJ_NEW" {
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure ✓ (Partially Complete)
+
 - [x] Method call syntax (`->`) - Already implemented
 - [ ] Class definition AST nodes
 - [ ] Method definition AST nodes
 - [ ] Object type in XdlValue
 
 ### Phase 2: Parser Extensions
+
 - [ ] Lexer: Add `::` token
 - [ ] Parse `PRO ClassName__define`
 - [ ] Parse `PRO/FUNCTION ClassName::MethodName`
@@ -474,11 +495,13 @@ if name.to_uppercase() == "OBJ_NEW" {
 - [ ] Parse `OBJ_DESTROY` statement
 
 ### Phase 3: Context & Storage
+
 - [ ] Class definition storage
 - [ ] Object instance storage
 - [ ] Object lifecycle management
 
 ### Phase 4: Evaluator Implementation
+
 - [ ] Execute class definitions
 - [ ] Execute method definitions
 - [ ] Implement OBJ_NEW
@@ -487,6 +510,7 @@ if name.to_uppercase() == "OBJ_NEW" {
 - [ ] Implement field access on objects
 
 ### Phase 5: Testing & Documentation
+
 - [ ] Create comprehensive test suite
 - [ ] Test inheritance (if implemented)
 - [ ] Update user documentation

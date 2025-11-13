@@ -142,6 +142,8 @@ pub struct Context {
     objects: HashMap<usize, ObjectInstance>,
     /// Next object ID (0 is reserved for NULL)
     next_object_id: usize,
+    /// Current SELF object ID (for method execution)
+    current_self: Option<usize>,
 }
 
 impl Context {
@@ -155,7 +157,8 @@ impl Context {
             next_dataframe_id: 0,
             classes: HashMap::new(),
             objects: HashMap::new(),
-            next_object_id: 1, // 0 is reserved for NULL
+            next_object_id: 1,  // 0 is reserved for NULL
+            current_self: None, // No SELF by default
         };
 
         // Initialize system variables
@@ -367,6 +370,31 @@ impl Context {
         self.objects
             .remove(&id)
             .ok_or_else(|| XdlError::RuntimeError(format!("Object {} not found", id)))
+    }
+
+    /// Set the current SELF object (for method execution)
+    pub fn set_self(&mut self, object_id: usize) {
+        self.current_self = Some(object_id);
+    }
+
+    /// Clear the current SELF object (after method execution)
+    pub fn clear_self(&mut self) {
+        self.current_self = None;
+    }
+
+    /// Get the current SELF object value
+    pub fn get_self(&self) -> XdlResult<XdlValue> {
+        match self.current_self {
+            Some(id) => Ok(XdlValue::Object(id)),
+            None => Err(XdlError::RuntimeError(
+                "SELF is not defined (not in method context)".to_string(),
+            )),
+        }
+    }
+
+    /// Get the current SELF object ID (for internal use)
+    pub fn get_self_id(&self) -> Option<usize> {
+        self.current_self
     }
 }
 
