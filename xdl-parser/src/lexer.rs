@@ -102,6 +102,7 @@ pub enum Token {
     Comma,        // ,
     Semicolon,    // ;
     Colon,        // :
+    DoubleColon,  // ::
     Dot,          // .
     Arrow,        // ->
 
@@ -276,6 +277,7 @@ fn parse_delimiter(input: &str) -> ParseResult<'_, Token> {
         value(Token::RightBrace, char('}')),
         value(Token::Comma, char(',')),
         value(Token::Semicolon, char(';')),
+        value(Token::DoubleColon, tag("::")),
         value(Token::Colon, char(':')),
         value(Token::Dot, char('.')),
     ))(input)

@@ -2,14 +2,88 @@
 """
 Comprehensive Visualization of XDL DataFrame Demos
 Shows Time Series, ML Classification, and 3D Spatial data
+
+This script runs XDL DataFrame demo scripts to generate data,
+then visualizes the results using matplotlib.
 """
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import csv
+import subprocess
+import sys
+import os
+from pathlib import Path
 
 print("=== XDL DataFrame Comprehensive Visualization ===\n")
+
+# Step 1: Run XDL demos to generate data
+print("Step 1: Running XDL DataFrame demos to generate data...")
+print("-" * 60)
+
+# Find XDL executable
+xdl_path = Path(__file__).parent.parent / "target" / "release" / "xdl"
+if not xdl_path.exists():
+    xdl_path = Path(__file__).parent.parent / "target" / "debug" / "xdl"
+if not xdl_path.exists():
+    print("ERROR: XDL executable not found. Please run 'cargo build --release' first.")
+    sys.exit(1)
+
+# Change to xdl-dataframe directory to run demos
+xdl_dataframe_dir = Path(__file__).parent.parent / "xdl-dataframe"
+os.chdir(xdl_dataframe_dir)
+
+# Run the comprehensive demo script
+demo_script = xdl_dataframe_dir / "examples" / "comprehensive_demo.xdl"
+if not demo_script.exists():
+    print(f"WARNING: {demo_script} not found. Looking for individual demos...")
+    # Run individual demos
+    demos = [
+        ("ML Classification", "examples/ml_classification_demo.xdl"),
+        ("3D Visualization", "examples/3d_visualization_demo.xdl"),
+    ]
+
+    for demo_name, demo_file in demos:
+        demo_path = xdl_dataframe_dir / demo_file
+        if demo_path.exists():
+            print(f"\nRunning {demo_name} demo...")
+            try:
+                result = subprocess.run(
+                    [str(xdl_path), str(demo_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode == 0:
+                    print(f"  ✓ {demo_name} demo completed successfully")
+                else:
+                    print(f"  ✗ {demo_name} demo failed: {result.stderr[:200]}")
+            except subprocess.TimeoutExpired:
+                print(f"  ⚠ {demo_name} demo timed out (may have opened windows)")
+            except Exception as e:
+                print(f"  ✗ Error running {demo_name}: {e}")
+else:
+    print(f"\nRunning comprehensive demo: {demo_script}")
+    try:
+        result = subprocess.run(
+            [str(xdl_path), str(demo_script)],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode == 0:
+            print("  ✓ Demo completed successfully")
+        else:
+            print(f"  ✗ Demo failed: {result.stderr[:200]}")
+    except subprocess.TimeoutExpired:
+        print("  ⚠ Demo timed out (may have opened windows)")
+    except Exception as e:
+        print(f"  ✗ Error running demo: {e}")
+
+print("\nStep 2: Loading generated data and creating visualizations...")
+print("-" * 60)
+print()
 
 # Set style
 plt.style.use('seaborn-v0_8-darkgrid')

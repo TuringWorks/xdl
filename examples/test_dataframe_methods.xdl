@@ -1,0 +1,43 @@
+; Test DataFrame object-oriented syntax implementation
+;
+; This script tests:
+; 1. XDLDATAFRAME_READ_CSV function
+; 2. DataFrame->Shape() method
+; 3. DataFrame->ColumnNames() method
+; 4. DataFrame->Column(name) method
+; 5. DataFrame->WriteCSV(filename) method
+
+PRINT, "=== DataFrame Object-Oriented Syntax Test ==="
+PRINT, ""
+
+; Test 1: Read CSV file
+PRINT, "Test 1: Reading CSV file..."
+df = XDLDATAFRAME_READ_CSV('xdl-dataframe/top_earners.csv')
+PRINT, "DataFrame loaded: ", df
+PRINT, ""
+
+; Test 2: Get shape
+PRINT, "Test 2: Getting DataFrame shape..."
+shape = df->Shape()
+PRINT, "Shape: ", shape
+PRINT, ""
+
+; Test 3: Get column names
+PRINT, "Test 3: Getting column names..."
+col_names = df->ColumnNames()
+PRINT, "Number of columns: ", col_names
+PRINT, ""
+
+; Test 4: Extract column data
+PRINT, "Test 4: Extracting 'salary' column..."
+salary_data = df->Column('salary')
+PRINT, "Salary data: ", salary_data
+PRINT, ""
+
+; Test 5: Write to new CSV
+PRINT, "Test 5: Writing DataFrame to new CSV..."
+df->WriteCSV('xdl-dataframe/test_output.csv')
+PRINT, "DataFrame written to xdl-dataframe/test_output.csv"
+PRINT, ""
+
+PRINT, "=== All DataFrame tests completed successfully! ==="

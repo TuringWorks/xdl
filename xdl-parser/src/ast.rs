@@ -106,6 +106,37 @@ pub enum Statement {
         label: String,
         location: Location,
     },
+    Case {
+        expr: Expression,
+        branches: Vec<CaseBranch>,
+        else_block: Option<Vec<Statement>>,
+        location: Location,
+    },
+    Switch {
+        expr: Expression,
+        branches: Vec<CaseBranch>,
+        else_block: Option<Vec<Statement>>,
+        location: Location,
+    },
+    // Object-oriented programming
+    ClassDefinition {
+        name: String,
+        body: Vec<Statement>,
+        location: Location,
+    },
+    MethodDefinition {
+        class_name: String,
+        method_name: String,
+        is_function: bool, // true for FUNCTION, false for PRO
+        params: Vec<Parameter>,
+        keywords: Vec<KeywordDecl>,
+        body: Vec<Statement>,
+        location: Location,
+    },
+    ObjectDestroy {
+        objects: Vec<Expression>,
+        location: Location,
+    },
 }
 
 /// XDL Expressions
@@ -194,6 +225,13 @@ pub enum Expression {
     },
     PreDecrement {
         expr: Box<Expression>,
+        location: Location,
+    },
+    // Object-oriented programming
+    ObjectNew {
+        class_name: String,
+        args: Vec<Expression>,
+        keywords: Vec<Keyword>,
         location: Location,
     },
 }
@@ -292,6 +330,14 @@ pub struct Keyword {
     pub location: Location,
 }
 
+/// CASE/SWITCH branch
+#[derive(Debug, Clone, PartialEq)]
+pub struct CaseBranch {
+    pub values: Vec<Expression>, // List of values to match (can be ranges or single values)
+    pub body: Vec<Statement>,
+    pub location: Location,
+}
+
 /// Structure field definition
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
@@ -347,6 +393,11 @@ impl Statement {
             Statement::ProcedureDef { location, .. } => location,
             Statement::Label { location, .. } => location,
             Statement::Goto { location, .. } => location,
+            Statement::Case { location, .. } => location,
+            Statement::Switch { location, .. } => location,
+            Statement::ClassDefinition { location, .. } => location,
+            Statement::MethodDefinition { location, .. } => location,
+            Statement::ObjectDestroy { location, .. } => location,
         }
     }
 }
@@ -373,6 +424,7 @@ impl Expression {
             Expression::PostDecrement { location, .. } => location,
             Expression::PreIncrement { location, .. } => location,
             Expression::PreDecrement { location, .. } => location,
+            Expression::ObjectNew { location, .. } => location,
         }
     }
 

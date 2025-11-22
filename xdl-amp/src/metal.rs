@@ -230,17 +230,105 @@ impl GpuDevice for MetalDevice {
 
     fn matmul_f32(
         &self,
-        _a: &[f32],
-        _b: &[f32],
-        _c: &mut [f32],
-        _m: usize,
-        _n: usize,
-        _k: usize,
+        a: &[f32],
+        b: &[f32],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
     ) -> Result<()> {
-        // TODO: Implement matrix multiplication
-        Err(GpuError::ExecutionFailed(
-            "matmul not yet implemented".to_string(),
-        ))
+        let size_a = (m * k * std::mem::size_of::<f32>()) as u64;
+        let size_b = (k * n * std::mem::size_of::<f32>()) as u64;
+        let size_c = (m * n * std::mem::size_of::<f32>()) as u64;
+
+        let buf_a = self.device.new_buffer_with_data(
+            a.as_ptr() as *const _,
+            size_a,
+            metal::MTLResourceOptions::StorageModeShared,
+        );
+
+        let buf_b = self.device.new_buffer_with_data(
+            b.as_ptr() as *const _,
+            size_b,
+            metal::MTLResourceOptions::StorageModeShared,
+        );
+
+        let buf_c = self
+            .device
+            .new_buffer(size_c, metal::MTLResourceOptions::StorageModeShared);
+
+        // Create buffers for dimensions
+        let m_u32 = m as u32;
+        let n_u32 = n as u32;
+        let k_u32 = k as u32;
+
+        let buf_m = self.device.new_buffer_with_data(
+            &m_u32 as *const u32 as *const _,
+            std::mem::size_of::<u32>() as u64,
+            metal::MTLResourceOptions::StorageModeShared,
+        );
+
+        let buf_n = self.device.new_buffer_with_data(
+            &n_u32 as *const u32 as *const _,
+            std::mem::size_of::<u32>() as u64,
+            metal::MTLResourceOptions::StorageModeShared,
+        );
+
+        let buf_k = self.device.new_buffer_with_data(
+            &k_u32 as *const u32 as *const _,
+            std::mem::size_of::<u32>() as u64,
+            metal::MTLResourceOptions::StorageModeShared,
+        );
+
+        let command_queue = self.device.new_command_queue();
+        let command_buffer = command_queue.new_command_buffer();
+        let encoder = command_buffer.new_compute_command_encoder();
+
+        let pipeline = self.library.get_function("matmul_f32", None).map_err(|e| {
+            GpuError::CompilationFailed(format!("Failed to get matmul function: {}", e))
+        })?;
+
+        let pipeline_state = self
+            .device
+            .new_compute_pipeline_state_with_function(&pipeline)
+            .map_err(|e| {
+                GpuError::CompilationFailed(format!("Failed to create matmul pipeline: {}", e))
+            })?;
+
+        encoder.set_compute_pipeline_state(&pipeline_state);
+        encoder.set_buffer(0, Some(&buf_a), 0);
+        encoder.set_buffer(1, Some(&buf_b), 0);
+        encoder.set_buffer(2, Some(&buf_c), 0);
+        encoder.set_buffer(3, Some(&buf_m), 0);
+        encoder.set_buffer(4, Some(&buf_n), 0);
+        encoder.set_buffer(5, Some(&buf_k), 0);
+
+        // 2D dispatch with 16x16 threadgroups
+        let grid_size = metal::MTLSize {
+            width: n as u64,
+            height: m as u64,
+            depth: 1,
+        };
+
+        let threadgroup_size = metal::MTLSize {
+            width: 16,
+            height: 16,
+            depth: 1,
+        };
+
+        encoder.dispatch_threads(grid_size, threadgroup_size);
+        encoder.end_encoding();
+
+        command_buffer.commit();
+        command_buffer.wait_until_completed();
+
+        // Copy result
+        let ptr = buf_c.contents() as *const f32;
+        unsafe {
+            std::ptr::copy_nonoverlapping(ptr, c.as_mut_ptr(), m * n);
+        }
+
+        Ok(())
     }
 
     fn sin_f32(&self, x: &[f32], y: &mut [f32]) -> Result<()> {

@@ -32,6 +32,9 @@ pub enum XdlValue {
         shape: Vec<usize>, // Dimensions: [rows, cols] for 2D, [depth, rows, cols] for 3D
     },
     PythonObject(String), // Opaque reference to Python object (stored by ID)
+    DataFrame(usize),     // Reference to DataFrame stored by ID
+    Struct(HashMap<String, XdlValue>), // Structure with named fields
+    Object(usize),        // Reference to object instance stored by ID (0 = NULL object)
 }
 
 impl XdlValue {
@@ -57,6 +60,9 @@ impl XdlValue {
             XdlValue::NestedArray(_) => GdlType::Float, // Nested arrays also default to float
             XdlValue::MultiDimArray { .. } => GdlType::Float, // Multi-dim arrays are float
             XdlValue::PythonObject(_) => GdlType::ObjRef, // Python objects are object references
+            XdlValue::DataFrame(_) => GdlType::ObjRef, // DataFrames are object references
+            XdlValue::Struct(_) => GdlType::ObjRef, // Structs are object references
+            XdlValue::Object(_) => GdlType::ObjRef, // Object instances are object references
         }
     }
 
@@ -159,6 +165,23 @@ impl XdlValue {
             XdlValue::PythonObject(id) => {
                 // Return a placeholder - actual string conversion happens in the stdlib layer
                 format!("<Python:{}>", id)
+            }
+            XdlValue::DataFrame(id) => {
+                format!("<DataFrame:{}>", id)
+            }
+            XdlValue::Struct(map) => {
+                let fields: Vec<String> = map
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v.to_string_repr()))
+                    .collect();
+                format!("{{{}}}", fields.join(", "))
+            }
+            XdlValue::Object(id) => {
+                if *id == 0 {
+                    "<NULL>".to_string()
+                } else {
+                    format!("<Object:{}>", id)
+                }
             }
         }
     }
@@ -291,6 +314,9 @@ impl XdlValue {
                 data.is_empty() || data.iter().all(|&x| x == 0.0)
             }
             XdlValue::PythonObject(_) => false, // Python objects are never considered zero
+            XdlValue::DataFrame(_) => false,    // DataFrames are never considered zero
+            XdlValue::Struct(_) => false,       // Structs are never considered zero
+            XdlValue::Object(id) => *id == 0,   // NULL object (id==0) is considered zero
             _ => false,
         }
     }

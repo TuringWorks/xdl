@@ -1,0 +1,3 @@
+; Simple DataFrame test
+df = XDLDATAFRAME_READ_CSV('xdl-dataframe/top_earners.csv')
+PRINT, df

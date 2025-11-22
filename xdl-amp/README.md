@@ -4,7 +4,7 @@ Multi-backend GPU and ML acceleration for XDL with comprehensive platform suppor
 
 ## Overview
 
-XDL AMP provides a unified interface for GPU/ML operations with **10 acceleration backends**:
+XDL AMP provides a unified interface for GPU/ML operations with **11 acceleration backends**:
 
 ### Apple Platforms (macOS, iOS)
 - ✅ **Metal Performance Shaders (MPS)** - Optimized operations (default)
@@ -23,6 +23,7 @@ XDL AMP provides a unified interface for GPU/ML operations with **10 acceleratio
 - ✅ **DirectX 12** - GPU compute shaders
 
 ### Cross-Platform
+- ✅ **Vulkan** - Modern cross-platform GPU compute
 - ✅ **ONNX Runtime** - ML model inference
 - ✅ **OpenCL** - Universal GPU fallback
 
@@ -45,12 +46,12 @@ XDL AMP provides a unified interface for GPU/ML operations with **10 acceleratio
 │  (Unified GPU operations API)       │
 └─────────────────────────────────────┘
                  │
-    ┌────────────┼────────────┐
-    ▼            ▼            ▼
-┌────────┐  ┌─────────┐  ┌─────────┐
-│ Metal  │  │  CUDA   │  │ OpenCL  │
-│ (macOS)│  │(Linux/W)│  │ (fallbk)│
-└────────┘  └─────────┘  └─────────┘
+    ┌────────────┼────────────┬────────────┐
+    ▼            ▼            ▼            ▼
+┌────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
+│ Metal  │  │  CUDA   │  │ Vulkan  │  │ OpenCL  │
+│ (macOS)│  │(Linux/W)│  │ (cross) │  │ (fallbk)│
+└────────┘  └─────────┘  └─────────┘  └─────────┘
 ```
 
 ## Features
@@ -70,6 +71,7 @@ XDL AMP provides a unified interface for GPU/ML operations with **10 acceleratio
 - ⏳ CUDA backend implementation
 - ⏳ OpenCL backend implementation
 - ⏳ DirectX 12 backend implementation
+- ⏳ Vulkan optimization (device-local buffers, async compute)
 - ⏳ Convolution operations
 - ⏳ FFT operations
 
@@ -134,6 +136,17 @@ cargo build --release --features opencl
 
 Requires OpenCL runtime installed.
 
+### Cross-Platform with Vulkan
+
+```bash
+cargo build --release --features vulkan
+```
+
+Requires Vulkan SDK or glslang installed:
+- **macOS**: `brew install glslang vulkan-headers vulkan-loader`
+- **Linux**: Install via package manager or download from [vulkan.lunarg.com](https://vulkan.lunarg.com)
+- **Windows**: Download from [vulkan.lunarg.com](https://vulkan.lunarg.com)
+
 ### Windows
 
 ```bash
@@ -146,19 +159,20 @@ cargo build --release --features cuda
 
 ## Supported Operations
 
-| Operation | Metal | CUDA | OpenCL | DirectX 12 |
-|-----------|-------|------|--------|------------|
-| add_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| mul_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| sub_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| div_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| sin_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| cos_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| exp_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| log_f32   | ✅    | ⏳   | ⏳     | ⏳         |
-| sqrt_f32  | ✅    | ⏳   | ⏳     | ⏳         |
-| matmul    | ⏳    | ⏳   | ⏳     | ⏳         |
-| sum       | ⏳    | ⏳   | ⏳     | ⏳         |
+| Operation | Metal | CUDA | Vulkan | OpenCL | DirectX 12 |
+|-----------|-------|------|--------|--------|------------|
+| add_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| mul_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| sub_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| div_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| sin_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| cos_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| exp_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| log_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| sqrt_f32  | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| pow_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
+| matmul    | ⏳    | ⏳   | ⏳     | ⏳     | ⏳         |
+| sum       | ⏳    | ⏳   | ⏳     | ⏳     | ⏳         |
 
 Legend: ✅ Implemented, ⏳ Planned, ❌ Not supported
 
@@ -196,6 +210,14 @@ Actual performance depends on:
 - Requires NVIDIA GPU
 - CUDA toolkit must be installed
 - Best performance on recent NVIDIA cards
+
+### Vulkan (Cross-platform)
+
+- Modern cross-platform GPU compute API
+- Works on Windows, Linux, macOS (via MoltenVK)
+- SPIR-V compute shaders compiled at build time
+- Supports NVIDIA, AMD, Intel GPUs
+- Requires Vulkan SDK or glslang for shader compilation
 
 ### OpenCL (Cross-platform)
 
