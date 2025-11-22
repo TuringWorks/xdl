@@ -40,17 +40,22 @@ cuda = ["cudarc"]  # NVIDIA CUDA
 cudnn = ["cuda"]  # NVIDIA cuDNN
 rocm = []  # AMD ROCm
 opencl = ["ocl"]  # OpenCL
+vulkan = ["ash"]  # Vulkan
 onnx = ["ort"]  # ONNX Runtime
 # Combined features
 all-nvidia = ["cuda", "cudnn"]
 all-amd = ["rocm", "opencl"]
 all-apple = ["mps", "coreml"]
-all-backends = ["mps", "coreml", "directml", "cuda", "cudnn", "rocm", "opencl", "onnx"]
+all-backends = ["mps", "coreml", "directml", "cuda", "cudnn", "rocm", "opencl", "vulkan", "onnx"]
 
 [dependencies.cudarc]
 version = "0.11"
 optional = true
 features = ["std", "f16"]
+
+[dependencies.ash]
+version = "0.38"
+optional = true
 
 [dependencies.ort]
 version = "2.0.0-rc.10"

@@ -1,0 +1,84 @@
+#version 450
+
+// Vulkan GLSL compute shaders for GPU operations
+
+// Element-wise addition: c = a + b
+layout(local_size_x = 256) in;
+layout(set = 0, binding = 0) buffer InputA { float a[]; };
+layout(set = 0, binding = 1) buffer InputB { float b[]; };
+layout(set = 0, binding = 2) buffer Output { float c[]; };
+
+void add_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    c[id] = a[id] + b[id];
+}
+
+// Element-wise multiplication: c = a * b
+void mul_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    c[id] = a[id] * b[id];
+}
+
+// Element-wise subtraction: c = a - b
+void sub_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    c[id] = a[id] - b[id];
+}
+
+// Element-wise division: c = a / b
+void div_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    c[id] = a[id] / b[id];
+}
+
+// Sine: y = sin(x)
+layout(set = 0, binding = 0) buffer InputX { float x[]; };
+layout(set = 0, binding = 1) buffer OutputY { float y[]; };
+
+void sin_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    y[id] = sin(x[id]);
+}
+
+// Cosine: y = cos(x)
+void cos_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    y[id] = cos(x[id]);
+}
+
+// Exponential: y = exp(x)
+void exp_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    y[id] = exp(x[id]);
+}
+
+// Natural logarithm: y = log(x)
+void log_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    y[id] = log(x[id]);
+}
+
+// Square root: y = sqrt(x)
+void sqrt_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    y[id] = sqrt(x[id]);
+}
+
+// Power: y = x^p
+layout(set = 0, binding = 0) buffer InputXPow { float x_pow[]; };
+layout(push_constant) uniform PushConstants {
+    float p;
+} push;
+layout(set = 0, binding = 1) buffer OutputYPow { float y_pow[]; };
+
+void pow_f32() {
+    uint id = gl_GlobalInvocationID.x;
+    y_pow[id] = pow(x_pow[id], push.p);
+}
+
+// Main entry point - this would be selected via specialization constants
+void main() {
+    // In practice, you would compile separate shader modules for each operation
+    // or use specialization constants to select the operation
+    add_f32();
+}

@@ -24,6 +24,8 @@ pub enum GpuBackend {
     ROCm,
     /// OpenCL (cross-platform fallback)
     OpenCL,
+    /// Vulkan (cross-platform)
+    Vulkan,
     /// ONNX Runtime (cross-platform ML)
     OnnxRuntime,
 }

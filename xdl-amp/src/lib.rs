@@ -56,6 +56,9 @@ pub mod cuda;
 pub mod cudnn;
 
 // Cross-platform backends
+#[cfg(feature = "vulkan")]
+pub mod vulkan;
+
 #[cfg(feature = "onnx")]
 pub mod onnx;
 
@@ -167,6 +170,15 @@ impl GpuContext {
                 })
             }
 
+            #[cfg(feature = "vulkan")]
+            GpuBackend::Vulkan => {
+                let device = vulkan::VulkanDevice::new()?;
+                Ok(Self {
+                    device: Arc::new(device),
+                    backend_name: "Vulkan".to_string(),
+                })
+            }
+
             #[cfg(feature = "onnx")]
             GpuBackend::OnnxRuntime => {
                 let device = onnx::OnnxDevice::new()?;
@@ -242,6 +254,12 @@ impl GpuContext {
         #[cfg(feature = "rocm")]
         if rocm::ROCmDevice::is_available() {
             return GpuBackend::ROCm;
+        }
+
+        // Vulkan for cross-platform support
+        #[cfg(feature = "vulkan")]
+        if vulkan::VulkanDevice::is_available() {
+            return GpuBackend::Vulkan;
         }
 
         // OpenCL fallback
