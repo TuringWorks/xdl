@@ -203,8 +203,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("✓ Zero-copy CPU-GPU data transfers");
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        println!("✓ Running on Windows");
+        #[cfg(feature = "directml")]
+        println!("✓ DirectML (Windows ML) support enabled");
+    }
+
     #[cfg(feature = "cuda")]
     println!("✓ NVIDIA CUDA support enabled");
+
+    #[cfg(feature = "vulkan")]
+    println!("✓ Vulkan support enabled");
 
     #[cfg(feature = "opencl")]
     println!("✓ OpenCL support enabled");

@@ -9,15 +9,18 @@
 //!
 //! ## Windows
 //! - **DirectX 12** - GPU compute shaders
-//! - **DirectML** - ML acceleration on DirectX
+//! - **DirectML** - ML acceleration on DirectX (any GPU)
 //! - **CUDA/cuDNN** - NVIDIA GPUs
+//! - **Vulkan** - Cross-platform GPU compute
 //!
 //! ## Linux
 //! - **CUDA/cuDNN** - NVIDIA GPUs
 //! - **ROCm** - AMD GPUs
+//! - **Vulkan** - Cross-platform GPU compute
 //! - **OpenCL** - Cross-platform fallback
 //!
 //! ## Cross-Platform
+//! - **Vulkan** - Cross-platform GPU compute
 //! - **ONNX Runtime** - ML model inference
 
 pub mod backend;
@@ -226,10 +229,16 @@ impl GpuContext {
             return GpuBackend::Cuda;
         }
 
-        // DirectML for ML on any GPU
+        // DirectML for ML on any GPU (NVIDIA, AMD, Intel)
         #[cfg(feature = "directml")]
         if directml::DirectMLDevice::is_available() {
             return GpuBackend::DirectML;
+        }
+
+        // Vulkan for cross-platform GPU compute
+        #[cfg(feature = "vulkan")]
+        if vulkan::VulkanDevice::is_available() {
+            return GpuBackend::Vulkan;
         }
 
         // Default to DirectX 12

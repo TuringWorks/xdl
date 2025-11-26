@@ -41,9 +41,17 @@ pub enum GpuError {
     #[error("DirectX error: {0}")]
     DirectXError(String),
 
+    #[cfg(all(target_os = "windows", feature = "directml"))]
+    #[error("DirectML error: {0}")]
+    DirectMLError(String),
+
     #[cfg(feature = "cuda")]
     #[error("CUDA error: {0}")]
     CudaError(String),
+
+    #[cfg(feature = "vulkan")]
+    #[error("Vulkan error: {0}")]
+    VulkanError(String),
 
     #[cfg(feature = "opencl")]
     #[error("OpenCL error: {0}")]

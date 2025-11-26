@@ -22,9 +22,14 @@ core-graphics = "0.23"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
     "Win32_Graphics_Direct3D12",
     "Win32_Graphics_Dxgi",
-    "Win32_AI_MachineLearning"
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_System_Threading",
+    "Win32_Security",
+    "Win32_AI_MachineLearning_DirectML"
 ], optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -36,7 +41,7 @@ default = ["mps"]
 mps = []  # Metal Performance Shaders (macOS)
 coreml = []  # CoreML/ANE (macOS/iOS)
 directml = ["windows"]  # DirectML (Windows)
-cuda = ["cudarc"]  # NVIDIA CUDA
+cuda = ["cudarc"]  # NVIDIA CUDA (auto-detects version)
 cudnn = ["cuda"]  # NVIDIA cuDNN
 rocm = []  # AMD ROCm
 opencl = ["ocl"]  # OpenCL
@@ -46,12 +51,16 @@ onnx = ["ort"]  # ONNX Runtime
 all-nvidia = ["cuda", "cudnn"]
 all-amd = ["rocm", "opencl"]
 all-apple = ["mps", "coreml"]
+all-windows = ["directml", "cuda"]
 all-backends = ["mps", "coreml", "directml", "cuda", "cudnn", "rocm", "opencl", "vulkan", "onnx"]
+# CUDA version-specific features (use if auto-detection fails)
+cuda-12 = ["cudarc/cuda-12060"]
+cuda-11 = ["cudarc/cuda-11080"]
 
 [dependencies.cudarc]
-version = "0.11"
+version = "0.12"
 optional = true
-features = ["std", "f16"]
+features = ["std", "f16", "nvrtc", "cuda-version-from-build-system"]
 
 [dependencies.ash]
 version = "0.38"
