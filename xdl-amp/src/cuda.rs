@@ -8,9 +8,7 @@ use crate::backend::{GpuBuffer, GpuDevice};
 use crate::error::{GpuError, Result};
 
 #[cfg(feature = "cuda")]
-use cudarc::driver::{CudaDevice as CudaDeviceHandle, CudaSlice, DeviceRepr, LaunchAsync, LaunchConfig};
-#[cfg(feature = "cuda")]
-use cudarc::nvrtc::Ptx;
+use cudarc::driver::{CudaDevice as CudaDeviceHandle, CudaSlice, LaunchAsync, LaunchConfig};
 #[cfg(feature = "cuda")]
 use std::sync::Arc;
 
@@ -306,10 +304,9 @@ impl CudaDevice {
     /// Create a new CUDA device
     #[cfg(feature = "cuda")]
     pub fn new() -> Result<Self> {
+        // CudaDeviceHandle::new() returns Arc<CudaDevice>
         let device = CudaDeviceHandle::new(0)
             .map_err(|e| GpuError::CudaError(format!("Failed to initialize CUDA device: {}", e)))?;
-
-        let device = Arc::new(device);
 
         // Compile and load kernels
         let ptx = cudarc::nvrtc::compile_ptx(CUDA_KERNELS)
