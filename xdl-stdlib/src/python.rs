@@ -45,7 +45,7 @@ impl PythonManager {
         let module_key = format!("module_{}", self.modules.len());
 
         // Test that the module can be imported
-        Python::with_gil(|py| match py.import_bound(module_name) {
+        Python::with_gil(|py| match py.import(module_name) {
             Ok(_) => {
                 self.modules
                     .insert(module_key.clone(), module_name.to_string());
@@ -75,7 +75,7 @@ impl PythonManager {
             .clone(); // Clone the module name to avoid borrow issues
 
         Python::with_gil(|py| {
-            let module = py.import_bound(module_name.as_str()).map_err(|e| {
+            let module = py.import(module_name.as_str()).map_err(|e| {
                 xdl_core::XdlError::RuntimeError(format!(
                     "Failed to re-import module '{}': {}",
                     module_name, e
@@ -89,7 +89,7 @@ impl PythonManager {
                 .collect::<Result<Vec<_>, _>>()?;
 
             // Create kwargs dictionary
-            let py_kwargs = PyDict::new_bound(py);
+            let py_kwargs = PyDict::new(py);
             for (key, value) in kwargs {
                 let py_value = self.gdl_to_python(py, value)?;
                 py_kwargs.set_item(key, py_value).map_err(|e| {
@@ -99,11 +99,11 @@ impl PythonManager {
 
             // Call the method
             let result = if py_kwargs.is_empty() {
-                module.call_method1(method_name, PyTuple::new_bound(py, py_args))
+                module.call_method1(method_name, PyTuple::new(py, py_args).unwrap())
             } else {
                 module.call_method(
                     method_name,
-                    PyTuple::new_bound(py, py_args),
+                    PyTuple::new(py, py_args).unwrap(),
                     Some(&py_kwargs),
                 )
             };
@@ -122,10 +122,10 @@ impl PythonManager {
     }
 
     /// Store a Python object and return its ID
-    fn store_object(&mut self, py: Python, py_obj: PyObject) -> String {
+    fn store_object(&mut self, _py: Python, py_obj: PyObject) -> String {
         let object_id = format!("pyobj_{}", self.object_counter);
         self.object_counter += 1;
-        self.objects.insert(object_id.clone(), py_obj.into_py(py));
+        self.objects.insert(object_id.clone(), py_obj);
         object_id
     }
 
@@ -157,23 +157,23 @@ impl PythonManager {
     /// Convert XdlValue to Python object
     fn gdl_to_python(&self, py: Python, value: &XdlValue) -> XdlResult<PyObject> {
         match value {
-            XdlValue::Long(n) => Ok(n.to_object(py)),
-            XdlValue::Double(f) => Ok(f.to_object(py)),
-            XdlValue::Float(f) => Ok((*f as f64).to_object(py)),
+            XdlValue::Long(n) => Ok(n.into_pyobject(py).unwrap().into_any().unbind()),
+            XdlValue::Double(f) => Ok(f.into_pyobject(py).unwrap().into_any().unbind()),
+            XdlValue::Float(f) => Ok((*f as f64).into_pyobject(py).unwrap().into_any().unbind()),
             XdlValue::String(s) => {
                 // Check if this is a module key or Python object ID
                 if s.starts_with("pyobj_") {
                     // This is a Python object reference, retrieve it
                     let py_obj = self.get_object(s)?;
-                    Ok(py_obj.to_object(py))
+                    Ok(py_obj.clone_ref(py).into_any())
                 } else {
                     // Regular string
-                    Ok(s.to_object(py))
+                    Ok(s.into_pyobject(py).unwrap().into_any().unbind())
                 }
             }
             XdlValue::PythonObject(object_id) => {
                 let py_obj = self.get_object(object_id)?;
-                Ok(py_obj.to_object(py))
+                Ok(py_obj.clone_ref(py).into_any())
             }
             _ => Err(xdl_core::XdlError::RuntimeError(format!(
                 "Cannot convert XdlValue to Python: {:?}",

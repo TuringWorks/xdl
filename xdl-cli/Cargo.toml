@@ -29,7 +29,7 @@ dirs = "5.0"
 serde_json = "1.0"
 
 [features]
-default = []
+default = ["python"]
 # Python integration via PyO3 (requires system Python)
 python = ["xdl-interpreter/python", "xdl-stdlib/python"]
 # RustPython - embedded pure Python interpreter (no C extensions like NumPy)
