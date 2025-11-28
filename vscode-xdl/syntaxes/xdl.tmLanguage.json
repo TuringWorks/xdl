@@ -1,0 +1,214 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "XDL",
+  "scopeName": "source.xdl",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#operators" },
+    { "include": "#system-variables" },
+    { "include": "#function-definition" },
+    { "include": "#procedure-definition" },
+    { "include": "#function-call" },
+    { "include": "#builtin-functions" },
+    { "include": "#builtin-procedures" },
+    { "include": "#variables" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.semicolon.xdl",
+          "match": ";.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.xdl",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.xdl",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.xdl",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.xdl",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.xdl",
+          "match": "\\b\\d+\\.\\d*([eEdD][+-]?\\d+)?\\b"
+        },
+        {
+          "name": "constant.numeric.float.xdl",
+          "match": "\\b\\d*\\.\\d+([eEdD][+-]?\\d+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.xdl",
+          "match": "\\b\\d+([bBsSlLuU])?\\b"
+        },
+        {
+          "name": "constant.numeric.hex.xdl",
+          "match": "'[0-9A-Fa-f]+'[xX]"
+        },
+        {
+          "name": "constant.numeric.octal.xdl",
+          "match": "'[0-7]+'[oO]"
+        },
+        {
+          "name": "constant.numeric.binary.xdl",
+          "match": "'[01]+'[bB]"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.xdl",
+          "match": "\\b(?i:IF|THEN|ELSE|ENDIF|FOR|ENDFOR|FOREACH|WHILE|ENDWHILE|REPEAT|UNTIL|BREAK|CONTINUE|RETURN|GOTO|CASE|ENDCASE|SWITCH|ENDSWITCH|OF|DO)\\b"
+        },
+        {
+          "name": "keyword.other.xdl",
+          "match": "\\b(?i:FUNCTION|ENDFUNCTION|PRO|PROCEDURE|ENDPRO|BEGIN|END|COMMON|COMPILE_OPT|FORWARD_FUNCTION|ON_ERROR|ON_IOERROR|CATCH|INHERITS)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.xdl",
+          "match": "\\b(?i:AND|OR|NOT|XOR)\\b"
+        },
+        {
+          "name": "keyword.operator.comparison.xdl",
+          "match": "\\b(?i:EQ|NE|LT|GT|LE|GE)\\b"
+        },
+        {
+          "name": "keyword.operator.arithmetic.xdl",
+          "match": "\\b(?i:MOD)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.xdl",
+          "match": "\\+=|-=|\\*=|/=|="
+        },
+        {
+          "name": "keyword.operator.arithmetic.xdl",
+          "match": "\\+\\+|--|\\+|-|\\*|/|\\^|#|##"
+        },
+        {
+          "name": "keyword.operator.pointer.xdl",
+          "match": "->"
+        },
+        {
+          "name": "keyword.operator.scope.xdl",
+          "match": "::"
+        },
+        {
+          "name": "keyword.operator.range.xdl",
+          "match": ":"
+        },
+        {
+          "name": "keyword.operator.ternary.xdl",
+          "match": "\\?"
+        }
+      ]
+    },
+    "system-variables": {
+      "patterns": [
+        {
+          "name": "variable.language.system.xdl",
+          "match": "![A-Za-z_][A-Za-z0-9_]*"
+        }
+      ]
+    },
+    "function-definition": {
+      "patterns": [
+        {
+          "name": "meta.function.xdl",
+          "begin": "\\b(?i:FUNCTION)\\s+",
+          "end": "(?=,|$|;)",
+          "beginCaptures": {
+            "0": { "name": "keyword.other.function.xdl" }
+          },
+          "patterns": [
+            {
+              "name": "entity.name.function.xdl",
+              "match": "[A-Za-z_][A-Za-z0-9_]*"
+            }
+          ]
+        }
+      ]
+    },
+    "procedure-definition": {
+      "patterns": [
+        {
+          "name": "meta.procedure.xdl",
+          "begin": "\\b(?i:PRO|PROCEDURE)\\s+",
+          "end": "(?=,|$|;)",
+          "beginCaptures": {
+            "0": { "name": "keyword.other.procedure.xdl" }
+          },
+          "patterns": [
+            {
+              "name": "entity.name.function.xdl",
+              "match": "[A-Za-z_][A-Za-z0-9_]*"
+            }
+          ]
+        }
+      ]
+    },
+    "builtin-functions": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.xdl",
+          "match": "\\b(?i:SIN|COS|TAN|ASIN|ACOS|ATAN|SINH|COSH|TANH|SQRT|EXP|ALOG|ALOG10|ABS|CEIL|FLOOR|ROUND|FIX|FLOAT|DOUBLE|COMPLEX|IMAGINARY|CONJ|FINDGEN|INDGEN|DINDGEN|BINDGEN|LINDGEN|FLTARR|DBLARR|INTARR|BYTARR|LONARR|STRARR|COMPLEXARR|MAKE_ARRAY|REPLICATE|WHERE|N_ELEMENTS|SIZE|REFORM|TRANSPOSE|REVERSE|SHIFT|ROTATE|SORT|UNIQ|TOTAL|MEAN|MEDIAN|VARIANCE|STDDEV|MIN|MAX|MOMENT|CORRELATE|HISTOGRAM|STRLEN|STRMID|STRPOS|STRTRIM|STRUPCASE|STRLOWCASE|STRING|STRSPLIT|STRJOIN|STRCMP|BYTE|UINT|ULONG|LONG64|ULONG64|PTR_NEW|OBJ_NEW|PTR_VALID|OBJ_VALID|OBJ_CLASS|OBJ_ISA|N_PARAMS|KEYWORD_SET|ARG_PRESENT|EXECUTE|CALL_FUNCTION|CALL_PROCEDURE|ROUTINE_INFO|BYTSCL|CONGRID|REBIN|INTERPOLATE|POLY_2D|FFT|CONVOL|SMOOTH|DERIV|INT_TABULATED|INTERPOL|SPLINE|POLY_FIT|SVDC|SVSOL|INVERT|DETERM|TRACE|IDENTITY|DIAG_MATRIX|EIGENQL|EIGENVEC|RANDOMU|RANDOMN|SYSTIME|FILEPATH|FILE_TEST|FILE_INFO|FILE_SEARCH|FILE_LINES|FILE_BASENAME|FILE_DIRNAME|GETENV|SETENV|SPAWN|READ_ASCII|READ_CSV|READ_BINARY|DIALOG_PICKFILE)\\b"
+        }
+      ]
+    },
+    "builtin-procedures": {
+      "patterns": [
+        {
+          "name": "support.function.procedure.xdl",
+          "match": "\\b(?i:PRINT|PRINTF|WRITEF|WRITEU|READF|READU|OPENR|OPENW|OPENU|CLOSE|FREE_LUN|GET_LUN|POINT_LUN|PLOT|OPLOT|PLOTS|CONTOUR|SURFACE|SHADE_SURF|TV|TVSCL|WINDOW|WSET|WSHOW|WDELETE|DEVICE|ERASE|XYOUTS|AXIS|POLYFILL|CURSOR|TVCRS|HELP|STOP|MESSAGE|RETALL|CD|PUSHD|POPD|RESOLVE_ROUTINE|RESOLVE_ALL|SAVE|RESTORE|JOURNAL|PTR_FREE|OBJ_DESTROY|HEAP_GC|ON_ERROR|CATCH|WAIT|WIDGET_CONTROL|WIDGET_EVENT|XMANAGER)\\b"
+        }
+      ]
+    },
+    "function-call": {
+      "patterns": [
+        {
+          "name": "meta.function-call.xdl",
+          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+          "captures": {
+            "1": { "name": "entity.name.function.xdl" }
+          }
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.xdl",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

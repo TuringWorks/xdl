@@ -1,0 +1,107 @@
+{
+  "name": "xdl-language",
+  "displayName": "XDL Language Support",
+  "description": "Language support for XDL (Extended Data Language) - IDL/GDL compatible scientific programming",
+  "version": "0.1.0",
+  "publisher": "xdl-team",
+  "license": "GPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gnudatalanguage/gdl"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "xdl",
+    "idl",
+    "gdl",
+    "scientific",
+    "data analysis",
+    "astronomy",
+    "image processing"
+  ],
+  "activationEvents": [
+    "onLanguage:xdl"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "xdl",
+        "aliases": [
+          "XDL",
+          "Extended Data Language",
+          "IDL",
+          "GDL"
+        ],
+        "extensions": [
+          ".xdl",
+          ".pro"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "xdl",
+        "scopeName": "source.xdl",
+        "path": "./syntaxes/xdl.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "XDL",
+      "properties": {
+        "xdl.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable the XDL language server"
+        },
+        "xdl.lsp.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to xdl-lsp executable. Leave empty to use bundled version."
+        },
+        "xdl.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the XDL language server"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "xdl.restartServer",
+        "title": "XDL: Restart Language Server"
+      },
+      {
+        "command": "xdl.runFile",
+        "title": "XDL: Run Current File"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
