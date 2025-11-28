@@ -52,6 +52,42 @@ impl GpuOps {
         Ok(result)
     }
 
+    /// Element-wise subtraction
+    pub fn sub_1d(&self, a: &Array1<f32>, b: &Array1<f32>) -> Result<Array1<f32>> {
+        if a.len() != b.len() {
+            return Err(crate::error::GpuError::BufferSizeMismatch {
+                expected: a.len(),
+                actual: b.len(),
+            });
+        }
+
+        let mut result = Array1::zeros(a.len());
+        self.device.sub_f32(
+            a.as_slice().unwrap(),
+            b.as_slice().unwrap(),
+            result.as_slice_mut().unwrap(),
+        )?;
+        Ok(result)
+    }
+
+    /// Element-wise division
+    pub fn div_1d(&self, a: &Array1<f32>, b: &Array1<f32>) -> Result<Array1<f32>> {
+        if a.len() != b.len() {
+            return Err(crate::error::GpuError::BufferSizeMismatch {
+                expected: a.len(),
+                actual: b.len(),
+            });
+        }
+
+        let mut result = Array1::zeros(a.len());
+        self.device.div_f32(
+            a.as_slice().unwrap(),
+            b.as_slice().unwrap(),
+            result.as_slice_mut().unwrap(),
+        )?;
+        Ok(result)
+    }
+
     /// Element-wise sine
     pub fn sin_1d(&self, a: &Array1<f32>) -> Result<Array1<f32>> {
         let mut result = Array1::zeros(a.len());

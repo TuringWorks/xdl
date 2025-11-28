@@ -22,10 +22,31 @@ plotters = { version = "0.3", features = ["all_series", "chrono", "bitmap_backen
 eframe = { workspace = true }
 egui = { workspace = true }
 egui_plot = { workspace = true }
-pyo3 = { workspace = true }
+pyo3 = { workspace = true, optional = true }
 lazy_static = "1.4"
 rustfft = "6.1"
 nalgebra = "0.32"
+
+# RustPython - embedded Python interpreter (pure Rust)
+rustpython = { workspace = true, optional = true }
+rustpython-vm = { workspace = true, optional = true }
+
+# Data Science - Polars (Pandas alternative, much faster)
+polars = { workspace = true, optional = true }
+
+# Machine Learning - Linfa (scikit-learn equivalent)
+linfa = { workspace = true, optional = true }
+linfa-clustering = { workspace = true, optional = true }
+linfa-linear = { workspace = true, optional = true }
+linfa-logistic = { workspace = true, optional = true }
+linfa-trees = { workspace = true, optional = true }
+linfa-svm = { workspace = true, optional = true }
+linfa-reduction = { workspace = true, optional = true }
+linfa-preprocessing = { workspace = true, optional = true }
+linfa-nn = { workspace = true, optional = true }
+
+# Statistics
+statrs = { workspace = true, optional = true }
 
 # GIS and Geospatial (optional - requires PROJ system library)
 geo = { version = "0.28", optional = true }
@@ -51,7 +72,31 @@ three-d = "0.17"
 # GSL = { workspace = true }  # TODO: Install GSL system dependency
 
 [features]
-default = []
+default = ["dataframes", "datascience"]
+
+# Python integration (requires Python installation for C extensions)
+python = ["pyo3"]
+
+# RustPython - embedded pure Python interpreter (no C extensions like NumPy/Pandas)
+rustpython = ["dep:rustpython", "rustpython-vm"]
+
+# Data Science - Polars DataFrames (faster than Pandas)
+dataframes = ["polars"]
+
+# Machine Learning - Linfa (scikit-learn equivalent)
+ml = ["linfa", "linfa-clustering", "linfa-linear", "linfa-logistic", "linfa-trees", "linfa-svm", "linfa-reduction", "linfa-preprocessing", "linfa-nn"]
+
+# Statistics
+stats = ["statrs"]
+
+# Convenience feature for all data science
+datascience = ["dataframes", "stats", "ml"]
+
+# GIS and Geospatial
 gis = ["geo", "geo-types", "geojson", "proj", "wkt"]
+
+# Scientific I/O
 scientific-io = ["netcdf", "hdf5"]
-all-features = ["gis", "scientific-io"]
+
+# All features
+all-features = ["gis", "scientific-io", "python", "rustpython", "datascience"]

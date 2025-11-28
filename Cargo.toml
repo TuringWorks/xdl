@@ -73,8 +73,29 @@ fltk = "1.4"
 criterion = "0.5"
 proptest = "1.4"
 
-# Python integration
-pyo3 = { version = "0.22", features = ["auto-initialize"] }
+# Python integration (optional - requires Python installation)
+pyo3 = { version = "0.27", features = ["auto-initialize"] }
+
+# RustPython - embedded Python interpreter (pure Rust, no C extensions)
+rustpython = { version = "0.4", default-features = false }
+rustpython-vm = { version = "0.4", default-features = false, features = ["compiler"] }
+
+# Data Science - Polars (faster than Pandas)
+polars = { version = "0.46", features = ["lazy", "csv", "parquet", "json", "dtype-full", "describe", "pivot"] }
+
+# Machine Learning - Linfa (scikit-learn equivalent)
+linfa = "0.7"
+linfa-clustering = "0.7"
+linfa-linear = "0.7"
+linfa-logistic = "0.7"
+linfa-trees = "0.7"
+linfa-svm = "0.7"
+linfa-reduction = "0.7"
+linfa-preprocessing = "0.7"
+linfa-nn = "0.7"
+
+# Statistics
+statrs = "0.18"
 
 [profile.release]
 lto = true

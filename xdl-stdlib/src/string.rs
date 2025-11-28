@@ -249,3 +249,56 @@ pub fn string_fn(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::String(result))
 }
+
+/// STRTRIM - Remove leading/trailing whitespace from string
+/// Syntax: result = STRTRIM(string [, flag])
+/// flag = 0: no trimming (default)
+/// flag = 1: remove leading whitespace
+/// flag = 2: remove both leading and trailing whitespace
+pub fn strtrim(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRTRIM: Expected 1-2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        // Also handle numeric values by converting to string first
+        other => other.to_string_repr(),
+    };
+
+    // Default flag is 0 (no trimming), but commonly used as 2
+    let flag = if args.len() == 2 {
+        match &args[1] {
+            XdlValue::Long(n) => *n,
+            XdlValue::Int(n) => *n as i32,
+            XdlValue::Byte(n) => *n as i32,
+            XdlValue::Float(f) => *f as i32,
+            XdlValue::Double(d) => *d as i32,
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "integer".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                })
+            }
+        }
+    } else {
+        0
+    };
+
+    let result = match flag {
+        0 => s, // No trimming
+        1 => s.trim_start().to_string(), // Remove leading whitespace
+        2 => s.trim().to_string(), // Remove both leading and trailing
+        _ => {
+            return Err(XdlError::InvalidArgument(format!(
+                "STRTRIM: Invalid flag value {}. Expected 0, 1, or 2",
+                flag
+            )))
+        }
+    };
+
+    Ok(XdlValue::String(result))
+}

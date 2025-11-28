@@ -15,3 +15,10 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 num-complex = { workspace = true }
+
+[features]
+default = []
+# Python integration via PyO3 (requires system Python)
+python = ["xdl-stdlib/python"]
+# RustPython - embedded pure Python interpreter (no C extensions like NumPy)
+rustpython = ["xdl-stdlib/rustpython"]

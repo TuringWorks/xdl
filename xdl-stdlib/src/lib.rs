@@ -14,12 +14,24 @@ pub mod linalg; // Linear algebra
 pub mod math;
 pub mod matlab_compat; // MATLAB compatibility functions
 pub mod ml;
+#[cfg(feature = "python")]
 pub mod python;
 pub mod signal; // Signal processing
 pub mod statistics;
 pub mod string;
 pub mod system;
 pub mod viz3d; // 3D volume visualization
+
+// Data Science modules (feature-gated)
+#[cfg(feature = "dataframes")]
+pub mod polars_df; // Polars DataFrames (Pandas alternative)
+
+// Linfa ML (scikit-learn alternative)
+#[cfg(feature = "ml")]
+pub mod linfa_ml;
+
+#[cfg(feature = "rustpython")]
+pub mod rustpython_interp; // RustPython interpreter
 
 // Re-export graphics callback registration for GUI
 pub use graphics_procs::{register_gui_image_callback, register_gui_plot_callback};
@@ -312,6 +324,7 @@ impl StandardLibrary {
             "STRUPCASE" => string::strupcase(args),
             "STRLOWCASE" => string::strlowcase(args),
             "STRING" => string::string_fn(args),
+            "STRTRIM" => string::strtrim(args),
 
             // Complex number functions
             "COMPLEX" => complex::complex(args),
@@ -350,9 +363,12 @@ impl StandardLibrary {
             "GAUSSIAN_FILTER" => image::gaussian_filter(args),
             "THRESHOLD" => image::threshold(args),
 
-            // Python integration functions
+            // Python integration functions (requires "python" feature)
+            #[cfg(feature = "python")]
             "PYTHON_IMPORT" => python::python_import(args),
+            #[cfg(feature = "python")]
             "PYTHON_CALL" => python::python_call(args),
+            #[cfg(feature = "python")]
             "PYTHON_CALL_KW" => python::python_call_kw(args),
 
             // Machine Learning functions
@@ -463,6 +479,106 @@ impl StandardLibrary {
             "XDLML_ONEHOTENCODER" => ml::xdlml_onehotencoder(args),
             "XDLML_LABELENCODER" => ml::xdlml_labelencoder(args),
             "XDLML_LAYERNORMALIZATION" => ml::xdlml_layernormalization(args),
+
+            // =========================================================================
+            // Polars DataFrame functions (requires "dataframes" feature)
+            // =========================================================================
+            #[cfg(feature = "dataframes")]
+            "DF_READ_CSV" => polars_df::df_read_csv(args),
+            #[cfg(feature = "dataframes")]
+            "DF_READ_PARQUET" => polars_df::df_read_parquet(args),
+            #[cfg(feature = "dataframes")]
+            "DF_READ_JSON" => polars_df::df_read_json(args),
+            #[cfg(feature = "dataframes")]
+            "DF_CREATE" => polars_df::df_create(args),
+            #[cfg(feature = "dataframes")]
+            "DF_WRITE_CSV" => polars_df::df_write_csv(args),
+            #[cfg(feature = "dataframes")]
+            "DF_WRITE_PARQUET" => polars_df::df_write_parquet(args),
+            #[cfg(feature = "dataframes")]
+            "DF_HEAD" => polars_df::df_head(args),
+            #[cfg(feature = "dataframes")]
+            "DF_TAIL" => polars_df::df_tail(args),
+            #[cfg(feature = "dataframes")]
+            "DF_SELECT" => polars_df::df_select(args),
+            #[cfg(feature = "dataframes")]
+            "DF_FILTER" => polars_df::df_filter(args),
+            #[cfg(feature = "dataframes")]
+            "DF_SORT" => polars_df::df_sort(args),
+            #[cfg(feature = "dataframes")]
+            "DF_GROUPBY" => polars_df::df_groupby(args),
+            #[cfg(feature = "dataframes")]
+            "DF_JOIN" => polars_df::df_join(args),
+            #[cfg(feature = "dataframes")]
+            "DF_SHAPE" => polars_df::df_shape(args),
+            #[cfg(feature = "dataframes")]
+            "DF_COLUMNS" => polars_df::df_columns(args),
+            #[cfg(feature = "dataframes")]
+            "DF_DTYPES" => polars_df::df_dtypes(args),
+            #[cfg(feature = "dataframes")]
+            "DF_DESCRIBE" => polars_df::df_describe(args),
+            #[cfg(feature = "dataframes")]
+            "DF_PRINT" => polars_df::df_print(args),
+            #[cfg(feature = "dataframes")]
+            "DF_TO_ARRAY" => polars_df::df_to_array(args),
+            #[cfg(feature = "dataframes")]
+            "DF_DROP" => polars_df::df_drop(args),
+
+            // =========================================================================
+            // Linfa ML functions (requires "ml" feature)
+            // =========================================================================
+            #[cfg(feature = "ml")]
+            "ML_KMEANS_FIT" => linfa_ml::ml_kmeans_fit(args),
+            #[cfg(feature = "ml")]
+            "ML_KMEANS_PREDICT" => linfa_ml::ml_kmeans_predict(args),
+            #[cfg(feature = "ml")]
+            "ML_KMEANS_CENTROIDS" => linfa_ml::ml_kmeans_centroids(args),
+            #[cfg(feature = "ml")]
+            "ML_LINEAR_FIT" => linfa_ml::ml_linear_fit(args),
+            #[cfg(feature = "ml")]
+            "ML_LINEAR_PREDICT" => linfa_ml::ml_linear_predict(args),
+            #[cfg(feature = "ml")]
+            "ML_LINEAR_COEFFICIENTS" => linfa_ml::ml_linear_coefficients(args),
+            #[cfg(feature = "ml")]
+            "ML_LINEAR_INTERCEPT" => linfa_ml::ml_linear_intercept(args),
+            #[cfg(feature = "ml")]
+            "ML_LOGISTIC_FIT" => linfa_ml::ml_logistic_fit(args),
+            #[cfg(feature = "ml")]
+            "ML_LOGISTIC_PREDICT" => linfa_ml::ml_logistic_predict(args),
+            #[cfg(feature = "ml")]
+            "ML_PCA_FIT" => linfa_ml::ml_pca_fit(args),
+            #[cfg(feature = "ml")]
+            "ML_PCA_TRANSFORM" => linfa_ml::ml_pca_transform(args),
+            #[cfg(feature = "ml")]
+            "ML_PCA_COMPONENTS" => linfa_ml::ml_pca_components(args),
+            #[cfg(feature = "ml")]
+            "ML_PCA_VARIANCE" => linfa_ml::ml_pca_variance(args),
+            #[cfg(feature = "ml")]
+            "ML_TRAIN_TEST_SPLIT" => linfa_ml::ml_train_test_split(args),
+            #[cfg(feature = "ml")]
+            "ML_ACCURACY" => linfa_ml::ml_accuracy(args),
+            #[cfg(feature = "ml")]
+            "ML_MSE" => linfa_ml::ml_mse(args),
+            #[cfg(feature = "ml")]
+            "ML_R2_SCORE" => linfa_ml::ml_r2_score(args),
+            #[cfg(feature = "ml")]
+            "ML_DROP_MODEL" => linfa_ml::ml_drop_model(args),
+
+            // =========================================================================
+            // RustPython functions (requires "rustpython" feature)
+            // =========================================================================
+            #[cfg(feature = "rustpython")]
+            "RUSTPY_EXEC" => rustpython_interp::rustpy_exec(args),
+            #[cfg(feature = "rustpython")]
+            "RUSTPY_EVAL" => rustpython_interp::rustpy_eval(args),
+            #[cfg(feature = "rustpython")]
+            "RUSTPY_CALL" => rustpython_interp::rustpy_call(args),
+            #[cfg(feature = "rustpython")]
+            "RUSTPY_IMPORT" => rustpython_interp::rustpy_import(args),
+            #[cfg(feature = "rustpython")]
+            "RUSTPY_VERSION" => rustpython_interp::rustpy_version(args),
+            #[cfg(feature = "rustpython")]
+            "RUSTPY_STDLIB" => rustpython_interp::rustpy_stdlib(args),
 
             _ => Err(xdl_core::XdlError::FunctionNotFound(name.to_string())),
         }

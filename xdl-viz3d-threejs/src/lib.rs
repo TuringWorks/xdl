@@ -37,11 +37,23 @@ pub fn launch_visualization(
         .map_err(|e| XdlError::RuntimeError(format!("Failed to write volume HTML: {}", e)))?;
 
     // Find xdl-chart-viewer
-    let viewer_path = std::env::current_exe()
+    let exe_dir = std::env::current_exe()
         .map_err(|e| XdlError::RuntimeError(format!("Cannot find exe: {}", e)))?
         .parent()
         .ok_or_else(|| XdlError::RuntimeError("Cannot find parent directory".to_string()))?
-        .join("xdl-chart-viewer");
+        .to_path_buf();
+
+    // Try with .exe extension first (Windows), then without
+    let viewer_path = if cfg!(windows) {
+        let with_exe = exe_dir.join("xdl-chart-viewer.exe");
+        if with_exe.exists() {
+            with_exe
+        } else {
+            exe_dir.join("xdl-chart-viewer")
+        }
+    } else {
+        exe_dir.join("xdl-chart-viewer")
+    };
 
     // Launch viewer
     Command::new(viewer_path)

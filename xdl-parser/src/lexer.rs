@@ -306,6 +306,25 @@ pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
     let mut tokens = Vec::new();
 
     while !remaining.is_empty() {
+        // Handle line continuation: $ followed by optional whitespace and newline
+        if remaining.starts_with('$') {
+            let after_dollar = &remaining[1..];
+            // Skip whitespace after $
+            let trimmed = after_dollar.trim_start_matches(|c| c == ' ' || c == '\t' || c == '\r');
+            // If followed by newline or end of input, it's a line continuation
+            if trimmed.is_empty() || trimmed.starts_with('\n') {
+                if trimmed.starts_with('\n') {
+                    remaining = &trimmed[1..];
+                } else {
+                    remaining = trimmed;
+                }
+                continue;
+            }
+            // Otherwise, skip the $ as unknown character
+            remaining = after_dollar;
+            continue;
+        }
+
         match parse_token(remaining) {
             Ok((rest, token)) => {
                 // Skip comments for now, but keep them for potential use

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell:*)",
+      "WebFetch(domain:crates.io)",
+      "Bash(cargo metadata:*)",
+      "Bash(cargo build:*)",
+      "Bash(C:/ProgramData/chocolatey/bin/ninja.exe:*)",
+      "Bash(where:*)",
+      "Bash(C:Usersravinscoopappsmingw-winlibscurrentbinninja.exe --version)",
+      "Bash(\"C:\\Users\\ravin\\scoop\\apps\\mingw-winlibs\\current\\bin\\ninja.exe\" --version)",
+      "Bash(set CMAKE_MAKE_PROGRAM=C:Usersravinscoopappsmingw-winlibscurrentbinninja.exe:*)",
+      "Bash(del \"C:\\ProgramData\\chocolatey\\bin\\ninja.exe\")",
+      "Bash(cargo clean:*)",
+      "Bash(cargo run:*)",
+      "Bash(git checkout:*)",
+      "Bash(for n in 50 100 150 200 210 220)",
+      "Bash(do echo '=== Testing $n lines ===')",
+      "Bash(head:*)",
+      "Bash(done)",
+      "Bash(for n in 30 35 40 50 60 70 80 90 100)",
+      "Bash(do echo '=== Lines 1-$n ===')",
+      "Bash(timeout 120 cargo run:*)",
+      "Bash(dir:*)",
+      "Bash(set PYO3_PYTHON=C:Python314python.exe)",
+      "Bash(cmd /c \"set PYO3_PYTHON=C:\\Python312\\python.exe & cargo build -p xdl-interpreter --features python\")",
+      "Bash(PYO3_PYTHON=/c/Python312/python.exe cargo build:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

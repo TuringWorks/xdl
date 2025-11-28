@@ -48,11 +48,23 @@ fn launch_chart(html: String, title: &str) -> XdlResult<()> {
     use std::fs;
     use std::io::Write;
 
-    let viewer_path = std::env::current_exe()
+    let exe_dir = std::env::current_exe()
         .map_err(|e| XdlError::RuntimeError(format!("Cannot find exe: {}", e)))?
         .parent()
         .ok_or_else(|| XdlError::RuntimeError("Cannot find parent directory".to_string()))?
-        .join("xdl-chart-viewer");
+        .to_path_buf();
+
+    // Try with .exe extension first (Windows), then without
+    let viewer_path = if cfg!(windows) {
+        let with_exe = exe_dir.join("xdl-chart-viewer.exe");
+        if with_exe.exists() {
+            with_exe
+        } else {
+            exe_dir.join("xdl-chart-viewer")
+        }
+    } else {
+        exe_dir.join("xdl-chart-viewer")
+    };
 
     // Write HTML to a temporary file to avoid command-line argument length limits
     let temp_dir = std::env::temp_dir();

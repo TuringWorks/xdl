@@ -201,24 +201,43 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse if statement
+    /// Supports both single-line (IF x THEN y) and multi-line (IF x THEN BEGIN...ENDIF) forms
     fn parse_if_statement(&mut self) -> XdlResult<Statement> {
         self.consume(Token::If, "Expected 'if'")?;
         let condition = self.parse_expression()?;
         self.consume(Token::Then, "Expected 'then' after if condition")?;
 
-        // Parse then block - supports begin...end blocks or statements until else/endif
-        let then_block = self.parse_block_or_statement(&[Token::Else, Token::Endif])?;
+        // Check if this is a block (BEGIN) or single-line form
+        let is_block = self.check(&Token::Begin);
+
+        let then_block = if is_block {
+            // Multi-line form: IF x THEN BEGIN ... END/ENDIF
+            self.parse_block_or_statement(&[Token::Else, Token::Endif])?
+        } else {
+            // Single-line form: IF x THEN statement [ELSE statement]
+            // Parse just one statement
+            vec![self.parse_statement()?]
+        };
 
         let else_block = if self.check(&Token::Else) {
             self.advance(); // consume 'else'
-                            // Parse else block - supports begin...end blocks or statements until endif
-            Some(self.parse_block_or_statement(&[Token::Endif])?)
+            if is_block || self.check(&Token::Begin) {
+                // Multi-line else block
+                Some(self.parse_block_or_statement(&[Token::Endif])?)
+            } else {
+                // Single-line else: just one statement
+                Some(vec![self.parse_statement()?])
+            }
         } else {
             None
         };
 
-        // Consume endif - required for if statements
-        self.consume(Token::Endif, "Expected 'endif' to close if statement")?;
+        // ENDIF is only required for block form (BEGIN was used)
+        if is_block || self.check(&Token::Endif) {
+            if self.check(&Token::Endif) {
+                self.advance(); // consume 'endif'
+            }
+        }
 
         Ok(Statement::If {
             condition,
@@ -289,7 +308,29 @@ impl<'a> Parser<'a> {
                 break;
             }
 
+            // Check for /KEYWORD syntax (shorthand for KEYWORD=1)
+            if matches!(self.peek(), Token::Divide) {
+                let next_pos = self.current + 1;
+                if next_pos < self.tokens.len() {
+                    if let Token::Identifier(kw_name) = &self.tokens[next_pos] {
+                        let kw_name = kw_name.clone();
+                        self.advance(); // consume '/'
+                        self.advance(); // consume identifier
+                        keywords.push(Keyword {
+                            name: kw_name,
+                            value: Some(Expression::Literal {
+                                value: XdlValue::Long(1),
+                                location: Location::unknown(),
+                            }),
+                            location: Location::unknown(),
+                        });
+                        continue;
+                    }
+                }
+            }
+
             // Check for keyword argument (identifier = expression)
+
             if let Token::Identifier(kw_name) = self.peek() {
                 let kw_name = kw_name.clone();
                 let next_pos = self.current + 1;

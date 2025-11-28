@@ -964,7 +964,12 @@ impl Evaluator {
         indices: &[ArrayIndex],
         context: &mut Context,
     ) -> XdlResult<XdlValue> {
-        // Handle multi-dimensional indexing by applying indices one at a time
+        // Handle MultiDimArray with all indices at once
+        if let XdlValue::MultiDimArray { data, shape } = array_val {
+            return self.evaluate_multidim_index(data, shape, indices, context);
+        }
+
+        // Handle other array types by applying indices one at a time
         let mut current_val = array_val.clone();
 
         for index in indices {
@@ -972,6 +977,247 @@ impl Evaluator {
         }
 
         Ok(current_val)
+    }
+
+    /// Evaluate multi-dimensional array indexing
+    fn evaluate_multidim_index(
+        &self,
+        data: &[f64],
+        shape: &[usize],
+        indices: &[ArrayIndex],
+        context: &mut Context,
+    ) -> XdlResult<XdlValue> {
+        if indices.is_empty() {
+            return Ok(XdlValue::MultiDimArray {
+                data: data.to_vec(),
+                shape: shape.to_vec(),
+            });
+        }
+
+        // Check for slice extraction with wildcards (e.g., u[*, *, k])
+        let has_wildcard = indices.iter().any(|idx| matches!(idx, ArrayIndex::All));
+
+        if has_wildcard {
+            return self.evaluate_multidim_slice(data, shape, indices, context);
+        }
+
+        // All indices are single values - extract a single element or sub-array
+        let mut evaluated_indices = Vec::new();
+        for idx in indices {
+            match idx {
+                ArrayIndex::Single(expr) => {
+                    let val = self.evaluate(expr, context)?;
+                    let i = val.to_long()?;
+                    evaluated_indices.push(i);
+                }
+                ArrayIndex::Range { .. } => {
+                    return self.evaluate_multidim_slice(data, shape, indices, context);
+                }
+                ArrayIndex::All => unreachable!(),
+            }
+        }
+
+        // If fewer indices than dimensions, return a sub-array
+        if evaluated_indices.len() < shape.len() {
+            // For column-major, we need to extract a slice
+            // Use the slice extraction with remaining dimensions as All
+            let mut ranges: Vec<(usize, usize, usize)> = Vec::new();
+            let mut result_shape = Vec::new();
+
+            for (i, &idx) in evaluated_indices.iter().enumerate() {
+                let actual_idx = if idx < 0 {
+                    (shape[i] as i32 + idx) as usize
+                } else {
+                    idx as usize
+                };
+                if actual_idx >= shape[i] {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Index {} out of bounds for dimension {} of size {}",
+                        idx, i, shape[i]
+                    )));
+                }
+                ranges.push((actual_idx, actual_idx + 1, 1));
+            }
+
+            // Add remaining dimensions as full ranges
+            for dim in evaluated_indices.len()..shape.len() {
+                ranges.push((0, shape[dim], 1));
+                result_shape.push(shape[dim]);
+            }
+
+            let mut result_data = Vec::new();
+            self.extract_slice_recursive(data, shape, &ranges, 0, 0, 1, &mut result_data);
+
+            if result_shape.len() == 1 {
+                return Ok(XdlValue::Array(result_data));
+            }
+            return Ok(XdlValue::MultiDimArray {
+                data: result_data,
+                shape: result_shape,
+            });
+        }
+
+        // Full indexing - return single element
+        if evaluated_indices.len() != shape.len() {
+            return Err(XdlError::RuntimeError(format!(
+                "Expected {} indices for {}-dimensional array, got {}",
+                shape.len(),
+                shape.len(),
+                evaluated_indices.len()
+            )));
+        }
+
+        // Calculate linear index (column-major order like IDL/GDL)
+        // For shape [nx, ny, nz] and indices [i, j, k]:
+        // linear_idx = i + j*nx + k*nx*ny
+        let mut linear_idx = 0;
+        let mut stride = 1;
+        for i in 0..shape.len() {
+            let idx = evaluated_indices[i];
+            let actual_idx = if idx < 0 {
+                (shape[i] as i32 + idx) as usize
+            } else {
+                idx as usize
+            };
+            if actual_idx >= shape[i] {
+                return Err(XdlError::RuntimeError(format!(
+                    "Index {} out of bounds for dimension {} of size {}",
+                    idx, i, shape[i]
+                )));
+            }
+            linear_idx += actual_idx * stride;
+            stride *= shape[i];
+        }
+
+        if linear_idx >= data.len() {
+            return Err(XdlError::RuntimeError(format!(
+                "Computed index {} out of bounds for array of size {}",
+                linear_idx,
+                data.len()
+            )));
+        }
+
+        Ok(XdlValue::Double(data[linear_idx]))
+    }
+
+    /// Evaluate multi-dimensional slice extraction (with wildcards or ranges)
+    fn evaluate_multidim_slice(
+        &self,
+        data: &[f64],
+        shape: &[usize],
+        indices: &[ArrayIndex],
+        context: &mut Context,
+    ) -> XdlResult<XdlValue> {
+        // Build range for each dimension
+        let mut ranges: Vec<(usize, usize, usize)> = Vec::new(); // (start, end, step)
+        let mut result_shape = Vec::new();
+
+        for (dim, idx) in indices.iter().enumerate() {
+            if dim >= shape.len() {
+                return Err(XdlError::RuntimeError(format!(
+                    "Too many indices ({}) for {}-dimensional array",
+                    indices.len(),
+                    shape.len()
+                )));
+            }
+            let dim_size = shape[dim];
+
+            match idx {
+                ArrayIndex::All => {
+                    ranges.push((0, dim_size, 1));
+                    result_shape.push(dim_size);
+                }
+                ArrayIndex::Single(expr) => {
+                    let val = self.evaluate(expr, context)?;
+                    let i = val.to_long()?;
+                    let actual_idx = if i < 0 {
+                        (dim_size as i32 + i) as usize
+                    } else {
+                        i as usize
+                    };
+                    if actual_idx >= dim_size {
+                        return Err(XdlError::RuntimeError(format!(
+                            "Index {} out of bounds for dimension {} of size {}",
+                            i, dim, dim_size
+                        )));
+                    }
+                    ranges.push((actual_idx, actual_idx + 1, 1));
+                    // Single index collapses dimension - don't add to result_shape
+                }
+                ArrayIndex::Range { start, end, step } => {
+                    let s = if let Some(e) = start {
+                        self.evaluate(e, context)?.to_long()? as usize
+                    } else {
+                        0
+                    };
+                    let e = if let Some(e) = end {
+                        (self.evaluate(e, context)?.to_long()? as usize + 1).min(dim_size)
+                    } else {
+                        dim_size
+                    };
+                    let st = if let Some(e) = step {
+                        self.evaluate(e, context)?.to_long()? as usize
+                    } else {
+                        1
+                    };
+                    ranges.push((s, e, st));
+                    let range_size = (e.saturating_sub(s) + st - 1) / st;
+                    result_shape.push(range_size);
+                }
+            }
+        }
+
+        // Add remaining dimensions if not fully indexed
+        for dim in indices.len()..shape.len() {
+            ranges.push((0, shape[dim], 1));
+            result_shape.push(shape[dim]);
+        }
+
+        // Extract data (start with stride=1 for column-major)
+        let mut result_data = Vec::new();
+        self.extract_slice_recursive(data, shape, &ranges, 0, 0, 1, &mut result_data);
+
+        if result_shape.is_empty() {
+            // Scalar result
+            Ok(XdlValue::Double(result_data[0]))
+        } else if result_shape.len() == 1 {
+            Ok(XdlValue::Array(result_data))
+        } else {
+            Ok(XdlValue::MultiDimArray {
+                data: result_data,
+                shape: result_shape,
+            })
+        }
+    }
+
+    /// Recursively extract slice data (column-major order)
+    fn extract_slice_recursive(
+        &self,
+        data: &[f64],
+        shape: &[usize],
+        ranges: &[(usize, usize, usize)],
+        dim: usize,
+        base_offset: usize,
+        current_stride: usize,
+        result: &mut Vec<f64>,
+    ) {
+        if dim >= ranges.len() {
+            if base_offset < data.len() {
+                result.push(data[base_offset]);
+            }
+            return;
+        }
+
+        let (start, end, step) = ranges[dim];
+        // Column-major: stride for dimension i is product of shape[0..i]
+        let next_stride = current_stride * shape[dim];
+
+        let mut i = start;
+        while i < end {
+            let offset = base_offset + i * current_stride;
+            self.extract_slice_recursive(data, shape, ranges, dim + 1, offset, next_stride, result);
+            i += step;
+        }
     }
 
     /// Evaluate a single index operation
@@ -1142,12 +1388,21 @@ impl Evaluator {
             }
         };
 
-        // For now, return a mock Python module object
-        // In a real implementation, this would interface with Python via FFI
-        Ok(XdlValue::String(format!(
-            "<Python module: {}>",
-            module_name
-        )))
+        // Use real Python integration when the python feature is enabled
+        #[cfg(feature = "python")]
+        {
+            use xdl_stdlib::python;
+            python::python_import(&[XdlValue::String(module_name)])
+        }
+
+        #[cfg(not(feature = "python"))]
+        {
+            // Return a mock Python module object when Python feature is disabled
+            Ok(XdlValue::String(format!(
+                "<Python module: {}> (Note: Build with --features python for real Python integration)",
+                module_name
+            )))
+        }
     }
 
     /// Call a method on a DataFrame
