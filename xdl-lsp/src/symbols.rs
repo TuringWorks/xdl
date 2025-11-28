@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use tower_lsp::lsp_types::{DocumentSymbol, Position, Range, SymbolKind};
-use xdl_parser::ast::{Expression, Program, Statement};
+use xdl_parser::ast::{Expression, Statement};
 
 use crate::document::DocumentState;
 

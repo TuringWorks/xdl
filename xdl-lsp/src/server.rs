@@ -9,7 +9,7 @@ use tower_lsp::{Client, LanguageServer};
 use crate::document::DocumentState;
 use crate::symbols::SymbolTable;
 use crate::semantic_tokens::semantic_tokens_legend;
-use crate::{completion, diagnostics, goto, hover, symbols};
+use crate::{completion, goto, hover, symbols};
 
 pub struct XdlLanguageServer {
     client: Client,

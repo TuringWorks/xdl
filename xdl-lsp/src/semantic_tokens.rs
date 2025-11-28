@@ -36,7 +36,6 @@ const TOKEN_KEYWORD: u32 = 0;
 const TOKEN_FUNCTION: u32 = 1;
 const TOKEN_METHOD: u32 = 2;
 const TOKEN_VARIABLE: u32 = 3;
-const TOKEN_PARAMETER: u32 = 4;
 const TOKEN_STRING: u32 = 5;
 const TOKEN_NUMBER: u32 = 6;
 const TOKEN_OPERATOR: u32 = 7;

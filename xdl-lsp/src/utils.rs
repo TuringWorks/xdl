@@ -1,5 +1,7 @@
 //! Utility functions for the LSP server
 
+#![allow(dead_code)]
+
 use tower_lsp::lsp_types::{Position, Range};
 
 /// Convert byte offset to LSP Position

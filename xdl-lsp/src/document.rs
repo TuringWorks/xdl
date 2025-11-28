@@ -9,6 +9,7 @@ use crate::diagnostics;
 #[derive(Debug)]
 pub struct DocumentState {
     pub content: Rope,
+    #[allow(dead_code)]
     pub version: i32,
     pub ast: Option<Program>,
     pub diagnostics: Vec<Diagnostic>,

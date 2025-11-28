@@ -5,8 +5,6 @@
 //!
 //! Run with: cargo run --example verify_cuda --release -p xdl-amp --features cuda
 
-use std::time::Instant;
-
 fn main() {
     println!("╔══════════════════════════════════════════════════════════════════╗");
     println!("║           XDL-AMP CUDA VERIFICATION                              ║");
@@ -17,6 +15,7 @@ fn main() {
         use xdl_amp::cuda::CudaDevice;
         use xdl_amp::backend::GpuDevice;
         use xdl_amp::stats::GLOBAL_STATS;
+        use std::time::Instant;
 
         // Check CUDA availability
         println!("Checking CUDA availability...");
@@ -422,6 +421,7 @@ fn main() {
     }
 }
 
+#[cfg(feature = "cuda")]
 fn verify_vec(actual: &[f32], expected: &[f32], tolerance: f32) -> bool {
     if actual.len() != expected.len() {
         return false;

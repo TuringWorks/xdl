@@ -72,7 +72,7 @@ three-d = "0.17"
 # GSL = { workspace = true }  # TODO: Install GSL system dependency
 
 [features]
-default = ["dataframes", "datascience", "python"]
+default = ["dataframes", "datascience"]
 
 # Python integration (requires Python installation for C extensions)
 python = ["pyo3"]
@@ -97,6 +97,10 @@ gis = ["geo", "geo-types", "geojson", "proj", "wkt"]
 
 # Scientific I/O
 scientific-io = ["netcdf", "hdf5"]
+
+# GPU acceleration (currently stubbed)nvulkan = []n# GPU acceleration (currently stubbed)ncuda = []nvulkan = []nn# GPU acceleration (currently stubbed)
+cuda = []
+vulkan = []
 
 # All features
 all-features = ["gis", "scientific-io", "python", "rustpython", "datascience"]
