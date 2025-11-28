@@ -789,7 +789,29 @@ impl<'a> Parser<'a> {
 
     /// Parse expression with precedence
     fn parse_expression(&mut self) -> XdlResult<Expression> {
-        self.parse_logical_or()
+        self.parse_ternary()
+    }
+
+    /// Parse ternary operator (condition ? if_true : if_false)
+    fn parse_ternary(&mut self) -> XdlResult<Expression> {
+        let condition = self.parse_logical_or()?;
+
+        // Check for ternary operator
+        if self.check(&Token::QuestionMark) {
+            self.advance(); // consume '?'
+            let if_true = self.parse_expression()?;
+            self.consume(Token::Colon, "Expected ':' in ternary expression")?;
+            let if_false = self.parse_expression()?;
+
+            Ok(Expression::Ternary {
+                condition: Box::new(condition),
+                if_true: Box::new(if_true),
+                if_false: Box::new(if_false),
+                location: Location::unknown(),
+            })
+        } else {
+            Ok(condition)
+        }
     }
 
     /// Parse logical OR expressions

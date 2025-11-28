@@ -1,0 +1,96 @@
+; ============================================
+; XDL-AMP CUDA/GPU Verification Script
+; ============================================
+; Tests GPU and SIMD operations with benchmarks
+;
+; Run with: cargo run -- examples/amp/verify_cuda.xdl
+
+print, "======================================================"
+print, "         XDL-AMP GPU/CUDA VERIFICATION"
+print, "======================================================"
+print, ""
+
+; Get AMP system information
+info = AMP_INFO()
+print, info
+print, ""
+
+; Check GPU availability
+gpu_available = AMP_GPU_AVAILABLE()
+print, "GPU Available:", gpu_available
+
+; Get active backend
+backend = AMP_BACKEND()
+print, "Active Backend:", backend
+print, ""
+
+; Reset statistics
+dummy = AMP_RESET_STATS()
+
+print, "------------------------------------------------------"
+print, "         SIMD Operations (CPU)"
+print, "------------------------------------------------------"
+print, ""
+
+; Test 1: SIMD Add
+print, "Test 1: AMP_SIMD_ADD (10K elements)"
+n = 10000
+a = findgen(n) / n
+b = findgen(n) / n
+c = AMP_SIMD_ADD(a, b)
+sum = AMP_SIMD_SUM(c)
+print, "  Sum of (a + b):", sum
+
+; Test 2: SIMD Dot Product
+print, ""
+print, "Test 2: AMP_SIMD_DOT"
+a = [1.0, 2.0, 3.0, 4.0]
+b = [5.0, 6.0, 7.0, 8.0]
+dot = AMP_SIMD_DOT(a, b)
+print, "  Expected: 70"
+print, "  Got:     ", dot
+
+; Test 3: Large Array Test
+print, ""
+print, "Test 3: Large Array (200K elements)"
+n = 200000
+a = findgen(n)
+b = reverse(findgen(n))
+c = AMP_SIMD_ADD(a, b)
+print, "  All elements should equal", n - 1.0
+print, "  c[0]=", c[0]
+print, "  c[99999]=", c[99999]
+
+print, ""
+print, "------------------------------------------------------"
+print, "         BENCHMARKS"
+print, "------------------------------------------------------"
+print, ""
+
+; Benchmark ADD operation
+print, "Benchmark: ADD"
+result = AMP_BENCHMARK("ADD", 100000, 50)
+print, result
+
+; Benchmark SUM operation
+print, "Benchmark: SUM"
+result = AMP_BENCHMARK("SUM", 100000, 50)
+print, result
+
+; Benchmark MATMUL operation
+print, "Benchmark: MATMUL (100x100)"
+result = AMP_BENCHMARK("MATMUL", 10000, 5)
+print, result
+
+print, ""
+print, "------------------------------------------------------"
+print, "         EXECUTION STATISTICS"
+print, "------------------------------------------------------"
+
+stats = AMP_STATS()
+print, stats
+
+print, ""
+print, "======================================================"
+print, "  GPU/CUDA verification complete"
+print, "======================================================"

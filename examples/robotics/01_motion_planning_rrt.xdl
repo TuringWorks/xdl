@@ -1,0 +1,236 @@
+; ============================================
+; Robot Motion Planning with Collision Avoidance
+; ============================================
+; Implements RRT* (Rapidly-exploring Random Tree) algorithm
+; for path planning in 2D workspace with obstacles
+;
+; Run with: cargo run -- examples/robotics/01_motion_planning_rrt.xdl
+
+print, "======================================================"
+print, "    ROBOT MOTION PLANNING - RRT* ALGORITHM"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Configuration Space Setup
+; --------------------------------------
+print, "Setting up configuration space..."
+
+; Workspace dimensions (meters)
+workspace_min_x = 0.0
+workspace_max_x = 10.0
+workspace_min_y = 0.0
+workspace_max_y = 10.0
+
+; Robot start and goal positions
+start_x = 1.0
+start_y = 1.0
+goal_x = 9.0
+goal_y = 9.0
+
+print, "Workspace: [", workspace_min_x, ",", workspace_max_x, "] x [", workspace_min_y, ",", workspace_max_y, "]"
+print, "Start: (", start_x, ",", start_y, ")"
+print, "Goal:  (", goal_x, ",", goal_y, ")"
+print, ""
+
+; --------------------------------------
+; Obstacle Definition
+; --------------------------------------
+print, "Defining obstacles..."
+
+; Obstacles as circles: [center_x, center_y, radius]
+num_obstacles = 5
+obstacle_x = [3.0, 5.0, 7.0, 4.0, 6.0]
+obstacle_y = [3.0, 5.0, 3.0, 7.0, 8.0]
+obstacle_r = [1.0, 1.5, 1.0, 0.8, 1.2]
+
+print, "Number of obstacles:", num_obstacles
+
+for i = 0, num_obstacles - 1
+    print, "  Obstacle", i + 1, ": center=(", obstacle_x[i], ",", obstacle_y[i], ") radius=", obstacle_r[i]
+endfor
+print, ""
+
+; --------------------------------------
+; RRT* Parameters
+; --------------------------------------
+print, "RRT* Parameters:"
+max_iterations = 500
+step_size = 0.5
+goal_tolerance = 0.5
+rewire_radius = 2.0
+
+print, "  Max iterations:", max_iterations
+print, "  Step size:", step_size
+print, "  Goal tolerance:", goal_tolerance
+print, "  Rewire radius:", rewire_radius
+print, ""
+
+; --------------------------------------
+; Initialize Tree
+; --------------------------------------
+print, "Building RRT* tree..."
+
+; Tree storage (simplified - storing nodes as arrays)
+max_nodes = max_iterations + 1
+tree_x = fltarr(max_nodes)
+tree_y = fltarr(max_nodes)
+tree_parent = intarr(max_nodes)
+tree_cost = fltarr(max_nodes)
+
+; Initialize with start node
+tree_x[0] = start_x
+tree_y[0] = start_y
+tree_parent[0] = -1
+tree_cost[0] = 0.0
+num_nodes = 1
+
+; Random seed for reproducibility
+seed = 42
+
+; --------------------------------------
+; RRT* Main Loop (Simplified)
+; --------------------------------------
+goal_reached = 0
+goal_node = -1
+
+for iter = 0, max_iterations - 1
+    ; Generate random point (simplified random using sin/cos)
+    rand_angle = (iter * 137.5) * 3.14159 / 180.0  ; Golden angle for coverage
+    rand_radius = 5.0 * sin(iter * 0.1)
+    rand_x = 5.0 + rand_radius * cos(rand_angle)
+    rand_y = 5.0 + rand_radius * sin(rand_angle)
+
+    ; Clamp to workspace
+    rand_x = rand_x > workspace_min_x ? rand_x : workspace_min_x
+    rand_x = rand_x < workspace_max_x ? rand_x : workspace_max_x
+    rand_y = rand_y > workspace_min_y ? rand_y : workspace_min_y
+    rand_y = rand_y < workspace_max_y ? rand_y : workspace_max_y
+
+    ; Find nearest node in tree
+    min_dist = 1e10
+    nearest_idx = 0
+
+    for j = 0, num_nodes - 1
+        dx = tree_x[j] - rand_x
+        dy = tree_y[j] - rand_y
+        dist = sqrt(dx * dx + dy * dy)
+        cond = dist < min_dist
+        min_dist = cond ? dist : min_dist
+        nearest_idx = cond ? j : nearest_idx
+    endfor
+
+    ; Steer towards random point
+    dx = rand_x - tree_x[nearest_idx]
+    dy = rand_y - tree_y[nearest_idx]
+    dist = sqrt(dx * dx + dy * dy)
+
+    ; Normalize and apply step size
+    new_x = tree_x[nearest_idx] + step_size * dx / (dist + 0.001)
+    new_y = tree_y[nearest_idx] + step_size * dy / (dist + 0.001)
+
+    ; Collision check (simplified - check against all obstacles)
+    collision = 0
+    for k = 0, num_obstacles - 1
+        dx_obs = new_x - obstacle_x[k]
+        dy_obs = new_y - obstacle_y[k]
+        dist_obs = sqrt(dx_obs * dx_obs + dy_obs * dy_obs)
+        collision = dist_obs < obstacle_r[k] ? 1 : collision
+    endfor
+
+    ; Add node if no collision
+    cond = collision eq 0 and num_nodes lt max_nodes
+    tree_x[num_nodes] = cond ? new_x : tree_x[num_nodes]
+    tree_y[num_nodes] = cond ? new_y : tree_y[num_nodes]
+    tree_parent[num_nodes] = cond ? nearest_idx : tree_parent[num_nodes]
+    tree_cost[num_nodes] = cond ? tree_cost[nearest_idx] + step_size : tree_cost[num_nodes]
+    num_nodes = cond ? num_nodes + 1 : num_nodes
+
+    ; Check if goal reached
+    dx_goal = new_x - goal_x
+    dy_goal = new_y - goal_y
+    dist_goal = sqrt(dx_goal * dx_goal + dy_goal * dy_goal)
+
+    goal_cond = dist_goal lt goal_tolerance and collision eq 0
+    goal_reached = goal_cond ? 1 : goal_reached
+    goal_node = goal_cond ? num_nodes - 1 : goal_node
+endfor
+
+print, "Tree construction complete."
+print, "  Total nodes:", num_nodes
+print, "  Goal reached:", goal_reached
+print, ""
+
+; --------------------------------------
+; Path Extraction
+; --------------------------------------
+print, "Extracting path..."
+
+path_length = 0
+total_path_cost = 0.0
+
+current = goal_node
+path_x = fltarr(100)
+path_y = fltarr(100)
+
+while current ge 0 and path_length lt 100
+    path_x[path_length] = tree_x[current]
+    path_y[path_length] = tree_y[current]
+    path_length = path_length + 1
+    current = tree_parent[current]
+endwhile
+
+print, "Path waypoints:", path_length
+print, ""
+
+; Print path (reversed - from start to goal)
+print, "Path from start to goal:"
+for i = 0, path_length - 1
+    idx = path_length - 1 - i
+    print, "  Waypoint", i + 1, ": (", path_x[idx], ",", path_y[idx], ")"
+endfor
+
+; Calculate total path length
+total_dist = 0.0
+for i = 0, path_length - 2
+    dx = path_x[i + 1] - path_x[i]
+    dy = path_y[i + 1] - path_y[i]
+    total_dist = total_dist + sqrt(dx * dx + dy * dy)
+endfor
+
+print, ""
+print, "Total path length:", total_dist, "meters"
+
+; --------------------------------------
+; Velocity Profile Generation
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    VELOCITY PROFILE GENERATION"
+print, "======================================================"
+
+max_velocity = 1.0     ; m/s
+max_acceleration = 0.5 ; m/s^2
+
+print, "Max velocity:", max_velocity, "m/s"
+print, "Max acceleration:", max_acceleration, "m/s^2"
+
+; Trapezoidal velocity profile
+accel_dist = max_velocity * max_velocity / (2.0 * max_acceleration)
+cruise_dist = total_dist - 2.0 * accel_dist
+
+accel_time = max_velocity / max_acceleration
+cruise_time = cruise_dist / max_velocity
+total_time = 2.0 * accel_time + cruise_time
+
+print, ""
+print, "Trajectory timing:"
+print, "  Acceleration phase:", accel_time, "s"
+print, "  Cruise phase:", cruise_time, "s"
+print, "  Deceleration phase:", accel_time, "s"
+print, "  Total time:", total_time, "s"
+
+print, ""
+print, "======================================================"
+print, "    MOTION PLANNING COMPLETE"
+print, "======================================================"

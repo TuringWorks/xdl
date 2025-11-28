@@ -46,6 +46,21 @@ impl Evaluator {
                 self.evaluate_unary_op(*op, &val)
             }
 
+            Expression::Ternary {
+                condition,
+                if_true,
+                if_false,
+                ..
+            } => {
+                let cond_val = self.evaluate(condition, context)?;
+                let is_true = self.to_bool(&cond_val);
+                if is_true {
+                    self.evaluate(if_true, context)
+                } else {
+                    self.evaluate(if_false, context)
+                }
+            }
+
             Expression::FunctionCall {
                 name,
                 args,
@@ -910,6 +925,23 @@ impl Evaluator {
     /// Convert a XdlValue to f64
     fn to_double(&self, val: &XdlValue) -> XdlResult<f64> {
         val.to_double()
+    }
+
+    /// Convert a XdlValue to boolean for ternary operator
+    fn to_bool(&self, val: &XdlValue) -> bool {
+        match val {
+            XdlValue::Long(i) => *i != 0,
+            XdlValue::Long64(i) => *i != 0,
+            XdlValue::Int(i) => *i != 0,
+            XdlValue::Byte(b) => *b != 0,
+            XdlValue::Float(f) => *f != 0.0,
+            XdlValue::Double(d) => *d != 0.0,
+            XdlValue::String(s) => !s.is_empty(),
+            XdlValue::Array(arr) => !arr.is_empty(),
+            XdlValue::NestedArray(arr) => !arr.is_empty(),
+            XdlValue::Undefined => false,
+            _ => true, // Objects, structs, etc. are truthy
+        }
     }
 
     /// Check if two values are equal

@@ -1,0 +1,308 @@
+; ============================================
+; Deformable Object Manipulation
+; ============================================
+; Implements FEM-based deformation with contact handling
+; for robotic manipulation of soft objects
+;
+; Run with: cargo run -- examples/robotics/09_deformable_manipulation.xdl
+
+print, "======================================================"
+print, "    DEFORMABLE OBJECT MANIPULATION"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Deformable Object Configuration
+; --------------------------------------
+print, "Creating deformable object (soft block)..."
+
+; Object dimensions (meters)
+obj_width = 0.1
+obj_height = 0.05
+obj_depth = 0.1
+
+; FEM mesh configuration (simplified 2D for visualization)
+mesh_nx = 5
+mesh_ny = 3
+num_nodes = mesh_nx * mesh_ny
+num_elements = (mesh_nx - 1) * (mesh_ny - 1) * 2  ; Triangular elements
+
+print, "Object size:", obj_width * 100, "x", obj_height * 100, "x", obj_depth * 100, "cm"
+print, "Mesh nodes:", num_nodes
+print, "Triangular elements:", num_elements
+print, ""
+
+; Initialize node positions
+node_x = fltarr(num_nodes)
+node_y = fltarr(num_nodes)
+node_rest_x = fltarr(num_nodes)  ; Rest configuration
+node_rest_y = fltarr(num_nodes)
+node_vx = fltarr(num_nodes)
+node_vy = fltarr(num_nodes)
+node_fx = fltarr(num_nodes)
+node_fy = fltarr(num_nodes)
+node_mass = fltarr(num_nodes)
+node_fixed = intarr(num_nodes)
+
+dx = obj_width / (mesh_nx - 1)
+dy = obj_height / (mesh_ny - 1)
+
+for i = 0, mesh_nx - 1
+    for j = 0, mesh_ny - 1
+        idx = i * mesh_ny + j
+        node_x[idx] = i * dx
+        node_y[idx] = j * dy + 0.1  ; Start above ground
+        node_rest_x[idx] = node_x[idx]
+        node_rest_y[idx] = node_y[idx]
+        node_mass[idx] = 0.01  ; 10 grams per node
+    endfor
+endfor
+
+; --------------------------------------
+; Material Properties
+; --------------------------------------
+print, "Material properties (silicone rubber):"
+
+youngs_modulus = 100000.0  ; Pa (soft rubber)
+poissons_ratio = 0.45      ; Nearly incompressible
+density = 1100.0           ; kg/m^3
+
+; Lame parameters
+lambda_lame = youngs_modulus * poissons_ratio / ((1 + poissons_ratio) * (1 - 2 * poissons_ratio))
+mu_lame = youngs_modulus / (2 * (1 + poissons_ratio))
+
+print, "  Young's modulus:", youngs_modulus, "Pa"
+print, "  Poisson's ratio:", poissons_ratio
+print, "  Density:", density, "kg/m^3"
+print, "  Lame lambda:", lambda_lame
+print, "  Lame mu:", mu_lame
+print, ""
+
+; --------------------------------------
+; Gripper Configuration
+; --------------------------------------
+print, "Gripper configuration:"
+
+; Two-finger gripper
+gripper_left_x = -0.01
+gripper_left_y = 0.1 + obj_height / 2
+gripper_right_x = obj_width + 0.01
+gripper_right_y = 0.1 + obj_height / 2
+
+gripper_width = gripper_right_x - gripper_left_x
+grip_force = 2.0  ; Newtons
+
+print, "  Left finger:  (", gripper_left_x, ",", gripper_left_y, ")"
+print, "  Right finger: (", gripper_right_x, ",", gripper_right_y, ")"
+print, "  Grip force:", grip_force, "N"
+print, ""
+
+; --------------------------------------
+; Contact Detection Parameters
+; --------------------------------------
+contact_stiffness = 10000.0  ; N/m
+contact_damping = 50.0
+friction_coeff = 0.3
+
+print, "Contact parameters:"
+print, "  Stiffness:", contact_stiffness, "N/m"
+print, "  Friction:", friction_coeff
+print, ""
+
+; --------------------------------------
+; Grasping Simulation
+; --------------------------------------
+print, "Simulating grasp..."
+print, ""
+
+dt = 0.0001  ; Small time step for stability
+num_steps = 500
+gravity = -9.81
+
+; Gripper motion (close gripper)
+gripper_speed = 0.02  ; m/s
+
+for step = 0, num_steps - 1
+    time = step * dt
+
+    ; Move gripper fingers
+    gripper_left_x = gripper_left_x + gripper_speed * dt
+    gripper_right_x = gripper_right_x - gripper_speed * dt
+
+    ; Stop when grippers reach object
+    gripper_left_x = gripper_left_x > 0.0 ? 0.0 : gripper_left_x
+    gripper_right_x = gripper_right_x < obj_width ? obj_width : gripper_right_x
+
+    ; Reset forces
+    for i = 0, num_nodes - 1
+        node_fx[i] = 0.0
+        node_fy[i] = node_mass[i] * gravity  ; Gravity
+    endfor
+
+    ; Compute elastic forces (simplified linear elasticity)
+    for i = 0, num_nodes - 1
+        ; Displacement from rest position
+        ux = node_x[i] - node_rest_x[i]
+        uy = node_y[i] - node_rest_y[i]
+
+        ; Spring force to neighbors (simplified FEM)
+        for di = -1, 1
+            for dj = -1, 1
+                cond = di ne 0 or dj ne 0
+
+                ni = (i / mesh_ny) + di
+                nj = (i mod mesh_ny) + dj
+
+                valid = cond and ni ge 0 and ni lt mesh_nx and nj ge 0 and nj lt mesh_ny
+                neighbor_idx = ni * mesh_ny + nj
+
+                ; Spring connection
+                rest_dx = valid ? node_rest_x[neighbor_idx] - node_rest_x[i] : 0.0
+                rest_dy = valid ? node_rest_y[neighbor_idx] - node_rest_y[i] : 0.0
+                rest_len = sqrt(rest_dx^2 + rest_dy^2) + 0.0001
+
+                curr_dx = valid ? node_x[neighbor_idx] - node_x[i] : 0.0
+                curr_dy = valid ? node_y[neighbor_idx] - node_y[i] : 0.0
+                curr_len = sqrt(curr_dx^2 + curr_dy^2) + 0.0001
+
+                ; Spring force
+                strain = (curr_len - rest_len) / rest_len
+                spring_k = mu_lame * 2.0  ; Simplified stiffness
+                force_mag = valid ? spring_k * strain : 0.0
+
+                node_fx[i] = valid ? node_fx[i] + force_mag * curr_dx / curr_len : node_fx[i]
+                node_fy[i] = valid ? node_fy[i] + force_mag * curr_dy / curr_len : node_fy[i]
+            endfor
+        endfor
+    endfor
+
+    ; Contact forces with gripper
+    for i = 0, num_nodes - 1
+        ; Left gripper contact
+        penetration_left = gripper_left_x - node_x[i]
+        contact_left = penetration_left > 0 and abs(node_y[i] - gripper_left_y) lt 0.03
+
+        contact_force_left = contact_left ? contact_stiffness * penetration_left : 0.0
+        node_fx[i] = contact_left ? node_fx[i] + contact_force_left : node_fx[i]
+
+        ; Friction (simplified)
+        friction_left = contact_left ? friction_coeff * abs(contact_force_left) : 0.0
+        node_fy[i] = contact_left and node_vy[i] lt 0 ? node_fy[i] + friction_left : node_fy[i]
+
+        ; Right gripper contact
+        penetration_right = node_x[i] - gripper_right_x
+        contact_right = penetration_right > 0 and abs(node_y[i] - gripper_right_y) lt 0.03
+
+        contact_force_right = contact_right ? contact_stiffness * penetration_right : 0.0
+        node_fx[i] = contact_right ? node_fx[i] - contact_force_right : node_fx[i]
+
+        ; Friction
+        friction_right = contact_right ? friction_coeff * abs(contact_force_right) : 0.0
+        node_fy[i] = contact_right and node_vy[i] lt 0 ? node_fy[i] + friction_right : node_fy[i]
+
+        ; Ground contact
+        penetration_ground = 0.0 - node_y[i]
+        contact_ground = penetration_ground > 0
+
+        node_fy[i] = contact_ground ? node_fy[i] + contact_stiffness * penetration_ground : node_fy[i]
+        node_y[i] = contact_ground ? 0.0 : node_y[i]
+    endfor
+
+    ; Damping
+    damping = 10.0
+    for i = 0, num_nodes - 1
+        node_fx[i] = node_fx[i] - damping * node_vx[i]
+        node_fy[i] = node_fy[i] - damping * node_vy[i]
+    endfor
+
+    ; Integration
+    for i = 0, num_nodes - 1
+        ax = node_fx[i] / node_mass[i]
+        ay = node_fy[i] / node_mass[i]
+
+        node_vx[i] = node_vx[i] + ax * dt
+        node_vy[i] = node_vy[i] + ay * dt
+
+        node_x[i] = node_x[i] + node_vx[i] * dt
+        node_y[i] = node_y[i] + node_vy[i] * dt
+    endfor
+endfor
+
+; --------------------------------------
+; Deformation Analysis
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    GRASP ANALYSIS"
+print, "======================================================"
+print, ""
+
+; Compute deformation metrics
+max_displacement = 0.0
+total_strain_energy = 0.0
+avg_compression = 0.0
+
+for i = 0, num_nodes - 1
+    ux = node_x[i] - node_rest_x[i]
+    uy = node_y[i] - node_rest_y[i]
+    disp = sqrt(ux^2 + uy^2)
+    max_displacement = disp > max_displacement ? disp : max_displacement
+
+    ; Simplified strain energy
+    strain = disp / (dx + 0.001)
+    total_strain_energy = total_strain_energy + 0.5 * youngs_modulus * strain^2 * dx * dy
+endfor
+
+; Compression in x-direction
+min_x = node_x[0]
+max_x = node_x[0]
+for i = 0, num_nodes - 1
+    min_x = node_x[i] lt min_x ? node_x[i] : min_x
+    max_x = node_x[i] gt max_x ? node_x[i] : max_x
+endfor
+current_width = max_x - min_x
+compression = (obj_width - current_width) / obj_width * 100
+
+print, "Deformation metrics:"
+print, "  Max displacement:", max_displacement * 1000, "mm"
+print, "  Width compression:", compression, "%"
+print, "  Strain energy:", total_strain_energy, "J"
+
+; Contact analysis
+contact_area = 0
+total_contact_force = 0.0
+
+for i = 0, num_nodes - 1
+    is_left = node_x[i] le 0.005
+    is_right = node_x[i] ge obj_width - 0.005
+    is_contact = is_left or is_right
+
+    contact_area = is_contact ? contact_area + 1 : contact_area
+endfor
+
+print, ""
+print, "Contact analysis:"
+print, "  Contact nodes:", contact_area, "/", num_nodes
+print, "  Gripper width:", (gripper_right_x - gripper_left_x) * 1000, "mm"
+
+; Grasp quality estimation
+; Form closure check
+form_closure = compression gt 5 and contact_area gt 4
+print, ""
+print, "Grasp quality:"
+print, "  Form closure:", form_closure
+print, "  Grasp stability:", form_closure ? "STABLE" : "UNSTABLE"
+
+; Print deformed shape
+print, ""
+print, "Deformed node positions (corners):"
+print, "  Bottom-left:  (", node_x[0] * 1000, ",", node_y[0] * 1000, ") mm"
+print, "  Bottom-right: (", node_x[(mesh_nx-1)*mesh_ny] * 1000, ",", node_y[(mesh_nx-1)*mesh_ny] * 1000, ") mm"
+print, "  Top-left:     (", node_x[mesh_ny-1] * 1000, ",", node_y[mesh_ny-1] * 1000, ") mm"
+top_right = (mesh_nx-1)*mesh_ny + mesh_ny - 1
+print, "  Top-right:    (", node_x[top_right] * 1000, ",", node_y[top_right] * 1000, ") mm"
+
+print, ""
+print, "======================================================"
+print, "    DEFORMABLE MANIPULATION COMPLETE"
+print, "======================================================"

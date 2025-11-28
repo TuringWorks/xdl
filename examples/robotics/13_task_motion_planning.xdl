@@ -1,0 +1,251 @@
+; ============================================
+; Task and Motion Planning (TAMP)
+; ============================================
+; Implements hierarchical planning combining
+; symbolic task planning with geometric motion planning
+;
+; Run with: cargo run -- examples/robotics/13_task_motion_planning.xdl
+
+print, "======================================================"
+print, "    TASK AND MOTION PLANNING (TAMP)"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; World State Representation
+; --------------------------------------
+print, "Initializing world state..."
+
+; Objects in the scene
+num_objects = 4
+obj_names = ["red_block", "blue_block", "green_block", "yellow_block"]
+
+; Object positions (x, y, z) in meters
+obj_x = [0.3, 0.4, 0.5, 0.6]
+obj_y = [0.0, 0.0, 0.0, 0.0]
+obj_z = [0.025, 0.025, 0.025, 0.025]  ; Half height
+
+; Object properties
+obj_graspable = [1, 1, 1, 1]
+obj_stackable = [1, 1, 1, 1]
+obj_size = [0.05, 0.05, 0.05, 0.05]  ; 5cm cubes
+
+; Object states (0=on_table, >0 = on object index)
+obj_on = [0, 0, 0, 0]  ; All on table initially
+
+print, "Objects:"
+for i = 0, num_objects - 1
+    print, "  Object", i + 1, ": pos=(", obj_x[i], ",", obj_y[i], ",", obj_z[i], ")"
+endfor
+print, ""
+
+; Robot state
+robot_x = 0.0
+robot_y = 0.0
+robot_z = 0.3
+gripper_open = 1
+holding = -1  ; Index of held object (-1 = empty)
+
+print, "Robot:"
+print, "  Position: (", robot_x, ",", robot_y, ",", robot_z, ")"
+print, "  Gripper:", gripper_open eq 1 ? "OPEN" : "CLOSED"
+print, ""
+
+; --------------------------------------
+; Goal Specification
+; --------------------------------------
+print, "Goal: Stack blocks (red on blue on green)"
+print, ""
+
+; Goal state: red on blue, blue on green
+goal_red_on_blue = 1   ; red_block on blue_block
+goal_blue_on_green = 1 ; blue_block on green_block
+
+; --------------------------------------
+; Symbolic Actions (PDDL-like)
+; --------------------------------------
+print, "Available actions:"
+print, "  PICK(obj) - Pick up object from table/stack"
+print, "  PLACE(obj, target) - Place object on table/object"
+print, "  MOVE(x, y, z) - Move robot to position"
+print, ""
+
+; Action sequence storage
+max_actions = 20
+action_type = intarr(max_actions)    ; 0=move, 1=pick, 2=place
+action_obj = intarr(max_actions)     ; Object index
+action_target = intarr(max_actions)  ; Target for place (-1=table)
+action_x = fltarr(max_actions)
+action_y = fltarr(max_actions)
+action_z = fltarr(max_actions)
+num_actions = 0
+
+; --------------------------------------
+; Task Planning (Backward Search)
+; --------------------------------------
+print, "Task planning..."
+print, ""
+
+; Goal: red(0) on blue(1), blue(1) on green(2)
+; Required actions (backward):
+; - Place red on blue
+; - Pick red
+; - Place blue on green
+; - Pick blue
+
+; Plan: Pick blue, Place blue on green, Pick red, Place red on blue
+print, "Generated plan:"
+
+; Action 1: Pick blue_block
+action_type[0] = 1  ; PICK
+action_obj[0] = 1   ; blue_block
+print, "  1. PICK blue_block"
+
+; Action 2: Place blue_block on green_block
+action_type[1] = 2  ; PLACE
+action_obj[1] = 1   ; blue_block
+action_target[1] = 2  ; on green_block
+print, "  2. PLACE blue_block ON green_block"
+
+; Action 3: Pick red_block
+action_type[2] = 1  ; PICK
+action_obj[2] = 0   ; red_block
+print, "  3. PICK red_block"
+
+; Action 4: Place red_block on blue_block
+action_type[3] = 2  ; PLACE
+action_obj[3] = 0   ; red_block
+action_target[3] = 1  ; on blue_block
+print, "  4. PLACE red_block ON blue_block"
+
+num_actions = 4
+print, ""
+
+; --------------------------------------
+; Motion Planning for Each Action
+; --------------------------------------
+print, "Motion planning for each action..."
+print, ""
+
+total_path_length = 0.0
+total_time = 0.0
+robot_speed = 0.2  ; m/s
+
+for a = 0, num_actions - 1
+    print, "Action", a + 1, ":"
+
+    act_type = action_type[a]
+    act_obj = action_obj[a]
+    act_target = action_target[a]
+
+    ; Compute target position based on action
+    target_x = obj_x[act_obj]
+    target_y = obj_y[act_obj]
+
+    ; For PICK: go to object position
+    target_z = act_type eq 1 ? obj_z[act_obj] + 0.1 : 0.0  ; Approach height
+
+    ; For PLACE: go to target position
+    cond_place = act_type eq 2
+    place_on_table = cond_place and act_target lt 0
+    place_on_obj = cond_place and act_target ge 0
+
+    target_x = place_on_obj ? obj_x[act_target] : target_x
+    target_y = place_on_obj ? obj_y[act_target] : target_y
+    target_z = place_on_obj ? obj_z[act_target] + obj_size[act_target] + 0.1 : target_z
+    target_z = place_on_table ? 0.15 : target_z
+
+    ; Compute motion path (simplified straight line)
+    dx = target_x - robot_x
+    dy = target_y - robot_y
+    dz = target_z - robot_z
+    path_length = sqrt(dx^2 + dy^2 + dz^2)
+
+    motion_time = path_length / robot_speed
+
+    print, "    Target: (", target_x, ",", target_y, ",", target_z, ")"
+    print, "    Path length:", path_length * 100, "cm"
+    print, "    Motion time:", motion_time, "s"
+
+    ; Execute motion (update state)
+    robot_x = target_x
+    robot_y = target_y
+    robot_z = target_z
+
+    total_path_length = total_path_length + path_length
+    total_time = total_time + motion_time
+
+    ; Execute gripper action
+    cond_pick = act_type eq 1
+    cond_place = act_type eq 2
+
+    ; Pick action
+    holding = cond_pick ? act_obj : holding
+    gripper_open = cond_pick ? 0 : gripper_open
+    obj_z[act_obj] = cond_pick ? robot_z : obj_z[act_obj]
+
+    ; Place action
+    obj_x[act_obj] = cond_place ? robot_x : obj_x[act_obj]
+    obj_y[act_obj] = cond_place ? robot_y : obj_y[act_obj]
+    new_z = cond_place and act_target ge 0 ? obj_z[act_target] + obj_size[act_target] : obj_size[act_obj] / 2
+    obj_z[act_obj] = cond_place ? new_z : obj_z[act_obj]
+    obj_on[act_obj] = cond_place ? (act_target ge 0 ? act_target + 1 : 0) : obj_on[act_obj]
+    holding = cond_place ? -1 : holding
+    gripper_open = cond_place ? 1 : gripper_open
+
+    ; Grasp/release time
+    total_time = total_time + 0.5  ; 0.5s for gripper action
+
+    print, ""
+endfor
+
+; --------------------------------------
+; Goal Verification
+; --------------------------------------
+print, "======================================================"
+print, "    EXECUTION RESULTS"
+print, "======================================================"
+print, ""
+
+print, "Final object states:"
+for i = 0, num_objects - 1
+    support = obj_on[i] eq 0 ? "table" : "object"
+    print, "  Object", i + 1, ": z=", obj_z[i], "m, on=", support
+endfor
+
+print, ""
+print, "Goal verification:"
+
+; Check: red (0) on blue (1)
+red_on_blue = obj_on[0] eq 2  ; 2 means on object index 1
+print, "  red on blue:", red_on_blue ? "YES" : "NO"
+
+; Check: blue (1) on green (2)
+blue_on_green = obj_on[1] eq 3  ; 3 means on object index 2
+print, "  blue on green:", blue_on_green ? "YES" : "NO"
+
+goal_achieved = red_on_blue and blue_on_green
+print, ""
+print, "Goal achieved:", goal_achieved ? "SUCCESS" : "FAILURE"
+
+; --------------------------------------
+; Planning Metrics
+; --------------------------------------
+print, ""
+print, "Planning metrics:"
+print, "  Total actions:", num_actions
+print, "  Total path length:", total_path_length * 100, "cm"
+print, "  Total execution time:", total_time, "s"
+print, "  Average action time:", total_time / num_actions, "s"
+
+; Stack height
+stack_height = obj_z[0] + obj_size[0] / 2
+print, ""
+print, "Final stack:"
+print, "  Height:", stack_height * 100, "cm"
+print, "  Layers: green (bottom) -> blue -> red (top)"
+
+print, ""
+print, "======================================================"
+print, "    TAMP COMPLETE"
+print, "======================================================"

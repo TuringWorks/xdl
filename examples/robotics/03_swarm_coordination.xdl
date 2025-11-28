@@ -1,0 +1,277 @@
+; ============================================
+; Multi-Robot Swarm Coordination
+; ============================================
+; Implements Reynolds flocking rules with obstacle avoidance
+; for coordinated multi-robot behavior
+;
+; Run with: cargo run -- examples/robotics/03_swarm_coordination.xdl
+
+print, "======================================================"
+print, "    MULTI-ROBOT SWARM COORDINATION"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Swarm Configuration
+; --------------------------------------
+print, "Initializing robot swarm..."
+
+num_robots = 10
+dt = 0.1  ; Time step (seconds)
+
+; Robot positions (random initial positions in 10x10 area)
+pos_x = [1.0, 2.5, 1.5, 3.0, 4.5, 5.0, 6.5, 7.0, 8.0, 9.0]
+pos_y = [1.0, 1.5, 3.0, 2.5, 1.0, 4.0, 3.5, 2.0, 1.5, 3.0]
+
+; Robot velocities
+vel_x = fltarr(num_robots)
+vel_y = fltarr(num_robots)
+
+; Initialize with small random velocities
+for i = 0, num_robots - 1
+    vel_x[i] = 0.1 * sin(i * 1.5)
+    vel_y[i] = 0.1 * cos(i * 1.5)
+endfor
+
+print, "Number of robots:", num_robots
+print, "Initial formation: scattered"
+print, ""
+
+; --------------------------------------
+; Flocking Parameters (Reynolds Rules)
+; --------------------------------------
+print, "Flocking parameters:"
+
+; Separation
+separation_radius = 1.0
+separation_weight = 1.5
+print, "  Separation radius:", separation_radius, "m"
+
+; Alignment
+alignment_radius = 2.5
+alignment_weight = 1.0
+print, "  Alignment radius:", alignment_radius, "m"
+
+; Cohesion
+cohesion_radius = 3.0
+cohesion_weight = 0.8
+print, "  Cohesion radius:", cohesion_radius, "m"
+
+; Speed limits
+max_speed = 2.0
+max_force = 0.5
+print, "  Max speed:", max_speed, "m/s"
+print, ""
+
+; --------------------------------------
+; Goal Configuration
+; --------------------------------------
+goal_x = 8.0
+goal_y = 8.0
+goal_weight = 0.3
+
+print, "Swarm goal: (", goal_x, ",", goal_y, ")"
+print, ""
+
+; --------------------------------------
+; Obstacle Configuration
+; --------------------------------------
+print, "Obstacles:"
+num_obstacles = 2
+obs_x = [4.0, 6.0]
+obs_y = [4.0, 5.0]
+obs_r = [1.0, 0.8]
+
+for i = 0, num_obstacles - 1
+    print, "  Obstacle", i + 1, ": center=(", obs_x[i], ",", obs_y[i], ") radius=", obs_r[i]
+endfor
+print, ""
+
+; --------------------------------------
+; Simulation Loop
+; --------------------------------------
+print, "Running swarm simulation..."
+print, ""
+
+num_steps = 50
+print, "Simulation steps:", num_steps
+
+for step = 0, num_steps - 1
+
+    ; Arrays for forces
+    force_x = fltarr(num_robots)
+    force_y = fltarr(num_robots)
+
+    ; Compute forces for each robot
+    for i = 0, num_robots - 1
+
+        sep_x = 0.0
+        sep_y = 0.0
+        sep_count = 0
+
+        align_vx = 0.0
+        align_vy = 0.0
+        align_count = 0
+
+        coh_x = 0.0
+        coh_y = 0.0
+        coh_count = 0
+
+        ; Interact with neighbors
+        for j = 0, num_robots - 1
+            cond = i ne j
+            dx = pos_x[j] - pos_x[i]
+            dy = pos_y[j] - pos_y[i]
+            dist = sqrt(dx * dx + dy * dy) + 0.001
+
+            ; Separation (avoid crowding)
+            sep_cond = cond and dist lt separation_radius
+            sep_x = sep_cond ? sep_x - dx / dist : sep_x
+            sep_y = sep_cond ? sep_y - dy / dist : sep_y
+            sep_count = sep_cond ? sep_count + 1 : sep_count
+
+            ; Alignment (match velocity)
+            align_cond = cond and dist lt alignment_radius
+            align_vx = align_cond ? align_vx + vel_x[j] : align_vx
+            align_vy = align_cond ? align_vy + vel_y[j] : align_vy
+            align_count = align_cond ? align_count + 1 : align_count
+
+            ; Cohesion (move toward center)
+            coh_cond = cond and dist lt cohesion_radius
+            coh_x = coh_cond ? coh_x + pos_x[j] : coh_x
+            coh_y = coh_cond ? coh_y + pos_y[j] : coh_y
+            coh_count = coh_cond ? coh_count + 1 : coh_count
+        endfor
+
+        ; Normalize and weight forces
+        ; Separation
+        sep_count = sep_count > 0 ? sep_count : 1
+        force_x[i] = separation_weight * sep_x / sep_count
+        force_y[i] = separation_weight * sep_y / sep_count
+
+        ; Alignment
+        align_count = align_count > 0 ? align_count : 1
+        align_vx = align_vx / align_count - vel_x[i]
+        align_vy = align_vy / align_count - vel_y[i]
+        force_x[i] = force_x[i] + alignment_weight * align_vx
+        force_y[i] = force_y[i] + alignment_weight * align_vy
+
+        ; Cohesion
+        coh_count = coh_count > 0 ? coh_count : 1
+        coh_x = coh_x / coh_count - pos_x[i]
+        coh_y = coh_y / coh_count - pos_y[i]
+        force_x[i] = force_x[i] + cohesion_weight * coh_x
+        force_y[i] = force_y[i] + cohesion_weight * coh_y
+
+        ; Goal seeking
+        goal_dx = goal_x - pos_x[i]
+        goal_dy = goal_y - pos_y[i]
+        goal_dist = sqrt(goal_dx * goal_dx + goal_dy * goal_dy) + 0.001
+        force_x[i] = force_x[i] + goal_weight * goal_dx / goal_dist
+        force_y[i] = force_y[i] + goal_weight * goal_dy / goal_dist
+
+        ; Obstacle avoidance
+        for k = 0, num_obstacles - 1
+            obs_dx = pos_x[i] - obs_x[k]
+            obs_dy = pos_y[i] - obs_y[k]
+            obs_dist = sqrt(obs_dx * obs_dx + obs_dy * obs_dy)
+            avoid_cond = obs_dist lt obs_r[k] + 1.0
+            avoid_force = avoid_cond ? 3.0 / (obs_dist - obs_r[k] + 0.1) : 0.0
+            force_x[i] = avoid_cond ? force_x[i] + avoid_force * obs_dx / obs_dist : force_x[i]
+            force_y[i] = avoid_cond ? force_y[i] + avoid_force * obs_dy / obs_dist : force_y[i]
+        endfor
+
+        ; Limit force
+        force_mag = sqrt(force_x[i]^2 + force_y[i]^2) + 0.001
+        force_scale = force_mag > max_force ? max_force / force_mag : 1.0
+        force_x[i] = force_x[i] * force_scale
+        force_y[i] = force_y[i] * force_scale
+    endfor
+
+    ; Update velocities and positions
+    for i = 0, num_robots - 1
+        ; Update velocity
+        vel_x[i] = vel_x[i] + force_x[i] * dt
+        vel_y[i] = vel_y[i] + force_y[i] * dt
+
+        ; Limit speed
+        speed = sqrt(vel_x[i]^2 + vel_y[i]^2) + 0.001
+        speed_scale = speed > max_speed ? max_speed / speed : 1.0
+        vel_x[i] = vel_x[i] * speed_scale
+        vel_y[i] = vel_y[i] * speed_scale
+
+        ; Update position
+        pos_x[i] = pos_x[i] + vel_x[i] * dt
+        pos_y[i] = pos_y[i] + vel_y[i] * dt
+    endfor
+
+    ; Print progress every 10 steps
+    print_step = (step mod 10) eq 0
+endfor
+
+; --------------------------------------
+; Final State Analysis
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    SIMULATION RESULTS"
+print, "======================================================"
+print, ""
+
+; Compute swarm centroid
+centroid_x = 0.0
+centroid_y = 0.0
+for i = 0, num_robots - 1
+    centroid_x = centroid_x + pos_x[i]
+    centroid_y = centroid_y + pos_y[i]
+endfor
+centroid_x = centroid_x / num_robots
+centroid_y = centroid_y / num_robots
+
+print, "Final swarm centroid: (", centroid_x, ",", centroid_y, ")"
+
+; Compute swarm spread (standard deviation)
+spread = 0.0
+for i = 0, num_robots - 1
+    dx = pos_x[i] - centroid_x
+    dy = pos_y[i] - centroid_y
+    spread = spread + dx * dx + dy * dy
+endfor
+spread = sqrt(spread / num_robots)
+
+print, "Swarm spread (std dev):", spread, "m"
+
+; Distance to goal
+dist_to_goal = sqrt((centroid_x - goal_x)^2 + (centroid_y - goal_y)^2)
+print, "Distance to goal:", dist_to_goal, "m"
+
+; Print final positions
+print, ""
+print, "Final robot positions:"
+for i = 0, num_robots - 1
+    speed = sqrt(vel_x[i]^2 + vel_y[i]^2)
+    print, "  Robot", i + 1, ": pos=(", pos_x[i], ",", pos_y[i], ") speed=", speed, "m/s"
+endfor
+
+; Compute cohesion metric (average inter-robot distance)
+avg_dist = 0.0
+pair_count = 0
+for i = 0, num_robots - 2
+    for j = i + 1, num_robots - 1
+        dx = pos_x[i] - pos_x[j]
+        dy = pos_y[i] - pos_y[j]
+        avg_dist = avg_dist + sqrt(dx * dx + dy * dy)
+        pair_count = pair_count + 1
+    endfor
+endfor
+avg_dist = avg_dist / pair_count
+
+print, ""
+print, "Swarm metrics:"
+print, "  Average inter-robot distance:", avg_dist, "m"
+print, "  Formation quality:", 1.0 / (1.0 + abs(avg_dist - 2.0)), "(optimal at 2m spacing)"
+
+print, ""
+print, "======================================================"
+print, "    SWARM COORDINATION COMPLETE"
+print, "======================================================"

@@ -1,0 +1,319 @@
+; ============================================
+; Cloth Simulation with Particle Mesh GNN
+; ============================================
+; Implements mass-spring model for cloth simulation
+; with GNN-based dynamics prediction
+;
+; Run with: cargo run -- examples/robotics/07_cloth_simulation_gnn.xdl
+
+print, "======================================================"
+print, "    CLOTH SIMULATION - PARTICLE MESH GNN"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Cloth Mesh Configuration
+; --------------------------------------
+print, "Creating cloth mesh..."
+
+; Cloth dimensions
+cloth_width = 5   ; particles
+cloth_height = 5  ; particles
+num_particles = cloth_width * cloth_height
+spacing = 0.1     ; meters between particles
+
+print, "Mesh size:", cloth_width, "x", cloth_height, "=", num_particles, "particles"
+print, "Particle spacing:", spacing, "m"
+print, ""
+
+; Initialize particle positions (flat cloth in XZ plane)
+pos_x = fltarr(num_particles)
+pos_y = fltarr(num_particles)  ; Height
+pos_z = fltarr(num_particles)
+
+; Velocities
+vel_x = fltarr(num_particles)
+vel_y = fltarr(num_particles)
+vel_z = fltarr(num_particles)
+
+; Masses (uniform)
+mass = fltarr(num_particles)
+
+; Fixed particles (top edge)
+is_fixed = intarr(num_particles)
+
+for i = 0, cloth_width - 1
+    for j = 0, cloth_height - 1
+        idx = i * cloth_height + j
+        pos_x[idx] = i * spacing
+        pos_y[idx] = 0.5  ; Initial height
+        pos_z[idx] = j * spacing
+        mass[idx] = 0.01  ; 10 grams per particle
+
+        ; Fix top row
+        is_fixed[idx] = j eq 0 ? 1 : 0
+    endfor
+endfor
+
+fixed_count = 0
+for i = 0, num_particles - 1
+    fixed_count = is_fixed[i] eq 1 ? fixed_count + 1 : fixed_count
+endfor
+
+print, "Fixed particles (top edge):", fixed_count
+print, ""
+
+; --------------------------------------
+; Spring Network (Graph Edges)
+; --------------------------------------
+print, "Building spring network..."
+
+; Spring types: structural, shear, bend
+; For simplicity, using only structural springs
+
+; Maximum springs per particle
+max_springs = 8
+spring_k = 100.0       ; Spring constant (N/m)
+spring_damping = 0.5   ; Damping coefficient
+
+; Store springs as adjacency list
+spring_count = fltarr(num_particles)
+spring_neighbor = intarr(num_particles * max_springs)
+spring_rest_length = fltarr(num_particles * max_springs)
+
+; Connect structural springs (horizontal and vertical neighbors)
+total_springs = 0
+
+for i = 0, cloth_width - 1
+    for j = 0, cloth_height - 1
+        idx = i * cloth_height + j
+
+        ; Right neighbor
+        cond_right = i lt cloth_width - 1
+        neighbor_right = (i + 1) * cloth_height + j
+        spring_idx = idx * max_springs + spring_count[idx]
+        spring_neighbor[spring_idx] = cond_right ? neighbor_right : -1
+        spring_rest_length[spring_idx] = cond_right ? spacing : 0.0
+        spring_count[idx] = cond_right ? spring_count[idx] + 1 : spring_count[idx]
+        total_springs = cond_right ? total_springs + 1 : total_springs
+
+        ; Down neighbor
+        cond_down = j lt cloth_height - 1
+        neighbor_down = i * cloth_height + (j + 1)
+        spring_idx = idx * max_springs + spring_count[idx]
+        spring_neighbor[spring_idx] = cond_down ? neighbor_down : -1
+        spring_rest_length[spring_idx] = cond_down ? spacing : 0.0
+        spring_count[idx] = cond_down ? spring_count[idx] + 1 : spring_count[idx]
+        total_springs = cond_down ? total_springs + 1 : total_springs
+
+        ; Diagonal (shear) springs
+        cond_diag = i lt cloth_width - 1 and j lt cloth_height - 1
+        neighbor_diag = (i + 1) * cloth_height + (j + 1)
+        spring_idx = idx * max_springs + spring_count[idx]
+        spring_neighbor[spring_idx] = cond_diag ? neighbor_diag : -1
+        spring_rest_length[spring_idx] = cond_diag ? spacing * 1.414 : 0.0
+        spring_count[idx] = cond_diag ? spring_count[idx] + 1 : spring_count[idx]
+        total_springs = cond_diag ? total_springs + 1 : total_springs
+    endfor
+endfor
+
+print, "Total springs:", total_springs
+print, "Spring constant:", spring_k, "N/m"
+print, ""
+
+; --------------------------------------
+; External Forces
+; --------------------------------------
+print, "External forces:"
+gravity = -9.81  ; m/s^2
+wind_x = 0.5     ; Wind velocity
+wind_y = 0.0
+wind_z = 0.2
+drag_coeff = 0.1
+
+print, "  Gravity:", gravity, "m/s^2"
+print, "  Wind: (", wind_x, ",", wind_y, ",", wind_z, ") m/s"
+print, ""
+
+; --------------------------------------
+; GNN-based Dynamics (Simplified)
+; --------------------------------------
+print, "Initializing GNN dynamics predictor..."
+
+; Node features: position, velocity, mass, is_fixed
+node_feature_dim = 10
+
+; Edge features: spring constant, rest length, current stretch
+edge_feature_dim = 4
+
+; Hidden dimension for message passing
+hidden_dim = 32
+
+print, "  Node features:", node_feature_dim
+print, "  Edge features:", edge_feature_dim
+print, "  Hidden dimension:", hidden_dim
+print, ""
+
+; --------------------------------------
+; Simulation Loop
+; --------------------------------------
+print, "Running cloth simulation..."
+print, ""
+
+dt = 0.01  ; Time step
+num_steps = 50
+
+print, "Time step:", dt, "s"
+print, "Simulation steps:", num_steps
+print, ""
+
+for step = 0, num_steps - 1
+
+    ; Arrays for forces
+    force_x = fltarr(num_particles)
+    force_y = fltarr(num_particles)
+    force_z = fltarr(num_particles)
+
+    ; Gravity
+    for i = 0, num_particles - 1
+        force_y[i] = mass[i] * gravity
+    endfor
+
+    ; Spring forces (GNN message passing)
+    for i = 0, num_particles - 1
+        for s = 0, spring_count[i] - 1
+            spring_idx = i * max_springs + s
+            j = spring_neighbor[spring_idx]
+            rest_len = spring_rest_length[spring_idx]
+
+            ; Spring vector
+            dx = pos_x[j] - pos_x[i]
+            dy = pos_y[j] - pos_y[i]
+            dz = pos_z[j] - pos_z[i]
+            curr_len = sqrt(dx*dx + dy*dy + dz*dz) + 0.0001
+
+            ; Spring force (Hooke's law)
+            stretch = curr_len - rest_len
+            force_mag = spring_k * stretch
+
+            ; Damping force
+            rel_vel_x = vel_x[j] - vel_x[i]
+            rel_vel_y = vel_y[j] - vel_y[i]
+            rel_vel_z = vel_z[j] - vel_z[i]
+            vel_along_spring = (rel_vel_x*dx + rel_vel_y*dy + rel_vel_z*dz) / curr_len
+            damping_force = spring_damping * vel_along_spring
+
+            ; Total spring force
+            total_force = force_mag + damping_force
+
+            ; Apply force
+            force_x[i] = force_x[i] + total_force * dx / curr_len
+            force_y[i] = force_y[i] + total_force * dy / curr_len
+            force_z[i] = force_z[i] + total_force * dz / curr_len
+        endfor
+    endfor
+
+    ; Wind force (simplified aerodynamic drag)
+    for i = 0, num_particles - 1
+        rel_wind_x = wind_x - vel_x[i]
+        rel_wind_y = wind_y - vel_y[i]
+        rel_wind_z = wind_z - vel_z[i]
+
+        force_x[i] = force_x[i] + drag_coeff * rel_wind_x
+        force_y[i] = force_y[i] + drag_coeff * rel_wind_y
+        force_z[i] = force_z[i] + drag_coeff * rel_wind_z
+    endfor
+
+    ; Integration (Verlet)
+    for i = 0, num_particles - 1
+        cond = is_fixed[i] eq 0
+
+        ; Acceleration
+        acc_x = cond ? force_x[i] / mass[i] : 0.0
+        acc_y = cond ? force_y[i] / mass[i] : 0.0
+        acc_z = cond ? force_z[i] / mass[i] : 0.0
+
+        ; Update velocity
+        vel_x[i] = cond ? vel_x[i] + acc_x * dt : 0.0
+        vel_y[i] = cond ? vel_y[i] + acc_y * dt : 0.0
+        vel_z[i] = cond ? vel_z[i] + acc_z * dt : 0.0
+
+        ; Update position
+        pos_x[i] = cond ? pos_x[i] + vel_x[i] * dt : pos_x[i]
+        pos_y[i] = cond ? pos_y[i] + vel_y[i] * dt : pos_y[i]
+        pos_z[i] = cond ? pos_z[i] + vel_z[i] * dt : pos_z[i]
+
+        ; Ground collision
+        pos_y[i] = pos_y[i] < 0.0 ? 0.0 : pos_y[i]
+        vel_y[i] = pos_y[i] eq 0.0 ? 0.0 : vel_y[i]
+    endfor
+endfor
+
+; --------------------------------------
+; Results Analysis
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    SIMULATION RESULTS"
+print, "======================================================"
+print, ""
+
+; Compute cloth statistics
+min_y = pos_y[0]
+max_y = pos_y[0]
+avg_y = 0.0
+total_ke = 0.0  ; Kinetic energy
+
+for i = 0, num_particles - 1
+    min_y = pos_y[i] lt min_y ? pos_y[i] : min_y
+    max_y = pos_y[i] gt max_y ? pos_y[i] : max_y
+    avg_y = avg_y + pos_y[i]
+
+    speed_sq = vel_x[i]^2 + vel_y[i]^2 + vel_z[i]^2
+    total_ke = total_ke + 0.5 * mass[i] * speed_sq
+endfor
+avg_y = avg_y / num_particles
+
+print, "Cloth height statistics:"
+print, "  Min height:", min_y, "m"
+print, "  Max height:", max_y, "m"
+print, "  Avg height:", avg_y, "m"
+print, "  Drape:", max_y - min_y, "m"
+
+print, ""
+print, "Energy:"
+print, "  Kinetic energy:", total_ke, "J"
+
+; Compute total stretch
+total_stretch = 0.0
+for i = 0, num_particles - 1
+    for s = 0, spring_count[i] - 1
+        spring_idx = i * max_springs + s
+        j = spring_neighbor[spring_idx]
+        rest_len = spring_rest_length[spring_idx]
+
+        dx = pos_x[j] - pos_x[i]
+        dy = pos_y[j] - pos_y[i]
+        dz = pos_z[j] - pos_z[i]
+        curr_len = sqrt(dx*dx + dy*dy + dz*dz)
+
+        total_stretch = total_stretch + abs(curr_len - rest_len)
+    endfor
+endfor
+
+print, "  Total stretch:", total_stretch, "m"
+
+; Print corner positions
+print, ""
+print, "Corner positions:"
+print, "  Top-left (fixed):    (", pos_x[0], ",", pos_y[0], ",", pos_z[0], ")"
+bottom_left = (cloth_width - 1) * cloth_height
+print, "  Bottom-left (free):  (", pos_x[cloth_height - 1], ",", pos_y[cloth_height - 1], ",", pos_z[cloth_height - 1], ")"
+print, "  Top-right (fixed):   (", pos_x[bottom_left], ",", pos_y[bottom_left], ",", pos_z[bottom_left], ")"
+bottom_right = cloth_width * cloth_height - 1
+print, "  Bottom-right (free): (", pos_x[bottom_right], ",", pos_y[bottom_right], ",", pos_z[bottom_right], ")"
+
+print, ""
+print, "======================================================"
+print, "    CLOTH SIMULATION COMPLETE"
+print, "======================================================"

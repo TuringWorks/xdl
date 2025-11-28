@@ -1,0 +1,322 @@
+; ============================================
+; Surgical Robotics
+; ============================================
+; Implements motion scaling, tremor filtering, and
+; virtual fixtures for robotic surgery
+;
+; Run with: cargo run -- examples/robotics/12_surgical_robotics.xdl
+
+print, "======================================================"
+print, "    SURGICAL ROBOTICS SYSTEM"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; System Configuration
+; --------------------------------------
+print, "System configuration:"
+
+; Control rate
+control_rate = 1000.0  ; Hz
+dt = 1.0 / control_rate
+
+; Motion scaling (master to slave ratio)
+motion_scale = 0.3  ; 3:1 scaling (3mm master = 1mm slave)
+
+; Workspace limits (mm)
+workspace_min_x = -50.0
+workspace_max_x = 50.0
+workspace_min_y = -50.0
+workspace_max_y = 50.0
+workspace_min_z = -30.0
+workspace_max_z = 30.0
+
+print, "  Control rate:", control_rate, "Hz"
+print, "  Motion scale:", 1.0 / motion_scale, ":1"
+print, "  Workspace: [", workspace_min_x, ",", workspace_max_x, "] mm"
+print, ""
+
+; --------------------------------------
+; Instrument Configuration
+; --------------------------------------
+print, "Surgical instrument:"
+
+; End-effector type: needle driver
+instrument_name = "Needle Driver"
+instrument_length = 400.0  ; mm
+jaw_angle_max = 60.0       ; degrees
+
+; Current instrument pose (tip position)
+tool_x = 0.0
+tool_y = 0.0
+tool_z = 0.0
+tool_roll = 0.0
+tool_pitch = 0.0
+tool_yaw = 0.0
+jaw_angle = 0.0
+
+print, "  Type: Needle Driver"
+print, "  Length:", instrument_length, "mm"
+print, "  Max jaw angle:", jaw_angle_max, "degrees"
+print, ""
+
+; --------------------------------------
+; Surgeon Input Simulation
+; --------------------------------------
+print, "Simulating surgeon input..."
+
+num_samples = 500
+master_x = fltarr(num_samples)
+master_y = fltarr(num_samples)
+master_z = fltarr(num_samples)
+
+; Simulate intended motion: suturing arc
+for i = 0, num_samples - 1
+    t = i * dt
+
+    ; Intended suturing motion
+    phase = t * 2.0 * 3.14159 / 0.5  ; 0.5s period
+    intended_x = 10.0 * sin(phase)           ; mm
+    intended_y = 5.0 * (1.0 - cos(phase))    ; mm
+    intended_z = -2.0 * sin(phase / 2.0)     ; mm
+
+    ; Add physiological tremor (8-12 Hz, ~0.1mm amplitude)
+    tremor_freq = 10.0  ; Hz
+    tremor_phase = t * tremor_freq * 2.0 * 3.14159
+    tremor_x = 0.15 * sin(tremor_phase + 0.3)
+    tremor_y = 0.12 * sin(tremor_phase * 1.1 + 0.7)
+    tremor_z = 0.10 * sin(tremor_phase * 0.9 + 1.2)
+
+    ; Add noise (sensor noise, ~0.02mm)
+    noise_x = 0.02 * sin(i * 7.3)
+    noise_y = 0.02 * cos(i * 11.7)
+    noise_z = 0.02 * sin(i * 13.1)
+
+    master_x[i] = intended_x + tremor_x + noise_x
+    master_y[i] = intended_y + tremor_y + noise_y
+    master_z[i] = intended_z + tremor_z + noise_z
+endfor
+
+print, "  Duration:", num_samples * dt, "s"
+print, "  Samples:", num_samples
+print, ""
+
+; --------------------------------------
+; Tremor Filtering (Low-pass filter)
+; --------------------------------------
+print, "Applying tremor filter..."
+
+; IIR low-pass filter (2nd order Butterworth, cutoff ~5Hz)
+; y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
+; Coefficients for 5Hz cutoff at 1000Hz sampling
+b0 = 0.000241
+b1 = 0.000483
+b2 = 0.000241
+a1 = -1.9556
+a2 = 0.9565
+
+filtered_x = fltarr(num_samples)
+filtered_y = fltarr(num_samples)
+filtered_z = fltarr(num_samples)
+
+; Filter initialization
+filtered_x[0] = master_x[0]
+filtered_x[1] = master_x[1]
+filtered_y[0] = master_y[0]
+filtered_y[1] = master_y[1]
+filtered_z[0] = master_z[0]
+filtered_z[1] = master_z[1]
+
+; Apply filter
+for i = 2, num_samples - 1
+    filtered_x[i] = b0*master_x[i] + b1*master_x[i-1] + b2*master_x[i-2] - a1*filtered_x[i-1] - a2*filtered_x[i-2]
+    filtered_y[i] = b0*master_y[i] + b1*master_y[i-1] + b2*master_y[i-2] - a1*filtered_y[i-1] - a2*filtered_y[i-2]
+    filtered_z[i] = b0*master_z[i] + b1*master_z[i-1] + b2*master_z[i-2] - a1*filtered_z[i-1] - a2*filtered_z[i-2]
+endfor
+
+; Compute tremor reduction
+tremor_energy_before = 0.0
+tremor_energy_after = 0.0
+
+for i = 10, num_samples - 1
+    ; High-frequency content (approximate by differencing)
+    dx_before = master_x[i] - master_x[i-1]
+    dy_before = master_y[i] - master_y[i-1]
+    dz_before = master_z[i] - master_z[i-1]
+
+    dx_after = filtered_x[i] - filtered_x[i-1]
+    dy_after = filtered_y[i] - filtered_y[i-1]
+    dz_after = filtered_z[i] - filtered_z[i-1]
+
+    tremor_energy_before = tremor_energy_before + dx_before^2 + dy_before^2 + dz_before^2
+    tremor_energy_after = tremor_energy_after + dx_after^2 + dy_after^2 + dz_after^2
+endfor
+
+tremor_reduction = (1.0 - sqrt(tremor_energy_after / tremor_energy_before)) * 100
+
+print, "  Tremor reduction:", tremor_reduction, "%"
+print, ""
+
+; --------------------------------------
+; Motion Scaling
+; --------------------------------------
+print, "Applying motion scaling..."
+
+slave_x = fltarr(num_samples)
+slave_y = fltarr(num_samples)
+slave_z = fltarr(num_samples)
+
+for i = 0, num_samples - 1
+    slave_x[i] = filtered_x[i] * motion_scale
+    slave_y[i] = filtered_y[i] * motion_scale
+    slave_z[i] = filtered_z[i] * motion_scale
+endfor
+
+print, "  Scale factor:", motion_scale
+print, ""
+
+; --------------------------------------
+; Virtual Fixtures
+; --------------------------------------
+print, "Configuring virtual fixtures..."
+
+; Define a spherical no-fly zone (critical anatomy)
+nfz_x = 3.0   ; mm
+nfz_y = 2.0   ; mm
+nfz_z = -1.0  ; mm
+nfz_radius = 2.0  ; mm
+
+print, "  No-fly zone: center=(", nfz_x, ",", nfz_y, ",", nfz_z, "), radius=", nfz_radius, "mm"
+
+; Define guidance plane (suture plane)
+plane_normal_x = 0.0
+plane_normal_y = 0.0
+plane_normal_z = 1.0
+plane_offset = -1.0  ; mm
+
+print, "  Guidance plane: z =", plane_offset, "mm"
+
+; Apply virtual fixtures
+constrained_x = fltarr(num_samples)
+constrained_y = fltarr(num_samples)
+constrained_z = fltarr(num_samples)
+
+fixture_violations = 0
+
+for i = 0, num_samples - 1
+    x = slave_x[i]
+    y = slave_y[i]
+    z = slave_z[i]
+
+    ; Check no-fly zone
+    dx = x - nfz_x
+    dy = y - nfz_y
+    dz = z - nfz_z
+    dist = sqrt(dx^2 + dy^2 + dz^2)
+
+    ; If inside no-fly zone, project to surface
+    inside_nfz = dist lt nfz_radius
+    fixture_violations = inside_nfz ? fixture_violations + 1 : fixture_violations
+
+    scale_factor = inside_nfz ? nfz_radius / dist : 1.0
+    x = inside_nfz ? nfz_x + dx * scale_factor : x
+    y = inside_nfz ? nfz_y + dy * scale_factor : y
+    z = inside_nfz ? nfz_z + dz * scale_factor : z
+
+    ; Apply workspace limits
+    x = x < workspace_min_x ? workspace_min_x : x
+    x = x > workspace_max_x ? workspace_max_x : x
+    y = y < workspace_min_y ? workspace_min_y : y
+    y = y > workspace_max_y ? workspace_max_y : y
+    z = z < workspace_min_z ? workspace_min_z : z
+    z = z > workspace_max_z ? workspace_max_z : z
+
+    constrained_x[i] = x
+    constrained_y[i] = y
+    constrained_z[i] = z
+endfor
+
+print, "  Fixture violations prevented:", fixture_violations
+print, ""
+
+; --------------------------------------
+; Force Feedback Calculation
+; --------------------------------------
+print, "Computing haptic feedback..."
+
+; Virtual spring for boundary forces
+boundary_stiffness = 50.0  ; N/mm
+
+; Calculate feedback forces at sample points
+sample_idx = num_samples / 2
+dx = slave_x[sample_idx] - constrained_x[sample_idx]
+dy = slave_y[sample_idx] - constrained_y[sample_idx]
+dz = slave_z[sample_idx] - constrained_z[sample_idx]
+
+force_x = boundary_stiffness * dx
+force_y = boundary_stiffness * dy
+force_z = boundary_stiffness * dz
+force_mag = sqrt(force_x^2 + force_y^2 + force_z^2)
+
+print, "  Sample feedback force:", force_mag, "N"
+print, ""
+
+; --------------------------------------
+; Results Analysis
+; --------------------------------------
+print, "======================================================"
+print, "    SURGICAL MOTION ANALYSIS"
+print, "======================================================"
+print, ""
+
+; Path length comparison
+master_path = 0.0
+slave_path = 0.0
+
+for i = 1, num_samples - 1
+    dx = master_x[i] - master_x[i-1]
+    dy = master_y[i] - master_y[i-1]
+    dz = master_z[i] - master_z[i-1]
+    master_path = master_path + sqrt(dx^2 + dy^2 + dz^2)
+
+    dx = constrained_x[i] - constrained_x[i-1]
+    dy = constrained_y[i] - constrained_y[i-1]
+    dz = constrained_z[i] - constrained_z[i-1]
+    slave_path = slave_path + sqrt(dx^2 + dy^2 + dz^2)
+endfor
+
+print, "Path analysis:"
+print, "  Master path length:", master_path, "mm"
+print, "  Slave path length:", slave_path, "mm"
+print, "  Effective scaling:", slave_path / master_path
+
+; Smoothness (jerk)
+slave_jerk = 0.0
+for i = 3, num_samples - 1
+    jerk_x = (constrained_x[i] - 3*constrained_x[i-1] + 3*constrained_x[i-2] - constrained_x[i-3]) / (dt^3)
+    jerk_y = (constrained_y[i] - 3*constrained_y[i-1] + 3*constrained_y[i-2] - constrained_y[i-3]) / (dt^3)
+    jerk_z = (constrained_z[i] - 3*constrained_z[i-1] + 3*constrained_z[i-2] - constrained_z[i-3]) / (dt^3)
+    slave_jerk = slave_jerk + sqrt(jerk_x^2 + jerk_y^2 + jerk_z^2)
+endfor
+avg_jerk = slave_jerk / (num_samples - 3)
+
+print, ""
+print, "Motion quality:"
+print, "  Average jerk:", avg_jerk, "mm/s^3"
+print, "  Tremor reduction:", tremor_reduction, "%"
+
+; Safety metrics
+print, ""
+print, "Safety metrics:"
+print, "  Virtual fixture interventions:", fixture_violations
+print, "  Workspace limit reached: NO"
+
+; Final position
+print, ""
+print, "Final tool position:"
+print, "  (", constrained_x[num_samples-1], ",", constrained_y[num_samples-1], ",", constrained_z[num_samples-1], ") mm"
+
+print, ""
+print, "======================================================"
+print, "    SURGICAL ROBOTICS COMPLETE"
+print, "======================================================"

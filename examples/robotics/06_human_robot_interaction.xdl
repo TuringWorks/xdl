@@ -1,0 +1,293 @@
+; ============================================
+; Human-Robot Interaction Modeling
+; ============================================
+; Implements social force model and intention prediction
+; for safe human-robot collaboration
+;
+; Run with: cargo run -- examples/robotics/06_human_robot_interaction.xdl
+
+print, "======================================================"
+print, "    HUMAN-ROBOT INTERACTION MODELING"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Workspace Configuration
+; --------------------------------------
+print, "Setting up shared workspace..."
+
+; Workspace boundaries
+ws_min_x = 0.0
+ws_max_x = 6.0
+ws_min_y = 0.0
+ws_max_y = 6.0
+
+; Robot configuration
+robot_x = 1.0
+robot_y = 3.0
+robot_theta = 0.0  ; Facing +x direction
+robot_radius = 0.3
+robot_goal_x = 5.0
+robot_goal_y = 3.0
+robot_max_vel = 0.5  ; m/s
+
+print, "Robot position: (", robot_x, ",", robot_y, ")"
+print, "Robot goal: (", robot_goal_x, ",", robot_goal_y, ")"
+print, ""
+
+; --------------------------------------
+; Human Tracking
+; --------------------------------------
+print, "Tracking human agents..."
+
+num_humans = 3
+
+; Human positions
+human_x = [3.0, 4.0, 2.5]
+human_y = [2.0, 4.0, 4.5]
+
+; Human velocities
+human_vx = [0.2, -0.1, 0.3]
+human_vy = [0.3, 0.2, -0.2]
+
+; Human predicted goals (estimated intentions)
+human_goal_x = [5.0, 2.0, 5.0]
+human_goal_y = [4.0, 3.0, 3.0]
+
+; Personal space radius
+personal_space = 0.8  ; meters
+
+for i = 0, num_humans - 1
+    speed = sqrt(human_vx[i]^2 + human_vy[i]^2)
+    print, "  Human", i + 1, ": pos=(", human_x[i], ",", human_y[i], ") vel=", speed, "m/s"
+endfor
+print, ""
+
+; --------------------------------------
+; Social Force Model Parameters
+; --------------------------------------
+print, "Social Force Model parameters:"
+
+; Attractive force to goal
+goal_force_weight = 2.0
+print, "  Goal attraction:", goal_force_weight
+
+; Repulsive force from humans
+human_repulsion_A = 2.1  ; Force magnitude
+human_repulsion_B = 0.3  ; Force range
+print, "  Human repulsion A:", human_repulsion_A
+print, "  Human repulsion B:", human_repulsion_B
+
+; Repulsive force from boundaries
+wall_repulsion = 1.0
+print, "  Wall repulsion:", wall_repulsion
+print, ""
+
+; --------------------------------------
+; Intention Prediction (Simplified HMM)
+; --------------------------------------
+print, "Predicting human intentions..."
+print, ""
+
+; For each human, predict likely goals
+num_possible_goals = 3
+goal_candidates_x = [5.0, 3.0, 1.0]
+goal_candidates_y = [3.0, 5.0, 1.0]
+
+for h = 0, num_humans - 1
+    print, "Human", h + 1, "intention prediction:"
+
+    ; Compute probability of each goal based on current heading
+    heading = atan(human_vy[h], human_vx[h] + 0.001)
+
+    total_prob = 0.0
+    goal_probs = fltarr(num_possible_goals)
+
+    for g = 0, num_possible_goals - 1
+        ; Direction to goal
+        dx = goal_candidates_x[g] - human_x[h]
+        dy = goal_candidates_y[g] - human_y[h]
+        goal_dir = atan(dy, dx + 0.001)
+
+        ; Angular difference
+        angle_diff = abs(goal_dir - heading)
+        angle_diff = angle_diff > 3.14159 ? 6.28318 - angle_diff : angle_diff
+
+        ; Probability based on heading alignment
+        goal_probs[g] = exp(-angle_diff * 2.0)
+        total_prob = total_prob + goal_probs[g]
+    endfor
+
+    ; Normalize and print
+    for g = 0, num_possible_goals - 1
+        goal_probs[g] = goal_probs[g] / total_prob * 100
+        print, "    Goal", g + 1, "(", goal_candidates_x[g], ",", goal_candidates_y[g], "):", goal_probs[g], "%"
+    endfor
+    print, ""
+endfor
+
+; --------------------------------------
+; Social Force Computation
+; --------------------------------------
+print, "Computing social forces on robot..."
+
+; Goal force
+dx_goal = robot_goal_x - robot_x
+dy_goal = robot_goal_y - robot_y
+dist_goal = sqrt(dx_goal^2 + dy_goal^2) + 0.001
+
+force_goal_x = goal_force_weight * dx_goal / dist_goal
+force_goal_y = goal_force_weight * dy_goal / dist_goal
+
+print, "  Goal force: (", force_goal_x, ",", force_goal_y, ")"
+
+; Human repulsion forces
+force_human_x = 0.0
+force_human_y = 0.0
+
+for h = 0, num_humans - 1
+    dx = robot_x - human_x[h]
+    dy = robot_y - human_y[h]
+    dist = sqrt(dx^2 + dy^2) + 0.001
+
+    ; Exponential repulsion
+    magnitude = human_repulsion_A * exp(-dist / human_repulsion_B)
+
+    force_human_x = force_human_x + magnitude * dx / dist
+    force_human_y = force_human_y + magnitude * dy / dist
+endfor
+
+print, "  Human repulsion: (", force_human_x, ",", force_human_y, ")"
+
+; Wall forces
+force_wall_x = 0.0
+force_wall_y = 0.0
+
+; Left wall
+dist_left = robot_x - ws_min_x
+force_wall_x = force_wall_x + wall_repulsion / (dist_left^2 + 0.1)
+
+; Right wall
+dist_right = ws_max_x - robot_x
+force_wall_x = force_wall_x - wall_repulsion / (dist_right^2 + 0.1)
+
+; Bottom wall
+dist_bottom = robot_y - ws_min_y
+force_wall_y = force_wall_y + wall_repulsion / (dist_bottom^2 + 0.1)
+
+; Top wall
+dist_top = ws_max_y - robot_y
+force_wall_y = force_wall_y - wall_repulsion / (dist_top^2 + 0.1)
+
+print, "  Wall repulsion: (", force_wall_x, ",", force_wall_y, ")"
+
+; Total force
+total_force_x = force_goal_x + force_human_x + force_wall_x
+total_force_y = force_goal_y + force_human_y + force_wall_y
+
+print, "  Total force: (", total_force_x, ",", total_force_y, ")"
+print, ""
+
+; --------------------------------------
+; Safety Assessment
+; --------------------------------------
+print, "======================================================"
+print, "    SAFETY ASSESSMENT"
+print, "======================================================"
+print, ""
+
+; Minimum distance to any human
+min_human_dist = 1e10
+closest_human = -1
+
+for h = 0, num_humans - 1
+    dx = robot_x - human_x[h]
+    dy = robot_y - human_y[h]
+    dist = sqrt(dx^2 + dy^2)
+
+    is_closer = dist lt min_human_dist
+    min_human_dist = is_closer ? dist : min_human_dist
+    closest_human = is_closer ? h : closest_human
+endfor
+
+print, "Minimum human distance:", min_human_dist, "m (Human", closest_human + 1, ")"
+
+; Time to collision estimation
+robot_vel_x = total_force_x * 0.5  ; Simplified velocity
+robot_vel_y = total_force_y * 0.5
+
+ttc = 1e10  ; Time to collision
+for h = 0, num_humans - 1
+    ; Relative position and velocity
+    rel_x = robot_x - human_x[h]
+    rel_y = robot_y - human_y[h]
+    rel_vx = robot_vel_x - human_vx[h]
+    rel_vy = robot_vel_y - human_vy[h]
+
+    ; Time to closest approach
+    rel_speed_sq = rel_vx^2 + rel_vy^2 + 0.001
+    dot_prod = rel_x * rel_vx + rel_y * rel_vy
+
+    t_closest = -dot_prod / rel_speed_sq
+    t_closest = t_closest > 0 ? t_closest : 1e10
+
+    ; Distance at closest approach
+    closest_x = rel_x + rel_vx * t_closest
+    closest_y = rel_y + rel_vy * t_closest
+    closest_dist = sqrt(closest_x^2 + closest_y^2)
+
+    ; Check if collision
+    collision_radius = robot_radius + personal_space
+    is_collision = closest_dist lt collision_radius
+
+    ttc = is_collision and t_closest lt ttc ? t_closest : ttc
+endfor
+
+print, "Time to collision:", ttc, "s"
+
+; Safety level assessment
+safety_level = min_human_dist gt 2.0 ? "SAFE" : (min_human_dist gt 1.0 ? "CAUTION" : "WARNING")
+print, "Safety level:", safety_level
+
+; Recommended action
+print, ""
+print, "Recommended action:"
+recommend_slow = min_human_dist lt 1.5
+recommend_stop = min_human_dist lt 0.8
+
+action = recommend_stop ? "STOP" : (recommend_slow ? "SLOW DOWN" : "PROCEED")
+print, "  ", action
+
+; Speed limit based on safety
+safe_speed = min_human_dist gt 2.0 ? robot_max_vel : robot_max_vel * min_human_dist / 2.0
+safe_speed = safe_speed > 0.1 ? safe_speed : 0.1
+print, "  Recommended speed:", safe_speed, "m/s"
+
+; --------------------------------------
+; Predicted Trajectories
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    TRAJECTORY PREDICTION (2s horizon)"
+print, "======================================================"
+print, ""
+
+prediction_horizon = 2.0  ; seconds
+num_pred_steps = 10
+pred_dt = prediction_horizon / num_pred_steps
+
+print, "Robot predicted path:"
+pred_robot_x = robot_x
+pred_robot_y = robot_y
+
+for t = 0, num_pred_steps - 1
+    pred_robot_x = pred_robot_x + robot_vel_x * pred_dt
+    pred_robot_y = pred_robot_y + robot_vel_y * pred_dt
+    time = (t + 1) * pred_dt
+    print, "  t=", time, "s: (", pred_robot_x, ",", pred_robot_y, ")"
+endfor
+
+print, ""
+print, "======================================================"
+print, "    HRI ANALYSIS COMPLETE"
+print, "======================================================"

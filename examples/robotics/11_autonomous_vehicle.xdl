@@ -1,0 +1,312 @@
+; ============================================
+; Autonomous Vehicle Trajectory Planning
+; ============================================
+; Implements Model Predictive Control (MPC) for
+; autonomous vehicle trajectory planning
+;
+; Run with: cargo run -- examples/robotics/11_autonomous_vehicle.xdl
+
+print, "======================================================"
+print, "    AUTONOMOUS VEHICLE TRAJECTORY PLANNING"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Vehicle Parameters
+; --------------------------------------
+print, "Vehicle configuration:"
+
+; Kinematic bicycle model parameters
+wheelbase = 2.7         ; meters (typical sedan)
+max_steer = 0.5         ; radians (~29 degrees)
+max_speed = 30.0        ; m/s (~108 km/h)
+max_accel = 3.0         ; m/s^2
+max_decel = -5.0        ; m/s^2
+
+print, "  Wheelbase:", wheelbase, "m"
+print, "  Max steering:", max_steer * 180 / 3.14159, "degrees"
+print, "  Max speed:", max_speed, "m/s (", max_speed * 3.6, "km/h)"
+print, ""
+
+; Initial state [x, y, heading, velocity]
+ego_x = 0.0
+ego_y = 0.0
+ego_theta = 0.0        ; Heading (radians)
+ego_v = 10.0           ; Initial velocity (m/s)
+
+print, "Initial state:"
+print, "  Position: (", ego_x, ",", ego_y, ")"
+print, "  Heading:", ego_theta * 180 / 3.14159, "degrees"
+print, "  Velocity:", ego_v, "m/s"
+print, ""
+
+; --------------------------------------
+; Road and Lane Definition
+; --------------------------------------
+print, "Road configuration:"
+
+lane_width = 3.5      ; meters
+num_lanes = 3
+road_length = 200.0   ; meters
+
+; Current lane (0 = left, 1 = center, 2 = right)
+current_lane = 1
+target_lane = 1
+
+print, "  Lane width:", lane_width, "m"
+print, "  Number of lanes:", num_lanes
+print, "  Current lane:", current_lane + 1
+print, ""
+
+; Lane center positions (y-coordinate)
+lane_centers = fltarr(num_lanes)
+for i = 0, num_lanes - 1
+    lane_centers[i] = (i + 0.5) * lane_width
+endfor
+
+; --------------------------------------
+; Obstacle Vehicles
+; --------------------------------------
+print, "Traffic scenario:"
+
+num_obstacles = 3
+
+; Obstacle states [x, y, vx]
+obs_x = [50.0, 80.0, 120.0]
+obs_y = [lane_centers[1], lane_centers[0], lane_centers[2]]
+obs_vx = [8.0, 12.0, 9.0]   ; m/s
+
+for i = 0, num_obstacles - 1
+    print, "  Vehicle", i + 1, ": x=", obs_x[i], "m, lane=", floor(obs_y[i] / lane_width) + 1, ", v=", obs_vx[i], "m/s"
+endfor
+print, ""
+
+; --------------------------------------
+; MPC Parameters
+; --------------------------------------
+print, "MPC configuration:"
+
+horizon = 20          ; Prediction horizon steps
+dt_mpc = 0.1         ; Time step
+
+; Cost weights
+w_progress = 1.0     ; Progress along road
+w_lane = 5.0         ; Lane keeping
+w_smooth_steer = 2.0 ; Steering smoothness
+w_smooth_accel = 1.0 ; Acceleration smoothness
+w_obstacle = 100.0   ; Obstacle avoidance
+
+print, "  Horizon:", horizon, "steps (", horizon * dt_mpc, "s)"
+print, "  Time step:", dt_mpc, "s"
+print, ""
+
+; --------------------------------------
+; Reference Trajectory
+; --------------------------------------
+print, "Computing reference trajectory..."
+
+; Reference: stay in lane at constant speed
+ref_x = fltarr(horizon + 1)
+ref_y = fltarr(horizon + 1)
+ref_v = fltarr(horizon + 1)
+
+target_y = lane_centers[target_lane]
+target_v = 15.0  ; Target speed
+
+for i = 0, horizon
+    ref_x[i] = ego_x + target_v * i * dt_mpc
+    ref_y[i] = target_y
+    ref_v[i] = target_v
+endfor
+
+print, "  Target lane center:", target_y, "m"
+print, "  Target velocity:", target_v, "m/s"
+print, ""
+
+; --------------------------------------
+; MPC Optimization (Simplified)
+; --------------------------------------
+print, "Running MPC optimization..."
+
+; Predicted trajectory
+pred_x = fltarr(horizon + 1)
+pred_y = fltarr(horizon + 1)
+pred_theta = fltarr(horizon + 1)
+pred_v = fltarr(horizon + 1)
+
+; Control inputs
+ctrl_steer = fltarr(horizon)
+ctrl_accel = fltarr(horizon)
+
+; Initialize prediction with current state
+pred_x[0] = ego_x
+pred_y[0] = ego_y
+pred_theta[0] = ego_theta
+pred_v[0] = ego_v
+
+; Iterative optimization (simplified gradient descent)
+num_iterations = 50
+learning_rate = 0.01
+
+for iter = 0, num_iterations - 1
+
+    ; Forward simulate with current controls
+    for t = 0, horizon - 1
+        ; Bicycle model dynamics
+        beta = atan(0.5 * tan(ctrl_steer[t]))  ; Slip angle
+
+        pred_x[t+1] = pred_x[t] + pred_v[t] * cos(pred_theta[t] + beta) * dt_mpc
+        pred_y[t+1] = pred_y[t] + pred_v[t] * sin(pred_theta[t] + beta) * dt_mpc
+        pred_theta[t+1] = pred_theta[t] + pred_v[t] / wheelbase * sin(beta) * dt_mpc
+        pred_v[t+1] = pred_v[t] + ctrl_accel[t] * dt_mpc
+
+        ; Clamp velocity
+        pred_v[t+1] = pred_v[t+1] > 0 ? pred_v[t+1] : 0
+        pred_v[t+1] = pred_v[t+1] < max_speed ? pred_v[t+1] : max_speed
+    endfor
+
+    ; Compute cost and gradients (simplified)
+    total_cost = 0.0
+
+    for t = 0, horizon
+        ; Lane keeping cost
+        lane_error = pred_y[t] - target_y
+        total_cost = total_cost + w_lane * lane_error^2
+
+        ; Velocity tracking cost
+        vel_error = pred_v[t] - target_v
+        total_cost = total_cost + 0.5 * vel_error^2
+
+        ; Obstacle avoidance cost
+        for obs = 0, num_obstacles - 1
+            ; Predict obstacle position
+            obs_pred_x = obs_x[obs] + obs_vx[obs] * t * dt_mpc
+            obs_pred_y = obs_y[obs]
+
+            dx = pred_x[t] - obs_pred_x
+            dy = pred_y[t] - obs_pred_y
+            dist = sqrt(dx^2 + dy^2) + 0.001
+
+            ; High cost for close proximity
+            safe_dist = 10.0
+            too_close = dist lt safe_dist
+            total_cost = too_close ? total_cost + w_obstacle / dist^2 : total_cost
+        endfor
+    endfor
+
+    ; Control smoothness cost
+    for t = 0, horizon - 1
+        total_cost = total_cost + w_smooth_steer * ctrl_steer[t]^2
+        total_cost = total_cost + w_smooth_accel * ctrl_accel[t]^2
+    endfor
+
+    ; Gradient update (simplified numerical gradient)
+    for t = 0, horizon - 1
+        ; Compute gradient for steering
+        grad_steer = 2.0 * w_smooth_steer * ctrl_steer[t]
+        grad_steer = grad_steer + 2.0 * w_lane * (pred_y[t+1] - target_y) * pred_v[t] * dt_mpc
+
+        ; Compute gradient for acceleration
+        grad_accel = 2.0 * w_smooth_accel * ctrl_accel[t]
+        grad_accel = grad_accel + (pred_v[t+1] - target_v) * dt_mpc
+
+        ; Update controls
+        ctrl_steer[t] = ctrl_steer[t] - learning_rate * grad_steer
+        ctrl_accel[t] = ctrl_accel[t] - learning_rate * grad_accel
+
+        ; Clamp controls
+        ctrl_steer[t] = ctrl_steer[t] > max_steer ? max_steer : ctrl_steer[t]
+        ctrl_steer[t] = ctrl_steer[t] < -max_steer ? -max_steer : ctrl_steer[t]
+        ctrl_accel[t] = ctrl_accel[t] > max_accel ? max_accel : ctrl_accel[t]
+        ctrl_accel[t] = ctrl_accel[t] < max_decel ? max_decel : ctrl_accel[t]
+    endfor
+endfor
+
+print, "  Optimization complete"
+print, ""
+
+; --------------------------------------
+; Trajectory Analysis
+; --------------------------------------
+print, "======================================================"
+print, "    TRAJECTORY RESULTS"
+print, "======================================================"
+print, ""
+
+; Final forward simulation
+pred_x[0] = ego_x
+pred_y[0] = ego_y
+pred_theta[0] = ego_theta
+pred_v[0] = ego_v
+
+for t = 0, horizon - 1
+    beta = atan(0.5 * tan(ctrl_steer[t]))
+    pred_x[t+1] = pred_x[t] + pred_v[t] * cos(pred_theta[t] + beta) * dt_mpc
+    pred_y[t+1] = pred_y[t] + pred_v[t] * sin(pred_theta[t] + beta) * dt_mpc
+    pred_theta[t+1] = pred_theta[t] + pred_v[t] / wheelbase * sin(beta) * dt_mpc
+    pred_v[t+1] = pred_v[t] + ctrl_accel[t] * dt_mpc
+    pred_v[t+1] = pred_v[t+1] > 0 ? pred_v[t+1] : 0
+    pred_v[t+1] = pred_v[t+1] < max_speed ? pred_v[t+1] : max_speed
+endfor
+
+; Print trajectory waypoints
+print, "Planned trajectory:"
+for i = 0, 4
+    t = i * (horizon / 4)
+    time = t * dt_mpc
+    print, "  t=", time, "s: x=", pred_x[t], "m, y=", pred_y[t], "m, v=", pred_v[t], "m/s"
+endfor
+print, ""
+
+; Safety check - minimum distance to obstacles
+min_obstacle_dist = 1e10
+for t = 0, horizon
+    for obs = 0, num_obstacles - 1
+        obs_pred_x = obs_x[obs] + obs_vx[obs] * t * dt_mpc
+        obs_pred_y = obs_y[obs]
+        dx = pred_x[t] - obs_pred_x
+        dy = pred_y[t] - obs_pred_y
+        dist = sqrt(dx^2 + dy^2)
+        min_obstacle_dist = dist lt min_obstacle_dist ? dist : min_obstacle_dist
+    endfor
+endfor
+
+print, "Safety analysis:"
+print, "  Min obstacle distance:", min_obstacle_dist, "m"
+print, "  Collision risk:", min_obstacle_dist lt 3.0 ? "HIGH" : (min_obstacle_dist lt 5.0 ? "MEDIUM" : "LOW")
+
+; Lane keeping quality
+max_lane_deviation = 0.0
+for t = 0, horizon
+    deviation = abs(pred_y[t] - target_y)
+    max_lane_deviation = deviation gt max_lane_deviation ? deviation : max_lane_deviation
+endfor
+
+print, "  Max lane deviation:", max_lane_deviation, "m"
+print, "  Lane keeping:", max_lane_deviation lt lane_width / 4 ? "GOOD" : "NEEDS_CORRECTION"
+
+; Control effort
+avg_steer = 0.0
+avg_accel = 0.0
+for t = 0, horizon - 1
+    avg_steer = avg_steer + abs(ctrl_steer[t])
+    avg_accel = avg_accel + abs(ctrl_accel[t])
+endfor
+avg_steer = avg_steer / horizon
+avg_accel = avg_accel / horizon
+
+print, ""
+print, "Control effort:"
+print, "  Avg steering:", avg_steer * 180 / 3.14159, "degrees"
+print, "  Avg acceleration:", avg_accel, "m/s^2"
+
+; First control command (to be executed)
+print, ""
+print, "Immediate control command:"
+print, "  Steering:", ctrl_steer[0] * 180 / 3.14159, "degrees"
+print, "  Acceleration:", ctrl_accel[0], "m/s^2"
+
+print, ""
+print, "======================================================"
+print, "    TRAJECTORY PLANNING COMPLETE"
+print, "======================================================"

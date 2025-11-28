@@ -2,6 +2,7 @@
 //!
 //! Built-in functions and procedures for XDL
 
+pub mod amp; // Accelerated Math Processing (SIMD/GPU)
 pub mod array;
 mod charting_procs; // ECharts charting procedures
 pub mod complex;
@@ -579,6 +580,30 @@ impl StandardLibrary {
             "RUSTPY_VERSION" => rustpython_interp::rustpy_version(args),
             #[cfg(feature = "rustpython")]
             "RUSTPY_STDLIB" => rustpython_interp::rustpy_stdlib(args),
+
+            // =========================================================================
+            // AMP (Accelerated Math Processing) functions
+            // =========================================================================
+            "AMP_INFO" => amp::amp_info(args),
+            "AMP_BACKEND" => amp::amp_backend(args),
+            "AMP_STATS" => amp::amp_stats(args),
+            "AMP_RESET_STATS" => amp::amp_reset_stats(args),
+            "AMP_BENCHMARK" => amp::amp_benchmark(args),
+            "AMP_GPU_AVAILABLE" => amp::amp_gpu_available(args),
+            // SIMD operations
+            "AMP_SIMD_ADD" => amp::amp_simd_add(args),
+            "AMP_SIMD_SUB" => amp::amp_simd_sub(args),
+            "AMP_SIMD_MUL" => amp::amp_simd_mul(args),
+            "AMP_SIMD_DIV" => amp::amp_simd_div(args),
+            "AMP_SIMD_SQRT" => amp::amp_simd_sqrt(args),
+            "AMP_SIMD_SUM" => amp::amp_simd_sum(args),
+            "AMP_SIMD_MAX" => amp::amp_simd_max(args),
+            "AMP_SIMD_MIN" => amp::amp_simd_min(args),
+            "AMP_SIMD_DOT" => amp::amp_simd_dot(args),
+            "AMP_SIMD_MATMUL" => amp::amp_simd_matmul(args),
+            // GPU operations
+            "AMP_GPU_ADD" => amp::amp_gpu_add(args),
+            "AMP_GPU_MATMUL" => amp::amp_gpu_matmul(args),
 
             _ => Err(xdl_core::XdlError::FunctionNotFound(name.to_string())),
         }

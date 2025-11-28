@@ -1,0 +1,67 @@
+; ============================================
+; XDL-AMP SIMD Verification Script
+; ============================================
+; Tests SIMD-accelerated operations and verifies correctness
+;
+; Run with: cargo run -- examples/amp/verify_simd.xdl
+
+print, "======================================================"
+print, "         XDL-AMP SIMD VERIFICATION"
+print, "======================================================"
+print, ""
+
+; Get AMP system information
+info = AMP_INFO()
+print, info
+print, ""
+
+; Reset statistics for clean measurement
+dummy = AMP_RESET_STATS()
+
+; Test 1: Element-wise Addition
+print, "Test 1: AMP_SIMD_ADD"
+a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+b = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]
+c = AMP_SIMD_ADD(a, b)
+print, "  Expected: [11, 22, 33, 44, 55, 66, 77, 88]"
+print, "  Got:     ", c
+
+; Test 2: Element-wise Multiplication
+print, ""
+print, "Test 2: AMP_SIMD_MUL"
+a = [2.0, 3.0, 4.0, 5.0]
+b = [10.0, 10.0, 10.0, 10.0]
+c = AMP_SIMD_MUL(a, b)
+print, "  Expected: [20, 30, 40, 50]"
+print, "  Got:     ", c
+
+; Test 3: Sum Reduction
+print, ""
+print, "Test 3: AMP_SIMD_SUM"
+x = findgen(100) + 1.0
+sum = AMP_SIMD_SUM(x)
+print, "  Expected: 5050"
+print, "  Got:     ", sum
+
+; Test 4: Dot Product
+print, ""
+print, "Test 4: AMP_SIMD_DOT"
+a = [1.0, 2.0, 3.0, 4.0]
+b = [5.0, 6.0, 7.0, 8.0]
+dot = AMP_SIMD_DOT(a, b)
+print, "  Expected: 70"
+print, "  Got:     ", dot
+
+; Test 5: Matrix Multiplication
+print, ""
+print, "Test 5: AMP_SIMD_MATMUL"
+a = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+b = [7.0, 8.0, 9.0, 10.0, 11.0, 12.0]
+c = AMP_SIMD_MATMUL(a, b, 2, 2, 3)
+print, "  Expected: [58, 64, 139, 154]"
+print, "  Got:     ", c
+
+print, ""
+print, "======================================================"
+print, "  SIMD verification complete"
+print, "======================================================"

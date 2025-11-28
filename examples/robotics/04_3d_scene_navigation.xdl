@@ -1,0 +1,242 @@
+; ============================================
+; 3D Scene Understanding for Navigation
+; ============================================
+; Implements semantic scene parsing and traversability
+; analysis for autonomous robot navigation
+;
+; Run with: cargo run -- examples/robotics/04_3d_scene_navigation.xdl
+
+print, "======================================================"
+print, "    3D SCENE UNDERSTANDING FOR NAVIGATION"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Point Cloud Input (Simulated LiDAR)
+; --------------------------------------
+print, "Loading 3D point cloud from LiDAR..."
+
+; Simulate a room with floor, walls, and obstacles
+; Point cloud grid resolution
+grid_size = 10
+num_points = grid_size * grid_size
+
+; Generate floor points
+floor_x = fltarr(num_points)
+floor_y = fltarr(num_points)
+floor_z = fltarr(num_points)
+
+for i = 0, grid_size - 1
+    for j = 0, grid_size - 1
+        idx = i * grid_size + j
+        floor_x[idx] = i * 0.5
+        floor_y[idx] = j * 0.5
+        floor_z[idx] = 0.0
+    endfor
+endfor
+
+print, "Point cloud loaded:", num_points, "floor points"
+print, "Coverage: 5m x 5m"
+print, ""
+
+; --------------------------------------
+; Semantic Segmentation
+; --------------------------------------
+print, "Performing semantic segmentation..."
+
+; Semantic classes: 0=floor, 1=wall, 2=obstacle, 3=stairs, 4=unknown
+num_classes = 5
+class_names = ["floor", "wall", "obstacle", "stairs", "unknown"]
+
+; Feature extraction for each point
+; Height-based classification (simplified)
+point_class = intarr(num_points)
+point_confidence = fltarr(num_points)
+
+; Classify based on height (z coordinate)
+for i = 0, num_points - 1
+    z = floor_z[i]
+    ; Floor: z near 0
+    is_floor = abs(z) lt 0.1
+    point_class[i] = is_floor ? 0 : 4
+    point_confidence[i] = is_floor ? 0.95 : 0.5
+endfor
+
+; Add some obstacles (simulate detection)
+; Obstacle 1: Table at (2.0, 2.0)
+obs1_points = 0
+for i = 0, num_points - 1
+    dx = floor_x[i] - 2.0
+    dy = floor_y[i] - 2.0
+    is_obs1 = sqrt(dx*dx + dy*dy) lt 0.6
+    point_class[i] = is_obs1 ? 2 : point_class[i]
+    point_confidence[i] = is_obs1 ? 0.9 : point_confidence[i]
+    obs1_points = is_obs1 ? obs1_points + 1 : obs1_points
+endfor
+
+; Obstacle 2: Chair at (3.5, 1.5)
+obs2_points = 0
+for i = 0, num_points - 1
+    dx = floor_x[i] - 3.5
+    dy = floor_y[i] - 1.5
+    is_obs2 = sqrt(dx*dx + dy*dy) lt 0.4
+    point_class[i] = is_obs2 ? 2 : point_class[i]
+    point_confidence[i] = is_obs2 ? 0.85 : point_confidence[i]
+    obs2_points = is_obs2 ? obs2_points + 1 : obs2_points
+endfor
+
+print, "Segmentation complete:"
+print, "  Floor points: detected"
+print, "  Obstacle 1 (table): ", obs1_points, "points"
+print, "  Obstacle 2 (chair): ", obs2_points, "points"
+print, ""
+
+; --------------------------------------
+; Traversability Map Generation
+; --------------------------------------
+print, "Generating traversability map..."
+
+; Create 2D costmap
+map_resolution = 0.25  ; meters per cell
+map_width = 20   ; cells
+map_height = 20  ; cells
+costmap = fltarr(map_width * map_height)
+
+; Initialize with low cost (traversable)
+for i = 0, map_width * map_height - 1
+    costmap[i] = 0.1
+endfor
+
+; Mark obstacles with high cost
+for i = 0, num_points - 1
+    map_x = floor(floor_x[i] / map_resolution)
+    map_y = floor(floor_y[i] / map_resolution)
+
+    ; Bounds check
+    valid = map_x ge 0 and map_x lt map_width and map_y ge 0 and map_y lt map_height
+    map_idx = map_y * map_width + map_x
+
+    ; Set cost based on classification
+    is_obstacle = point_class[i] eq 2
+    costmap[map_idx] = valid and is_obstacle ? 1.0 : costmap[map_idx]
+endfor
+
+; Inflate obstacles for robot radius (0.3m)
+inflation_radius = 2  ; cells
+inflated_costmap = fltarr(map_width * map_height)
+
+for i = 0, map_width * map_height - 1
+    inflated_costmap[i] = costmap[i]
+endfor
+
+for y = inflation_radius, map_height - inflation_radius - 1
+    for x = inflation_radius, map_width - inflation_radius - 1
+        idx = y * map_width + x
+        ; Check if any neighbor is obstacle
+        max_cost = costmap[idx]
+        for dy = -inflation_radius, inflation_radius
+            for dx = -inflation_radius, inflation_radius
+                neighbor_idx = (y + dy) * map_width + (x + dx)
+                dist = sqrt(dx*dx + dy*dy)
+                decay = 1.0 / (1.0 + dist)
+                neighbor_cost = costmap[neighbor_idx] * decay
+                max_cost = neighbor_cost > max_cost ? neighbor_cost : max_cost
+            endfor
+        endfor
+        inflated_costmap[idx] = max_cost
+    endfor
+endfor
+
+print, "Costmap generated:"
+print, "  Resolution:", map_resolution, "m/cell"
+print, "  Size:", map_width, "x", map_height, "cells"
+print, "  Inflation radius:", inflation_radius, "cells"
+print, ""
+
+; --------------------------------------
+; Navigation Goal Planning
+; --------------------------------------
+print, "Planning navigation path..."
+
+; Robot current position
+robot_x = 0.5
+robot_y = 0.5
+robot_theta = 0.0  ; radians
+
+; Goal position
+goal_nav_x = 4.0
+goal_nav_y = 4.0
+
+print, "Robot position: (", robot_x, ",", robot_y, ")"
+print, "Goal position: (", goal_nav_x, ",", goal_nav_y, ")"
+
+; A* path planning (simplified - using waypoints)
+; Generate waypoints avoiding obstacles
+num_waypoints = 5
+waypoint_x = [0.5, 1.0, 1.5, 3.0, 4.0]
+waypoint_y = [0.5, 1.0, 3.5, 4.0, 4.0]
+
+print, ""
+print, "Generated path waypoints:"
+path_length = 0.0
+for i = 0, num_waypoints - 1
+    print, "  Waypoint", i + 1, ": (", waypoint_x[i], ",", waypoint_y[i], ")"
+    cond = i gt 0
+    dx = cond ? waypoint_x[i] - waypoint_x[i-1] : 0.0
+    dy = cond ? waypoint_y[i] - waypoint_y[i-1] : 0.0
+    path_length = path_length + sqrt(dx*dx + dy*dy)
+endfor
+
+print, ""
+print, "Total path length:", path_length, "m"
+
+; --------------------------------------
+; Scene Understanding Summary
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    SCENE UNDERSTANDING SUMMARY"
+print, "======================================================"
+print, ""
+
+; Compute statistics
+floor_area = 0.0
+obstacle_area = 0.0
+
+for i = 0, num_points - 1
+    cell_area = 0.25  ; m^2 per cell
+    floor_area = point_class[i] eq 0 ? floor_area + cell_area : floor_area
+    obstacle_area = point_class[i] eq 2 ? obstacle_area + cell_area : obstacle_area
+endfor
+
+print, "Detected objects:"
+print, "  Floor area:", floor_area, "m^2"
+print, "  Obstacle area:", obstacle_area, "m^2"
+print, "  Free space ratio:", (floor_area - obstacle_area) / floor_area * 100, "%"
+
+; Traversability analysis
+traversable_cells = 0
+for i = 0, map_width * map_height - 1
+    traversable_cells = inflated_costmap[i] lt 0.5 ? traversable_cells + 1 : traversable_cells
+endfor
+
+print, ""
+print, "Traversability analysis:"
+print, "  Traversable cells:", traversable_cells, "/", map_width * map_height
+print, "  Traversability ratio:", traversable_cells * 100.0 / (map_width * map_height), "%"
+
+; Safety assessment
+avg_confidence = 0.0
+for i = 0, num_points - 1
+    avg_confidence = avg_confidence + point_confidence[i]
+endfor
+avg_confidence = avg_confidence / num_points
+
+print, ""
+print, "Perception confidence:", avg_confidence * 100, "%"
+print, "Navigation feasibility: HIGH"
+
+print, ""
+print, "======================================================"
+print, "    SCENE UNDERSTANDING COMPLETE"
+print, "======================================================"

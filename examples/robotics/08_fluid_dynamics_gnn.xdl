@@ -1,0 +1,305 @@
+; ============================================
+; Fluid Dynamics Prediction with GNN
+; ============================================
+; Implements SPH (Smoothed Particle Hydrodynamics)
+; with learned correction for robotic fluid manipulation
+;
+; Run with: cargo run -- examples/robotics/08_fluid_dynamics_gnn.xdl
+
+print, "======================================================"
+print, "    FLUID DYNAMICS - SPH WITH GNN"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Fluid Configuration
+; --------------------------------------
+print, "Initializing fluid particles..."
+
+; Domain size
+domain_x = 2.0  ; meters
+domain_y = 1.0
+domain_z = 1.0
+
+; Particle configuration
+particle_spacing = 0.05  ; meters
+num_particles_x = 10
+num_particles_y = 10
+num_particles_z = 5
+num_particles = num_particles_x * num_particles_y * num_particles_z
+
+print, "Domain:", domain_x, "x", domain_y, "x", domain_z, "m"
+print, "Particles:", num_particles
+
+; Initialize particle positions (block of fluid)
+pos_x = fltarr(num_particles)
+pos_y = fltarr(num_particles)
+pos_z = fltarr(num_particles)
+vel_x = fltarr(num_particles)
+vel_y = fltarr(num_particles)
+vel_z = fltarr(num_particles)
+density = fltarr(num_particles)
+pressure = fltarr(num_particles)
+
+idx = 0
+for i = 0, num_particles_x - 1
+    for j = 0, num_particles_y - 1
+        for k = 0, num_particles_z - 1
+            pos_x[idx] = 0.1 + i * particle_spacing
+            pos_y[idx] = 0.1 + j * particle_spacing
+            pos_z[idx] = 0.1 + k * particle_spacing
+            idx = idx + 1
+        endfor
+    endfor
+endfor
+
+print, ""
+
+; --------------------------------------
+; SPH Parameters
+; --------------------------------------
+print, "SPH parameters:"
+
+; Physical parameters
+rest_density = 1000.0    ; kg/m^3 (water)
+particle_mass = rest_density * particle_spacing^3
+gas_constant = 2000.0    ; Pressure stiffness
+viscosity = 0.001        ; Dynamic viscosity
+gravity_y = -9.81        ; m/s^2
+
+; Kernel parameters
+kernel_radius = 2.0 * particle_spacing
+
+print, "  Rest density:", rest_density, "kg/m^3"
+print, "  Particle mass:", particle_mass, "kg"
+print, "  Kernel radius:", kernel_radius, "m"
+print, "  Viscosity:", viscosity
+print, ""
+
+; --------------------------------------
+; GNN for Learned Physics Correction
+; --------------------------------------
+print, "Initializing GNN physics corrector..."
+
+; The GNN learns residual corrections to SPH
+; Node features: position, velocity, density, pressure
+; Edge features: relative position, distance
+
+gnn_hidden_dim = 64
+gnn_num_layers = 3
+
+print, "  Hidden dimension:", gnn_hidden_dim
+print, "  Message passing layers:", gnn_num_layers
+print, ""
+
+; Learned correction weights (pre-trained, simulated)
+; These would normally come from training on high-fidelity simulation
+correction_scale = 0.1  ; Scale factor for GNN corrections
+
+; --------------------------------------
+; SPH Kernel Functions
+; --------------------------------------
+; Poly6 kernel for density
+; W(r, h) = 315 / (64 * pi * h^9) * (h^2 - r^2)^3
+
+; Spiky kernel for pressure
+; W_spiky(r, h) = 15 / (pi * h^6) * (h - r)^3
+
+pi = 3.14159265
+
+; --------------------------------------
+; Simulation Loop
+; --------------------------------------
+print, "Running fluid simulation..."
+print, ""
+
+dt = 0.001  ; Time step (small for stability)
+num_steps = 100
+
+print, "Time step:", dt, "s"
+print, "Simulation steps:", num_steps
+print, ""
+
+for step = 0, num_steps - 1
+
+    ; Step 1: Compute density for each particle
+    for i = 0, num_particles - 1
+        density[i] = 0.0
+
+        for j = 0, num_particles - 1
+            dx = pos_x[i] - pos_x[j]
+            dy = pos_y[i] - pos_y[j]
+            dz = pos_z[i] - pos_z[j]
+            r = sqrt(dx*dx + dy*dy + dz*dz)
+
+            ; Poly6 kernel
+            cond = r lt kernel_radius
+            h2_r2 = kernel_radius^2 - r^2
+            kernel_val = cond ? 315.0 / (64.0 * pi * kernel_radius^9) * h2_r2^3 : 0.0
+            density[i] = density[i] + particle_mass * kernel_val
+        endfor
+
+        ; Compute pressure using equation of state
+        pressure[i] = gas_constant * (density[i] - rest_density)
+        pressure[i] = pressure[i] > 0 ? pressure[i] : 0.0
+    endfor
+
+    ; Step 2: Compute forces
+    force_x = fltarr(num_particles)
+    force_y = fltarr(num_particles)
+    force_z = fltarr(num_particles)
+
+    for i = 0, num_particles - 1
+        ; Gravity
+        force_y[i] = particle_mass * gravity_y
+
+        ; Pressure and viscosity forces from neighbors
+        for j = 0, num_particles - 1
+            cond = i ne j
+            dx = pos_x[i] - pos_x[j]
+            dy = pos_y[i] - pos_y[j]
+            dz = pos_z[i] - pos_z[j]
+            r = sqrt(dx*dx + dy*dy + dz*dz) + 0.0001
+
+            in_range = cond and r lt kernel_radius
+
+            ; Spiky kernel gradient (for pressure)
+            h_r = kernel_radius - r
+            grad_spiky = in_range ? -45.0 / (pi * kernel_radius^6) * h_r^2 : 0.0
+
+            ; Pressure force (symmetric)
+            p_term = (pressure[i] + pressure[j]) / (2.0 * density[j] + 0.001)
+            f_pressure = particle_mass * p_term * grad_spiky
+
+            force_x[i] = in_range ? force_x[i] - f_pressure * dx / r : force_x[i]
+            force_y[i] = in_range ? force_y[i] - f_pressure * dy / r : force_y[i]
+            force_z[i] = in_range ? force_z[i] - f_pressure * dz / r : force_z[i]
+
+            ; Viscosity force (Laplacian kernel)
+            lap_visc = in_range ? 45.0 / (pi * kernel_radius^6) * (kernel_radius - r) : 0.0
+            visc_term = viscosity * particle_mass / (density[j] + 0.001) * lap_visc
+
+            force_x[i] = in_range ? force_x[i] + visc_term * (vel_x[j] - vel_x[i]) : force_x[i]
+            force_y[i] = in_range ? force_y[i] + visc_term * (vel_y[j] - vel_y[i]) : force_y[i]
+            force_z[i] = in_range ? force_z[i] + visc_term * (vel_z[j] - vel_z[i]) : force_z[i]
+        endfor
+
+        ; GNN learned correction (simulated)
+        ; In practice, this would be a neural network forward pass
+        gnn_correction_x = correction_scale * sin(pos_x[i] * 10.0) * density[i] / rest_density
+        gnn_correction_y = correction_scale * cos(pos_y[i] * 10.0) * density[i] / rest_density
+        gnn_correction_z = correction_scale * sin(pos_z[i] * 10.0) * density[i] / rest_density
+
+        force_x[i] = force_x[i] + gnn_correction_x
+        force_y[i] = force_y[i] + gnn_correction_y
+        force_z[i] = force_z[i] + gnn_correction_z
+    endfor
+
+    ; Step 3: Integration
+    for i = 0, num_particles - 1
+        ; Acceleration
+        acc_x = force_x[i] / particle_mass
+        acc_y = force_y[i] / particle_mass
+        acc_z = force_z[i] / particle_mass
+
+        ; Update velocity
+        vel_x[i] = vel_x[i] + acc_x * dt
+        vel_y[i] = vel_y[i] + acc_y * dt
+        vel_z[i] = vel_z[i] + acc_z * dt
+
+        ; Update position
+        pos_x[i] = pos_x[i] + vel_x[i] * dt
+        pos_y[i] = pos_y[i] + vel_y[i] * dt
+        pos_z[i] = pos_z[i] + vel_z[i] * dt
+
+        ; Boundary conditions (simple reflection)
+        ; X boundaries
+        pos_x[i] = pos_x[i] < 0.01 ? 0.01 : pos_x[i]
+        pos_x[i] = pos_x[i] > domain_x - 0.01 ? domain_x - 0.01 : pos_x[i]
+        vel_x[i] = pos_x[i] le 0.02 or pos_x[i] ge domain_x - 0.02 ? -0.5 * vel_x[i] : vel_x[i]
+
+        ; Y boundaries (floor)
+        pos_y[i] = pos_y[i] < 0.01 ? 0.01 : pos_y[i]
+        pos_y[i] = pos_y[i] > domain_y - 0.01 ? domain_y - 0.01 : pos_y[i]
+        vel_y[i] = pos_y[i] le 0.02 ? -0.5 * vel_y[i] : vel_y[i]
+
+        ; Z boundaries
+        pos_z[i] = pos_z[i] < 0.01 ? 0.01 : pos_z[i]
+        pos_z[i] = pos_z[i] > domain_z - 0.01 ? domain_z - 0.01 : pos_z[i]
+        vel_z[i] = pos_z[i] le 0.02 or pos_z[i] ge domain_z - 0.02 ? -0.5 * vel_z[i] : vel_z[i]
+    endfor
+endfor
+
+; --------------------------------------
+; Results Analysis
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    SIMULATION RESULTS"
+print, "======================================================"
+print, ""
+
+; Compute fluid statistics
+min_y = pos_y[0]
+max_y = pos_y[0]
+avg_density = 0.0
+total_ke = 0.0
+total_pe = 0.0
+
+for i = 0, num_particles - 1
+    min_y = pos_y[i] lt min_y ? pos_y[i] : min_y
+    max_y = pos_y[i] gt max_y ? pos_y[i] : max_y
+    avg_density = avg_density + density[i]
+
+    speed_sq = vel_x[i]^2 + vel_y[i]^2 + vel_z[i]^2
+    total_ke = total_ke + 0.5 * particle_mass * speed_sq
+    total_pe = total_pe + particle_mass * abs(gravity_y) * pos_y[i]
+endfor
+avg_density = avg_density / num_particles
+
+print, "Fluid state:"
+print, "  Fluid height range:", min_y, "-", max_y, "m"
+print, "  Average density:", avg_density, "kg/m^3"
+print, "  Density ratio:", avg_density / rest_density
+
+print, ""
+print, "Energy:"
+print, "  Kinetic energy:", total_ke, "J"
+print, "  Potential energy:", total_pe, "J"
+print, "  Total energy:", total_ke + total_pe, "J"
+
+; Compute center of mass
+com_x = 0.0
+com_y = 0.0
+com_z = 0.0
+for i = 0, num_particles - 1
+    com_x = com_x + pos_x[i]
+    com_y = com_y + pos_y[i]
+    com_z = com_z + pos_z[i]
+endfor
+com_x = com_x / num_particles
+com_y = com_y / num_particles
+com_z = com_z / num_particles
+
+print, ""
+print, "Center of mass: (", com_x, ",", com_y, ",", com_z, ")"
+
+; Velocity statistics
+max_vel = 0.0
+avg_vel = 0.0
+for i = 0, num_particles - 1
+    vel_mag = sqrt(vel_x[i]^2 + vel_y[i]^2 + vel_z[i]^2)
+    max_vel = vel_mag gt max_vel ? vel_mag : max_vel
+    avg_vel = avg_vel + vel_mag
+endfor
+avg_vel = avg_vel / num_particles
+
+print, ""
+print, "Velocity:"
+print, "  Max velocity:", max_vel, "m/s"
+print, "  Avg velocity:", avg_vel, "m/s"
+
+print, ""
+print, "======================================================"
+print, "    FLUID SIMULATION COMPLETE"
+print, "======================================================"

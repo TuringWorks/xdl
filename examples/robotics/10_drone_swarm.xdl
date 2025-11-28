@@ -1,0 +1,314 @@
+; ============================================
+; Drone Swarm Coordination
+; ============================================
+; Implements consensus-based formation control
+; for multi-UAV coordination
+;
+; Run with: cargo run -- examples/robotics/10_drone_swarm.xdl
+
+print, "======================================================"
+print, "    DRONE SWARM COORDINATION"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Swarm Configuration
+; --------------------------------------
+print, "Initializing drone swarm..."
+
+num_drones = 6
+dt = 0.02  ; Time step (50 Hz control)
+
+; 3D positions (x, y, z)
+pos_x = [0.0, 2.0, 4.0, 1.0, 3.0, 2.0]
+pos_y = [0.0, 0.0, 0.0, 2.0, 2.0, 4.0]
+pos_z = [10.0, 10.5, 10.2, 10.8, 10.3, 10.6]
+
+; Velocities
+vel_x = fltarr(num_drones)
+vel_y = fltarr(num_drones)
+vel_z = fltarr(num_drones)
+
+; Drone parameters
+drone_mass = 1.5        ; kg
+max_velocity = 5.0      ; m/s
+max_acceleration = 3.0  ; m/s^2
+
+print, "Number of drones:", num_drones
+print, "Initial altitude range: 10-11m"
+print, ""
+
+; --------------------------------------
+; Communication Graph
+; --------------------------------------
+print, "Communication topology:"
+
+; Adjacency matrix (ring topology + center connections)
+; Each drone can communicate with neighbors
+comm_range = 5.0  ; meters
+
+; Build adjacency based on distance
+adj = intarr(num_drones * num_drones)
+
+for i = 0, num_drones - 1
+    for j = 0, num_drones - 1
+        cond = i ne j
+        dx = pos_x[i] - pos_x[j]
+        dy = pos_y[i] - pos_y[j]
+        dz = pos_z[i] - pos_z[j]
+        dist = sqrt(dx*dx + dy*dy + dz*dz)
+
+        adj[i * num_drones + j] = cond and dist lt comm_range ? 1 : 0
+    endfor
+endfor
+
+; Count connections
+total_edges = 0
+for i = 0, num_drones * num_drones - 1
+    total_edges = total_edges + adj[i]
+endfor
+total_edges = total_edges / 2
+
+print, "  Communication range:", comm_range, "m"
+print, "  Active links:", total_edges
+print, ""
+
+; --------------------------------------
+; Formation Definition
+; --------------------------------------
+print, "Target formation: Hexagon at 15m altitude"
+
+; Target formation (hexagon centered at goal)
+goal_x = 10.0
+goal_y = 10.0
+goal_z = 15.0
+formation_radius = 3.0
+
+; Hexagon positions relative to center
+formation_offset_x = fltarr(num_drones)
+formation_offset_y = fltarr(num_drones)
+formation_offset_z = fltarr(num_drones)
+
+for i = 0, num_drones - 1
+    angle = i * 2.0 * 3.14159 / num_drones
+    formation_offset_x[i] = formation_radius * cos(angle)
+    formation_offset_y[i] = formation_radius * sin(angle)
+    formation_offset_z[i] = 0.0  ; Same altitude
+endfor
+
+print, "  Center: (", goal_x, ",", goal_y, ",", goal_z, ")"
+print, "  Radius:", formation_radius, "m"
+print, ""
+
+for i = 0, num_drones - 1
+    target_x = goal_x + formation_offset_x[i]
+    target_y = goal_y + formation_offset_y[i]
+    print, "  Drone", i + 1, "target: (", target_x, ",", target_y, ",", goal_z, ")"
+endfor
+print, ""
+
+; --------------------------------------
+; Control Parameters
+; --------------------------------------
+print, "Control parameters:"
+
+; Consensus gains
+kp_formation = 1.5   ; Formation position gain
+kp_altitude = 2.0    ; Altitude control gain
+kp_collision = 3.0   ; Collision avoidance gain
+
+; Safety distances
+min_separation = 1.0  ; meters
+
+print, "  Formation gain:", kp_formation
+print, "  Altitude gain:", kp_altitude
+print, "  Min separation:", min_separation, "m"
+print, ""
+
+; --------------------------------------
+; Swarm Control Loop
+; --------------------------------------
+print, "Running formation control..."
+print, ""
+
+num_steps = 200
+
+for step = 0, num_steps - 1
+
+    ; Compute control inputs for each drone
+    cmd_x = fltarr(num_drones)
+    cmd_y = fltarr(num_drones)
+    cmd_z = fltarr(num_drones)
+
+    for i = 0, num_drones - 1
+        ; Target position
+        target_x = goal_x + formation_offset_x[i]
+        target_y = goal_y + formation_offset_y[i]
+        target_z = goal_z
+
+        ; Position error
+        err_x = target_x - pos_x[i]
+        err_y = target_y - pos_y[i]
+        err_z = target_z - pos_z[i]
+
+        ; Formation control
+        cmd_x[i] = kp_formation * err_x
+        cmd_y[i] = kp_formation * err_y
+        cmd_z[i] = kp_altitude * err_z
+
+        ; Collision avoidance with neighbors
+        for j = 0, num_drones - 1
+            cond = i ne j
+            dx = pos_x[i] - pos_x[j]
+            dy = pos_y[i] - pos_y[j]
+            dz = pos_z[i] - pos_z[j]
+            dist = sqrt(dx*dx + dy*dy + dz*dz) + 0.001
+
+            ; Repulsive force if too close
+            too_close = cond and dist lt min_separation * 2
+            repel_mag = too_close ? kp_collision / (dist * dist) : 0.0
+
+            cmd_x[i] = too_close ? cmd_x[i] + repel_mag * dx / dist : cmd_x[i]
+            cmd_y[i] = too_close ? cmd_y[i] + repel_mag * dy / dist : cmd_y[i]
+            cmd_z[i] = too_close ? cmd_z[i] + repel_mag * dz / dist : cmd_z[i]
+        endfor
+
+        ; Consensus with neighbors (velocity matching)
+        neighbor_count = 0
+        neighbor_vx = 0.0
+        neighbor_vy = 0.0
+        neighbor_vz = 0.0
+
+        for j = 0, num_drones - 1
+            is_neighbor = adj[i * num_drones + j] eq 1
+            neighbor_vx = is_neighbor ? neighbor_vx + vel_x[j] : neighbor_vx
+            neighbor_vy = is_neighbor ? neighbor_vy + vel_y[j] : neighbor_vy
+            neighbor_vz = is_neighbor ? neighbor_vz + vel_z[j] : neighbor_vz
+            neighbor_count = is_neighbor ? neighbor_count + 1 : neighbor_count
+        endfor
+
+        neighbor_count = neighbor_count > 0 ? neighbor_count : 1
+        neighbor_vx = neighbor_vx / neighbor_count
+        neighbor_vy = neighbor_vy / neighbor_count
+        neighbor_vz = neighbor_vz / neighbor_count
+
+        ; Velocity consensus
+        cmd_x[i] = cmd_x[i] + 0.3 * (neighbor_vx - vel_x[i])
+        cmd_y[i] = cmd_y[i] + 0.3 * (neighbor_vy - vel_y[i])
+        cmd_z[i] = cmd_z[i] + 0.3 * (neighbor_vz - vel_z[i])
+
+        ; Limit acceleration
+        cmd_mag = sqrt(cmd_x[i]^2 + cmd_y[i]^2 + cmd_z[i]^2) + 0.001
+        cmd_scale = cmd_mag > max_acceleration ? max_acceleration / cmd_mag : 1.0
+        cmd_x[i] = cmd_x[i] * cmd_scale
+        cmd_y[i] = cmd_y[i] * cmd_scale
+        cmd_z[i] = cmd_z[i] * cmd_scale
+    endfor
+
+    ; Update velocities and positions
+    for i = 0, num_drones - 1
+        ; Update velocity
+        vel_x[i] = vel_x[i] + cmd_x[i] * dt
+        vel_y[i] = vel_y[i] + cmd_y[i] * dt
+        vel_z[i] = vel_z[i] + cmd_z[i] * dt
+
+        ; Limit velocity
+        vel_mag = sqrt(vel_x[i]^2 + vel_y[i]^2 + vel_z[i]^2) + 0.001
+        vel_scale = vel_mag > max_velocity ? max_velocity / vel_mag : 1.0
+        vel_x[i] = vel_x[i] * vel_scale
+        vel_y[i] = vel_y[i] * vel_scale
+        vel_z[i] = vel_z[i] * vel_scale
+
+        ; Update position
+        pos_x[i] = pos_x[i] + vel_x[i] * dt
+        pos_y[i] = pos_y[i] + vel_y[i] * dt
+        pos_z[i] = pos_z[i] + vel_z[i] * dt
+    endfor
+
+    ; Update communication graph
+    for i = 0, num_drones - 1
+        for j = 0, num_drones - 1
+            cond = i ne j
+            dx = pos_x[i] - pos_x[j]
+            dy = pos_y[i] - pos_y[j]
+            dz = pos_z[i] - pos_z[j]
+            dist = sqrt(dx*dx + dy*dy + dz*dz)
+            adj[i * num_drones + j] = cond and dist lt comm_range ? 1 : 0
+        endfor
+    endfor
+endfor
+
+; --------------------------------------
+; Final State Analysis
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    FORMATION RESULTS"
+print, "======================================================"
+print, ""
+
+; Compute formation error
+total_error = 0.0
+for i = 0, num_drones - 1
+    target_x = goal_x + formation_offset_x[i]
+    target_y = goal_y + formation_offset_y[i]
+    target_z = goal_z
+
+    err = sqrt((pos_x[i] - target_x)^2 + (pos_y[i] - target_y)^2 + (pos_z[i] - target_z)^2)
+    total_error = total_error + err
+endfor
+avg_error = total_error / num_drones
+
+print, "Formation accuracy:"
+print, "  Average position error:", avg_error, "m"
+
+; Check minimum separation
+min_dist = 1e10
+for i = 0, num_drones - 2
+    for j = i + 1, num_drones - 1
+        dx = pos_x[i] - pos_x[j]
+        dy = pos_y[i] - pos_y[j]
+        dz = pos_z[i] - pos_z[j]
+        dist = sqrt(dx*dx + dy*dy + dz*dz)
+        min_dist = dist lt min_dist ? dist : min_dist
+    endfor
+endfor
+
+print, "  Minimum separation:", min_dist, "m"
+print, "  Collision-free:", min_dist gt min_separation ? "YES" : "NO"
+
+; Swarm centroid
+centroid_x = 0.0
+centroid_y = 0.0
+centroid_z = 0.0
+for i = 0, num_drones - 1
+    centroid_x = centroid_x + pos_x[i]
+    centroid_y = centroid_y + pos_y[i]
+    centroid_z = centroid_z + pos_z[i]
+endfor
+centroid_x = centroid_x / num_drones
+centroid_y = centroid_y / num_drones
+centroid_z = centroid_z / num_drones
+
+print, ""
+print, "Swarm centroid: (", centroid_x, ",", centroid_y, ",", centroid_z, ")"
+
+; Final drone positions
+print, ""
+print, "Final drone positions:"
+for i = 0, num_drones - 1
+    vel_mag = sqrt(vel_x[i]^2 + vel_y[i]^2 + vel_z[i]^2)
+    print, "  Drone", i + 1, ": (", pos_x[i], ",", pos_y[i], ",", pos_z[i], ") vel=", vel_mag, "m/s"
+endfor
+
+; Coverage analysis
+covered_area = 3.14159 * formation_radius^2
+print, ""
+print, "Coverage:"
+print, "  Formation radius:", formation_radius, "m"
+print, "  Covered area:", covered_area, "m^2"
+
+print, ""
+print, "======================================================"
+print, "    DRONE SWARM COORDINATION COMPLETE"
+print, "======================================================"

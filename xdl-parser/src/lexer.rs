@@ -105,6 +105,7 @@ pub enum Token {
     DoubleColon,  // ::
     Dot,          // .
     Arrow,        // ->
+    QuestionMark, // ?
 
     // Special
     Identifier(String),
@@ -263,6 +264,7 @@ fn parse_operator(input: &str) -> ParseResult<'_, Token> {
         value(Token::Multiply, char('*')),
         value(Token::Divide, char('/')),
         value(Token::Assign, char('=')),
+        value(Token::QuestionMark, char('?')),
     ))(input)
 }
 

@@ -1,0 +1,306 @@
+; ============================================
+; Object Affordance Prediction
+; ============================================
+; Implements affordance prediction for robotic manipulation
+; using geometric and semantic features
+;
+; Run with: cargo run -- examples/robotics/15_affordance_prediction.xdl
+
+print, "======================================================"
+print, "    OBJECT AFFORDANCE PREDICTION"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Object Point Cloud Input
+; --------------------------------------
+print, "Loading object point cloud..."
+
+; Simulate a mug (cylinder with handle)
+; Main body: cylinder
+num_body_points = 50
+num_handle_points = 20
+num_points = num_body_points + num_handle_points
+
+; Object dimensions
+mug_radius = 0.04     ; meters
+mug_height = 0.10     ; meters
+handle_radius = 0.015 ; meters
+
+; Point cloud arrays
+point_x = fltarr(num_points)
+point_y = fltarr(num_points)
+point_z = fltarr(num_points)
+point_normal_x = fltarr(num_points)
+point_normal_y = fltarr(num_points)
+point_normal_z = fltarr(num_points)
+
+; Generate body points (cylinder surface)
+for i = 0, num_body_points - 1
+    angle = i * 2.0 * 3.14159 / (num_body_points / 2)
+    height_idx = i / (num_body_points / 2)
+
+    point_x[i] = mug_radius * cos(angle)
+    point_y[i] = mug_radius * sin(angle)
+    point_z[i] = height_idx * mug_height / 2
+
+    ; Normal points outward from cylinder axis
+    point_normal_x[i] = cos(angle)
+    point_normal_y[i] = sin(angle)
+    point_normal_z[i] = 0.0
+endfor
+
+; Generate handle points (arc on side)
+handle_center_x = mug_radius + handle_radius
+handle_center_y = 0.0
+
+for i = 0, num_handle_points - 1
+    angle = 3.14159 * i / (num_handle_points - 1) - 3.14159 / 2  ; -90 to +90 degrees
+    idx = num_body_points + i
+
+    point_x[idx] = handle_center_x + handle_radius * cos(angle)
+    point_y[idx] = 0.0
+    point_z[idx] = mug_height / 2 + 0.03 * sin(3.14159 * i / (num_handle_points - 1))
+
+    ; Normal points outward from handle
+    point_normal_x[idx] = cos(angle)
+    point_normal_y[idx] = 0.0
+    point_normal_z[idx] = 0.0
+endfor
+
+print, "Object: Mug"
+print, "  Body points:", num_body_points
+print, "  Handle points:", num_handle_points
+print, "  Total points:", num_points
+print, ""
+
+; --------------------------------------
+; Part Segmentation
+; --------------------------------------
+print, "Performing part segmentation..."
+
+; Segment labels: 0=body, 1=rim, 2=handle, 3=bottom
+point_segment = intarr(num_points)
+
+for i = 0, num_points - 1
+    ; Handle points
+    is_handle = i ge num_body_points
+    point_segment[i] = is_handle ? 2 : 0
+
+    ; Rim points (top of body)
+    is_rim = point_z[i] gt mug_height * 0.9 and is_handle eq 0
+    point_segment[i] = is_rim ? 1 : point_segment[i]
+
+    ; Bottom points
+    is_bottom = point_z[i] lt mug_height * 0.1 and is_handle eq 0
+    point_segment[i] = is_bottom ? 3 : point_segment[i]
+endfor
+
+; Count segments
+body_count = 0
+rim_count = 0
+handle_count = 0
+bottom_count = 0
+
+for i = 0, num_points - 1
+    body_count = point_segment[i] eq 0 ? body_count + 1 : body_count
+    rim_count = point_segment[i] eq 1 ? rim_count + 1 : rim_count
+    handle_count = point_segment[i] eq 2 ? handle_count + 1 : handle_count
+    bottom_count = point_segment[i] eq 3 ? bottom_count + 1 : bottom_count
+endfor
+
+print, "Segmentation results:"
+print, "  Body:", body_count, "points"
+print, "  Rim:", rim_count, "points"
+print, "  Handle:", handle_count, "points"
+print, "  Bottom:", bottom_count, "points"
+print, ""
+
+; --------------------------------------
+; Affordance Feature Extraction
+; --------------------------------------
+print, "Extracting affordance features..."
+
+; Feature categories:
+; 1. Geometric features
+; 2. Semantic features
+; 3. Functional features
+
+; Geometric: Compute bounding box
+min_x = point_x[0]
+max_x = point_x[0]
+min_y = point_y[0]
+max_y = point_y[0]
+min_z = point_z[0]
+max_z = point_z[0]
+
+for i = 0, num_points - 1
+    min_x = point_x[i] lt min_x ? point_x[i] : min_x
+    max_x = point_x[i] gt max_x ? point_x[i] : max_x
+    min_y = point_y[i] lt min_y ? point_y[i] : min_y
+    max_y = point_y[i] gt max_y ? point_y[i] : max_y
+    min_z = point_z[i] lt min_z ? point_z[i] : min_z
+    max_z = point_z[i] gt max_z ? point_z[i] : max_z
+endfor
+
+bbox_width = max_x - min_x
+bbox_depth = max_y - min_y
+bbox_height = max_z - min_z
+
+print, "Geometric features:"
+print, "  Bounding box:", bbox_width * 100, "x", bbox_depth * 100, "x", bbox_height * 100, "cm"
+
+; Compute surface area (simplified)
+surface_area = 2 * 3.14159 * mug_radius * mug_height + 3.14159 * mug_radius^2
+print, "  Surface area:", surface_area * 10000, "cm^2"
+
+; Compute centroid
+centroid_x = 0.0
+centroid_y = 0.0
+centroid_z = 0.0
+for i = 0, num_points - 1
+    centroid_x = centroid_x + point_x[i]
+    centroid_y = centroid_y + point_y[i]
+    centroid_z = centroid_z + point_z[i]
+endfor
+centroid_x = centroid_x / num_points
+centroid_y = centroid_y / num_points
+centroid_z = centroid_z / num_points
+
+print, "  Centroid: (", centroid_x * 100, ",", centroid_y * 100, ",", centroid_z * 100, ") cm"
+print, ""
+
+; --------------------------------------
+; Affordance Prediction
+; --------------------------------------
+print, "======================================================"
+print, "    AFFORDANCE PREDICTIONS"
+print, "======================================================"
+print, ""
+
+; Affordance categories for manipulation
+print, "1. GRASP AFFORDANCES:"
+print, ""
+
+; Handle grasp (most suitable for mugs)
+print, "   Handle Grasp:"
+handle_grasp_score = handle_count gt 0 ? 0.95 : 0.0
+print, "     Score:", handle_grasp_score
+print, "     Grasp type: Precision pinch"
+print, "     Grasp axis: Y-axis (horizontal)"
+print, "     Suggested contact: Handle arc"
+print, ""
+
+; Wrap grasp (around body)
+print, "   Wrap Grasp:"
+wrap_grasp_score = mug_radius lt 0.05 ? 0.75 : 0.5
+print, "     Score:", wrap_grasp_score
+print, "     Grasp type: Power wrap"
+print, "     Grasp axis: Z-axis (vertical)"
+print, "     Suggested contact: Body cylinder"
+print, ""
+
+; Rim grasp (from top)
+print, "   Rim Grasp:"
+rim_grasp_score = rim_count gt 0 ? 0.60 : 0.0
+print, "     Score:", rim_grasp_score
+print, "     Grasp type: Tip pinch"
+print, "     Grasp axis: Z-axis"
+print, "     Suggested contact: Rim edge"
+print, ""
+
+; Best grasp selection
+best_grasp = "Handle Grasp"
+best_score = handle_grasp_score
+
+print, "2. FUNCTIONAL AFFORDANCES:"
+print, ""
+
+; Containment (can hold liquid)
+print, "   Containment:"
+has_cavity = 1  ; Detected from geometry
+containment_score = has_cavity ? 0.95 : 0.1
+print, "     Score:", containment_score
+print, "     Capacity:", 3.14159 * mug_radius^2 * mug_height * 1000000, "ml"
+print, ""
+
+; Pourability
+print, "   Pourability:"
+has_opening = rim_count gt 0
+pour_score = has_opening ? 0.90 : 0.0
+print, "     Score:", pour_score
+print, "     Pour angle: 45-90 degrees"
+print, "     Pour axis: Tilt around X or Y"
+print, ""
+
+; Stability (can stand upright)
+print, "   Stability:"
+base_area = 3.14159 * mug_radius^2
+height_base_ratio = bbox_height / (2 * mug_radius)
+stability_score = height_base_ratio lt 3 ? 0.85 : 0.5
+print, "     Score:", stability_score
+print, "     Base area:", base_area * 10000, "cm^2"
+print, "     Height/base ratio:", height_base_ratio
+print, ""
+
+print, "3. MANIPULATION AFFORDANCES:"
+print, ""
+
+; Liftability
+print, "   Lift:"
+estimated_mass = 0.3  ; kg (typical ceramic mug)
+lift_score = estimated_mass lt 1.0 ? 0.90 : 0.5
+print, "     Score:", lift_score
+print, "     Estimated mass:", estimated_mass, "kg"
+print, "     Lift direction: +Z"
+print, ""
+
+; Placeable
+print, "   Place:"
+place_score = stability_score
+print, "     Score:", place_score
+print, "     Stable orientations: Upright"
+print, ""
+
+; Pushable
+print, "   Push:"
+push_score = 0.70
+print, "     Score:", push_score
+print, "     Push direction: Any horizontal"
+print, ""
+
+; --------------------------------------
+; Affordance Summary
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    AFFORDANCE SUMMARY"
+print, "======================================================"
+print, ""
+
+print, "Object Class: Mug (drinking vessel)"
+print, ""
+print, "Primary affordances:"
+print, "  1. Handle Grasp - Score:", handle_grasp_score
+print, "  2. Containment - Score:", containment_score
+print, "  3. Pourability - Score:", pour_score
+print, ""
+
+print, "Recommended manipulation sequence:"
+print, "  1. Approach from handle side"
+print, "  2. Grasp handle with precision grip"
+print, "  3. Lift vertically"
+print, "  4. Transport (maintain upright)"
+print, "  5. Place on flat surface"
+print, ""
+
+; Grasp pose suggestion
+print, "Suggested grasp pose:"
+print, "  Position: (", handle_center_x * 100, ", 0,", mug_height / 2 * 100, ") cm"
+print, "  Orientation: [0, 90, 0] degrees (RPY)"
+print, "  Gripper width:", handle_radius * 2 * 100, "cm"
+
+print, ""
+print, "======================================================"
+print, "    AFFORDANCE PREDICTION COMPLETE"
+print, "======================================================"

@@ -1,0 +1,277 @@
+; ============================================
+; Manipulation Skill Learning
+; ============================================
+; Implements Dynamic Movement Primitives (DMP)
+; for learning and reproducing manipulation skills
+;
+; Run with: cargo run -- examples/robotics/05_manipulation_learning.xdl
+
+print, "======================================================"
+print, "    MANIPULATION SKILL LEARNING - DMPs"
+print, "======================================================"
+print, ""
+
+; --------------------------------------
+; Demonstration Trajectory
+; --------------------------------------
+print, "Loading demonstration trajectory..."
+
+; Demonstrated trajectory for pick-and-place task
+; Trajectory in 3D Cartesian space
+num_demo_points = 20
+demo_time = findgen(num_demo_points) / (num_demo_points - 1)  ; 0 to 1
+
+; X trajectory (approach, grasp, lift, move, place)
+demo_x = fltarr(num_demo_points)
+demo_y = fltarr(num_demo_points)
+demo_z = fltarr(num_demo_points)
+
+for i = 0, num_demo_points - 1
+    t = demo_time[i]
+    ; Smooth trajectory using sigmoid-like profile
+    phase = 3.14159 * t
+    demo_x[i] = 0.3 + 0.2 * sin(phase)
+    demo_y[i] = 0.0 + 0.3 * t
+    demo_z[i] = 0.1 + 0.15 * sin(phase) * (1.0 - t)
+endfor
+
+; Start and goal positions
+start_x = demo_x[0]
+start_y = demo_y[0]
+start_z = demo_z[0]
+goal_x = demo_x[num_demo_points - 1]
+goal_y = demo_y[num_demo_points - 1]
+goal_z = demo_z[num_demo_points - 1]
+
+print, "Demonstration: Pick-and-place task"
+print, "  Duration: 1.0 seconds"
+print, "  Waypoints:", num_demo_points
+print, "  Start: (", start_x, ",", start_y, ",", start_z, ")"
+print, "  Goal:  (", goal_x, ",", goal_y, ",", goal_z, ")"
+print, ""
+
+; --------------------------------------
+; DMP Parameters
+; --------------------------------------
+print, "Configuring Dynamic Movement Primitive..."
+
+; Number of basis functions
+num_basis = 10
+alpha_z = 25.0  ; Spring constant
+beta_z = alpha_z / 4.0  ; Damping
+alpha_x = 1.0  ; Canonical system decay
+
+print, "DMP parameters:"
+print, "  Basis functions:", num_basis
+print, "  Spring constant (alpha_z):", alpha_z
+print, "  Damping (beta_z):", beta_z
+print, ""
+
+; --------------------------------------
+; Basis Functions Setup
+; --------------------------------------
+print, "Setting up radial basis functions..."
+
+; Centers of basis functions (spread along phase)
+centers = fltarr(num_basis)
+widths = fltarr(num_basis)
+
+for i = 0, num_basis - 1
+    ; Spread centers logarithmically
+    centers[i] = exp(-alpha_x * i / (num_basis - 1))
+    widths[i] = 0.5 / (num_basis * num_basis)
+endfor
+
+print, "  Basis function centers: logarithmically spaced"
+print, ""
+
+; --------------------------------------
+; Learn Forcing Function Weights
+; --------------------------------------
+print, "Learning forcing function from demonstration..."
+
+; Compute desired forcing function from demo
+; f_target = tau^2 * ddemo - alpha_z * (beta_z * (goal - demo) - tau * d_demo)
+
+tau = 1.0  ; Time scaling
+weights_x = fltarr(num_basis)
+weights_y = fltarr(num_basis)
+weights_z = fltarr(num_basis)
+
+; Simplified weight learning using regression
+for b = 0, num_basis - 1
+    sum_psi = 0.0
+    sum_psi_f_x = 0.0
+    sum_psi_f_y = 0.0
+    sum_psi_f_z = 0.0
+
+    for i = 1, num_demo_points - 2
+        t = demo_time[i]
+        x = exp(-alpha_x * t)  ; Canonical system state
+
+        ; Compute basis function activation
+        psi = exp(-widths[b] * (x - centers[b])^2)
+
+        ; Compute velocity and acceleration from demo
+        dt = 1.0 / (num_demo_points - 1)
+        dx = (demo_x[i+1] - demo_x[i-1]) / (2.0 * dt)
+        dy = (demo_y[i+1] - demo_y[i-1]) / (2.0 * dt)
+        dz = (demo_z[i+1] - demo_z[i-1]) / (2.0 * dt)
+
+        ddx = (demo_x[i+1] - 2.0*demo_x[i] + demo_x[i-1]) / (dt * dt)
+        ddy = (demo_y[i+1] - 2.0*demo_y[i] + demo_y[i-1]) / (dt * dt)
+        ddz = (demo_z[i+1] - 2.0*demo_z[i] + demo_z[i-1]) / (dt * dt)
+
+        ; Target forcing function
+        f_target_x = tau*tau*ddx - alpha_z*(beta_z*(goal_x - demo_x[i]) - tau*dx)
+        f_target_y = tau*tau*ddy - alpha_z*(beta_z*(goal_y - demo_y[i]) - tau*dy)
+        f_target_z = tau*tau*ddz - alpha_z*(beta_z*(goal_z - demo_z[i]) - tau*dz)
+
+        ; Accumulate for regression
+        sum_psi = sum_psi + psi * x * x
+        sum_psi_f_x = sum_psi_f_x + psi * x * f_target_x
+        sum_psi_f_y = sum_psi_f_y + psi * x * f_target_y
+        sum_psi_f_z = sum_psi_f_z + psi * x * f_target_z
+    endfor
+
+    ; Compute weights
+    weights_x[b] = sum_psi_f_x / (sum_psi + 1e-10)
+    weights_y[b] = sum_psi_f_y / (sum_psi + 1e-10)
+    weights_z[b] = sum_psi_f_z / (sum_psi + 1e-10)
+endfor
+
+print, "  Weights learned for X, Y, Z dimensions"
+print, ""
+
+; --------------------------------------
+; Reproduce Trajectory with New Goal
+; --------------------------------------
+print, "Reproducing trajectory with new goal..."
+
+; New goal position
+new_goal_x = goal_x + 0.1  ; Shifted goal
+new_goal_y = goal_y + 0.05
+new_goal_z = goal_z
+
+print, "New goal: (", new_goal_x, ",", new_goal_y, ",", new_goal_z, ")"
+
+; Integrate DMP
+num_repro_points = 50
+repro_dt = tau / num_repro_points
+
+repro_x = fltarr(num_repro_points)
+repro_y = fltarr(num_repro_points)
+repro_z = fltarr(num_repro_points)
+
+; Initial state
+curr_x = start_x
+curr_y = start_y
+curr_z = start_z
+curr_dx = 0.0
+curr_dy = 0.0
+curr_dz = 0.0
+canonical_x = 1.0
+
+print, ""
+print, "Integrating DMP..."
+
+for i = 0, num_repro_points - 1
+    repro_x[i] = curr_x
+    repro_y[i] = curr_y
+    repro_z[i] = curr_z
+
+    ; Compute forcing function
+    force_x = 0.0
+    force_y = 0.0
+    force_z = 0.0
+    psi_sum = 0.0
+
+    for b = 0, num_basis - 1
+        psi = exp(-widths[b] * (canonical_x - centers[b])^2)
+        psi_sum = psi_sum + psi
+        force_x = force_x + psi * weights_x[b]
+        force_y = force_y + psi * weights_y[b]
+        force_z = force_z + psi * weights_z[b]
+    endfor
+
+    force_x = force_x * canonical_x / (psi_sum + 1e-10) * (new_goal_x - start_x)
+    force_y = force_y * canonical_x / (psi_sum + 1e-10) * (new_goal_y - start_y)
+    force_z = force_z * canonical_x / (psi_sum + 1e-10) * (new_goal_z - start_z)
+
+    ; DMP acceleration
+    ddx = alpha_z * (beta_z * (new_goal_x - curr_x) - curr_dx) + force_x
+    ddy = alpha_z * (beta_z * (new_goal_y - curr_y) - curr_dy) + force_y
+    ddz = alpha_z * (beta_z * (new_goal_z - curr_z) - curr_dz) + force_z
+
+    ; Update state
+    curr_dx = curr_dx + ddx * repro_dt / tau
+    curr_dy = curr_dy + ddy * repro_dt / tau
+    curr_dz = curr_dz + ddz * repro_dt / tau
+
+    curr_x = curr_x + curr_dx * repro_dt
+    curr_y = curr_y + curr_dy * repro_dt
+    curr_z = curr_z + curr_dz * repro_dt
+
+    ; Update canonical system
+    canonical_x = canonical_x - alpha_x * canonical_x * repro_dt
+endfor
+
+print, "  Generated", num_repro_points, "trajectory points"
+
+; --------------------------------------
+; Trajectory Analysis
+; --------------------------------------
+print, ""
+print, "======================================================"
+print, "    TRAJECTORY ANALYSIS"
+print, "======================================================"
+print, ""
+
+; Compute trajectory length
+path_length = 0.0
+for i = 1, num_repro_points - 1
+    dx = repro_x[i] - repro_x[i-1]
+    dy = repro_y[i] - repro_y[i-1]
+    dz = repro_z[i] - repro_z[i-1]
+    path_length = path_length + sqrt(dx*dx + dy*dy + dz*dz)
+endfor
+
+print, "Reproduced trajectory:"
+print, "  Start: (", repro_x[0], ",", repro_y[0], ",", repro_z[0], ")"
+print, "  End:   (", repro_x[num_repro_points-1], ",", repro_y[num_repro_points-1], ",", repro_z[num_repro_points-1], ")"
+print, "  Length:", path_length, "m"
+
+; Goal error
+goal_err_x = repro_x[num_repro_points-1] - new_goal_x
+goal_err_y = repro_y[num_repro_points-1] - new_goal_y
+goal_err_z = repro_z[num_repro_points-1] - new_goal_z
+goal_error = sqrt(goal_err_x^2 + goal_err_y^2 + goal_err_z^2)
+
+print, "  Goal error:", goal_error * 1000, "mm"
+
+; Smoothness (average jerk)
+avg_jerk = 0.0
+for i = 2, num_repro_points - 2
+    dt = repro_dt
+    ; Approximate jerk
+    jerk_x = (repro_x[i+1] - 3*repro_x[i] + 3*repro_x[i-1] - repro_x[i-2]) / (dt^3)
+    jerk_y = (repro_y[i+1] - 3*repro_y[i] + 3*repro_y[i-1] - repro_y[i-2]) / (dt^3)
+    jerk_z = (repro_z[i+1] - 3*repro_z[i] + 3*repro_z[i-1] - repro_z[i-2]) / (dt^3)
+    avg_jerk = avg_jerk + sqrt(jerk_x^2 + jerk_y^2 + jerk_z^2)
+endfor
+avg_jerk = avg_jerk / (num_repro_points - 4)
+
+print, "  Smoothness (avg jerk):", avg_jerk
+
+; Print sample waypoints
+print, ""
+print, "Sample waypoints:"
+for i = 0, 4
+    idx = i * (num_repro_points - 1) / 4
+    print, "  t=", i * 0.25, "s: (", repro_x[idx], ",", repro_y[idx], ",", repro_z[idx], ")"
+endfor
+
+print, ""
+print, "======================================================"
+print, "    MANIPULATION LEARNING COMPLETE"
+print, "======================================================"
