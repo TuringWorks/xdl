@@ -12,10 +12,10 @@ fn main() {
 
     #[cfg(feature = "cuda")]
     {
-        use xdl_amp::cuda::CudaDevice;
-        use xdl_amp::backend::GpuDevice;
-        use xdl_amp::stats::GLOBAL_STATS;
         use std::time::Instant;
+        use xdl_amp::backend::GpuDevice;
+        use xdl_amp::cuda::CudaDevice;
+        use xdl_amp::stats::GLOBAL_STATS;
 
         // Check CUDA availability
         println!("Checking CUDA availability...");
@@ -205,11 +205,18 @@ fn main() {
         }
 
         print!("Testing CUDA log_f32... ");
-        let x = vec![1.0f32, std::f32::consts::E, std::f32::consts::E * std::f32::consts::E];
+        let x = vec![
+            1.0f32,
+            std::f32::consts::E,
+            std::f32::consts::E * std::f32::consts::E,
+        ];
         let mut y = vec![0.0f32; 3];
         match device.log_f32(&x, &mut y) {
             Ok(_) => {
-                if (y[0] - 0.0).abs() < 1e-5 && (y[1] - 1.0).abs() < 1e-4 && (y[2] - 2.0).abs() < 1e-3 {
+                if (y[0] - 0.0).abs() < 1e-5
+                    && (y[1] - 1.0).abs() < 1e-4
+                    && (y[2] - 2.0).abs() < 1e-3
+                {
                     println!("PASSED");
                 } else {
                     println!("FAILED");
@@ -327,8 +334,8 @@ fn main() {
         // Test 13: Large Matrix Multiplication
         print!("Testing CUDA matmul_f32 (256x256)... ");
         let n = 256;
-        let a: Vec<f32> = (0..n*n).map(|i| (i % 10) as f32 / 10.0).collect();
-        let b: Vec<f32> = (0..n*n).map(|i| (i % 10) as f32 / 10.0).collect();
+        let a: Vec<f32> = (0..n * n).map(|i| (i % 10) as f32 / 10.0).collect();
+        let b: Vec<f32> = (0..n * n).map(|i| (i % 10) as f32 / 10.0).collect();
         let mut c = vec![0.0f32; n * n];
         let start = Instant::now();
         match device.matmul_f32(&a, &b, &mut c, n, n, n) {
@@ -337,7 +344,11 @@ fn main() {
                 // Verify a sample of results
                 let sum: f32 = c.iter().sum();
                 if sum.is_finite() && sum > 0.0 {
-                    println!("PASSED ({:.2}ms, sum={})", elapsed.as_secs_f64() * 1000.0, sum);
+                    println!(
+                        "PASSED ({:.2}ms, sum={})",
+                        elapsed.as_secs_f64() * 1000.0,
+                        sum
+                    );
                 } else {
                     println!("FAILED (invalid result)");
                     all_passed = false;
@@ -388,12 +399,15 @@ fn main() {
         let avg_ms = elapsed.as_secs_f64() * 1000.0 / iterations as f64;
         let throughput = (n as f64 * 3.0 * 4.0) / (avg_ms / 1000.0) / 1e9; // GB/s (read a, b, write c)
 
-        println!("  Add (10M elements): {:.2}ms avg, {:.1} GB/s", avg_ms, throughput);
+        println!(
+            "  Add (10M elements): {:.2}ms avg, {:.1} GB/s",
+            avg_ms, throughput
+        );
 
         // MatMul benchmark
         let n = 512;
-        let a: Vec<f32> = (0..n*n).map(|i| (i % 100) as f32 / 100.0).collect();
-        let b: Vec<f32> = (0..n*n).map(|i| (i % 100) as f32 / 100.0).collect();
+        let a: Vec<f32> = (0..n * n).map(|i| (i % 100) as f32 / 100.0).collect();
+        let b: Vec<f32> = (0..n * n).map(|i| (i % 100) as f32 / 100.0).collect();
         let mut c = vec![0.0f32; n * n];
 
         // Warm up
@@ -410,7 +424,10 @@ fn main() {
         let avg_ms = elapsed.as_secs_f64() * 1000.0 / iterations as f64;
         let gflops = (2.0 * (n as f64).powi(3)) / (avg_ms / 1000.0) / 1e9;
 
-        println!("  MatMul (512x512): {:.2}ms avg, {:.1} GFLOPS", avg_ms, gflops);
+        println!(
+            "  MatMul (512x512): {:.2}ms avg, {:.1} GFLOPS",
+            avg_ms, gflops
+        );
     }
 
     #[cfg(not(feature = "cuda"))]
@@ -426,5 +443,8 @@ fn verify_vec(actual: &[f32], expected: &[f32], tolerance: f32) -> bool {
     if actual.len() != expected.len() {
         return false;
     }
-    actual.iter().zip(expected.iter()).all(|(a, e)| (a - e).abs() < tolerance)
+    actual
+        .iter()
+        .zip(expected.iter())
+        .all(|(a, e)| (a - e).abs() < tolerance)
 }

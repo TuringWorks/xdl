@@ -7,13 +7,13 @@ use std::fmt;
 
 /// Generic XDL array container
 #[derive(Debug, Clone)]
-pub struct GdlArray<T> {
+pub struct XdlArray<T> {
     data: ArrayD<T>,
     dimensions: Dimension,
     gdl_type: GdlType,
 }
 
-impl<T> GdlArray<T>
+impl<T> XdlArray<T>
 where
     T: Clone + Default + fmt::Debug + Send + Sync + 'static,
 {
@@ -229,14 +229,14 @@ where
 }
 
 // Implementations for specific types
-pub type ByteArray = GdlArray<u8>;
-pub type IntArray = GdlArray<i16>;
-pub type LongArray = GdlArray<i32>;
-pub type FloatArray = GdlArray<f32>;
-pub type DoubleArray = GdlArray<f64>;
-pub type ComplexArray = GdlArray<Complex32>;
-pub type DComplexArray = GdlArray<Complex64>;
-pub type StringArray = GdlArray<String>;
+pub type ByteArray = XdlArray<u8>;
+pub type IntArray = XdlArray<i16>;
+pub type LongArray = XdlArray<i32>;
+pub type FloatArray = XdlArray<f32>;
+pub type DoubleArray = XdlArray<f64>;
+pub type ComplexArray = XdlArray<Complex32>;
+pub type DComplexArray = XdlArray<Complex64>;
+pub type StringArray = XdlArray<String>;
 
 // Implement GdlData trait for typed arrays
 macro_rules! impl_gdl_data {
@@ -283,7 +283,7 @@ impl_gdl_data!(DComplexArray, GdlType::DComplex);
 impl_gdl_data!(StringArray, GdlType::String);
 
 /// Helper functions for creating arrays from XdlValue
-impl GdlArray<f64> {
+impl XdlArray<f64> {
     /// Create from XdlValue (converting to double)
     pub fn from_gdl_value(value: &XdlValue) -> XdlResult<Self> {
         let double_val = value.to_double()?;

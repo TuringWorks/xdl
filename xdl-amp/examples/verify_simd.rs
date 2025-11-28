@@ -22,7 +22,9 @@ fn main() {
     // Test 1: Element-wise Addition
     print!("Testing add_f32... ");
     let a = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
-    let b = vec![10.0f32, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0];
+    let b = vec![
+        10.0f32, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0,
+    ];
     let mut c = vec![0.0f32; 10];
     simd_ops::add_f32(&a, &b, &mut c);
     let expected = vec![11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0, 99.0, 110.0];
@@ -119,7 +121,11 @@ fn main() {
     }
 
     print!("Testing log_f32... ");
-    let x = vec![1.0f32, std::f32::consts::E, std::f32::consts::E * std::f32::consts::E];
+    let x = vec![
+        1.0f32,
+        std::f32::consts::E,
+        std::f32::consts::E * std::f32::consts::E,
+    ];
     let mut y = vec![0.0f32; 3];
     simd_ops::log_f32(&x, &mut y);
     if (y[0] - 0.0).abs() < 1e-6 && (y[1] - 1.0).abs() < 1e-5 && (y[2] - 2.0).abs() < 1e-4 {
@@ -199,7 +205,8 @@ fn main() {
     let d = vec![1.0f32; 16];
     let mut c = vec![0.0f32; 16];
     simd_ops::fma_f32(&a, &b, &d, &mut c);
-    if c.iter().all(|&x| (x - 7.0).abs() < 1e-6) {  // 2*3 + 1 = 7
+    if c.iter().all(|&x| (x - 7.0).abs() < 1e-6) {
+        // 2*3 + 1 = 7
         println!("PASSED");
     } else {
         println!("FAILED");
@@ -211,7 +218,7 @@ fn main() {
     let x = vec![1.0f32; 16];
     let y = vec![2.0f32; 16];
     let mut z = vec![0.0f32; 16];
-    simd_ops::axpy_f32(3.0, &x, &y, &mut z);  // 3*1 + 2 = 5
+    simd_ops::axpy_f32(3.0, &x, &y, &mut z); // 3*1 + 2 = 5
     if z.iter().all(|&x| (x - 5.0).abs() < 1e-6) {
         println!("PASSED");
     } else {
@@ -250,5 +257,8 @@ fn verify_vec(actual: &[f32], expected: &[f32], tolerance: f32) -> bool {
     if actual.len() != expected.len() {
         return false;
     }
-    actual.iter().zip(expected.iter()).all(|(a, e)| (a - e).abs() < tolerance)
+    actual
+        .iter()
+        .zip(expected.iter())
+        .all(|(a, e)| (a - e).abs() < tolerance)
 }

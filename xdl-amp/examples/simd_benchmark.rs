@@ -64,8 +64,8 @@ fn main() {
     let mat_sizes = [64, 128, 256, 512];
 
     for &n in &mat_sizes {
-        let a: Vec<f32> = (0..n*n).map(|i| (i % 100) as f32 / 100.0).collect();
-        let b: Vec<f32> = (0..n*n).map(|i| (i % 100) as f32 / 100.0).collect();
+        let a: Vec<f32> = (0..n * n).map(|i| (i % 100) as f32 / 100.0).collect();
+        let b: Vec<f32> = (0..n * n).map(|i| (i % 100) as f32 / 100.0).collect();
         let mut c_naive = vec![0.0f32; n * n];
         let mut c_opt = vec![0.0f32; n * n];
 

@@ -233,10 +233,8 @@ impl<'a> Parser<'a> {
         };
 
         // ENDIF is only required for block form (BEGIN was used)
-        if is_block || self.check(&Token::Endif) {
-            if self.check(&Token::Endif) {
-                self.advance(); // consume 'endif'
-            }
+        if (is_block || self.check(&Token::Endif)) && self.check(&Token::Endif) {
+            self.advance(); // consume 'endif'
         }
 
         Ok(Statement::If {

@@ -294,14 +294,18 @@ pub fn amp_simd_matmul(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let k = extract_int(&args[4])? as usize;
 
     if a.len() != m * k {
-        return Err(XdlError::RuntimeError(
-            format!("Matrix A should have {} elements (m*k), got {}", m * k, a.len()),
-        ));
+        return Err(XdlError::RuntimeError(format!(
+            "Matrix A should have {} elements (m*k), got {}",
+            m * k,
+            a.len()
+        )));
     }
     if b.len() != k * n {
-        return Err(XdlError::RuntimeError(
-            format!("Matrix B should have {} elements (k*n), got {}", k * n, b.len()),
-        ));
+        return Err(XdlError::RuntimeError(format!(
+            "Matrix B should have {} elements (k*n), got {}",
+            k * n,
+            b.len()
+        )));
     }
 
     let mut c = vec![0.0f32; m * n];
@@ -323,8 +327,8 @@ pub fn amp_gpu_available(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// AMP_GPU_ADD(a, b) - GPU-accelerated element-wise addition
 #[cfg(feature = "cuda")]
 pub fn amp_gpu_add(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use xdl_amp::cuda::CudaDevice;
     use xdl_amp::backend::GpuDevice;
+    use xdl_amp::cuda::CudaDevice;
 
     if args.len() != 2 {
         return Err(XdlError::RuntimeError(
@@ -345,7 +349,8 @@ pub fn amp_gpu_add(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .map_err(|e| XdlError::RuntimeError(format!("CUDA init failed: {}", e)))?;
 
     let mut c = vec![0.0f32; a.len()];
-    device.add_f32(&a, &b, &mut c)
+    device
+        .add_f32(&a, &b, &mut c)
         .map_err(|e| XdlError::RuntimeError(format!("CUDA add failed: {}", e)))?;
 
     Ok(f32_array_to_xdl(&c))
@@ -361,8 +366,8 @@ pub fn amp_gpu_add(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// AMP_GPU_MATMUL(a, b, m, n, k) - GPU-accelerated matrix multiplication
 #[cfg(feature = "cuda")]
 pub fn amp_gpu_matmul(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    use xdl_amp::cuda::CudaDevice;
     use xdl_amp::backend::GpuDevice;
+    use xdl_amp::cuda::CudaDevice;
 
     if args.len() != 5 {
         return Err(XdlError::RuntimeError(
@@ -380,7 +385,8 @@ pub fn amp_gpu_matmul(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .map_err(|e| XdlError::RuntimeError(format!("CUDA init failed: {}", e)))?;
 
     let mut c = vec![0.0f32; m * n];
-    device.matmul_f32(&a, &b, &mut c, m, n, k)
+    device
+        .matmul_f32(&a, &b, &mut c, m, n, k)
         .map_err(|e| XdlError::RuntimeError(format!("CUDA matmul failed: {}", e)))?;
 
     Ok(f32_array_to_xdl(&c))
@@ -408,14 +414,25 @@ pub fn amp_benchmark(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let op = match &args[0] {
         XdlValue::String(s) => s.to_uppercase(),
-        _ => return Err(XdlError::RuntimeError("Operation must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Operation must be a string".to_string(),
+            ))
+        }
     };
 
     let size = extract_int(&args[1])? as usize;
-    let iterations = if args.len() > 2 { extract_int(&args[2])? as usize } else { 100 };
+    let iterations = if args.len() > 2 {
+        extract_int(&args[2])? as usize
+    } else {
+        100
+    };
 
     let mut result = String::new();
-    result.push_str(&format!("Benchmarking {} with {} elements, {} iterations\n", op, size, iterations));
+    result.push_str(&format!(
+        "Benchmarking {} with {} elements, {} iterations\n",
+        op, size, iterations
+    ));
 
     match op.as_str() {
         "ADD" => {
@@ -473,8 +490,8 @@ pub fn amp_benchmark(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
         "MATMUL" => {
             let n = (size as f64).sqrt() as usize;
-            let a: Vec<f32> = (0..n*n).map(|i| (i % 100) as f32 / 100.0).collect();
-            let b: Vec<f32> = (0..n*n).map(|i| (i % 100) as f32 / 100.0).collect();
+            let a: Vec<f32> = (0..n * n).map(|i| (i % 100) as f32 / 100.0).collect();
+            let b: Vec<f32> = (0..n * n).map(|i| (i % 100) as f32 / 100.0).collect();
             let mut c = vec![0.0f32; n * n];
 
             simd_ops::matmul_f32(&a, &b, &mut c, n, n, n);
@@ -493,9 +510,10 @@ pub fn amp_benchmark(args: &[XdlValue]) -> XdlResult<XdlValue> {
             result.push_str(&format!("  Performance: {:.2} GFLOPS\n", gflops));
         }
         _ => {
-            return Err(XdlError::RuntimeError(
-                format!("Unknown operation: {}. Use ADD, MUL, SUM, or MATMUL", op),
-            ));
+            return Err(XdlError::RuntimeError(format!(
+                "Unknown operation: {}. Use ADD, MUL, SUM, or MATMUL",
+                op
+            )));
         }
     }
 
@@ -518,7 +536,9 @@ fn extract_f32_array(value: &XdlValue) -> XdlResult<Vec<f32>> {
                     XdlValue::Float(f) => Ok(*f),
                     XdlValue::Long(i) => Ok(*i as f32),
                     XdlValue::Long64(i) => Ok(*i as f32),
-                    _ => Err(XdlError::RuntimeError("Array must contain numbers".to_string())),
+                    _ => Err(XdlError::RuntimeError(
+                        "Array must contain numbers".to_string(),
+                    )),
                 })
                 .collect()
         }

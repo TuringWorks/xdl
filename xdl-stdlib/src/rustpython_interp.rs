@@ -16,8 +16,8 @@
 //! - Educational purposes
 
 use rustpython_vm as vm;
-use rustpython_vm::Interpreter;
 use rustpython_vm::convert::ToPyResult;
+use rustpython_vm::Interpreter;
 use std::sync::Mutex;
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
@@ -33,7 +33,7 @@ fn get_interpreter() -> XdlResult<()> {
         *interp = Some(
             rustpython::InterpreterConfig::new()
                 .init_stdlib()
-                .interpreter()
+                .interpreter(),
         );
     }
     Ok(())
@@ -59,9 +59,9 @@ pub fn rustpy_exec(args: &[XdlValue]) -> XdlResult<XdlValue> {
     get_interpreter()?;
 
     let interp = INTERPRETER.lock().unwrap();
-    let interp = interp.as_ref().ok_or_else(|| {
-        XdlError::RuntimeError("Failed to get interpreter".to_string())
-    })?;
+    let interp = interp
+        .as_ref()
+        .ok_or_else(|| XdlError::RuntimeError("Failed to get interpreter".to_string()))?;
 
     interp.enter(|vm| {
         let scope = vm.new_scope_with_builtins();
@@ -84,17 +84,21 @@ pub fn rustpy_exec(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 } else if let Ok(list) = result.try_to_value::<Vec<f64>>(vm) {
                     Ok(XdlValue::Array(list))
                 } else if let Ok(list) = result.try_to_value::<Vec<String>>(vm) {
-                    Ok(XdlValue::NestedArray(list.into_iter().map(XdlValue::String).collect()))
+                    Ok(XdlValue::NestedArray(
+                        list.into_iter().map(XdlValue::String).collect(),
+                    ))
                 } else {
                     // Return string representation
-                    let repr = result.repr(vm)
+                    let repr = result
+                        .repr(vm)
                         .map(|s| s.to_string())
                         .unwrap_or_else(|_| "<object>".to_string());
                     Ok(XdlValue::String(repr))
                 }
             }
             Err(exc) => {
-                let msg = exc.to_pyresult(vm)
+                let msg = exc
+                    .to_pyresult(vm)
                     .and_then(|e| e.str(vm))
                     .map(|s| s.to_string())
                     .unwrap_or_else(|_| "Unknown Python error".to_string());
@@ -116,7 +120,11 @@ pub fn rustpy_eval(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For simple expressions, wrap in eval-friendly format
     let expr = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Expression must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Expression must be a string".to_string(),
+            ))
+        }
     };
 
     rustpy_exec(&[XdlValue::String(expr)])
@@ -137,12 +145,20 @@ pub fn rustpy_call(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let func_def = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Function definition must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Function definition must be a string".to_string(),
+            ))
+        }
     };
 
     let func_name = match &args[1] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Function name must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Function name must be a string".to_string(),
+            ))
+        }
     };
 
     // Build argument list
@@ -154,18 +170,25 @@ pub fn rustpy_call(args: &[XdlValue]) -> XdlResult<XdlValue> {
             XdlValue::Float(f) => f.to_string(),
             XdlValue::Double(d) => d.to_string(),
             XdlValue::String(s) => format!("\"{}\"", s.replace('\"', "\\\"")),
-            XdlValue::Byte(b) => if *b != 0 { "True".to_string() } else { "False".to_string() },
-            XdlValue::Array(arr) => format!("[{}]", arr.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")),
+            XdlValue::Byte(b) => {
+                if *b != 0 {
+                    "True".to_string()
+                } else {
+                    "False".to_string()
+                }
+            }
+            XdlValue::Array(arr) => format!(
+                "[{}]",
+                arr.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             _ => "None".to_string(),
         })
         .collect();
 
-    let call_code = format!(
-        "{}\n{}({})",
-        func_def,
-        func_name,
-        py_args.join(", ")
-    );
+    let call_code = format!("{}\n{}({})", func_def, func_name, py_args.join(", "));
 
     rustpy_exec(&[XdlValue::String(call_code)])
 }
@@ -184,11 +207,24 @@ pub fn rustpy_import(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let module_name = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Module name must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Module name must be a string".to_string(),
+            ))
+        }
     };
 
     // Check for unsupported modules
-    let unsupported = ["numpy", "pandas", "scipy", "sklearn", "tensorflow", "torch", "cv2", "PIL"];
+    let unsupported = [
+        "numpy",
+        "pandas",
+        "scipy",
+        "sklearn",
+        "tensorflow",
+        "torch",
+        "cv2",
+        "PIL",
+    ];
     if unsupported.iter().any(|&m| module_name.starts_with(m)) {
         return Err(XdlError::RuntimeError(format!(
             "Module '{}' requires C extensions and is not supported by RustPython. \
@@ -214,11 +250,40 @@ pub fn rustpy_version(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: modules = RUSTPY_STDLIB()
 pub fn rustpy_stdlib(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     let modules = vec![
-        "math", "random", "json", "re", "datetime", "collections",
-        "itertools", "functools", "operator", "string", "textwrap",
-        "struct", "codecs", "io", "os", "sys", "time", "calendar",
-        "hashlib", "base64", "binascii", "copy", "types", "abc",
-        "contextlib", "decimal", "fractions", "statistics", "cmath",
+        "math",
+        "random",
+        "json",
+        "re",
+        "datetime",
+        "collections",
+        "itertools",
+        "functools",
+        "operator",
+        "string",
+        "textwrap",
+        "struct",
+        "codecs",
+        "io",
+        "os",
+        "sys",
+        "time",
+        "calendar",
+        "hashlib",
+        "base64",
+        "binascii",
+        "copy",
+        "types",
+        "abc",
+        "contextlib",
+        "decimal",
+        "fractions",
+        "statistics",
+        "cmath",
     ];
-    Ok(XdlValue::NestedArray(modules.iter().map(|s| XdlValue::String(s.to_string())).collect()))
+    Ok(XdlValue::NestedArray(
+        modules
+            .iter()
+            .map(|s| XdlValue::String(s.to_string()))
+            .collect(),
+    ))
 }

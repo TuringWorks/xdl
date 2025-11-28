@@ -312,11 +312,11 @@ pub fn tokenize(input: &str) -> XdlResult<Vec<Token>> {
         if remaining.starts_with('$') {
             let after_dollar = &remaining[1..];
             // Skip whitespace after $
-            let trimmed = after_dollar.trim_start_matches(|c| c == ' ' || c == '\t' || c == '\r');
+            let trimmed = after_dollar.trim_start_matches([' ', '\t', '\r']);
             // If followed by newline or end of input, it's a line continuation
             if trimmed.is_empty() || trimmed.starts_with('\n') {
-                if trimmed.starts_with('\n') {
-                    remaining = &trimmed[1..];
+                if let Some(stripped) = trimmed.strip_prefix('\n') {
+                    remaining = stripped;
                 } else {
                     remaining = trimmed;
                 }

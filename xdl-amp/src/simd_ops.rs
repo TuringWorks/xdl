@@ -326,7 +326,7 @@ fn sum_f32_simd(x: &[f32]) -> f32 {
     for i in 0..chunks {
         let offset = i * SIMD_WIDTH;
         let vx = f32x8::new(x[offset..offset + SIMD_WIDTH].try_into().unwrap());
-        acc = acc + vx;
+        acc += vx;
     }
 
     // Horizontal sum of SIMD register
@@ -334,8 +334,8 @@ fn sum_f32_simd(x: &[f32]) -> f32 {
     let mut sum: f32 = arr.iter().sum();
 
     // Add remainder
-    for i in (chunks * SIMD_WIDTH)..len {
-        sum += x[i];
+    for val in x.iter().skip(chunks * SIMD_WIDTH) {
+        sum += val;
     }
 
     sum
@@ -343,9 +343,7 @@ fn sum_f32_simd(x: &[f32]) -> f32 {
 
 fn sum_f32_parallel(x: &[f32]) -> f32 {
     const CHUNK_SIZE: usize = 8192;
-    x.par_chunks(CHUNK_SIZE)
-        .map(sum_f32_simd)
-        .sum()
+    x.par_chunks(CHUNK_SIZE).map(sum_f32_simd).sum()
 }
 
 /// SIMD-optimized max reduction
@@ -380,8 +378,8 @@ fn max_f32_simd(x: &[f32]) -> f32 {
     let mut max_val = arr.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
 
     // Check remainder
-    for i in (chunks * SIMD_WIDTH)..len {
-        max_val = max_val.max(x[i]);
+    for val in x.iter().skip(chunks * SIMD_WIDTH) {
+        max_val = max_val.max(*val);
     }
 
     max_val
@@ -426,8 +424,8 @@ fn min_f32_simd(x: &[f32]) -> f32 {
     let mut min_val = arr.iter().cloned().fold(f32::INFINITY, f32::min);
 
     // Check remainder
-    for i in (chunks * SIMD_WIDTH)..len {
-        min_val = min_val.min(x[i]);
+    for val in x.iter().skip(chunks * SIMD_WIDTH) {
+        min_val = min_val.min(*val);
     }
 
     min_val
@@ -462,20 +460,20 @@ pub fn matmul_f32(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: us
     // sgemm computes: C = beta*C + alpha*A*B
     unsafe {
         matrixmultiply::sgemm(
-            m,      // rows of A and C
-            k,      // cols of A, rows of B
-            n,      // cols of B and C
-            1.0,    // alpha
+            m,   // rows of A and C
+            k,   // cols of A, rows of B
+            n,   // cols of B and C
+            1.0, // alpha
             a.as_ptr(),
-            k as isize,  // row stride of A (distance between rows)
-            1,           // col stride of A (distance between columns)
+            k as isize, // row stride of A (distance between rows)
+            1,          // col stride of A (distance between columns)
             b.as_ptr(),
-            n as isize,  // row stride of B
-            1,           // col stride of B
-            0.0,    // beta (we initialized C to zero)
+            n as isize, // row stride of B
+            1,          // col stride of B
+            0.0,        // beta (we initialized C to zero)
             c.as_mut_ptr(),
-            n as isize,  // row stride of C
-            1,           // col stride of C
+            n as isize, // row stride of C
+            1,          // col stride of C
         );
     }
 }
@@ -562,7 +560,7 @@ fn fma_f32_simd(a: &[f32], b: &[f32], d: &[f32], c: &mut [f32]) {
         let va = f32x8::new(a[offset..offset + SIMD_WIDTH].try_into().unwrap());
         let vb = f32x8::new(b[offset..offset + SIMD_WIDTH].try_into().unwrap());
         let vd = f32x8::new(d[offset..offset + SIMD_WIDTH].try_into().unwrap());
-        let vc = va.mul_add(vb, vd);  // a * b + d
+        let vc = va.mul_add(vb, vd); // a * b + d
         let result: [f32; 8] = vc.into();
         c[offset..offset + SIMD_WIDTH].copy_from_slice(&result);
     }

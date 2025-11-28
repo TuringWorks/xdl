@@ -1072,9 +1072,9 @@ impl Evaluator {
             }
 
             // Add remaining dimensions as full ranges
-            for dim in evaluated_indices.len()..shape.len() {
-                ranges.push((0, shape[dim], 1));
-                result_shape.push(shape[dim]);
+            for &dim_size in shape.iter().skip(evaluated_indices.len()) {
+                ranges.push((0, dim_size, 1));
+                result_shape.push(dim_size);
             }
 
             let mut result_data = Vec::new();
@@ -1193,16 +1193,16 @@ impl Evaluator {
                         1
                     };
                     ranges.push((s, e, st));
-                    let range_size = (e.saturating_sub(s) + st - 1) / st;
+                    let range_size = e.saturating_sub(s).div_ceil(st);
                     result_shape.push(range_size);
                 }
             }
         }
 
         // Add remaining dimensions if not fully indexed
-        for dim in indices.len()..shape.len() {
-            ranges.push((0, shape[dim], 1));
-            result_shape.push(shape[dim]);
+        for &dim_size in shape.iter().skip(indices.len()) {
+            ranges.push((0, dim_size, 1));
+            result_shape.push(dim_size);
         }
 
         // Extract data (start with stride=1 for column-major)
@@ -1223,6 +1223,7 @@ impl Evaluator {
     }
 
     /// Recursively extract slice data (column-major order)
+    #[allow(clippy::too_many_arguments, clippy::only_used_in_recursion)]
     fn extract_slice_recursive(
         &self,
         data: &[f64],

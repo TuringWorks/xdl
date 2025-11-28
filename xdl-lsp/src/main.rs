@@ -6,14 +6,14 @@
 use tower_lsp::{LspService, Server};
 use tracing_subscriber::prelude::*;
 
-mod server;
-mod document;
-mod diagnostics;
-mod symbols;
 mod completion;
-mod hover;
+mod diagnostics;
+mod document;
 mod goto;
+mod hover;
 mod semantic_tokens;
+mod server;
+mod symbols;
 mod utils;
 
 #[tokio::main]
@@ -33,7 +33,7 @@ async fn main() {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let (service, socket) = LspService::new(|client| server::XdlLanguageServer::new(client));
+    let (service, socket) = LspService::new(server::XdlLanguageServer::new);
 
     Server::new(stdin, stdout, socket).serve(service).await;
 }

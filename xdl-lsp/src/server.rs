@@ -1,14 +1,14 @@
 //! LSP Server implementation using tower-lsp
 
-use std::sync::Arc;
 use dashmap::DashMap;
+use std::sync::Arc;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 
 use crate::document::DocumentState;
-use crate::symbols::SymbolTable;
 use crate::semantic_tokens::semantic_tokens_legend;
+use crate::symbols::SymbolTable;
 use crate::{completion, goto, hover, symbols};
 
 pub struct XdlLanguageServer {
@@ -134,7 +134,11 @@ impl LanguageServer for XdlLanguageServer {
 
         if let Some(doc) = self.documents.get(uri) {
             let symbol_table = self.symbol_table.read().await;
-            Ok(completion::provide_completions(&doc, position, &symbol_table))
+            Ok(completion::provide_completions(
+                &doc,
+                position,
+                &symbol_table,
+            ))
         } else {
             Ok(None)
         }

@@ -18,12 +18,8 @@ use std::sync::Mutex;
 
 #[cfg(all(target_os = "windows", feature = "directml"))]
 use windows::{
-    core::Interface,
-    Win32::Foundation::HANDLE,
-    Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL_11_0,
-    Win32::Graphics::Direct3D12::*,
-    Win32::Graphics::Dxgi::Common::*,
-    Win32::Graphics::Dxgi::*,
+    core::Interface, Win32::Foundation::HANDLE, Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL_11_0,
+    Win32::Graphics::Direct3D12::*, Win32::Graphics::Dxgi::Common::*, Win32::Graphics::Dxgi::*,
     Win32::AI::MachineLearning::DirectML::*,
 };
 
@@ -101,8 +97,10 @@ impl DirectMLContext {
             }
 
             // Create DXGI factory
-            let factory: IDXGIFactory4 = CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))
-                .map_err(|e| GpuError::ExecutionFailed(format!("Failed to create DXGI factory: {:?}", e)))?;
+            let factory: IDXGIFactory4 =
+                CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0)).map_err(|e| {
+                    GpuError::ExecutionFailed(format!("Failed to create DXGI factory: {:?}", e))
+                })?;
 
             // Find adapter
             let mut adapter: Option<IDXGIAdapter1> = None;
@@ -122,8 +120,9 @@ impl DirectMLContext {
 
             // Create D3D12 device
             let mut device: Option<ID3D12Device> = None;
-            D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, &mut device)
-                .map_err(|e| GpuError::ExecutionFailed(format!("Failed to create D3D12 device: {:?}", e)))?;
+            D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, &mut device).map_err(|e| {
+                GpuError::ExecutionFailed(format!("Failed to create D3D12 device: {:?}", e))
+            })?;
             let device = device.ok_or_else(|| GpuError::DeviceNotFound)?;
 
             // Create command queue
@@ -133,27 +132,39 @@ impl DirectMLContext {
                 Flags: D3D12_COMMAND_QUEUE_FLAG_NONE,
                 NodeMask: 0,
             };
-            let command_queue: ID3D12CommandQueue = device.CreateCommandQueue(&queue_desc)
-                .map_err(|e| GpuError::ExecutionFailed(format!("Failed to create command queue: {:?}", e)))?;
+            let command_queue: ID3D12CommandQueue =
+                device.CreateCommandQueue(&queue_desc).map_err(|e| {
+                    GpuError::ExecutionFailed(format!("Failed to create command queue: {:?}", e))
+                })?;
 
             // Create command allocator
             let command_allocator: ID3D12CommandAllocator = device
                 .CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT)
-                .map_err(|e| GpuError::ExecutionFailed(format!("Failed to create command allocator: {:?}", e)))?;
+                .map_err(|e| {
+                    GpuError::ExecutionFailed(format!(
+                        "Failed to create command allocator: {:?}",
+                        e
+                    ))
+                })?;
 
             // Create DirectML device
             let mut dml_device: Option<IDMLDevice> = None;
-            DMLCreateDevice(&device, DML_CREATE_DEVICE_FLAG_NONE, &mut dml_device)
-                .map_err(|e| GpuError::ExecutionFailed(format!("Failed to create DirectML device: {:?}", e)))?;
-            let dml_device = dml_device.ok_or_else(|| GpuError::ExecutionFailed("DirectML device creation returned None".to_string()))?;
+            DMLCreateDevice(&device, DML_CREATE_DEVICE_FLAG_NONE, &mut dml_device).map_err(
+                |e| GpuError::ExecutionFailed(format!("Failed to create DirectML device: {:?}", e)),
+            )?;
+            let dml_device = dml_device.ok_or_else(|| {
+                GpuError::ExecutionFailed("DirectML device creation returned None".to_string())
+            })?;
 
             // Create fence
-            let fence: ID3D12Fence = device.CreateFence(0, D3D12_FENCE_FLAG_NONE)
-                .map_err(|e| GpuError::ExecutionFailed(format!("Failed to create fence: {:?}", e)))?;
+            let fence: ID3D12Fence = device.CreateFence(0, D3D12_FENCE_FLAG_NONE).map_err(|e| {
+                GpuError::ExecutionFailed(format!("Failed to create fence: {:?}", e))
+            })?;
 
             let fence_event = windows::Win32::System::Threading::CreateEventW(
-                None, false, false, None
-            ).map_err(|e| GpuError::ExecutionFailed(format!("Failed to create event: {:?}", e)))?;
+                None, false, false, None,
+            )
+            .map_err(|e| GpuError::ExecutionFailed(format!("Failed to create event: {:?}", e)))?;
 
             Ok(Self {
                 inner: Mutex::new(DirectMLContextInner {

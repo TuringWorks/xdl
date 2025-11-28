@@ -88,7 +88,8 @@ impl BufferPool {
             let mut pool = self.free_buffers.write().unwrap();
             if let Some(buffers) = pool.get_mut(&bucket_size) {
                 if let Some(buffer) = buffers.pop() {
-                    self.total_bytes.fetch_sub(bucket_size, std::sync::atomic::Ordering::Relaxed);
+                    self.total_bytes
+                        .fetch_sub(bucket_size, std::sync::atomic::Ordering::Relaxed);
                     GLOBAL_STATS.record_cache_memory(-(bucket_size as i64));
                     return Ok(buffer);
                 }
@@ -125,12 +126,13 @@ impl BufferPool {
         }
 
         let mut pool = self.free_buffers.write().unwrap();
-        let buffers = pool.entry(bucket_size).or_insert_with(Vec::new);
+        let buffers = pool.entry(bucket_size).or_default();
 
         if buffers.len() < 100 {
             // Keep up to 100 buffers per size bucket
             buffers.push(buffer);
-            self.total_bytes.fetch_add(bucket_size, std::sync::atomic::Ordering::Relaxed);
+            self.total_bytes
+                .fetch_add(bucket_size, std::sync::atomic::Ordering::Relaxed);
             GLOBAL_STATS.record_cache_memory(bucket_size as i64);
         } else {
             GLOBAL_STATS.record_gpu_free(size);
@@ -140,7 +142,9 @@ impl BufferPool {
     /// Clear the entire pool
     pub fn clear(&self) {
         let mut pool = self.free_buffers.write().unwrap();
-        let total = self.total_bytes.swap(0, std::sync::atomic::Ordering::Relaxed);
+        let total = self
+            .total_bytes
+            .swap(0, std::sync::atomic::Ordering::Relaxed);
         GLOBAL_STATS.record_cache_memory(-(total as i64));
         pool.clear();
     }
@@ -179,7 +183,8 @@ impl ResultCache {
             if entry.last_access.elapsed() > self.config.ttl {
                 let size = entry.data.len();
                 cache.remove(key);
-                self.total_bytes.fetch_sub(size, std::sync::atomic::Ordering::Relaxed);
+                self.total_bytes
+                    .fetch_sub(size, std::sync::atomic::Ordering::Relaxed);
                 GLOBAL_STATS.record_cache_memory(-(size as i64));
                 return None;
             }
@@ -211,7 +216,8 @@ impl ResultCache {
             if let Some(key) = lru_key {
                 if let Some(entry) = cache.remove(&key) {
                     let size = entry.data.len();
-                    self.total_bytes.fetch_sub(size, std::sync::atomic::Ordering::Relaxed);
+                    self.total_bytes
+                        .fetch_sub(size, std::sync::atomic::Ordering::Relaxed);
                     GLOBAL_STATS.record_cache_memory(-(size as i64));
                 }
             } else {
@@ -227,14 +233,17 @@ impl ResultCache {
                 access_count: 1,
             },
         );
-        self.total_bytes.fetch_add(data_size, std::sync::atomic::Ordering::Relaxed);
+        self.total_bytes
+            .fetch_add(data_size, std::sync::atomic::Ordering::Relaxed);
         GLOBAL_STATS.record_cache_memory(data_size as i64);
     }
 
     /// Clear the cache
     pub fn clear(&self) {
         let mut cache = self.cache.write().unwrap();
-        let total = self.total_bytes.swap(0, std::sync::atomic::Ordering::Relaxed);
+        let total = self
+            .total_bytes
+            .swap(0, std::sync::atomic::Ordering::Relaxed);
         GLOBAL_STATS.record_cache_memory(-(total as i64));
         cache.clear();
     }

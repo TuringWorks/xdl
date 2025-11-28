@@ -114,7 +114,10 @@ pub fn provide_completions(
                         detail: Some(format!("Returns: {}", info.return_type)),
                         documentation: Some(Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
-                            value: format!("```\n{}\n```\n\n{}", info.signature, info.documentation),
+                            value: format!(
+                                "```\n{}\n```\n\n{}",
+                                info.signature, info.documentation
+                            ),
                         })),
                         insert_text: Some(format!("{}($0)", name)),
                         insert_text_format: Some(InsertTextFormat::SNIPPET),
@@ -131,7 +134,10 @@ pub fn provide_completions(
                         kind: Some(CompletionItemKind::METHOD),
                         documentation: Some(Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
-                            value: format!("```\n{}\n```\n\n{}", info.signature, info.documentation),
+                            value: format!(
+                                "```\n{}\n```\n\n{}",
+                                info.signature, info.documentation
+                            ),
                         })),
                         insert_text: Some(format!("{}, $0", name)),
                         insert_text_format: Some(InsertTextFormat::SNIPPET),

@@ -25,8 +25,8 @@ pub enum OpType {
     Sum,
     Max,
     Min,
-    MemCopyH2D,  // Host to Device
-    MemCopyD2H,  // Device to Host
+    MemCopyH2D, // Host to Device
+    MemCopyD2H, // Device to Host
     BufferAlloc,
     BufferFree,
 }
@@ -182,12 +182,24 @@ impl ExecutionStats {
 
         // Initialize stats for all operation types
         for op in [
-            OpType::Add, OpType::Sub, OpType::Mul, OpType::Div,
-            OpType::Sin, OpType::Cos, OpType::Exp, OpType::Log,
-            OpType::Sqrt, OpType::Pow, OpType::MatMul,
-            OpType::Sum, OpType::Max, OpType::Min,
-            OpType::MemCopyH2D, OpType::MemCopyD2H,
-            OpType::BufferAlloc, OpType::BufferFree,
+            OpType::Add,
+            OpType::Sub,
+            OpType::Mul,
+            OpType::Div,
+            OpType::Sin,
+            OpType::Cos,
+            OpType::Exp,
+            OpType::Log,
+            OpType::Sqrt,
+            OpType::Pow,
+            OpType::MatMul,
+            OpType::Sum,
+            OpType::Max,
+            OpType::Min,
+            OpType::MemCopyH2D,
+            OpType::MemCopyD2H,
+            OpType::BufferAlloc,
+            OpType::BufferFree,
         ] {
             op_stats.insert(op, Arc::new(OpStats::new()));
         }
@@ -232,18 +244,19 @@ impl ExecutionStats {
         }
 
         if let Some(stats) = self.op_stats.get(&op) {
-            stats.record(
-                time.as_nanos() as u64,
-                elements as u64,
-                bytes as u64,
-                layer,
-            );
+            stats.record(time.as_nanos() as u64, elements as u64, bytes as u64, layer);
         }
         self.total_ops.fetch_add(1, Ordering::Relaxed);
     }
 
     /// Record a dispatch decision
-    pub fn record_dispatch(&self, op: OpType, elements: usize, layer: ExecutionLayer, reason: &'static str) {
+    pub fn record_dispatch(
+        &self,
+        op: OpType,
+        elements: usize,
+        layer: ExecutionLayer,
+        reason: &'static str,
+    ) {
         if !self.is_enabled() {
             return;
         }
@@ -265,7 +278,10 @@ impl ExecutionStats {
 
     /// Record GPU memory allocation
     pub fn record_gpu_alloc(&self, bytes: usize) {
-        let current = self.gpu_memory_allocated.fetch_add(bytes as u64, Ordering::Relaxed) + bytes as u64;
+        let current = self
+            .gpu_memory_allocated
+            .fetch_add(bytes as u64, Ordering::Relaxed)
+            + bytes as u64;
         let mut peak = self.gpu_memory_peak.load(Ordering::Relaxed);
         while current > peak {
             match self.gpu_memory_peak.compare_exchange_weak(
@@ -282,15 +298,18 @@ impl ExecutionStats {
 
     /// Record GPU memory free
     pub fn record_gpu_free(&self, bytes: usize) {
-        self.gpu_memory_allocated.fetch_sub(bytes as u64, Ordering::Relaxed);
+        self.gpu_memory_allocated
+            .fetch_sub(bytes as u64, Ordering::Relaxed);
     }
 
     /// Record cache memory change
     pub fn record_cache_memory(&self, bytes: i64) {
         if bytes >= 0 {
-            self.cache_memory_used.fetch_add(bytes as u64, Ordering::Relaxed);
+            self.cache_memory_used
+                .fetch_add(bytes as u64, Ordering::Relaxed);
         } else {
-            self.cache_memory_used.fetch_sub((-bytes) as u64, Ordering::Relaxed);
+            self.cache_memory_used
+                .fetch_sub((-bytes) as u64, Ordering::Relaxed);
         }
     }
 
@@ -352,32 +371,60 @@ impl ExecutionStats {
         let report = self.report();
         let mut output = String::new();
 
-        output.push_str("\n╔══════════════════════════════════════════════════════════════════════════════╗\n");
-        output.push_str("║                        XDL-AMP EXECUTION STATISTICS                          ║\n");
-        output.push_str("╠══════════════════════════════════════════════════════════════════════════════╣\n");
+        output.push_str(
+            "\n╔══════════════════════════════════════════════════════════════════════════════╗\n",
+        );
+        output.push_str(
+            "║                        XDL-AMP EXECUTION STATISTICS                          ║\n",
+        );
+        output.push_str(
+            "╠══════════════════════════════════════════════════════════════════════════════╣\n",
+        );
 
         output.push_str(&format!("║ Backend: {:<67} ║\n", report.backend));
-        output.push_str(&format!("║ Session Duration: {:<58} ║\n",
-            format!("{:.2}s", report.duration.as_secs_f64())));
-        output.push_str(&format!("║ Total Operations: {:<58} ║\n",
-            format_number(report.total_ops)));
+        output.push_str(&format!(
+            "║ Session Duration: {:<58} ║\n",
+            format!("{:.2}s", report.duration.as_secs_f64())
+        ));
+        output.push_str(&format!(
+            "║ Total Operations: {:<58} ║\n",
+            format_number(report.total_ops)
+        ));
 
-        output.push_str("╠══════════════════════════════════════════════════════════════════════════════╣\n");
-        output.push_str("║ MEMORY                                                                       ║\n");
-        output.push_str("╠══════════════════════════════════════════════════════════════════════════════╣\n");
-        output.push_str(&format!("║ GPU Memory (Current): {:<54} ║\n",
-            format_bytes(report.gpu_memory_current)));
-        output.push_str(&format!("║ GPU Memory (Peak):    {:<54} ║\n",
-            format_bytes(report.gpu_memory_peak)));
-        output.push_str(&format!("║ Cache Memory:         {:<54} ║\n",
-            format_bytes(report.cache_memory)));
+        output.push_str(
+            "╠══════════════════════════════════════════════════════════════════════════════╣\n",
+        );
+        output.push_str(
+            "║ MEMORY                                                                       ║\n",
+        );
+        output.push_str(
+            "╠══════════════════════════════════════════════════════════════════════════════╣\n",
+        );
+        output.push_str(&format!(
+            "║ GPU Memory (Current): {:<54} ║\n",
+            format_bytes(report.gpu_memory_current)
+        ));
+        output.push_str(&format!(
+            "║ GPU Memory (Peak):    {:<54} ║\n",
+            format_bytes(report.gpu_memory_peak)
+        ));
+        output.push_str(&format!(
+            "║ Cache Memory:         {:<54} ║\n",
+            format_bytes(report.cache_memory)
+        ));
 
         if !report.op_summaries.is_empty() {
             output.push_str("╠══════════════════════════════════════════════════════════════════════════════╣\n");
             output.push_str("║ OPERATIONS                                                                   ║\n");
-            output.push_str("╠════════════╤═══════════╤═══════════╤═══════════╤═══════════╤════════════════╣\n");
-            output.push_str("║ Operation  │   Count   │  Avg(μs)  │  MEPS     │   GPU%    │   Cache%       ║\n");
-            output.push_str("╠════════════╪═══════════╪═══════════╪═══════════╪═══════════╪════════════════╣\n");
+            output.push_str(
+                "╠════════════╤═══════════╤═══════════╤═══════════╤═══════════╤════════════════╣\n",
+            );
+            output.push_str(
+                "║ Operation  │   Count   │  Avg(μs)  │  MEPS     │   GPU%    │   Cache%       ║\n",
+            );
+            output.push_str(
+                "╠════════════╪═══════════╪═══════════╪═══════════╪═══════════╪════════════════╣\n",
+            );
 
             for summary in &report.op_summaries {
                 output.push_str(&format!(
@@ -392,7 +439,9 @@ impl ExecutionStats {
             }
         }
 
-        output.push_str("╚══════════════════════════════════════════════════════════════════════════════╝\n");
+        output.push_str(
+            "╚══════════════════════════════════════════════════════════════════════════════╝\n",
+        );
         output
     }
 
@@ -511,7 +560,13 @@ impl OpTimer {
 
     pub fn finish(mut self) {
         self.finished = true;
-        GLOBAL_STATS.record_op(self.op, self.start.elapsed(), self.elements, self.bytes, self.layer);
+        GLOBAL_STATS.record_op(
+            self.op,
+            self.start.elapsed(),
+            self.elements,
+            self.bytes,
+            self.layer,
+        );
     }
 }
 
@@ -519,7 +574,13 @@ impl Drop for OpTimer {
     fn drop(&mut self) {
         // Only record on drop if not explicitly finished
         if !self.finished {
-            GLOBAL_STATS.record_op(self.op, self.start.elapsed(), self.elements, self.bytes, self.layer);
+            GLOBAL_STATS.record_op(
+                self.op,
+                self.start.elapsed(),
+                self.elements,
+                self.bytes,
+                self.layer,
+            );
         }
     }
 }
@@ -531,8 +592,20 @@ mod tests {
     #[test]
     fn test_stats_recording() {
         let stats = ExecutionStats::new();
-        stats.record_op(OpType::Add, Duration::from_micros(100), 1000, 4000, ExecutionLayer::GpuCompute);
-        stats.record_op(OpType::Add, Duration::from_micros(200), 2000, 8000, ExecutionLayer::Cpu);
+        stats.record_op(
+            OpType::Add,
+            Duration::from_micros(100),
+            1000,
+            4000,
+            ExecutionLayer::GpuCompute,
+        );
+        stats.record_op(
+            OpType::Add,
+            Duration::from_micros(200),
+            2000,
+            8000,
+            ExecutionLayer::Cpu,
+        );
 
         let op_stats = stats.get_op_stats(OpType::Add).unwrap();
         assert_eq!(op_stats.count.load(Ordering::Relaxed), 2);
@@ -544,7 +617,13 @@ mod tests {
     fn test_report_generation() {
         let stats = ExecutionStats::new();
         stats.set_backend("Test Backend");
-        stats.record_op(OpType::MatMul, Duration::from_millis(10), 1_000_000, 4_000_000, ExecutionLayer::GpuCompute);
+        stats.record_op(
+            OpType::MatMul,
+            Duration::from_millis(10),
+            1_000_000,
+            4_000_000,
+            ExecutionLayer::GpuCompute,
+        );
 
         let report = stats.format_report();
         assert!(report.contains("Test Backend"));

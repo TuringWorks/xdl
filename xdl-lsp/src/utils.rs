@@ -83,19 +83,79 @@ mod tests {
     fn test_offset_to_position() {
         let text = "line1\nline2\nline3";
 
-        assert_eq!(offset_to_position(text, 0), Position { line: 0, character: 0 });
-        assert_eq!(offset_to_position(text, 3), Position { line: 0, character: 3 });
-        assert_eq!(offset_to_position(text, 6), Position { line: 1, character: 0 });
-        assert_eq!(offset_to_position(text, 8), Position { line: 1, character: 2 });
+        assert_eq!(
+            offset_to_position(text, 0),
+            Position {
+                line: 0,
+                character: 0
+            }
+        );
+        assert_eq!(
+            offset_to_position(text, 3),
+            Position {
+                line: 0,
+                character: 3
+            }
+        );
+        assert_eq!(
+            offset_to_position(text, 6),
+            Position {
+                line: 1,
+                character: 0
+            }
+        );
+        assert_eq!(
+            offset_to_position(text, 8),
+            Position {
+                line: 1,
+                character: 2
+            }
+        );
     }
 
     #[test]
     fn test_position_to_offset() {
         let text = "line1\nline2\nline3";
 
-        assert_eq!(position_to_offset(text, Position { line: 0, character: 0 }), Some(0));
-        assert_eq!(position_to_offset(text, Position { line: 0, character: 3 }), Some(3));
-        assert_eq!(position_to_offset(text, Position { line: 1, character: 0 }), Some(6));
-        assert_eq!(position_to_offset(text, Position { line: 1, character: 2 }), Some(8));
+        assert_eq!(
+            position_to_offset(
+                text,
+                Position {
+                    line: 0,
+                    character: 0
+                }
+            ),
+            Some(0)
+        );
+        assert_eq!(
+            position_to_offset(
+                text,
+                Position {
+                    line: 0,
+                    character: 3
+                }
+            ),
+            Some(3)
+        );
+        assert_eq!(
+            position_to_offset(
+                text,
+                Position {
+                    line: 1,
+                    character: 0
+                }
+            ),
+            Some(6)
+        );
+        assert_eq!(
+            position_to_offset(
+                text,
+                Position {
+                    line: 1,
+                    character: 2
+                }
+            ),
+            Some(8)
+        );
     }
 }

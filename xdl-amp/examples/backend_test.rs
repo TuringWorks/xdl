@@ -21,7 +21,10 @@ fn test_backend(backend: GpuBackend) {
             match gpu_ops.add_1d(&a, &b) {
                 Ok(result) => {
                     let expected: Vec<f32> = vec![6.0, 6.0, 6.0, 6.0, 6.0];
-                    let passed = result.iter().zip(expected.iter()).all(|(r, e)| (r - e).abs() < 1e-5);
+                    let passed = result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(r, e)| (r - e).abs() < 1e-5);
                     println!("  add_f32: {}", if passed { "PASS" } else { "FAIL" });
                 }
                 Err(e) => println!("  add_f32: ERROR - {}", e),
@@ -31,7 +34,10 @@ fn test_backend(backend: GpuBackend) {
             match gpu_ops.mul_1d(&a, &b) {
                 Ok(result) => {
                     let expected: Vec<f32> = vec![5.0, 8.0, 9.0, 8.0, 5.0];
-                    let passed = result.iter().zip(expected.iter()).all(|(r, e)| (r - e).abs() < 1e-5);
+                    let passed = result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(r, e)| (r - e).abs() < 1e-5);
                     println!("  mul_f32: {}", if passed { "PASS" } else { "FAIL" });
                 }
                 Err(e) => println!("  mul_f32: ERROR - {}", e),
@@ -41,7 +47,10 @@ fn test_backend(backend: GpuBackend) {
             match gpu_ops.sub_1d(&a, &b) {
                 Ok(result) => {
                     let expected: Vec<f32> = vec![-4.0, -2.0, 0.0, 2.0, 4.0];
-                    let passed = result.iter().zip(expected.iter()).all(|(r, e)| (r - e).abs() < 1e-5);
+                    let passed = result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(r, e)| (r - e).abs() < 1e-5);
                     println!("  sub_f32: {}", if passed { "PASS" } else { "FAIL" });
                 }
                 Err(e) => println!("  sub_f32: ERROR - {}", e),
@@ -51,7 +60,10 @@ fn test_backend(backend: GpuBackend) {
             match gpu_ops.div_1d(&a, &b) {
                 Ok(result) => {
                     let expected: Vec<f32> = vec![0.2, 0.5, 1.0, 2.0, 5.0];
-                    let passed = result.iter().zip(expected.iter()).all(|(r, e)| (r - e).abs() < 1e-5);
+                    let passed = result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(r, e)| (r - e).abs() < 1e-5);
                     println!("  div_f32: {}", if passed { "PASS" } else { "FAIL" });
                 }
                 Err(e) => println!("  div_f32: ERROR - {}", e),
@@ -62,7 +74,10 @@ fn test_backend(backend: GpuBackend) {
             match gpu_ops.sin_1d(&x) {
                 Ok(result) => {
                     let expected: Vec<f32> = vec![0.0, 1.0, 0.0];
-                    let passed = result.iter().zip(expected.iter()).all(|(r, e)| (r - e).abs() < 1e-5);
+                    let passed = result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(r, e)| (r - e).abs() < 1e-5);
                     println!("  sin_f32: {}", if passed { "PASS" } else { "FAIL" });
                 }
                 Err(e) => println!("  sin_f32: ERROR - {}", e),
@@ -72,7 +87,10 @@ fn test_backend(backend: GpuBackend) {
             match gpu_ops.cos_1d(&x) {
                 Ok(result) => {
                     let expected: Vec<f32> = vec![1.0, 0.0, -1.0];
-                    let passed = result.iter().zip(expected.iter()).all(|(r, e)| (r - e).abs() < 1e-5);
+                    let passed = result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(r, e)| (r - e).abs() < 1e-5);
                     println!("  cos_f32: {}", if passed { "PASS" } else { "FAIL" });
                 }
                 Err(e) => println!("  cos_f32: ERROR - {}", e),
@@ -82,8 +100,12 @@ fn test_backend(backend: GpuBackend) {
             let y = Array1::from_vec(vec![0.0, 1.0, 2.0]);
             match gpu_ops.exp_1d(&y) {
                 Ok(result) => {
-                    let expected: Vec<f32> = vec![1.0, std::f32::consts::E, std::f32::consts::E.powi(2)];
-                    let passed = result.iter().zip(expected.iter()).all(|(r, e)| (r - e).abs() < 1e-4);
+                    let expected: Vec<f32> =
+                        vec![1.0, std::f32::consts::E, std::f32::consts::E.powi(2)];
+                    let passed = result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(r, e)| (r - e).abs() < 1e-4);
                     println!("  exp_f32: {}", if passed { "PASS" } else { "FAIL" });
                 }
                 Err(e) => println!("  exp_f32: ERROR - {}", e),
@@ -91,14 +113,24 @@ fn test_backend(backend: GpuBackend) {
 
             // Matrix multiplication
             let mat_a = Array2::from_shape_vec((2, 3), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).unwrap();
-            let mat_b = Array2::from_shape_vec((3, 2), vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]).unwrap();
+            let mat_b =
+                Array2::from_shape_vec((3, 2), vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]).unwrap();
             match gpu_ops.matmul(&mat_a, &mat_b) {
                 Ok(result) => {
                     // Expected: [[58, 64], [139, 154]]
-                    let expected = Array2::from_shape_vec((2, 2), vec![58.0, 64.0, 139.0, 154.0]).unwrap();
-                    let max_diff = result.iter().zip(expected.iter()).map(|(r, e)| (r - e).abs()).fold(0.0f32, f32::max);
+                    let expected =
+                        Array2::from_shape_vec((2, 2), vec![58.0, 64.0, 139.0, 154.0]).unwrap();
+                    let max_diff = result
+                        .iter()
+                        .zip(expected.iter())
+                        .map(|(r, e)| (r - e).abs())
+                        .fold(0.0f32, f32::max);
                     let passed = max_diff < 1e-3;
-                    println!("  matmul:  {} (max_diff: {:.2e})", if passed { "PASS" } else { "FAIL" }, max_diff);
+                    println!(
+                        "  matmul:  {} (max_diff: {:.2e})",
+                        if passed { "PASS" } else { "FAIL" },
+                        max_diff
+                    );
                 }
                 Err(e) => println!("  matmul:  ERROR - {}", e),
             }

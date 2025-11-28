@@ -2,7 +2,7 @@
 
 use crate::backend::GpuDevice;
 use crate::cache::{CacheConfig, CacheManager};
-use crate::dispatch::{DispatchConfig, DispatchTarget, SmartDispatcher, cpu_ops};
+use crate::dispatch::{cpu_ops, DispatchConfig, DispatchTarget, SmartDispatcher};
 use crate::error::Result;
 use crate::stats::{ExecutionLayer, OpType, GLOBAL_STATS};
 use ndarray::{Array1, Array2};
@@ -270,7 +270,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 )?;
-                GLOBAL_STATS.record_op(OpType::Add, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::Add,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::add_f32(
@@ -278,7 +284,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 );
-                GLOBAL_STATS.record_op(OpType::Add, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Add,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -308,7 +320,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 )?;
-                GLOBAL_STATS.record_op(OpType::Sub, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::Sub,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::sub_f32(
@@ -316,7 +334,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 );
-                GLOBAL_STATS.record_op(OpType::Sub, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Sub,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -346,7 +370,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 )?;
-                GLOBAL_STATS.record_op(OpType::Mul, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::Mul,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::mul_f32(
@@ -354,7 +384,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 );
-                GLOBAL_STATS.record_op(OpType::Mul, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Mul,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -384,7 +420,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 )?;
-                GLOBAL_STATS.record_op(OpType::Div, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::Div,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::div_f32(
@@ -392,7 +434,13 @@ impl AcceleratedOps {
                     b.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
                 );
-                GLOBAL_STATS.record_op(OpType::Div, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Div,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -414,12 +462,25 @@ impl AcceleratedOps {
 
         match target {
             DispatchTarget::Gpu => {
-                self.device.sin_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Sin, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                self.device
+                    .sin_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Sin,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::sin_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap());
-                GLOBAL_STATS.record_op(OpType::Sin, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Sin,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -437,12 +498,25 @@ impl AcceleratedOps {
 
         match target {
             DispatchTarget::Gpu => {
-                self.device.cos_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Cos, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                self.device
+                    .cos_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Cos,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::cos_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap());
-                GLOBAL_STATS.record_op(OpType::Cos, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Cos,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -460,12 +534,25 @@ impl AcceleratedOps {
 
         match target {
             DispatchTarget::Gpu => {
-                self.device.exp_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Exp, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                self.device
+                    .exp_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Exp,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::exp_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap());
-                GLOBAL_STATS.record_op(OpType::Exp, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Exp,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -483,12 +570,25 @@ impl AcceleratedOps {
 
         match target {
             DispatchTarget::Gpu => {
-                self.device.log_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Log, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                self.device
+                    .log_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Log,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::log_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap());
-                GLOBAL_STATS.record_op(OpType::Log, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Log,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -506,12 +606,25 @@ impl AcceleratedOps {
 
         match target {
             DispatchTarget::Gpu => {
-                self.device.sqrt_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Sqrt, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                self.device
+                    .sqrt_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Sqrt,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::sqrt_f32(a.as_slice().unwrap(), result.as_slice_mut().unwrap());
-                GLOBAL_STATS.record_op(OpType::Sqrt, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Sqrt,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 
@@ -532,12 +645,24 @@ impl AcceleratedOps {
         let result = match target {
             DispatchTarget::Gpu => {
                 let r = self.device.sum_f32(a.as_slice().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Sum, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::Sum,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
                 r
             }
             DispatchTarget::Cpu => {
                 let r = cpu_ops::sum_f32(a.as_slice().unwrap());
-                GLOBAL_STATS.record_op(OpType::Sum, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Sum,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
                 r
             }
         };
@@ -555,12 +680,24 @@ impl AcceleratedOps {
         let result = match target {
             DispatchTarget::Gpu => {
                 let r = self.device.max_f32(a.as_slice().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Max, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::Max,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
                 r
             }
             DispatchTarget::Cpu => {
                 let r = cpu_ops::max_f32(a.as_slice().unwrap());
-                GLOBAL_STATS.record_op(OpType::Max, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Max,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
                 r
             }
         };
@@ -578,12 +715,24 @@ impl AcceleratedOps {
         let result = match target {
             DispatchTarget::Gpu => {
                 let r = self.device.min_f32(a.as_slice().unwrap())?;
-                GLOBAL_STATS.record_op(OpType::Min, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::Min,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
                 r
             }
             DispatchTarget::Cpu => {
                 let r = cpu_ops::min_f32(a.as_slice().unwrap());
-                GLOBAL_STATS.record_op(OpType::Min, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::Min,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
                 r
             }
         };
@@ -625,18 +774,34 @@ impl AcceleratedOps {
                     a_contig.as_slice().unwrap(),
                     b_contig.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
-                    m, n, k,
+                    m,
+                    n,
+                    k,
                 )?;
-                GLOBAL_STATS.record_op(OpType::MatMul, start.elapsed(), elements, bytes, ExecutionLayer::GpuCompute);
+                GLOBAL_STATS.record_op(
+                    OpType::MatMul,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
             }
             DispatchTarget::Cpu => {
                 cpu_ops::matmul_f32(
                     a_contig.as_slice().unwrap(),
                     b_contig.as_slice().unwrap(),
                     result.as_slice_mut().unwrap(),
-                    m, n, k,
+                    m,
+                    n,
+                    k,
                 );
-                GLOBAL_STATS.record_op(OpType::MatMul, start.elapsed(), elements, bytes, ExecutionLayer::Cpu);
+                GLOBAL_STATS.record_op(
+                    OpType::MatMul,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
             }
         }
 

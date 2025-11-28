@@ -44,22 +44,32 @@ pub fn df_read_csv(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let filename = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Filename must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Filename must be a string".to_string(),
+            ))
+        }
     };
 
-    let has_header = args.get(1).map(|v| match v {
-        XdlValue::Byte(b) => *b != 0,
-        XdlValue::Long(n) => *n != 0,
-        _ => true,
-    }).unwrap_or(true);
+    let has_header = args
+        .get(1)
+        .map(|v| match v {
+            XdlValue::Byte(b) => *b != 0,
+            XdlValue::Long(n) => *n != 0,
+            _ => true,
+        })
+        .unwrap_or(true);
 
-    let delimiter = args.get(2).and_then(|v| {
-        if let XdlValue::String(s) = v {
-            s.chars().next()
-        } else {
-            None
-        }
-    }).unwrap_or(',');
+    let delimiter = args
+        .get(2)
+        .and_then(|v| {
+            if let XdlValue::String(s) = v {
+                s.chars().next()
+            } else {
+                None
+            }
+        })
+        .unwrap_or(',');
 
     let df = CsvReadOptions::default()
         .with_has_header(has_header)
@@ -76,12 +86,18 @@ pub fn df_read_csv(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_READ_PARQUET - Read a Parquet file
 pub fn df_read_parquet(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("DF_READ_PARQUET requires filename".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_READ_PARQUET requires filename".to_string(),
+        ));
     }
 
     let filename = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Filename must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Filename must be a string".to_string(),
+            ))
+        }
     };
 
     let file = std::fs::File::open(&filename)
@@ -98,12 +114,18 @@ pub fn df_read_parquet(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_READ_JSON - Read a JSON file
 pub fn df_read_json(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("DF_READ_JSON requires filename".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_READ_JSON requires filename".to_string(),
+        ));
     }
 
     let filename = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Filename must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Filename must be a string".to_string(),
+            ))
+        }
     };
 
     let file = std::fs::File::open(&filename)
@@ -128,9 +150,19 @@ pub fn df_create(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let col_names: Vec<String> = match &args[0] {
         XdlValue::NestedArray(arr) => arr
             .iter()
-            .filter_map(|v| if let XdlValue::String(s) = v { Some(s.clone()) } else { None })
+            .filter_map(|v| {
+                if let XdlValue::String(s) = v {
+                    Some(s.clone())
+                } else {
+                    None
+                }
+            })
             .collect(),
-        _ => return Err(XdlError::RuntimeError("Column names must be an array".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Column names must be an array".to_string(),
+            ))
+        }
     };
 
     if col_names.len() != args.len() - 1 {
@@ -146,7 +178,11 @@ pub fn df_create(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let series = match data {
             XdlValue::Array(arr) => Series::new(name.into(), arr.as_slice()),
             XdlValue::MultiDimArray { data, .. } => Series::new(name.into(), data.as_slice()),
-            _ => return Err(XdlError::RuntimeError("Column data must be an array".to_string())),
+            _ => {
+                return Err(XdlError::RuntimeError(
+                    "Column data must be an array".to_string(),
+                ))
+            }
         };
         columns.push(series.into());
     }
@@ -161,7 +197,9 @@ pub fn df_create(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_WRITE_CSV - Write DataFrame to CSV
 pub fn df_write_csv(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("DF_WRITE_CSV requires df_id, filename".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_WRITE_CSV requires df_id, filename".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -171,7 +209,11 @@ pub fn df_write_csv(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let filename = match &args[1] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("Filename must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Filename must be a string".to_string(),
+            ))
+        }
     };
 
     let mut df = get_dataframe(df_id)?;
@@ -188,7 +230,9 @@ pub fn df_write_csv(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_WRITE_PARQUET - Write DataFrame to Parquet
 pub fn df_write_parquet(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("DF_WRITE_PARQUET requires df_id, filename".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_WRITE_PARQUET requires df_id, filename".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -198,7 +242,11 @@ pub fn df_write_parquet(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let filename = match &args[1] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("Filename must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Filename must be a string".to_string(),
+            ))
+        }
     };
 
     let mut df = get_dataframe(df_id)?;
@@ -223,10 +271,13 @@ pub fn df_head(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => return Err(XdlError::RuntimeError("df_id must be a string".to_string())),
     };
 
-    let n = args.get(1).map(|v| match v {
-        XdlValue::Long(n) => *n as usize,
-        _ => 5,
-    }).unwrap_or(5);
+    let n = args
+        .get(1)
+        .map(|v| match v {
+            XdlValue::Long(n) => *n as usize,
+            _ => 5,
+        })
+        .unwrap_or(5);
 
     let df = get_dataframe(df_id)?;
     let result = df.head(Some(n));
@@ -245,10 +296,13 @@ pub fn df_tail(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => return Err(XdlError::RuntimeError("df_id must be a string".to_string())),
     };
 
-    let n = args.get(1).map(|v| match v {
-        XdlValue::Long(n) => *n as usize,
-        _ => 5,
-    }).unwrap_or(5);
+    let n = args
+        .get(1)
+        .map(|v| match v {
+            XdlValue::Long(n) => *n as usize,
+            _ => 5,
+        })
+        .unwrap_or(5);
 
     let df = get_dataframe(df_id)?;
     let result = df.tail(Some(n));
@@ -259,7 +313,9 @@ pub fn df_tail(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_SELECT - Select columns
 pub fn df_select(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("DF_SELECT requires df_id and columns".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_SELECT requires df_id and columns".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -269,14 +325,21 @@ pub fn df_select(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let columns: Vec<String> = args[1..]
         .iter()
-        .filter_map(|v| if let XdlValue::String(s) = v { Some(s.clone()) } else { None })
+        .filter_map(|v| {
+            if let XdlValue::String(s) = v {
+                Some(s.clone())
+            } else {
+                None
+            }
+        })
         .collect();
 
     let df = get_dataframe(df_id)?;
 
     // Use lazy select with column expressions
-    let col_exprs: Vec<Expr> = columns.iter().map(|c| col(c)).collect();
-    let result = df.lazy()
+    let col_exprs: Vec<Expr> = columns.iter().map(col).collect();
+    let result = df
+        .lazy()
         .select(col_exprs)
         .collect()
         .map_err(|e| XdlError::RuntimeError(format!("Failed to select: {}", e)))?;
@@ -300,12 +363,20 @@ pub fn df_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let column = match &args[1] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Column must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Column must be a string".to_string(),
+            ))
+        }
     };
 
     let operator = match &args[2] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Operator must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Operator must be a string".to_string(),
+            ))
+        }
     };
 
     let df = get_dataframe(df_id)?;
@@ -321,7 +392,12 @@ pub fn df_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 "<" => col(&column).lt(lit(val)),
                 ">=" => col(&column).gt_eq(lit(val)),
                 "<=" => col(&column).lt_eq(lit(val)),
-                _ => return Err(XdlError::RuntimeError(format!("Unknown operator: {}", operator))),
+                _ => {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Unknown operator: {}",
+                        operator
+                    )))
+                }
             }
         }
         XdlValue::Double(d) => {
@@ -333,20 +409,32 @@ pub fn df_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 "<" => col(&column).lt(lit(val)),
                 ">=" => col(&column).gt_eq(lit(val)),
                 "<=" => col(&column).lt_eq(lit(val)),
-                _ => return Err(XdlError::RuntimeError(format!("Unknown operator: {}", operator))),
+                _ => {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Unknown operator: {}",
+                        operator
+                    )))
+                }
             }
         }
-        XdlValue::String(s) => {
-            match operator.as_str() {
-                "=" | "==" => col(&column).eq(lit(s.clone())),
-                "!=" | "<>" => col(&column).neq(lit(s.clone())),
-                _ => return Err(XdlError::RuntimeError("String only supports = and !=".to_string())),
+        XdlValue::String(s) => match operator.as_str() {
+            "=" | "==" => col(&column).eq(lit(s.clone())),
+            "!=" | "<>" => col(&column).neq(lit(s.clone())),
+            _ => {
+                return Err(XdlError::RuntimeError(
+                    "String only supports = and !=".to_string(),
+                ))
             }
+        },
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Unsupported filter value".to_string(),
+            ))
         }
-        _ => return Err(XdlError::RuntimeError("Unsupported filter value".to_string())),
     };
 
-    let result = df.lazy()
+    let result = df
+        .lazy()
         .filter(filter_expr)
         .collect()
         .map_err(|e| XdlError::RuntimeError(format!("Failed to filter: {}", e)))?;
@@ -358,7 +446,9 @@ pub fn df_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_SORT - Sort by column
 pub fn df_sort(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("DF_SORT requires df_id, column".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_SORT requires df_id, column".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -368,18 +458,28 @@ pub fn df_sort(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let column = match &args[1] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Column must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Column must be a string".to_string(),
+            ))
+        }
     };
 
-    let descending = args.get(2).map(|v| match v {
-        XdlValue::Byte(b) => *b != 0,
-        XdlValue::Long(n) => *n != 0,
-        _ => false,
-    }).unwrap_or(false);
+    let descending = args
+        .get(2)
+        .map(|v| match v {
+            XdlValue::Byte(b) => *b != 0,
+            XdlValue::Long(n) => *n != 0,
+            _ => false,
+        })
+        .unwrap_or(false);
 
     let df = get_dataframe(df_id)?;
     let result = df
-        .sort([&column], SortMultipleOptions::default().with_order_descending(descending))
+        .sort(
+            [&column],
+            SortMultipleOptions::default().with_order_descending(descending),
+        )
         .map_err(|e| XdlError::RuntimeError(format!("Failed to sort: {}", e)))?;
 
     let id = store_dataframe(result);
@@ -401,17 +501,29 @@ pub fn df_groupby(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let group_col = match &args[1] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Group column must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Group column must be a string".to_string(),
+            ))
+        }
     };
 
     let agg_col = match &args[2] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Aggregate column must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Aggregate column must be a string".to_string(),
+            ))
+        }
     };
 
     let agg_func = match &args[3] {
         XdlValue::String(s) => s.to_lowercase(),
-        _ => return Err(XdlError::RuntimeError("Aggregate function must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Aggregate function must be a string".to_string(),
+            ))
+        }
     };
 
     let df = get_dataframe(df_id)?;
@@ -426,7 +538,12 @@ pub fn df_groupby(args: &[XdlValue]) -> XdlResult<XdlValue> {
         "last" => col(&agg_col).last(),
         "std" => col(&agg_col).std(1),
         "var" => col(&agg_col).var(1),
-        _ => return Err(XdlError::RuntimeError(format!("Unknown aggregation: {}", agg_func))),
+        _ => {
+            return Err(XdlError::RuntimeError(format!(
+                "Unknown aggregation: {}",
+                agg_func
+            )))
+        }
     };
 
     let result = df
@@ -450,22 +567,41 @@ pub fn df_join(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let df1_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("df1_id must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "df1_id must be a string".to_string(),
+            ))
+        }
     };
 
     let df2_id = match &args[1] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("df2_id must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "df2_id must be a string".to_string(),
+            ))
+        }
     };
 
     let on_col = match &args[2] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Join column must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Join column must be a string".to_string(),
+            ))
+        }
     };
 
-    let how = args.get(3).and_then(|v| {
-        if let XdlValue::String(s) = v { Some(s.to_lowercase()) } else { None }
-    }).unwrap_or_else(|| "inner".to_string());
+    let how = args
+        .get(3)
+        .and_then(|v| {
+            if let XdlValue::String(s) = v {
+                Some(s.to_lowercase())
+            } else {
+                None
+            }
+        })
+        .unwrap_or_else(|| "inner".to_string());
 
     let df1 = get_dataframe(df1_id)?;
     let df2 = get_dataframe(df2_id)?;
@@ -475,7 +611,12 @@ pub fn df_join(args: &[XdlValue]) -> XdlResult<XdlValue> {
         "left" => JoinType::Left,
         "right" => JoinType::Right,
         "outer" | "full" => JoinType::Full,
-        _ => return Err(XdlError::RuntimeError(format!("Unknown join type: {}", how))),
+        _ => {
+            return Err(XdlError::RuntimeError(format!(
+                "Unknown join type: {}",
+                how
+            )))
+        }
     };
 
     let result = df1
@@ -489,7 +630,9 @@ pub fn df_join(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_SHAPE - Get shape
 pub fn df_shape(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("DF_SHAPE requires df_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_SHAPE requires df_id".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -505,7 +648,9 @@ pub fn df_shape(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_COLUMNS - Get column names
 pub fn df_columns(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("DF_COLUMNS requires df_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_COLUMNS requires df_id".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -514,7 +659,8 @@ pub fn df_columns(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     let df = get_dataframe(df_id)?;
-    let columns: Vec<XdlValue> = df.get_column_names()
+    let columns: Vec<XdlValue> = df
+        .get_column_names()
         .iter()
         .map(|s| XdlValue::String(s.to_string()))
         .collect();
@@ -524,7 +670,9 @@ pub fn df_columns(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_DTYPES - Get column types
 pub fn df_dtypes(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("DF_DTYPES requires df_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_DTYPES requires df_id".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -533,7 +681,8 @@ pub fn df_dtypes(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     let df = get_dataframe(df_id)?;
-    let dtypes: Vec<XdlValue> = df.dtypes()
+    let dtypes: Vec<XdlValue> = df
+        .dtypes()
         .iter()
         .map(|dt| XdlValue::String(format!("{:?}", dt)))
         .collect();
@@ -543,7 +692,9 @@ pub fn df_dtypes(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_DESCRIBE - Get basic statistics (shape, columns, dtypes)
 pub fn df_describe(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("DF_DESCRIBE requires df_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_DESCRIBE requires df_id".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -567,7 +718,9 @@ pub fn df_describe(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_PRINT - Print DataFrame as string
 pub fn df_print(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("DF_PRINT requires df_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_PRINT requires df_id".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -582,7 +735,9 @@ pub fn df_print(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// DF_TO_ARRAY - Convert column to array
 pub fn df_to_array(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("DF_TO_ARRAY requires df_id, column".to_string()));
+        return Err(XdlError::RuntimeError(
+            "DF_TO_ARRAY requires df_id, column".to_string(),
+        ));
     }
 
     let df_id = match &args[0] {
@@ -592,11 +747,16 @@ pub fn df_to_array(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let column = match &args[1] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Column must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Column must be a string".to_string(),
+            ))
+        }
     };
 
     let df = get_dataframe(df_id)?;
-    let series = df.column(&column)
+    let series = df
+        .column(&column)
         .map_err(|e| XdlError::RuntimeError(format!("Column not found: {}", e)))?;
 
     match series.dtype() {
@@ -636,7 +796,10 @@ pub fn df_to_array(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 .collect();
             Ok(XdlValue::NestedArray(arr))
         }
-        _ => Err(XdlError::RuntimeError(format!("Unsupported type: {:?}", series.dtype()))),
+        _ => Err(XdlError::RuntimeError(format!(
+            "Unsupported type: {:?}",
+            series.dtype()
+        ))),
     }
 }
 

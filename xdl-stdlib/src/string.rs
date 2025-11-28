@@ -289,9 +289,9 @@ pub fn strtrim(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     let result = match flag {
-        0 => s, // No trimming
+        0 => s,                          // No trimming
         1 => s.trim_start().to_string(), // Remove leading whitespace
-        2 => s.trim().to_string(), // Remove both leading and trailing
+        2 => s.trim().to_string(),       // Remove both leading and trailing
         _ => {
             return Err(XdlError::InvalidArgument(format!(
                 "STRTRIM: Invalid flag value {}. Expected 0, 1, or 2",

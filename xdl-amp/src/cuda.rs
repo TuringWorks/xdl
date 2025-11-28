@@ -309,26 +309,31 @@ impl CudaDevice {
             .map_err(|e| GpuError::CudaError(format!("Failed to initialize CUDA device: {}", e)))?;
 
         // Compile and load kernels
-        let ptx = cudarc::nvrtc::compile_ptx(CUDA_KERNELS)
-            .map_err(|e| GpuError::CompilationFailed(format!("Failed to compile CUDA kernels: {}", e)))?;
+        let ptx = cudarc::nvrtc::compile_ptx(CUDA_KERNELS).map_err(|e| {
+            GpuError::CompilationFailed(format!("Failed to compile CUDA kernels: {}", e))
+        })?;
 
         device
-            .load_ptx(ptx, "xdl_kernels", &[
-                "add_f32",
-                "mul_f32",
-                "sub_f32",
-                "div_f32",
-                "sin_f32",
-                "cos_f32",
-                "exp_f32",
-                "log_f32",
-                "sqrt_f32",
-                "pow_f32",
-                "sum_reduce_f32",
-                "max_reduce_f32",
-                "min_reduce_f32",
-                "matmul_f32",
-            ])
+            .load_ptx(
+                ptx,
+                "xdl_kernels",
+                &[
+                    "add_f32",
+                    "mul_f32",
+                    "sub_f32",
+                    "div_f32",
+                    "sin_f32",
+                    "cos_f32",
+                    "exp_f32",
+                    "log_f32",
+                    "sqrt_f32",
+                    "pow_f32",
+                    "sum_reduce_f32",
+                    "max_reduce_f32",
+                    "min_reduce_f32",
+                    "matmul_f32",
+                ],
+            )
             .map_err(|e| GpuError::CudaError(format!("Failed to load PTX module: {}", e)))?;
 
         Ok(Self {
@@ -396,10 +401,9 @@ impl GpuDevice for CudaDevice {
     }
 
     fn create_buffer(&self, size: usize) -> Result<Box<dyn GpuBuffer>> {
-        let data = self
-            .device
-            .alloc_zeros::<u8>(size)
-            .map_err(|e| GpuError::BufferCreationFailed(format!("Failed to allocate CUDA buffer: {}", e)))?;
+        let data = self.device.alloc_zeros::<u8>(size).map_err(|e| {
+            GpuError::BufferCreationFailed(format!("Failed to allocate CUDA buffer: {}", e))
+        })?;
 
         Ok(Box::new(CudaBuffer {
             data,
@@ -409,10 +413,9 @@ impl GpuDevice for CudaDevice {
     }
 
     fn create_buffer_with_data(&self, data: &[u8]) -> Result<Box<dyn GpuBuffer>> {
-        let gpu_data = self
-            .device
-            .htod_sync_copy(data)
-            .map_err(|e| GpuError::BufferCreationFailed(format!("Failed to create CUDA buffer with data: {}", e)))?;
+        let gpu_data = self.device.htod_sync_copy(data).map_err(|e| {
+            GpuError::BufferCreationFailed(format!("Failed to create CUDA buffer with data: {}", e))
+        })?;
 
         Ok(Box::new(CudaBuffer {
             data: gpu_data,
@@ -423,22 +426,35 @@ impl GpuDevice for CudaDevice {
 
     fn add_f32(&self, a: &[f32], b: &[f32], c: &mut [f32]) -> Result<()> {
         let n = a.len();
-        let dev_a = self.device.htod_sync_copy(a)
+        let dev_a = self
+            .device
+            .htod_sync_copy(a)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let dev_b = self.device.htod_sync_copy(b)
+        let dev_b = self
+            .device
+            .htod_sync_copy(b)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_c = self.device.alloc_zeros::<f32>(n)
+        let mut dev_c = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "add_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "add_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel add_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_a, &dev_b, &mut dev_c, n as i32))
+            kernel
+                .launch(
+                    Self::launch_config(n),
+                    (&dev_a, &dev_b, &mut dev_c, n as i32),
+                )
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_c, c)
+        self.device
+            .dtoh_sync_copy_into(&dev_c, c)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -446,22 +462,35 @@ impl GpuDevice for CudaDevice {
 
     fn mul_f32(&self, a: &[f32], b: &[f32], c: &mut [f32]) -> Result<()> {
         let n = a.len();
-        let dev_a = self.device.htod_sync_copy(a)
+        let dev_a = self
+            .device
+            .htod_sync_copy(a)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let dev_b = self.device.htod_sync_copy(b)
+        let dev_b = self
+            .device
+            .htod_sync_copy(b)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_c = self.device.alloc_zeros::<f32>(n)
+        let mut dev_c = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "mul_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "mul_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel mul_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_a, &dev_b, &mut dev_c, n as i32))
+            kernel
+                .launch(
+                    Self::launch_config(n),
+                    (&dev_a, &dev_b, &mut dev_c, n as i32),
+                )
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_c, c)
+        self.device
+            .dtoh_sync_copy_into(&dev_c, c)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -469,22 +498,35 @@ impl GpuDevice for CudaDevice {
 
     fn sub_f32(&self, a: &[f32], b: &[f32], c: &mut [f32]) -> Result<()> {
         let n = a.len();
-        let dev_a = self.device.htod_sync_copy(a)
+        let dev_a = self
+            .device
+            .htod_sync_copy(a)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let dev_b = self.device.htod_sync_copy(b)
+        let dev_b = self
+            .device
+            .htod_sync_copy(b)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_c = self.device.alloc_zeros::<f32>(n)
+        let mut dev_c = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "sub_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "sub_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel sub_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_a, &dev_b, &mut dev_c, n as i32))
+            kernel
+                .launch(
+                    Self::launch_config(n),
+                    (&dev_a, &dev_b, &mut dev_c, n as i32),
+                )
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_c, c)
+        self.device
+            .dtoh_sync_copy_into(&dev_c, c)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -492,22 +534,35 @@ impl GpuDevice for CudaDevice {
 
     fn div_f32(&self, a: &[f32], b: &[f32], c: &mut [f32]) -> Result<()> {
         let n = a.len();
-        let dev_a = self.device.htod_sync_copy(a)
+        let dev_a = self
+            .device
+            .htod_sync_copy(a)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let dev_b = self.device.htod_sync_copy(b)
+        let dev_b = self
+            .device
+            .htod_sync_copy(b)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_c = self.device.alloc_zeros::<f32>(n)
+        let mut dev_c = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "div_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "div_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel div_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_a, &dev_b, &mut dev_c, n as i32))
+            kernel
+                .launch(
+                    Self::launch_config(n),
+                    (&dev_a, &dev_b, &mut dev_c, n as i32),
+                )
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_c, c)
+        self.device
+            .dtoh_sync_copy_into(&dev_c, c)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -522,25 +577,35 @@ impl GpuDevice for CudaDevice {
         n: usize,
         k: usize,
     ) -> Result<()> {
-        let dev_a = self.device.htod_sync_copy(a)
+        let dev_a = self
+            .device
+            .htod_sync_copy(a)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let dev_b = self.device.htod_sync_copy(b)
+        let dev_b = self
+            .device
+            .htod_sync_copy(b)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_c = self.device.alloc_zeros::<f32>(m * n)
+        let mut dev_c = self
+            .device
+            .alloc_zeros::<f32>(m * n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "matmul_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "matmul_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel matmul_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(
-                Self::launch_config_2d(m, n),
-                (&dev_a, &dev_b, &mut dev_c, m as i32, n as i32, k as i32),
-            )
-            .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
+            kernel
+                .launch(
+                    Self::launch_config_2d(m, n),
+                    (&dev_a, &dev_b, &mut dev_c, m as i32, n as i32, k as i32),
+                )
+                .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_c, c)
+        self.device
+            .dtoh_sync_copy_into(&dev_c, c)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -548,20 +613,28 @@ impl GpuDevice for CudaDevice {
 
     fn sin_f32(&self, x: &[f32], y: &mut [f32]) -> Result<()> {
         let n = x.len();
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_y = self.device.alloc_zeros::<f32>(n)
+        let mut dev_y = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "sin_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "sin_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel sin_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
+            kernel
+                .launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_y, y)
+        self.device
+            .dtoh_sync_copy_into(&dev_y, y)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -569,20 +642,28 @@ impl GpuDevice for CudaDevice {
 
     fn cos_f32(&self, x: &[f32], y: &mut [f32]) -> Result<()> {
         let n = x.len();
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_y = self.device.alloc_zeros::<f32>(n)
+        let mut dev_y = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "cos_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "cos_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel cos_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
+            kernel
+                .launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_y, y)
+        self.device
+            .dtoh_sync_copy_into(&dev_y, y)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -590,20 +671,28 @@ impl GpuDevice for CudaDevice {
 
     fn exp_f32(&self, x: &[f32], y: &mut [f32]) -> Result<()> {
         let n = x.len();
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_y = self.device.alloc_zeros::<f32>(n)
+        let mut dev_y = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "exp_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "exp_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel exp_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
+            kernel
+                .launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_y, y)
+        self.device
+            .dtoh_sync_copy_into(&dev_y, y)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -611,20 +700,28 @@ impl GpuDevice for CudaDevice {
 
     fn log_f32(&self, x: &[f32], y: &mut [f32]) -> Result<()> {
         let n = x.len();
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_y = self.device.alloc_zeros::<f32>(n)
+        let mut dev_y = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "log_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "log_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel log_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
+            kernel
+                .launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_y, y)
+        self.device
+            .dtoh_sync_copy_into(&dev_y, y)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -632,20 +729,28 @@ impl GpuDevice for CudaDevice {
 
     fn sqrt_f32(&self, x: &[f32], y: &mut [f32]) -> Result<()> {
         let n = x.len();
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_y = self.device.alloc_zeros::<f32>(n)
+        let mut dev_y = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "sqrt_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "sqrt_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel sqrt_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
+            kernel
+                .launch(Self::launch_config(n), (&dev_x, &mut dev_y, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_y, y)
+        self.device
+            .dtoh_sync_copy_into(&dev_y, y)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -653,20 +758,28 @@ impl GpuDevice for CudaDevice {
 
     fn pow_f32(&self, x: &[f32], p: f32, y: &mut [f32]) -> Result<()> {
         let n = x.len();
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
-        let mut dev_y = self.device.alloc_zeros::<f32>(n)
+        let mut dev_y = self
+            .device
+            .alloc_zeros::<f32>(n)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "pow_f32")
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "pow_f32")
             .ok_or_else(|| GpuError::ExecutionFailed("Kernel pow_f32 not found".to_string()))?;
 
         unsafe {
-            kernel.launch(Self::launch_config(n), (&dev_x, p, &mut dev_y, n as i32))
+            kernel
+                .launch(Self::launch_config(n), (&dev_x, p, &mut dev_y, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
-        self.device.dtoh_sync_copy_into(&dev_y, y)
+        self.device
+            .dtoh_sync_copy_into(&dev_y, y)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(())
@@ -678,24 +791,34 @@ impl GpuDevice for CudaDevice {
             return Ok(0.0);
         }
 
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         let (config, grid_size) = Self::launch_config_reduce(n);
-        let mut dev_partial = self.device.alloc_zeros::<f32>(grid_size)
+        let mut dev_partial = self
+            .device
+            .alloc_zeros::<f32>(grid_size)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "sum_reduce_f32")
-            .ok_or_else(|| GpuError::ExecutionFailed("Kernel sum_reduce_f32 not found".to_string()))?;
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "sum_reduce_f32")
+            .ok_or_else(|| {
+                GpuError::ExecutionFailed("Kernel sum_reduce_f32 not found".to_string())
+            })?;
 
         unsafe {
-            kernel.launch(config, (&dev_x, &mut dev_partial, n as i32))
+            kernel
+                .launch(config, (&dev_x, &mut dev_partial, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
         // Copy partial results back and sum on CPU
         let mut partial = vec![0.0f32; grid_size];
-        self.device.dtoh_sync_copy_into(&dev_partial, &mut partial)
+        self.device
+            .dtoh_sync_copy_into(&dev_partial, &mut partial)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(partial.iter().sum())
@@ -707,23 +830,33 @@ impl GpuDevice for CudaDevice {
             return Err(GpuError::ExecutionFailed("Empty array".to_string()));
         }
 
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         let (config, grid_size) = Self::launch_config_reduce(n);
-        let mut dev_partial = self.device.alloc_zeros::<f32>(grid_size)
+        let mut dev_partial = self
+            .device
+            .alloc_zeros::<f32>(grid_size)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "max_reduce_f32")
-            .ok_or_else(|| GpuError::ExecutionFailed("Kernel max_reduce_f32 not found".to_string()))?;
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "max_reduce_f32")
+            .ok_or_else(|| {
+                GpuError::ExecutionFailed("Kernel max_reduce_f32 not found".to_string())
+            })?;
 
         unsafe {
-            kernel.launch(config, (&dev_x, &mut dev_partial, n as i32))
+            kernel
+                .launch(config, (&dev_x, &mut dev_partial, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
         let mut partial = vec![0.0f32; grid_size];
-        self.device.dtoh_sync_copy_into(&dev_partial, &mut partial)
+        self.device
+            .dtoh_sync_copy_into(&dev_partial, &mut partial)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(partial.iter().cloned().fold(f32::NEG_INFINITY, f32::max))
@@ -735,23 +868,33 @@ impl GpuDevice for CudaDevice {
             return Err(GpuError::ExecutionFailed("Empty array".to_string()));
         }
 
-        let dev_x = self.device.htod_sync_copy(x)
+        let dev_x = self
+            .device
+            .htod_sync_copy(x)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         let (config, grid_size) = Self::launch_config_reduce(n);
-        let mut dev_partial = self.device.alloc_zeros::<f32>(grid_size)
+        let mut dev_partial = self
+            .device
+            .alloc_zeros::<f32>(grid_size)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
-        let kernel = self.device.get_func("xdl_kernels", "min_reduce_f32")
-            .ok_or_else(|| GpuError::ExecutionFailed("Kernel min_reduce_f32 not found".to_string()))?;
+        let kernel = self
+            .device
+            .get_func("xdl_kernels", "min_reduce_f32")
+            .ok_or_else(|| {
+                GpuError::ExecutionFailed("Kernel min_reduce_f32 not found".to_string())
+            })?;
 
         unsafe {
-            kernel.launch(config, (&dev_x, &mut dev_partial, n as i32))
+            kernel
+                .launch(config, (&dev_x, &mut dev_partial, n as i32))
                 .map_err(|e| GpuError::ExecutionFailed(format!("Kernel launch failed: {}", e)))?;
         }
 
         let mut partial = vec![0.0f32; grid_size];
-        self.device.dtoh_sync_copy_into(&dev_partial, &mut partial)
+        self.device
+            .dtoh_sync_copy_into(&dev_partial, &mut partial)
             .map_err(|e| GpuError::CudaError(e.to_string()))?;
 
         Ok(partial.iter().cloned().fold(f32::INFINITY, f32::min))

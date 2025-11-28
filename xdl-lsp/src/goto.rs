@@ -60,19 +60,23 @@ fn find_definition_in_statement(stmt: &Statement, target: &str) -> Option<Range>
                 return Some(location_to_range(location));
             }
         }
-        Statement::Assignment { target: expr, location, .. } => {
-            if let Expression::Variable { name, .. } = expr {
-                if name.eq_ignore_ascii_case(target) {
-                    return Some(location_to_range(location));
-                }
-            }
+        Statement::Assignment {
+            target: Expression::Variable { name, .. },
+            location,
+            ..
+        } if name.eq_ignore_ascii_case(target) => {
+            return Some(location_to_range(location));
         }
-        Statement::For { variable, location, .. } => {
+        Statement::For {
+            variable, location, ..
+        } => {
             if variable.eq_ignore_ascii_case(target) {
                 return Some(location_to_range(location));
             }
         }
-        Statement::Foreach { variable, location, .. } => {
+        Statement::Foreach {
+            variable, location, ..
+        } => {
             if variable.eq_ignore_ascii_case(target) {
                 return Some(location_to_range(location));
             }
@@ -88,9 +92,19 @@ fn find_definition_in_statement(stmt: &Statement, target: &str) -> Option<Range>
     None
 }
 
-fn find_references_in_statement(stmt: &Statement, target: &str, uri: &Url, refs: &mut Vec<Location>) {
+fn find_references_in_statement(
+    stmt: &Statement,
+    target: &str,
+    uri: &Url,
+    refs: &mut Vec<Location>,
+) {
     match stmt {
-        Statement::FunctionDef { name, body, location, .. } => {
+        Statement::FunctionDef {
+            name,
+            body,
+            location,
+            ..
+        } => {
             if name.eq_ignore_ascii_case(target) {
                 refs.push(Location {
                     uri: uri.clone(),
@@ -101,7 +115,12 @@ fn find_references_in_statement(stmt: &Statement, target: &str, uri: &Url, refs:
                 find_references_in_statement(s, target, uri, refs);
             }
         }
-        Statement::ProcedureDef { name, body, location, .. } => {
+        Statement::ProcedureDef {
+            name,
+            body,
+            location,
+            ..
+        } => {
             if name.eq_ignore_ascii_case(target) {
                 refs.push(Location {
                     uri: uri.clone(),
@@ -112,18 +131,26 @@ fn find_references_in_statement(stmt: &Statement, target: &str, uri: &Url, refs:
                 find_references_in_statement(s, target, uri, refs);
             }
         }
-        Statement::Assignment { target: expr, value, location } => {
-            if let Expression::Variable { name, .. } = expr {
-                if name.eq_ignore_ascii_case(target) {
-                    refs.push(Location {
-                        uri: uri.clone(),
-                        range: location_to_range(location),
-                    });
-                }
-            }
+        Statement::Assignment {
+            target: Expression::Variable { name, .. },
+            value,
+            location,
+        } if name.eq_ignore_ascii_case(target) => {
+            refs.push(Location {
+                uri: uri.clone(),
+                range: location_to_range(location),
+            });
             find_references_in_expression(value, target, uri, refs);
         }
-        Statement::If { condition, then_block, else_block, .. } => {
+        Statement::Assignment { value, .. } => {
+            find_references_in_expression(value, target, uri, refs);
+        }
+        Statement::If {
+            condition,
+            then_block,
+            else_block,
+            ..
+        } => {
             find_references_in_expression(condition, target, uri, refs);
             for s in then_block {
                 find_references_in_statement(s, target, uri, refs);
@@ -134,7 +161,14 @@ fn find_references_in_statement(stmt: &Statement, target: &str, uri: &Url, refs:
                 }
             }
         }
-        Statement::For { variable, start, end, step, body, location } => {
+        Statement::For {
+            variable,
+            start,
+            end,
+            step,
+            body,
+            location,
+        } => {
             if variable.eq_ignore_ascii_case(target) {
                 refs.push(Location {
                     uri: uri.clone(),
@@ -150,7 +184,9 @@ fn find_references_in_statement(stmt: &Statement, target: &str, uri: &Url, refs:
                 find_references_in_statement(s, target, uri, refs);
             }
         }
-        Statement::While { condition, body, .. } => {
+        Statement::While {
+            condition, body, ..
+        } => {
             find_references_in_expression(condition, target, uri, refs);
             for s in body {
                 find_references_in_statement(s, target, uri, refs);
@@ -164,16 +200,19 @@ fn find_references_in_statement(stmt: &Statement, target: &str, uri: &Url, refs:
         Statement::Expression { expr, .. } => {
             find_references_in_expression(expr, target, uri, refs);
         }
-        Statement::Return { value, .. } => {
-            if let Some(v) = value {
-                find_references_in_expression(v, target, uri, refs);
-            }
+        Statement::Return { value: Some(v), .. } => {
+            find_references_in_expression(v, target, uri, refs);
         }
         _ => {}
     }
 }
 
-fn find_references_in_expression(expr: &Expression, target: &str, uri: &Url, refs: &mut Vec<Location>) {
+fn find_references_in_expression(
+    expr: &Expression,
+    target: &str,
+    uri: &Url,
+    refs: &mut Vec<Location>,
+) {
     match expr {
         Expression::Variable { name, location } => {
             if name.eq_ignore_ascii_case(target) {
@@ -183,7 +222,12 @@ fn find_references_in_expression(expr: &Expression, target: &str, uri: &Url, ref
                 });
             }
         }
-        Expression::FunctionCall { name, args, location, .. } => {
+        Expression::FunctionCall {
+            name,
+            args,
+            location,
+            ..
+        } => {
             if name.eq_ignore_ascii_case(target) {
                 refs.push(Location {
                     uri: uri.clone(),
@@ -232,7 +276,12 @@ fn find_references_in_expression(expr: &Expression, target: &str, uri: &Url, ref
         Expression::StructRef { object, .. } => {
             find_references_in_expression(object, target, uri, refs);
         }
-        Expression::Ternary { condition, if_true, if_false, .. } => {
+        Expression::Ternary {
+            condition,
+            if_true,
+            if_false,
+            ..
+        } => {
             find_references_in_expression(condition, target, uri, refs);
             find_references_in_expression(if_true, target, uri, refs);
             find_references_in_expression(if_false, target, uri, refs);

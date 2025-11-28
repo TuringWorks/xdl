@@ -40,7 +40,9 @@ fn xdl_to_array2(value: &XdlValue, n_cols: usize) -> XdlResult<Array2<f64>> {
     let n_rows = flat.len() / n_cols;
     if flat.len() != n_rows * n_cols {
         return Err(XdlError::RuntimeError(format!(
-            "Array length {} not divisible by {} columns", flat.len(), n_cols
+            "Array length {} not divisible by {} columns",
+            flat.len(),
+            n_cols
         )));
     }
 
@@ -80,25 +82,39 @@ pub fn ml_kmeans_fit(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let n_features = match &args[1] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_features must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_features must be integer".to_string(),
+            ))
+        }
     };
 
     let x = xdl_to_array2(&args[0], n_features)?;
 
     let n_clusters = match &args[2] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_clusters must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_clusters must be integer".to_string(),
+            ))
+        }
     };
 
-    let max_iter = args.get(3).map(|v| match v {
-        XdlValue::Long(n) => *n as u64,
-        _ => 100,
-    }).unwrap_or(100);
+    let max_iter = args
+        .get(3)
+        .map(|v| match v {
+            XdlValue::Long(n) => *n as u64,
+            _ => 100,
+        })
+        .unwrap_or(100);
 
-    let tolerance = args.get(4).map(|v| match v {
-        XdlValue::Double(d) => *d,
-        _ => 1e-4,
-    }).unwrap_or(1e-4);
+    let tolerance = args
+        .get(4)
+        .map(|v| match v {
+            XdlValue::Double(d) => *d,
+            _ => 1e-4,
+        })
+        .unwrap_or(1e-4);
 
     let dataset = DatasetBase::from(x);
 
@@ -126,18 +142,27 @@ pub fn ml_kmeans_predict(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let n_features = match &args[2] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_features must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_features must be integer".to_string(),
+            ))
+        }
     };
 
     let x = xdl_to_array2(&args[1], n_features)?;
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::KMeans(kmeans) = model {
@@ -154,16 +179,23 @@ pub fn ml_kmeans_predict(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: centroids = ML_KMEANS_CENTROIDS(model)
 pub fn ml_kmeans_centroids(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("ML_KMEANS_CENTROIDS requires model_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_KMEANS_CENTROIDS requires model_id".to_string(),
+        ));
     }
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::KMeans(kmeans) = model {
@@ -188,7 +220,11 @@ pub fn ml_linear_fit(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let n_features = match &args[2] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_features must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_features must be integer".to_string(),
+            ))
+        }
     };
 
     let x = xdl_to_array2(&args[0], n_features)?;
@@ -218,25 +254,36 @@ pub fn ml_linear_predict(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let n_features = match &args[2] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_features must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_features must be integer".to_string(),
+            ))
+        }
     };
 
     let x = xdl_to_array2(&args[1], n_features)?;
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::LinearRegression(linear) = model {
         let predictions = linear.predict(&x);
         Ok(array1_to_xdl(&predictions))
     } else {
-        Err(XdlError::RuntimeError("Not a linear regression model".to_string()))
+        Err(XdlError::RuntimeError(
+            "Not a linear regression model".to_string(),
+        ))
     }
 }
 
@@ -244,22 +291,31 @@ pub fn ml_linear_predict(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: coeffs = ML_LINEAR_COEFFICIENTS(model)
 pub fn ml_linear_coefficients(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("ML_LINEAR_COEFFICIENTS requires model_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_LINEAR_COEFFICIENTS requires model_id".to_string(),
+        ));
     }
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::LinearRegression(linear) = model {
         Ok(array1_to_xdl(linear.params()))
     } else {
-        Err(XdlError::RuntimeError("Not a linear regression model".to_string()))
+        Err(XdlError::RuntimeError(
+            "Not a linear regression model".to_string(),
+        ))
     }
 }
 
@@ -267,22 +323,31 @@ pub fn ml_linear_coefficients(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: intercept = ML_LINEAR_INTERCEPT(model)
 pub fn ml_linear_intercept(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("ML_LINEAR_INTERCEPT requires model_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_LINEAR_INTERCEPT requires model_id".to_string(),
+        ));
     }
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::LinearRegression(linear) = model {
         Ok(XdlValue::Double(linear.intercept()))
     } else {
-        Err(XdlError::RuntimeError("Not a linear regression model".to_string()))
+        Err(XdlError::RuntimeError(
+            "Not a linear regression model".to_string(),
+        ))
     }
 }
 
@@ -303,15 +368,22 @@ pub fn ml_logistic_predict(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let linear_result = ml_linear_predict(args)?;
 
     if let XdlValue::Array(predictions) = linear_result {
-        let labels: Vec<f64> = predictions.iter()
+        let labels: Vec<f64> = predictions
+            .iter()
             .map(|&p| {
                 let sigmoid = 1.0 / (1.0 + (-p).exp());
-                if sigmoid > 0.5 { 1.0 } else { 0.0 }
+                if sigmoid > 0.5 {
+                    1.0
+                } else {
+                    0.0
+                }
             })
             .collect();
         Ok(XdlValue::Array(labels))
     } else {
-        Err(XdlError::RuntimeError("Unexpected prediction result".to_string()))
+        Err(XdlError::RuntimeError(
+            "Unexpected prediction result".to_string(),
+        ))
     }
 }
 
@@ -330,14 +402,22 @@ pub fn ml_pca_fit(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let n_features = match &args[1] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_features must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_features must be integer".to_string(),
+            ))
+        }
     };
 
     let x = xdl_to_array2(&args[0], n_features)?;
 
     let n_components = match &args[2] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_components must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_components must be integer".to_string(),
+            ))
+        }
     };
 
     let dataset = DatasetBase::from(x);
@@ -364,18 +444,27 @@ pub fn ml_pca_transform(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let n_features = match &args[2] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_features must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_features must be integer".to_string(),
+            ))
+        }
     };
 
     let x = xdl_to_array2(&args[1], n_features)?;
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::Pca(pca) = model {
@@ -391,16 +480,23 @@ pub fn ml_pca_transform(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: components = ML_PCA_COMPONENTS(model)
 pub fn ml_pca_components(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("ML_PCA_COMPONENTS requires model_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_PCA_COMPONENTS requires model_id".to_string(),
+        ));
     }
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::Pca(pca) = model {
@@ -414,16 +510,23 @@ pub fn ml_pca_components(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: variance = ML_PCA_VARIANCE(model)
 pub fn ml_pca_variance(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("ML_PCA_VARIANCE requires model_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_PCA_VARIANCE requires model_id".to_string(),
+        ));
     }
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let models = MODELS.lock().unwrap();
-    let model = models.get(model_id)
+    let model = models
+        .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
 
     if let ModelType::Pca(pca) = model {
@@ -449,7 +552,11 @@ pub fn ml_train_test_split(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let n_features = match &args[2] {
         XdlValue::Long(n) => *n as usize,
-        _ => return Err(XdlError::RuntimeError("n_features must be integer".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "n_features must be integer".to_string(),
+            ))
+        }
     };
 
     let x = xdl_to_array2(&args[0], n_features)?;
@@ -458,7 +565,11 @@ pub fn ml_train_test_split(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let test_ratio = match &args[3] {
         XdlValue::Double(d) => *d,
         XdlValue::Float(f) => *f as f64,
-        _ => return Err(XdlError::RuntimeError("test_ratio must be float".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "test_ratio must be float".to_string(),
+            ))
+        }
     };
 
     let n_samples = x.nrows();
@@ -482,17 +593,23 @@ pub fn ml_train_test_split(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: accuracy = ML_ACCURACY(y_true, y_pred)
 pub fn ml_accuracy(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("ML_ACCURACY requires: y_true, y_pred".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_ACCURACY requires: y_true, y_pred".to_string(),
+        ));
     }
 
     let y_true = xdl_to_array1(&args[0])?;
     let y_pred = xdl_to_array1(&args[1])?;
 
     if y_true.len() != y_pred.len() {
-        return Err(XdlError::RuntimeError("Arrays must have same length".to_string()));
+        return Err(XdlError::RuntimeError(
+            "Arrays must have same length".to_string(),
+        ));
     }
 
-    let correct: usize = y_true.iter().zip(y_pred.iter())
+    let correct: usize = y_true
+        .iter()
+        .zip(y_pred.iter())
         .filter(|(&t, &p)| (t - p).abs() < 1e-10)
         .count();
 
@@ -503,19 +620,26 @@ pub fn ml_accuracy(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: mse = ML_MSE(y_true, y_pred)
 pub fn ml_mse(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("ML_MSE requires: y_true, y_pred".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_MSE requires: y_true, y_pred".to_string(),
+        ));
     }
 
     let y_true = xdl_to_array1(&args[0])?;
     let y_pred = xdl_to_array1(&args[1])?;
 
     if y_true.len() != y_pred.len() {
-        return Err(XdlError::RuntimeError("Arrays must have same length".to_string()));
+        return Err(XdlError::RuntimeError(
+            "Arrays must have same length".to_string(),
+        ));
     }
 
-    let mse: f64 = y_true.iter().zip(y_pred.iter())
+    let mse: f64 = y_true
+        .iter()
+        .zip(y_pred.iter())
         .map(|(&t, &p)| (t - p).powi(2))
-        .sum::<f64>() / y_true.len() as f64;
+        .sum::<f64>()
+        / y_true.len() as f64;
 
     Ok(XdlValue::Double(mse))
 }
@@ -524,22 +648,33 @@ pub fn ml_mse(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: r2 = ML_R2_SCORE(y_true, y_pred)
 pub fn ml_r2_score(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("ML_R2_SCORE requires: y_true, y_pred".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_R2_SCORE requires: y_true, y_pred".to_string(),
+        ));
     }
 
     let y_true = xdl_to_array1(&args[0])?;
     let y_pred = xdl_to_array1(&args[1])?;
 
     if y_true.len() != y_pred.len() {
-        return Err(XdlError::RuntimeError("Arrays must have same length".to_string()));
+        return Err(XdlError::RuntimeError(
+            "Arrays must have same length".to_string(),
+        ));
     }
 
     let mean = y_true.mean().unwrap_or(0.0);
-    let ss_res: f64 = y_true.iter().zip(y_pred.iter())
-        .map(|(&t, &p)| (t - p).powi(2)).sum();
+    let ss_res: f64 = y_true
+        .iter()
+        .zip(y_pred.iter())
+        .map(|(&t, &p)| (t - p).powi(2))
+        .sum();
     let ss_tot: f64 = y_true.iter().map(|&t| (t - mean).powi(2)).sum();
 
-    let r2 = if ss_tot > 0.0 { 1.0 - ss_res / ss_tot } else { 0.0 };
+    let r2 = if ss_tot > 0.0 {
+        1.0 - ss_res / ss_tot
+    } else {
+        0.0
+    };
     Ok(XdlValue::Double(r2))
 }
 
@@ -547,12 +682,18 @@ pub fn ml_r2_score(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: ML_DROP_MODEL, model_id
 pub fn ml_drop_model(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("ML_DROP_MODEL requires model_id".to_string()));
+        return Err(XdlError::RuntimeError(
+            "ML_DROP_MODEL requires model_id".to_string(),
+        ));
     }
 
     let model_id = match &args[0] {
         XdlValue::String(s) => s,
-        _ => return Err(XdlError::RuntimeError("model_id must be string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "model_id must be string".to_string(),
+            ))
+        }
     };
 
     let mut models = MODELS.lock().unwrap();

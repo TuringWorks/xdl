@@ -29,10 +29,10 @@ impl Default for DispatchConfig {
     fn default() -> Self {
         Self {
             // GPU overhead typically ~10-50μs, so need enough elements to amortize
-            min_gpu_elements_elementwise: 10_000,      // ~40KB for f32
-            min_gpu_elements_reduction: 50_000,        // Reductions need more elements
-            min_gpu_matmul_dim: 64,                    // 64x64 minimum
-            min_gpu_matmul_elements: 10_000,           // M*K + K*N elements
+            min_gpu_elements_elementwise: 10_000, // ~40KB for f32
+            min_gpu_elements_reduction: 50_000,   // Reductions need more elements
+            min_gpu_matmul_dim: 64,               // 64x64 minimum
+            min_gpu_matmul_elements: 10_000,      // M*K + K*N elements
             adaptive_thresholds: true,
             force_gpu: false,
             force_cpu: false,
@@ -99,12 +99,7 @@ impl SmartDispatcher {
             );
             DispatchTarget::Gpu
         } else {
-            GLOBAL_STATS.record_dispatch(
-                op,
-                elements,
-                ExecutionLayer::Cpu,
-                "Below threshold",
-            );
+            GLOBAL_STATS.record_dispatch(op, elements, ExecutionLayer::Cpu, "Below threshold");
             DispatchTarget::Cpu
         }
     }
@@ -152,7 +147,12 @@ impl SmartDispatcher {
             return DispatchTarget::Cpu;
         }
         if self.config.force_gpu {
-            GLOBAL_STATS.record_dispatch(OpType::MatMul, m * n, ExecutionLayer::GpuCompute, "Forced GPU");
+            GLOBAL_STATS.record_dispatch(
+                OpType::MatMul,
+                m * n,
+                ExecutionLayer::GpuCompute,
+                "Forced GPU",
+            );
             return DispatchTarget::Gpu;
         }
 
@@ -192,9 +192,16 @@ impl SmartDispatcher {
         }
 
         let atomic = match op {
-            OpType::Add | OpType::Sub | OpType::Mul | OpType::Div |
-            OpType::Sin | OpType::Cos | OpType::Exp | OpType::Log |
-            OpType::Sqrt | OpType::Pow => &self.adaptive_elementwise,
+            OpType::Add
+            | OpType::Sub
+            | OpType::Mul
+            | OpType::Div
+            | OpType::Sin
+            | OpType::Cos
+            | OpType::Exp
+            | OpType::Log
+            | OpType::Sqrt
+            | OpType::Pow => &self.adaptive_elementwise,
             OpType::Sum | OpType::Max | OpType::Min => &self.adaptive_reduction,
             OpType::MatMul => &self.adaptive_matmul,
             _ => return,
@@ -297,15 +304,28 @@ impl ThresholdInfo {
 pub mod cpu_ops {
     pub use crate::simd_ops::{
         // Binary element-wise
-        add_f32, sub_f32, mul_f32, div_f32,
-        // Unary element-wise
-        sin_f32, cos_f32, exp_f32, log_f32, sqrt_f32, pow_f32,
-        // Reductions
-        sum_f32, max_f32, min_f32,
-        // Matrix operations
-        matmul_f32, matmul_f32_parallel,
+        add_f32,
+        axpy_f32,
+        cos_f32,
+        div_f32,
+        dot_f32,
+        exp_f32,
         // Fused operations
-        fma_f32, axpy_f32, dot_f32,
+        fma_f32,
+        log_f32,
+        // Matrix operations
+        matmul_f32,
+        matmul_f32_parallel,
+        max_f32,
+        min_f32,
+        mul_f32,
+        pow_f32,
+        // Unary element-wise
+        sin_f32,
+        sqrt_f32,
+        sub_f32,
+        // Reductions
+        sum_f32,
     };
 }
 

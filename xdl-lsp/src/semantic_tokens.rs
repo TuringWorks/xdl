@@ -1,8 +1,8 @@
 //! Semantic tokens provider for enhanced syntax highlighting
 
 use tower_lsp::lsp_types::{
-    SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens,
-    SemanticTokensLegend, SemanticTokensResult,
+    SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens, SemanticTokensLegend,
+    SemanticTokensResult,
 };
 
 use crate::document::DocumentState;
@@ -10,24 +10,24 @@ use crate::document::DocumentState;
 pub fn semantic_tokens_legend() -> SemanticTokensLegend {
     SemanticTokensLegend {
         token_types: vec![
-            SemanticTokenType::KEYWORD,      // 0
-            SemanticTokenType::FUNCTION,     // 1
-            SemanticTokenType::METHOD,       // 2 (procedures)
-            SemanticTokenType::VARIABLE,     // 3
-            SemanticTokenType::PARAMETER,    // 4
-            SemanticTokenType::STRING,       // 5
-            SemanticTokenType::NUMBER,       // 6
-            SemanticTokenType::OPERATOR,     // 7
-            SemanticTokenType::COMMENT,      // 8
-            SemanticTokenType::NAMESPACE,    // 9 (system variables)
-            SemanticTokenType::CLASS,        // 10
-            SemanticTokenType::PROPERTY,     // 11 (struct fields)
-            SemanticTokenType::TYPE,         // 12
+            SemanticTokenType::KEYWORD,   // 0
+            SemanticTokenType::FUNCTION,  // 1
+            SemanticTokenType::METHOD,    // 2 (procedures)
+            SemanticTokenType::VARIABLE,  // 3
+            SemanticTokenType::PARAMETER, // 4
+            SemanticTokenType::STRING,    // 5
+            SemanticTokenType::NUMBER,    // 6
+            SemanticTokenType::OPERATOR,  // 7
+            SemanticTokenType::COMMENT,   // 8
+            SemanticTokenType::NAMESPACE, // 9 (system variables)
+            SemanticTokenType::CLASS,     // 10
+            SemanticTokenType::PROPERTY,  // 11 (struct fields)
+            SemanticTokenType::TYPE,      // 12
         ],
         token_modifiers: vec![
-            SemanticTokenModifier::DEFINITION,   // 0
-            SemanticTokenModifier::READONLY,     // 1
-            SemanticTokenModifier::DECLARATION,  // 2
+            SemanticTokenModifier::DEFINITION,  // 0
+            SemanticTokenModifier::READONLY,    // 1
+            SemanticTokenModifier::DECLARATION, // 2
         ],
     }
 }
@@ -127,7 +127,8 @@ fn tokenize_line(line: &str) -> Vec<(u32, u32, u32)> {
         }
 
         // Number
-        if c.is_ascii_digit() || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) {
+        if c.is_ascii_digit() || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit())
+        {
             let start = i;
             while i < chars.len()
                 && (chars[i].is_ascii_digit()
@@ -180,18 +181,19 @@ fn tokenize_line(line: &str) -> Vec<(u32, u32, u32)> {
         if is_operator_char(c) {
             let start = i;
             // Handle multi-character operators
-            if c == '-' && i + 1 < chars.len() && chars[i + 1] == '>' {
-                i += 2;
-            } else if c == ':' && i + 1 < chars.len() && chars[i + 1] == ':' {
-                i += 2;
-            } else if (c == '+' || c == '-' || c == '*' || c == '/')
-                && i + 1 < chars.len()
-                && chars[i + 1] == '='
-            {
-                i += 2;
-            } else if c == '+' && i + 1 < chars.len() && chars[i + 1] == '+' {
-                i += 2;
-            } else if c == '-' && i + 1 < chars.len() && chars[i + 1] == '-' {
+            let is_two_char_op = i + 1 < chars.len()
+                && matches!(
+                    (c, chars[i + 1]),
+                    ('-', '>')
+                        | (':', ':')
+                        | ('+', '+')
+                        | ('-', '-')
+                        | ('+', '=')
+                        | ('-', '=')
+                        | ('*', '=')
+                        | ('/', '=')
+                );
+            if is_two_char_op {
                 i += 2;
             } else {
                 i += 1;
@@ -212,10 +214,35 @@ fn classify_word(word: &str) -> u32 {
 
     // Keywords
     let keywords = [
-        "IF", "THEN", "ELSE", "ENDIF", "FOR", "ENDFOR", "FOREACH", "WHILE", "ENDWHILE",
-        "REPEAT", "UNTIL", "DO", "BEGIN", "END", "BREAK", "CONTINUE", "RETURN", "GOTO",
-        "CASE", "ENDCASE", "SWITCH", "ENDSWITCH", "OF", "COMMON", "COMPILE_OPT",
-        "FORWARD_FUNCTION", "ON_ERROR", "ON_IOERROR", "CATCH",
+        "IF",
+        "THEN",
+        "ELSE",
+        "ENDIF",
+        "FOR",
+        "ENDFOR",
+        "FOREACH",
+        "WHILE",
+        "ENDWHILE",
+        "REPEAT",
+        "UNTIL",
+        "DO",
+        "BEGIN",
+        "END",
+        "BREAK",
+        "CONTINUE",
+        "RETURN",
+        "GOTO",
+        "CASE",
+        "ENDCASE",
+        "SWITCH",
+        "ENDSWITCH",
+        "OF",
+        "COMMON",
+        "COMPILE_OPT",
+        "FORWARD_FUNCTION",
+        "ON_ERROR",
+        "ON_IOERROR",
+        "CATCH",
     ];
     if keywords.contains(&upper.as_str()) {
         return TOKEN_KEYWORD;
@@ -230,24 +257,90 @@ fn classify_word(word: &str) -> u32 {
     }
 
     // Logical operators (keywords)
-    let logical_ops = ["AND", "OR", "NOT", "XOR", "EQ", "NE", "LT", "GT", "LE", "GE", "MOD"];
+    let logical_ops = [
+        "AND", "OR", "NOT", "XOR", "EQ", "NE", "LT", "GT", "LE", "GE", "MOD",
+    ];
     if logical_ops.contains(&upper.as_str()) {
         return TOKEN_OPERATOR;
     }
 
     // Built-in functions (common ones)
     let builtin_funcs = [
-        "SIN", "COS", "TAN", "ASIN", "ACOS", "ATAN", "SINH", "COSH", "TANH",
-        "SQRT", "EXP", "ALOG", "ALOG10", "ABS", "CEIL", "FLOOR", "ROUND", "FIX",
-        "FLOAT", "DOUBLE", "COMPLEX", "FINDGEN", "INDGEN", "DINDGEN", "FLTARR",
-        "DBLARR", "INTARR", "BYTARR", "STRARR", "MAKE_ARRAY", "REPLICATE",
-        "WHERE", "N_ELEMENTS", "SIZE", "REFORM", "TRANSPOSE", "REVERSE", "SHIFT",
-        "ROTATE", "SORT", "UNIQ", "TOTAL", "MEAN", "MEDIAN", "VARIANCE", "STDDEV",
-        "MIN", "MAX", "MOMENT", "CORRELATE", "HISTOGRAM", "STRLEN", "STRMID",
-        "STRPOS", "STRTRIM", "STRUPCASE", "STRLOWCASE", "STRING", "STRSPLIT",
-        "STRJOIN", "STRCMP", "READ_ASCII", "READ_CSV", "READ_BINARY", "FILE_TEST",
-        "FILE_INFO", "FILE_SEARCH", "FILE_LINES", "PTR_NEW", "OBJ_NEW",
-        "BYTSCL", "CONGRID", "REBIN", "INTERPOLATE", "FFT",
+        "SIN",
+        "COS",
+        "TAN",
+        "ASIN",
+        "ACOS",
+        "ATAN",
+        "SINH",
+        "COSH",
+        "TANH",
+        "SQRT",
+        "EXP",
+        "ALOG",
+        "ALOG10",
+        "ABS",
+        "CEIL",
+        "FLOOR",
+        "ROUND",
+        "FIX",
+        "FLOAT",
+        "DOUBLE",
+        "COMPLEX",
+        "FINDGEN",
+        "INDGEN",
+        "DINDGEN",
+        "FLTARR",
+        "DBLARR",
+        "INTARR",
+        "BYTARR",
+        "STRARR",
+        "MAKE_ARRAY",
+        "REPLICATE",
+        "WHERE",
+        "N_ELEMENTS",
+        "SIZE",
+        "REFORM",
+        "TRANSPOSE",
+        "REVERSE",
+        "SHIFT",
+        "ROTATE",
+        "SORT",
+        "UNIQ",
+        "TOTAL",
+        "MEAN",
+        "MEDIAN",
+        "VARIANCE",
+        "STDDEV",
+        "MIN",
+        "MAX",
+        "MOMENT",
+        "CORRELATE",
+        "HISTOGRAM",
+        "STRLEN",
+        "STRMID",
+        "STRPOS",
+        "STRTRIM",
+        "STRUPCASE",
+        "STRLOWCASE",
+        "STRING",
+        "STRSPLIT",
+        "STRJOIN",
+        "STRCMP",
+        "READ_ASCII",
+        "READ_CSV",
+        "READ_BINARY",
+        "FILE_TEST",
+        "FILE_INFO",
+        "FILE_SEARCH",
+        "FILE_LINES",
+        "PTR_NEW",
+        "OBJ_NEW",
+        "BYTSCL",
+        "CONGRID",
+        "REBIN",
+        "INTERPOLATE",
+        "FFT",
     ];
     if builtin_funcs.contains(&upper.as_str()) {
         return TOKEN_FUNCTION;
@@ -255,11 +348,34 @@ fn classify_word(word: &str) -> u32 {
 
     // Built-in procedures (common ones)
     let builtin_procs = [
-        "PRINT", "PRINTF", "WRITEF", "WRITEU", "READF", "READU",
-        "OPENR", "OPENW", "OPENU", "CLOSE", "FREE_LUN",
-        "PLOT", "OPLOT", "CONTOUR", "SURFACE", "SHADE_SURF",
-        "TV", "TVSCL", "WINDOW", "WSET", "WDELETE", "DEVICE", "ERASE",
-        "HELP", "STOP", "MESSAGE", "PTR_FREE", "OBJ_DESTROY",
+        "PRINT",
+        "PRINTF",
+        "WRITEF",
+        "WRITEU",
+        "READF",
+        "READU",
+        "OPENR",
+        "OPENW",
+        "OPENU",
+        "CLOSE",
+        "FREE_LUN",
+        "PLOT",
+        "OPLOT",
+        "CONTOUR",
+        "SURFACE",
+        "SHADE_SURF",
+        "TV",
+        "TVSCL",
+        "WINDOW",
+        "WSET",
+        "WDELETE",
+        "DEVICE",
+        "ERASE",
+        "HELP",
+        "STOP",
+        "MESSAGE",
+        "PTR_FREE",
+        "OBJ_DESTROY",
     ];
     if builtin_procs.contains(&upper.as_str()) {
         return TOKEN_METHOD;
@@ -272,7 +388,22 @@ fn classify_word(word: &str) -> u32 {
 fn is_operator_char(c: char) -> bool {
     matches!(
         c,
-        '+' | '-' | '*' | '/' | '^' | '#' | '=' | '<' | '>' | '.' | ':' | ',' | '[' | ']'
-            | '(' | ')' | '{' | '}'
+        '+' | '-'
+            | '*'
+            | '/'
+            | '^'
+            | '#'
+            | '='
+            | '<'
+            | '>'
+            | '.'
+            | ':'
+            | ','
+            | '['
+            | ']'
+            | '('
+            | ')'
+            | '{'
+            | '}'
     )
 }
