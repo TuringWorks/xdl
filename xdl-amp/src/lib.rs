@@ -1,6 +1,13 @@
 //! # XDL AMP (Accelerated Math Processing)
 //!
-//! Multi-backend GPU/ML acceleration for XDL:
+//! Multi-backend GPU/ML acceleration for XDL with intelligent dispatch,
+//! buffer caching, and execution statistics.
+//!
+//! ## Features
+//! - **Smart Dispatch**: Automatically chooses GPU or CPU based on array size
+//! - **Buffer Caching**: Reuses GPU memory allocations for better performance
+//! - **Execution Statistics**: Detailed metrics and performance reporting
+//! - **Multi-Backend Support**: Multiple GPU backends per platform
 //!
 //! ## Apple Platforms (macOS, iOS)
 //! - **Metal** - Low-level GPU compute
@@ -22,10 +29,29 @@
 //! ## Cross-Platform
 //! - **Vulkan** - Cross-platform GPU compute
 //! - **ONNX Runtime** - ML model inference
+//!
+//! ## Usage
+//!
+//! ```rust,ignore
+//! use xdl_amp::{GpuContext, AcceleratedOps};
+//!
+//! // Create context with automatic backend selection
+//! let ctx = GpuContext::new()?;
+//! let ops = AcceleratedOps::new(ctx);
+//!
+//! // Operations automatically dispatch to GPU or CPU
+//! let result = ops.add_1d(&a, &b)?;
+//!
+//! // Print execution statistics
+//! ops.print_stats();
+//! ```
 
 pub mod backend;
+pub mod cache;
+pub mod dispatch;
 pub mod error;
 pub mod ops;
+pub mod stats;
 
 // Apple backends
 #[cfg(target_os = "macos")]
@@ -66,7 +92,11 @@ pub mod vulkan;
 pub mod onnx;
 
 pub use backend::{GpuBackend, GpuBuffer, GpuDevice};
+pub use cache::{CacheConfig, CacheManager};
+pub use dispatch::{DispatchConfig, DispatchTarget, SmartDispatcher};
 pub use error::{GpuError, Result};
+pub use ops::{AcceleratedOps, GpuOps};
+pub use stats::{ExecutionStats, OpType, StatsReport, GLOBAL_STATS};
 
 use std::sync::Arc;
 
