@@ -5,6 +5,9 @@
 //!
 //! ## Features
 //! - **Smart Dispatch**: Automatically chooses GPU or CPU based on array size
+//! - **SIMD Optimization**: Uses SSE/AVX (x86) or NEON (ARM) via `wide` crate
+//! - **Parallel Execution**: Automatic parallelization via `rayon` for large arrays
+//! - **Cache-Efficient MatMul**: Optimized matrix multiplication via `matrixmultiply`
 //! - **Buffer Caching**: Reuses GPU memory allocations for better performance
 //! - **Execution Statistics**: Detailed metrics and performance reporting
 //! - **Multi-Backend Support**: Multiple GPU backends per platform
@@ -51,6 +54,7 @@ pub mod cache;
 pub mod dispatch;
 pub mod error;
 pub mod ops;
+pub mod simd_ops;
 pub mod stats;
 
 // Apple backends

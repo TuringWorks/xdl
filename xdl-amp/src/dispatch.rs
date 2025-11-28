@@ -288,105 +288,25 @@ impl ThresholdInfo {
     }
 }
 
-/// CPU fallback implementations for when GPU dispatch is not chosen
+/// CPU fallback implementations using SIMD and parallel execution
+///
+/// Re-exports from simd_ops module which provides:
+/// - SIMD-optimized operations using `wide` crate (SSE/AVX/NEON)
+/// - Parallel execution via `rayon` for arrays > 100K elements
+/// - Cache-efficient matmul via `matrixmultiply` crate
 pub mod cpu_ops {
-    /// Element-wise addition
-    pub fn add_f32(a: &[f32], b: &[f32], c: &mut [f32]) {
-        for i in 0..a.len() {
-            c[i] = a[i] + b[i];
-        }
-    }
-
-    /// Element-wise subtraction
-    pub fn sub_f32(a: &[f32], b: &[f32], c: &mut [f32]) {
-        for i in 0..a.len() {
-            c[i] = a[i] - b[i];
-        }
-    }
-
-    /// Element-wise multiplication
-    pub fn mul_f32(a: &[f32], b: &[f32], c: &mut [f32]) {
-        for i in 0..a.len() {
-            c[i] = a[i] * b[i];
-        }
-    }
-
-    /// Element-wise division
-    pub fn div_f32(a: &[f32], b: &[f32], c: &mut [f32]) {
-        for i in 0..a.len() {
-            c[i] = a[i] / b[i];
-        }
-    }
-
-    /// Element-wise sine
-    pub fn sin_f32(x: &[f32], y: &mut [f32]) {
-        for i in 0..x.len() {
-            y[i] = x[i].sin();
-        }
-    }
-
-    /// Element-wise cosine
-    pub fn cos_f32(x: &[f32], y: &mut [f32]) {
-        for i in 0..x.len() {
-            y[i] = x[i].cos();
-        }
-    }
-
-    /// Element-wise exp
-    pub fn exp_f32(x: &[f32], y: &mut [f32]) {
-        for i in 0..x.len() {
-            y[i] = x[i].exp();
-        }
-    }
-
-    /// Element-wise log
-    pub fn log_f32(x: &[f32], y: &mut [f32]) {
-        for i in 0..x.len() {
-            y[i] = x[i].ln();
-        }
-    }
-
-    /// Element-wise sqrt
-    pub fn sqrt_f32(x: &[f32], y: &mut [f32]) {
-        for i in 0..x.len() {
-            y[i] = x[i].sqrt();
-        }
-    }
-
-    /// Element-wise pow
-    pub fn pow_f32(x: &[f32], p: f32, y: &mut [f32]) {
-        for i in 0..x.len() {
-            y[i] = x[i].powf(p);
-        }
-    }
-
-    /// Sum reduction
-    pub fn sum_f32(x: &[f32]) -> f32 {
-        x.iter().sum()
-    }
-
-    /// Max reduction
-    pub fn max_f32(x: &[f32]) -> f32 {
-        x.iter().cloned().fold(f32::NEG_INFINITY, f32::max)
-    }
-
-    /// Min reduction
-    pub fn min_f32(x: &[f32]) -> f32 {
-        x.iter().cloned().fold(f32::INFINITY, f32::min)
-    }
-
-    /// Matrix multiplication (naive)
-    pub fn matmul_f32(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize) {
-        for i in 0..m {
-            for j in 0..n {
-                let mut sum = 0.0f32;
-                for p in 0..k {
-                    sum += a[i * k + p] * b[p * n + j];
-                }
-                c[i * n + j] = sum;
-            }
-        }
-    }
+    pub use crate::simd_ops::{
+        // Binary element-wise
+        add_f32, sub_f32, mul_f32, div_f32,
+        // Unary element-wise
+        sin_f32, cos_f32, exp_f32, log_f32, sqrt_f32, pow_f32,
+        // Reductions
+        sum_f32, max_f32, min_f32,
+        // Matrix operations
+        matmul_f32, matmul_f32_parallel,
+        // Fused operations
+        fma_f32, axpy_f32, dot_f32,
+    };
 }
 
 #[cfg(test)]
