@@ -22,10 +22,10 @@ impl PythonManager {
     pub fn new() -> XdlResult<Self> {
         // Initialize Python interpreter if not already done
         // This is safe to call multiple times
-        pyo3::prepare_freethreaded_python();
+        let _ = Python::initialize();
 
         // Verify Python is working
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let version = py.version_info();
             info!(
                 "Python version: {}.{}.{}",
@@ -45,7 +45,7 @@ impl PythonManager {
         let module_key = format!("module_{}", self.modules.len());
 
         // Test that the module can be imported
-        Python::with_gil(|py| match py.import(module_name) {
+        Python::attach(|py| match py.import(module_name) {
             Ok(_) => {
                 self.modules
                     .insert(module_key.clone(), module_name.to_string());
@@ -74,7 +74,7 @@ impl PythonManager {
             })?
             .clone(); // Clone the module name to avoid borrow issues
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let module = py.import(module_name.as_str()).map_err(|e| {
                 xdl_core::XdlError::RuntimeError(format!(
                     "Failed to re-import module '{}': {}",
@@ -83,7 +83,7 @@ impl PythonManager {
             })?;
 
             // Convert XdlValue arguments to Python objects
-            let py_args: Vec<PyObject> = args
+            let py_args: Vec<Py<PyAny>> = args
                 .iter()
                 .map(|arg| self.gdl_to_python(py, arg))
                 .collect::<Result<Vec<_>, _>>()?;
@@ -122,7 +122,7 @@ impl PythonManager {
     }
 
     /// Store a Python object and return its ID
-    fn store_object(&mut self, _py: Python, py_obj: PyObject) -> String {
+    fn store_object(&mut self, _py: Python, py_obj: Py<PyAny>) -> String {
         let object_id = format!("pyobj_{}", self.object_counter);
         self.object_counter += 1;
         self.objects.insert(object_id.clone(), py_obj);
@@ -138,7 +138,7 @@ impl PythonManager {
 
     /// Get string representation of a Python object
     pub fn object_to_string(&self, object_id: &str) -> XdlResult<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let py_obj = self.get_object(object_id)?;
             let bound = py_obj.bind(py);
 
@@ -155,7 +155,7 @@ impl PythonManager {
     }
 
     /// Convert XdlValue to Python object
-    fn gdl_to_python(&self, py: Python, value: &XdlValue) -> XdlResult<PyObject> {
+    fn gdl_to_python(&self, py: Python, value: &XdlValue) -> XdlResult<Py<PyAny>> {
         match value {
             XdlValue::Long(n) => Ok(n.into_pyobject(py).unwrap().into_any().unbind()),
             XdlValue::Double(f) => Ok(f.into_pyobject(py).unwrap().into_any().unbind()),
@@ -183,7 +183,7 @@ impl PythonManager {
     }
 
     /// Convert Python object to XdlValue
-    fn python_to_gdl(&mut self, py: Python, py_obj: PyObject) -> XdlResult<XdlValue> {
+    fn python_to_gdl(&mut self, py: Python, py_obj: Py<PyAny>) -> XdlResult<XdlValue> {
         let bound_obj = py_obj.bind(py);
 
         // Try to handle different Python types
