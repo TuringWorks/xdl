@@ -30,6 +30,7 @@ The project is structured as a Cargo workspace with the following crates:
 - **`xdl-viz3d-threejs`**: Three.js 3D visualization web components
 - **`xdl-chart-viewer`**: Interactive chart viewer application
 - **`xdl-amp`**: Accelerated Math Processing
+- **`xdl-lsp`**: Language Server Protocol implementation for IDE support
 
 **Additional Modules (not in workspace):**
 - **`xdl-matlab`**: MATLAB transpilation support (~83,000 line transpiler)
@@ -51,15 +52,17 @@ The project is structured as a Cargo workspace with the following crates:
 - Structure definitions
 - **Not yet supported**: User-defined procedures (PRO/ENDPRO), GOTO/labels
 
-### Built-in Functions (100+ functions implemented)
+### Built-in Functions (150+ functions implemented)
 - **Mathematical functions**: SIN, COS, TAN, EXP, ALOG, SQRT, FFT, etc.
 - **Array functions**: TRANSPOSE, REFORM, REVERSE, SORT, WHERE, etc.
 - **Array creation**: FINDGEN, INDGEN, FLTARR, DBLARR, RANDOMU, etc.
 - **Statistics**: MEAN, VARIANCE, STDDEV, MEDIAN, MOMENT, KURTOSIS, etc.
 - **I/O operations**: PRINT, OPENR, OPENW, READF, WRITEF, etc.
-- **Python 3.13 integration**: PYTHON_IMPORT, PYTHON_CALL, PYTHON_CALL_KW (PyO3-based)
+- **Python integration**: PYTHON_IMPORT, PYTHON_CALL, PYTHON_CALL_KW (PyO3 0.27)
 - **Graphics and plotting**: 50+ procedures (PLOT, SURFACE, CONTOUR, CHART_*, SURFACE3D, etc.)
-- **Machine learning**: 50+ functions (neural networks, K-means, SVM, cross-validation, activation functions, optimizers)
+- **Machine learning (XDLML)**: 50+ functions (neural networks, K-means, SVM, cross-validation, activation functions, optimizers)
+- **Native ML (Linfa)**: ML_KMEANS_*, ML_LINEAR_*, ML_PCA_*, ML_ACCURACY, ML_MSE, ML_R2_SCORE
+- **DataFrames (Polars)**: DF_READ_CSV, DF_FILTER, DF_GROUPBY, DF_JOIN, DF_SORT, etc.
 - **Linear algebra**: INVERT, DETERM, SVDC, LA_EIGENVAL, LUDC, etc.
 - **Image processing**: CONVOL, DILATE, ERODE, SOBEL, GAUSSIAN_FILTER, etc.
 - **Signal processing**: A_CORRELATE, C_CORRELATE, DIGITAL_FILTER, HILBERT, etc.
@@ -67,6 +70,7 @@ The project is structured as a Cargo workspace with the following crates:
 - **MATLAB transpilation**: Working transpiler for basic to moderate complexity .m files
 - **MATLAB compatibility**: LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
 - **GPU acceleration**: XDL-AMP module with multi-backend support
+- **IDE support**: Language Server Protocol (LSP) and VS Code extension
 
 ## Known Limitations
 
@@ -98,8 +102,17 @@ While XDL provides substantial functionality, the following features are not yet
 
 ### Prerequisites
 - Rust 1.70 or later
-- **Python 3.13.0** for Python integration features
+- **Python 3.8-3.12** for Python integration features (set `PYO3_PYTHON` environment variable)
 - Optional: Scientific libraries for full functionality
+
+### Feature Flags
+```bash
+# Full build with all features
+cargo build --features "python,dataframes,ml"
+
+# Build without Python (if Python not available)
+cargo build --no-default-features
+```
 
 ### Building from Source
 
@@ -148,7 +161,18 @@ XDL> .quit     ; Exit REPL
 
 ### Python Integration
 
-XDL provides seamless integration with Python 3.13.0. See [PYTHON_INTEGRATION.md](PYTHON_INTEGRATION.md) for detailed documentation.
+XDL provides seamless integration with Python. See [docs/PYTHON_INTEGRATION.md](docs/PYTHON_INTEGRATION.md) for detailed documentation.
+
+### Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- **[Function Reference](docs/FUNCTION_REFERENCE.md)** - Complete list of 150+ functions
+- **[LSP & VS Code Extension](docs/LSP_AND_VSCODE.md)** - IDE setup and features
+- **[DataFrame Reference](docs/DATAFRAMES_REFERENCE.md)** - Polars DataFrame operations
+- **[Linfa ML Reference](docs/LINFA_ML_REFERENCE.md)** - Native Rust ML functions
+- **[ML Complete Reference](docs/ML_COMPLETE_REFERENCE.md)** - XDLML neural networks and more
+- **[Python Integration](docs/PYTHON_INTEGRATION.md)** - Python interoperability
 
 ```xdl
 ; Import and use Python modules
@@ -302,13 +326,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 🚧 **Active Development - Beta** 🚧
 
-XDL is a functional beta implementation with substantial language support and advanced features. The project totals **~196,000 lines of Rust code** across 145 source files and includes:
+XDL is a functional beta implementation with substantial language support and advanced features. The project totals **~200,000 lines of Rust code** across 150+ source files and includes:
 
 - **Core language**: Variables, expressions, control flow (FOR, WHILE, FOREACH, IF/THEN/ELSE)
-- **100+ built-in functions**: Math, arrays, statistics, I/O, graphics
+- **150+ built-in functions**: Math, arrays, statistics, I/O, graphics, ML
 - **50+ ML functions**: Neural networks, K-means, SVM, cross-validation, optimizers
+- **Native ML (Linfa)**: K-Means, Linear/Logistic Regression, PCA (pure Rust)
+- **DataFrames (Polars)**: High-performance data manipulation (10-100x faster than Pandas)
 - **50+ graphics procedures**: 2D/3D plotting, charting, interactive visualization
-- **Python 3.13 integration**: Real PyO3-based integration with PYTHON_IMPORT/PYTHON_CALL
+- **Python integration**: PyO3 0.27 integration with PYTHON_IMPORT/PYTHON_CALL
+- **IDE support**: Language Server Protocol (LSP) + VS Code extension
 - **MATLAB transpiler**: 83,000-line transpiler supporting basic to moderate .m files
 - **GPU acceleration**: XDL-AMP module with multi-backend support
 - **Multiple interfaces**: CLI/REPL, GUI (egui), web-based viewers

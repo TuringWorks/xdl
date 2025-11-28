@@ -1,24 +1,53 @@
-# Python 3.13 Integration with XDL
+# Python Integration with XDL
 
-This document describes the Python integration capabilities in XDL using Python 3.13.0.
+**Version**: 1.0
+**Date**: November 2025
+**Status**: Complete ✅
+**Feature Flag**: `python` (enabled by default)
+
+---
 
 ## Overview
 
-XDL provides seamless integration with Python 3.13.0 through the PyO3 library, allowing you to:
+XDL provides seamless integration with Python through the PyO3 library (v0.27), allowing you to:
 
 - Import Python modules
 - Call Python functions and methods
 - Pass data between XDL and Python
 - Use Python's extensive scientific computing ecosystem
+- Handle Python objects with automatic reference management
+
+---
 
 ## Configuration
 
-The Python interpreter path is configured in `.cargo/config.toml`:
+### Setting the Python Interpreter
 
+Set the `PYO3_PYTHON` environment variable to your Python executable:
+
+**Windows:**
+```bash
+set PYO3_PYTHON=C:/Python312/python.exe
+cargo build --features python
+```
+
+**Linux/macOS:**
+```bash
+export PYO3_PYTHON=/usr/bin/python3
+cargo build --features python
+```
+
+**Or in `.cargo/config.toml`:**
 ```toml
 [env]
-PYO3_PYTHON = "/Users/ravindraboddipalli/.pyenv/shims/python3"
+PYO3_PYTHON = "C:/Python312/python.exe"  # Windows
+# PYO3_PYTHON = "/usr/bin/python3"       # Linux/macOS
 ```
+
+### Supported Python Versions
+
+- Python 3.8 - 3.12 (recommended)
+- Python 3.13+ may work but is less tested
 
 ## Available Functions
 
@@ -118,9 +147,27 @@ If a Python operation fails, XDL will return an appropriate error:
 
 ## Requirements
 
-- Python 3.13.0 or compatible version
-- PyO3 0.22+ for Rust-Python interop
+- Python 3.8 - 3.12 (recommended)
+- PyO3 0.27+ for Rust-Python interop
 - Standard Python libraries available in your Python installation
+
+---
+
+## Building with Python Support
+
+Python integration is enabled by default. To explicitly enable:
+
+```bash
+cargo build --features python
+```
+
+To build without Python:
+
+```bash
+cargo build --no-default-features
+```
+
+---
 
 ## Testing
 
@@ -130,18 +177,125 @@ Run the test script to verify Python integration:
 cargo run --bin xdl test_python_integration.xdl
 ```
 
+---
+
 ## Performance Notes
 
 - Python calls have some overhead due to the Python C API
-- Complex data structures are converted to strings for simplicity
-- For heavy numerical computing, consider implementing performance-critical parts in Rust
+- Complex data structures are handled via object references
+- For heavy numerical computing, consider:
+  - Native XDL array operations
+  - Linfa ML functions (pure Rust)
+  - Polars DataFrames (pure Rust)
 
-## Future Enhancements
+---
 
-Planned improvements include:
+## Architecture
 
-- NumPy array support
-- Pandas DataFrame integration
-- Matplotlib plotting integration
-- Better error propagation
-- Asynchronous Python calls
+### Thread Safety
+
+The Python manager uses thread-local storage for safe concurrent access:
+
+```
+┌─────────────────┐
+│   XDL Thread    │
+│  ┌───────────┐  │
+│  │  Python   │  │
+│  │  Manager  │  │
+│  └───────────┘  │
+│       │         │
+│  ┌────▼──────┐  │
+│  │  Module   │  │
+│  │  Cache    │  │
+│  └───────────┘  │
+│       │         │
+│  ┌────▼──────┐  │
+│  │  Object   │  │
+│  │  Store    │  │
+│  └───────────┘  │
+└─────────────────┘
+```
+
+### Object Management
+
+Python objects are stored with unique IDs (`pyobj_1`, `pyobj_2`, etc.) allowing:
+
+- Complex Python objects to be passed between XDL functions
+- Automatic cleanup when objects go out of scope
+- Safe reference counting via PyO3
+
+---
+
+## Complete Example: Scientific Computing
+
+```idl
+; ===================================
+; Scientific Computing with Python
+; ===================================
+
+; Import numpy for numerical operations
+np = PYTHON_IMPORT('numpy')
+
+; Create arrays
+arr = PYTHON_CALL(np, 'linspace', 0.0, 10.0, 100)
+PRINT, 'Array created:', arr
+
+; Calculate statistics
+mean_val = PYTHON_CALL(np, 'mean', arr)
+std_val = PYTHON_CALL(np, 'std', arr)
+PRINT, 'Mean:', mean_val
+PRINT, 'Std:', std_val
+
+; Import scipy for advanced functions
+scipy = PYTHON_IMPORT('scipy.integrate')
+
+; Define a function to integrate (x^2)
+; Note: For complex operations, consider writing Python functions
+builtins = PYTHON_IMPORT('builtins')
+
+; Get Python version
+sys = PYTHON_IMPORT('sys')
+version = PYTHON_CALL(sys, 'version')
+PRINT, 'Python version:', version
+```
+
+---
+
+## Troubleshooting
+
+### "Python interpreter not found"
+
+Set `PYO3_PYTHON` environment variable:
+
+```bash
+# Windows
+set PYO3_PYTHON=C:\Python312\python.exe
+
+# Linux/macOS
+export PYO3_PYTHON=/usr/bin/python3
+```
+
+### "Module not found"
+
+Ensure the module is installed in your Python environment:
+
+```bash
+pip install numpy scipy pandas
+```
+
+### "Python calls are slow"
+
+For performance-critical operations:
+
+1. Use native XDL functions when available
+2. Use Polars DataFrames for data processing
+3. Use Linfa ML for machine learning
+4. Batch Python operations to reduce call overhead
+
+---
+
+## See Also
+
+- [Polars DataFrame Reference](DATAFRAMES_REFERENCE.md) - Native Rust DataFrames
+- [Linfa ML Reference](LINFA_ML_REFERENCE.md) - Native Rust ML
+- [ML Complete Reference](ML_COMPLETE_REFERENCE.md) - XDL ML functions
