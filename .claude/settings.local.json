@@ -25,7 +25,9 @@
       "Bash(set PYO3_PYTHON=C:Python314python.exe)",
       "Bash(cmd /c \"set PYO3_PYTHON=C:\\Python312\\python.exe & cargo build -p xdl-interpreter --features python\")",
       "Bash(PYO3_PYTHON=/c/Python312/python.exe cargo build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []
