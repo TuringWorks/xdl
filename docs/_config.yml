@@ -16,7 +16,7 @@ remote_theme: just-the-docs/just-the-docs
 color_scheme: dark
 
 # Logo
-logo: "/assets/images/logo.png"
+logo: "/xdl/assets/images/logo.svg"
 
 # Search
 search_enabled: true

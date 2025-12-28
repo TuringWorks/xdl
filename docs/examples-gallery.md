@@ -43,6 +43,9 @@ This gallery showcases visual output from XDL examples, demonstrating the plotti
 ![Plot surface demo](examples_images/test_plot_surface_xdl_surface.png)
 *Surface plotting demonstration*
 
+![Plot surface 2D](examples_images/test_plot_surface_xdl_plot.png)
+*2D view of surface data*
+
 ### Contour Plots
 ![Contour plot](examples_images/test_contour_xdl_contour.png)
 *Contour plot visualization*
@@ -63,6 +66,28 @@ This gallery showcases visual output from XDL examples, demonstrating the plotti
 ![3D line plot](examples_images/plot3d_demo_xdl_plot3d.png)
 *3D line plotting*
 
+## 🔬 Scientific Visualization
+
+### GIS and Terrain Analysis
+![Colormap demo](examples_images/colormap_demo.png)
+*Colormap demonstration for data visualization*
+
+![Elevation map](examples_images/elevation_map.png)
+*Elevation map visualization*
+
+![Hillshade demo](examples_images/hillshade_demo.png)
+*Hillshade terrain rendering*
+
+### Physics Simulations
+![Vector field](examples_images/vector_field.png)
+*Vector field visualization*
+
+![Fluid instability](examples_images/fluid_instability.png)
+*Fluid dynamics instability simulation*
+
+![Rayleigh-Taylor](examples_images/rayleigh_taylor_t0.png)
+*Rayleigh-Taylor instability initial conditions*
+
 ## 📋 Simple Examples
 
 ### Basic Demos
@@ -74,6 +99,22 @@ This gallery showcases visual output from XDL examples, demonstrating the plotti
 
 ![Simple plot test](examples_images/simple_plot_test_xdl_plot.png)
 *Simple plotting test*
+
+### Standard Plot Types
+![XDL Plot](examples_images/xdl_plot.png)
+*Standard XDL plot output*
+
+![XDL Contour](examples_images/xdl_contour.png)
+*Standard contour plot*
+
+![XDL Surface](examples_images/xdl_surface.png)
+*Standard surface plot*
+
+![XDL Plot3D](examples_images/xdl_plot3d.png)
+*Standard 3D plot*
+
+![XDL Shade Surf](examples_images/xdl_shade_surf.png)
+*Shaded surface rendering*
 
 ## 📁 Example Categories
 
@@ -108,8 +149,8 @@ ls examples_organized/
 - **Total Examples**: 152 files (.xdl, .pro, .m)
 - **Working Examples**: 44 (execute successfully)
 - **Failing Examples**: 31 (need fixes or dependencies)
-- **Visual Examples**: 22 (generate plots/visualizations)
-- **Generated Images**: 18 images from 12 examples
+- **Visual Examples**: 30 (generate plots/visualizations)
+- **Generated Images**: 29 images covering 2D plots, 3D surfaces, contours, and scientific visualizations
 
 ## 🔧 Technical Details
 

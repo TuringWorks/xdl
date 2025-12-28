@@ -23,7 +23,7 @@ A modern Rust implementation of the Extended Data Language (XDL), providing IDL-
 
 ## 🚀 Getting Started
 
-< div class="code-example" markdown="1">
+<div class="code-example" markdown="1">
 
 ### Installation
 
@@ -237,7 +237,7 @@ Contributions are welcome! We appreciate:
 - Documentation improvements
 - Performance benchmarks and optimizations
 
-See our [Contributing Guide](development/contributing) for more details.
+See our [Contributing Guide](development#contributing) for more details.
 
 ---
 
