@@ -1,0 +1,112 @@
+; Test string functions
+; STRJOIN, STRSPLIT, STRCOMPRESS, STRCMP, STREGEX, STRREPLACE
+
+PRINT, '=== Testing String Functions ==='
+
+; Test basic string operations first
+PRINT, ''
+PRINT, '--- Basic String Operations ---'
+s = 'Hello World'
+PRINT, 'String: "', s, '"'
+PRINT, 'STRLEN("', s, '"): ', STRLEN(s)
+PRINT, 'STRUPCASE("', s, '"): ', STRUPCASE(s)
+PRINT, 'STRLOWCASE("', s, '"): ', STRLOWCASE(s)
+
+; Test STRSPLIT - creates array from string
+PRINT, ''
+PRINT, '--- STRSPLIT ---'
+sentence = 'Hello World From XDL'
+PRINT, 'String: "', sentence, '"'
+parts = STRSPLIT(sentence, ' ')
+PRINT, 'STRSPLIT result type: array of strings'
+
+; Get first element
+PRINT, 'First part: ', parts[0]
+
+csv_line = 'apple,banana,cherry,date'
+PRINT, ''
+PRINT, 'CSV: "', csv_line, '"'
+csv_parts = STRSPLIT(csv_line, ',')
+PRINT, 'First CSV part: ', csv_parts[0]
+
+; Test STRJOIN with result from STRSPLIT
+PRINT, ''
+PRINT, '--- STRJOIN ---'
+; Use STRSPLIT to create a string array, then join it
+words = STRSPLIT('Hello World From XDL', ' ')
+joined = STRJOIN(words, '-')
+PRINT, 'STRJOIN with "-": ', joined
+
+joined_comma = STRJOIN(words, ', ')
+PRINT, 'STRJOIN with ", ": ', joined_comma
+
+; Test STRCOMPRESS
+PRINT, ''
+PRINT, '--- STRCOMPRESS ---'
+spaced = '  Hello   World  '
+PRINT, 'Original: "', spaced, '"'
+compressed = STRCOMPRESS(spaced)
+PRINT, 'STRCOMPRESS: "', compressed, '"'
+
+; Test STRCMP
+PRINT, ''
+PRINT, '--- STRCMP ---'
+s1 = 'Hello'
+s2 = 'Hello'
+s3 = 'hello'
+s4 = 'World'
+PRINT, 's1 = "', s1, '", s2 = "', s2, '"'
+PRINT, 'STRCMP(s1, s2): ', STRCMP(s1, s2), ' (expected: 1 for equal)'
+PRINT, 's1 = "', s1, '", s3 = "', s3, '"'
+PRINT, 'STRCMP(s1, s3): ', STRCMP(s1, s3), ' (expected: 0 for different case)'
+PRINT, 's1 = "', s1, '", s4 = "', s4, '"'
+PRINT, 'STRCMP(s1, s4): ', STRCMP(s1, s4), ' (expected: 0 for different)'
+
+; Test STREGEX
+PRINT, ''
+PRINT, '--- STREGEX ---'
+text = 'The quick brown fox jumps over the lazy dog'
+PRINT, 'Text: "', text, '"'
+match_result = STREGEX(text, 'fox')
+PRINT, 'STREGEX(text, "fox"): ', match_result, ' (expected: >= 0 for found)'
+match_result2 = STREGEX(text, 'cat')
+PRINT, 'STREGEX(text, "cat"): ', match_result2, ' (expected: -1 for not found)'
+
+; Test STRREPLACE
+PRINT, ''
+PRINT, '--- STRREPLACE ---'
+original = 'Hello World World'
+PRINT, 'Original: "', original, '"'
+replaced = STRREPLACE(original, 'World', 'Universe')
+PRINT, 'STRREPLACE("World" -> "Universe"): "', replaced, '"'
+
+code = 'foo_bar_baz_foo'
+PRINT, 'Code: "', code, '"'
+replaced_code = STRREPLACE(code, 'foo', 'qux')
+PRINT, 'STRREPLACE("foo" -> "qux"): "', replaced_code, '"'
+
+; Test STRPOS
+PRINT, ''
+PRINT, '--- STRPOS ---'
+test_str = 'Hello World'
+PRINT, 'String: "', test_str, '"'
+PRINT, 'STRPOS("World"): ', STRPOS(test_str, 'World'), ' (expected: 6)'
+PRINT, 'STRPOS("xyz"): ', STRPOS(test_str, 'xyz'), ' (expected: -1)'
+
+; Test STRMID
+PRINT, ''
+PRINT, '--- STRMID ---'
+PRINT, 'STRMID("Hello World", 6): "', STRMID(test_str, 6), '"'
+PRINT, 'STRMID("Hello World", 0, 5): "', STRMID(test_str, 0, 5), '"'
+
+; Test STRTRIM
+PRINT, ''
+PRINT, '--- STRTRIM ---'
+trimmed = '  Hello  '
+PRINT, 'Original: "', trimmed, '"'
+PRINT, 'STRTRIM(0-leading): "', STRTRIM(trimmed, 0), '"'
+PRINT, 'STRTRIM(1-trailing): "', STRTRIM(trimmed, 1), '"'
+PRINT, 'STRTRIM(2-both): "', STRTRIM(trimmed, 2), '"'
+
+PRINT, ''
+PRINT, '=== String function tests complete ==='

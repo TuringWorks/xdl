@@ -26,6 +26,8 @@ pyo3 = { workspace = true, optional = true }
 lazy_static = "1.4"
 rustfft = "6.1"
 nalgebra = "0.32"
+regex = "1.10"
+libm = "0.2"
 
 # RustPython - embedded Python interpreter (pure Rust)
 rustpython = { workspace = true, optional = true }

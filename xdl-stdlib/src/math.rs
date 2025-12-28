@@ -318,6 +318,245 @@ pub fn atan(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(from_float(result, input.gdl_type()))
 }
 
+/// ATAN2 - Two-argument arctangent (angle from x-axis to point (x, y))
+/// Result = ATAN(y, x) or ATAN(y/x) with correct quadrant
+pub fn atan2(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ATAN: Expected 2 arguments for ATAN(y, x), got {}",
+            _args.len()
+        )));
+    }
+
+    let y = to_float(&_args[0])?;
+    let x = to_float(&_args[1])?;
+    let result = y.atan2(x);
+
+    Ok(from_float(result, _args[0].gdl_type()))
+}
+
+/// SINH - Hyperbolic sine
+pub fn sinh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "SINH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.sinh()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.sinh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let float_val = to_float(input)?;
+    Ok(from_float(float_val.sinh(), input.gdl_type()))
+}
+
+/// COSH - Hyperbolic cosine
+pub fn cosh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "COSH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.cosh()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.cosh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let float_val = to_float(input)?;
+    Ok(from_float(float_val.cosh(), input.gdl_type()))
+}
+
+/// TANH - Hyperbolic tangent
+pub fn tanh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "TANH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.tanh()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.tanh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let float_val = to_float(input)?;
+    Ok(from_float(float_val.tanh(), input.gdl_type()))
+}
+
+/// ASINH - Inverse hyperbolic sine
+pub fn asinh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ASINH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.asinh()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.asinh()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let float_val = to_float(input)?;
+    Ok(from_float(float_val.asinh(), input.gdl_type()))
+}
+
+/// ACOSH - Inverse hyperbolic cosine
+/// Note: Argument must be >= 1
+pub fn acosh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ACOSH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| if x >= 1.0 { x.acosh() } else { f64::NAN })
+            .collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| if x >= 1.0 { x.acosh() } else { f64::NAN })
+            .collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let float_val = to_float(input)?;
+    if float_val < 1.0 {
+        return Err(XdlError::MathError(
+            "ACOSH: Argument must be >= 1".to_string(),
+        ));
+    }
+    Ok(from_float(float_val.acosh(), input.gdl_type()))
+}
+
+/// ATANH - Inverse hyperbolic tangent
+/// Note: Argument must be in range (-1, 1)
+pub fn atanh(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if _args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ATANH: Expected 1 argument, got {}",
+            _args.len()
+        )));
+    }
+
+    let input = &_args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| {
+                if x > -1.0 && x < 1.0 {
+                    x.atanh()
+                } else {
+                    f64::NAN
+                }
+            })
+            .collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| {
+                if x > -1.0 && x < 1.0 {
+                    x.atanh()
+                } else {
+                    f64::NAN
+                }
+            })
+            .collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let float_val = to_float(input)?;
+    if float_val <= -1.0 || float_val >= 1.0 {
+        return Err(XdlError::MathError(
+            "ATANH: Argument must be in range (-1, 1)".to_string(),
+        ));
+    }
+    Ok(from_float(float_val.atanh(), input.gdl_type()))
+}
+
 pub fn floor(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     if _args.len() != 1 {
         return Err(XdlError::InvalidArgument(format!(
@@ -867,6 +1106,156 @@ pub fn double_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
+/// BYTE - Convert to byte (u8) type
+pub fn byte_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BYTE: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    match input {
+        XdlValue::Array(arr) => {
+            let result: Vec<f64> = arr.iter().map(|&x| (x as u8) as f64).collect();
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            let result: Vec<f64> = data.iter().map(|&x| (x as u8) as f64).collect();
+            Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: shape.clone(),
+            })
+        }
+        XdlValue::String(s) => {
+            // Convert string to byte array
+            let bytes: Vec<f64> = s.bytes().map(|b| b as f64).collect();
+            Ok(XdlValue::Array(bytes))
+        }
+        _ => {
+            let val = input.to_double()?;
+            Ok(XdlValue::Byte(val as u8))
+        }
+    }
+}
+
+/// UINT - Convert to unsigned integer (u16) type
+pub fn uint_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "UINT: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    match input {
+        XdlValue::Array(arr) => {
+            let result: Vec<f64> = arr.iter().map(|&x| (x as u16) as f64).collect();
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            let result: Vec<f64> = data.iter().map(|&x| (x as u16) as f64).collect();
+            Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: shape.clone(),
+            })
+        }
+        _ => {
+            let val = input.to_double()?;
+            Ok(XdlValue::UInt(val as u16))
+        }
+    }
+}
+
+/// ULONG - Convert to unsigned long (u32) type
+pub fn ulong_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ULONG: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    match input {
+        XdlValue::Array(arr) => {
+            let result: Vec<f64> = arr.iter().map(|&x| (x as u32) as f64).collect();
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            let result: Vec<f64> = data.iter().map(|&x| (x as u32) as f64).collect();
+            Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: shape.clone(),
+            })
+        }
+        _ => {
+            let val = input.to_double()?;
+            Ok(XdlValue::ULong(val as u32))
+        }
+    }
+}
+
+/// LONG64 - Convert to 64-bit signed integer type
+pub fn long64_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "LONG64: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    match input {
+        XdlValue::Array(arr) => {
+            let result: Vec<f64> = arr.iter().map(|&x| (x as i64) as f64).collect();
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            let result: Vec<f64> = data.iter().map(|&x| (x as i64) as f64).collect();
+            Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: shape.clone(),
+            })
+        }
+        _ => {
+            let val = input.to_double()?;
+            Ok(XdlValue::Long64(val as i64))
+        }
+    }
+}
+
+/// ULONG64 - Convert to 64-bit unsigned integer type
+pub fn ulong64_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ULONG64: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+    match input {
+        XdlValue::Array(arr) => {
+            let result: Vec<f64> = arr.iter().map(|&x| (x as u64) as f64).collect();
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            let result: Vec<f64> = data.iter().map(|&x| (x as u64) as f64).collect();
+            Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: shape.clone(),
+            })
+        }
+        _ => {
+            let val = input.to_double()?;
+            Ok(XdlValue::ULong64(val as u64))
+        }
+    }
+}
+
 /// FFT - Fast Fourier Transform
 /// FFT(array [, direction] [, /INVERSE])
 /// Returns complex FFT of input array
@@ -1037,6 +1426,454 @@ pub fn randomn(args: &[XdlValue]) -> XdlResult<XdlValue> {
         values.truncate(n);
         Ok(XdlValue::Array(values))
     }
+}
+
+// ============================================================
+// Special Mathematical Functions (using libm)
+// ============================================================
+
+/// ERF - Error function
+pub fn erf(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ERF: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| libm::erf(x)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::erf(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(libm::erf(val), input.gdl_type()))
+}
+
+/// ERFC - Complementary error function (1 - erf(x))
+pub fn erfc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ERFC: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| libm::erfc(x)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::erfc(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(libm::erfc(val), input.gdl_type()))
+}
+
+/// GAMMA - Gamma function
+pub fn gamma_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GAMMA: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| libm::tgamma(x)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::tgamma(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(libm::tgamma(val), input.gdl_type()))
+}
+
+/// LNGAMMA - Natural log of gamma function
+pub fn lngamma(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "LNGAMMA: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| libm::lgamma(x)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::lgamma(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(libm::lgamma(val), input.gdl_type()))
+}
+
+/// FACTORIAL - Factorial function (n!)
+pub fn factorial(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "FACTORIAL: Expected 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    fn factorial_val(n: i64) -> f64 {
+        if n < 0 {
+            f64::NAN
+        } else if n <= 1 {
+            1.0
+        } else if n <= 20 {
+            // Use iterative for small values
+            let mut result = 1u64;
+            for i in 2..=n as u64 {
+                result = result.saturating_mul(i);
+            }
+            result as f64
+        } else {
+            // Use gamma function for large values: n! = gamma(n+1)
+            libm::tgamma((n + 1) as f64)
+        }
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| factorial_val(x as i64)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle 1D Array
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| factorial_val(x as i64)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let n = match input {
+        XdlValue::Long(v) => *v as i64,
+        XdlValue::Int(v) => *v as i64,
+        XdlValue::Byte(v) => *v as i64,
+        XdlValue::Float(v) => *v as i64,
+        XdlValue::Double(v) => *v as i64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", input.gdl_type()),
+            })
+        }
+    };
+    Ok(XdlValue::Double(factorial_val(n)))
+}
+
+/// BESELJ - Bessel function of the first kind
+pub fn beselj(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BESELJ: Expected 2 arguments (x, n), got {}",
+            args.len()
+        )));
+    }
+
+    let n = match &args[1] {
+        XdlValue::Long(v) => *v,
+        XdlValue::Int(v) => *v as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::jn(n, x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| libm::jn(n, x)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(libm::jn(n, val), input.gdl_type()))
+}
+
+/// BESELY - Bessel function of the second kind
+pub fn besely(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BESELY: Expected 2 arguments (x, n), got {}",
+            args.len()
+        )));
+    }
+
+    let n = match &args[1] {
+        XdlValue::Long(v) => *v,
+        XdlValue::Int(v) => *v as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::yn(n, x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| libm::yn(n, x)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(libm::yn(n, val), input.gdl_type()))
+}
+
+/// BESELI - Modified Bessel function of the first kind I_n(x)
+/// Using the relation I_n(x) = i^(-n) * J_n(i*x) and series expansion
+pub fn beseli(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BESELI: Expected 2 arguments (x, n), got {}",
+            args.len()
+        )));
+    }
+
+    let n = match &args[1] {
+        XdlValue::Long(v) => *v as i32,
+        XdlValue::Int(v) => *v as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Compute modified Bessel I_n(x) using series expansion
+    fn bessel_i(x: f64, n: i32) -> f64 {
+        let n = n.unsigned_abs();
+        if x == 0.0 {
+            return if n == 0 { 1.0 } else { 0.0 };
+        }
+
+        let x2 = x * 0.5;
+        let mut sum = 0.0;
+        let mut term = libm::pow(x2, n as f64) / libm::tgamma((n + 1) as f64);
+        let x2_sq = x2 * x2;
+
+        for k in 0..100 {
+            sum += term;
+            term *= x2_sq / ((k + 1) as f64 * (n + k + 1) as f64);
+            if term.abs() < 1e-15 * sum.abs() {
+                break;
+            }
+        }
+        sum
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| bessel_i(x, n)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| bessel_i(x, n)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(bessel_i(val, n), input.gdl_type()))
+}
+
+/// BESELK - Modified Bessel function of the second kind K_n(x)
+pub fn beselk(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "BESELK: Expected 2 arguments (x, n), got {}",
+            args.len()
+        )));
+    }
+
+    let n = match &args[1] {
+        XdlValue::Long(v) => *v as i32,
+        XdlValue::Int(v) => *v as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Compute K_n(x) using asymptotic expansion for large x,
+    // or relation to I_n for small x
+    fn bessel_k(x: f64, n: i32) -> f64 {
+        if x <= 0.0 {
+            return f64::INFINITY;
+        }
+
+        let n = n.unsigned_abs() as i32;
+
+        // For large x, use asymptotic expansion
+        if x > 2.0 {
+            let mu = 4.0 * (n as f64) * (n as f64);
+            let mut term = 1.0;
+            let mut sum = 1.0;
+            let x8 = 8.0 * x;
+
+            for k in 1..20 {
+                let k_f = k as f64;
+                term *= (mu - (2.0 * k_f - 1.0).powi(2)) / (k_f * x8);
+                sum += term;
+                if term.abs() < 1e-15 * sum.abs() {
+                    break;
+                }
+            }
+
+            (std::f64::consts::PI / (2.0 * x)).sqrt() * (-x).exp() * sum
+        } else {
+            // Use recurrence relation and series for small x
+            // K_n(x) = (pi/2) * (I_{-n}(x) - I_n(x)) / sin(n*pi)
+            // For integer n, use limiting form
+            let x2 = x * 0.5;
+            let gamma_n = libm::tgamma(n as f64);
+            let mut sum = 0.5 * gamma_n * libm::pow(x2, -(n as f64));
+
+            if n == 0 {
+                // K_0 special case
+                sum = -(x2.ln() + 0.5772156649) * bessel_i_local(x, 0);
+                let x2_sq = x2 * x2;
+                let mut term = 1.0;
+                let mut psi = -0.5772156649;
+                for k in 1..50 {
+                    term *= x2_sq / (k as f64).powi(2);
+                    psi += 1.0 / k as f64;
+                    sum += term * psi;
+                    if term.abs() < 1e-15 * sum.abs() {
+                        break;
+                    }
+                }
+            }
+            sum
+        }
+    }
+
+    fn bessel_i_local(x: f64, n: i32) -> f64 {
+        let n = n.unsigned_abs();
+        if x == 0.0 {
+            return if n == 0 { 1.0 } else { 0.0 };
+        }
+        let x2 = x * 0.5;
+        let mut sum = 0.0;
+        let mut term = libm::pow(x2, n as f64) / libm::tgamma((n + 1) as f64);
+        let x2_sq = x2 * x2;
+        for k in 0..100 {
+            sum += term;
+            term *= x2_sq / ((k + 1) as f64 * (n + k + 1) as f64);
+            if term.abs() < 1e-15 * sum.abs() {
+                break;
+            }
+        }
+        sum
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| bessel_k(x, n)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| bessel_k(x, n)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let val = to_float(input)?;
+    Ok(from_float(bessel_k(val, n), input.gdl_type()))
 }
 
 #[cfg(test)]

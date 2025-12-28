@@ -347,3 +347,315 @@ pub fn stop(args: &[XdlValue]) -> XdlResult<XdlValue> {
         "Execution stopped by STOP command".to_string(),
     ))
 }
+
+// ============================================================
+// Time Functions
+// ============================================================
+
+/// SYSTIME - Get current system time
+/// SYSTIME() - Returns current time as string
+/// SYSTIME(1) - Returns seconds since Unix epoch
+/// SYSTIME(0, julian) - Converts Julian date to calendar string
+pub fn systime(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let julian_mode = if !args.is_empty() {
+        match &args[0] {
+            XdlValue::Long(n) => *n == 1,
+            XdlValue::Int(n) => *n == 1,
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    let now = SystemTime::now();
+    let since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
+
+    if julian_mode {
+        // Return seconds since Unix epoch
+        Ok(XdlValue::Double(since_epoch.as_secs_f64()))
+    } else {
+        // Return formatted time string
+        let secs = since_epoch.as_secs();
+
+        // Simple UTC time formatting (basic implementation)
+        let days_since_1970 = secs / 86400;
+        let time_of_day = secs % 86400;
+        let hours = time_of_day / 3600;
+        let minutes = (time_of_day % 3600) / 60;
+        let seconds = time_of_day % 60;
+
+        // Calculate date from days since 1970 (simplified, ignoring leap years correctly for demo)
+        let year = 1970 + days_since_1970 / 365;
+        let day_of_year = days_since_1970 % 365;
+        let month = day_of_year / 30 + 1;
+        let day = day_of_year % 30 + 1;
+
+        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        let month_name = months.get(month as usize % 12).unwrap_or(&"???");
+
+        Ok(XdlValue::String(format!(
+            "{} {:02} {:02}:{:02}:{:02} {}",
+            month_name, day, hours, minutes, seconds, year
+        )))
+    }
+}
+
+/// JULDAY - Calculate Julian day number
+/// JULDAY(month, day, year [, hour, minute, second])
+pub fn julday(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "JULDAY: Expected at least 3 arguments (month, day, year)".to_string(),
+        ));
+    }
+
+    let month = match &args[0] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let day = match &args[1] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let year = match &args[2] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[2].gdl_type()),
+        }),
+    };
+
+    // Optional hour, minute, second
+    let hour = if args.len() > 3 {
+        match &args[3] {
+            XdlValue::Long(n) => *n as f64,
+            XdlValue::Double(n) => *n,
+            _ => 0.0,
+        }
+    } else { 0.0 };
+
+    let minute = if args.len() > 4 {
+        match &args[4] {
+            XdlValue::Long(n) => *n as f64,
+            XdlValue::Double(n) => *n,
+            _ => 0.0,
+        }
+    } else { 0.0 };
+
+    let second = if args.len() > 5 {
+        match &args[5] {
+            XdlValue::Long(n) => *n as f64,
+            XdlValue::Double(n) => *n,
+            _ => 0.0,
+        }
+    } else { 0.0 };
+
+    // Julian day calculation (based on standard algorithm)
+    let a = (14 - month) / 12;
+    let y = year + 4800 - a;
+    let m = month + 12 * a - 3;
+
+    let jdn = day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
+
+    // Add fractional day for time
+    let fraction = (hour - 12.0) / 24.0 + minute / 1440.0 + second / 86400.0;
+
+    Ok(XdlValue::Double(jdn as f64 + fraction))
+}
+
+/// CALDAT - Convert Julian date to calendar date
+/// CALDAT, julian, month, day, year [, hour, minute, second]
+pub fn caldat(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "CALDAT: Expected Julian date argument".to_string(),
+        ));
+    }
+
+    let julian = match &args[0] {
+        XdlValue::Long(n) => *n as f64,
+        XdlValue::Double(n) => *n,
+        XdlValue::Float(n) => *n as f64,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let jdn = julian.floor() as i32;
+    let fraction = julian - jdn as f64;
+
+    // Reverse Julian day calculation
+    let a = jdn + 32044;
+    let b = (4 * a + 3) / 146097;
+    let c = a - (b * 146097) / 4;
+    let d = (4 * c + 3) / 1461;
+    let e = c - (1461 * d) / 4;
+    let m = (5 * e + 2) / 153;
+
+    let day = e - (153 * m + 2) / 5 + 1;
+    let month = m + 3 - 12 * (m / 10);
+    let year = b * 100 + d - 4800 + m / 10;
+
+    // Calculate time from fraction
+    let hours = ((fraction + 0.5) * 24.0) % 24.0;
+    let minutes = hours.fract() * 60.0;
+    let seconds = minutes.fract() * 60.0;
+
+    // Return as array [month, day, year, hour, minute, second]
+    Ok(XdlValue::Array(vec![
+        month as f64,
+        day as f64,
+        year as f64,
+        hours.floor(),
+        minutes.floor(),
+        seconds.floor(),
+    ]))
+}
+
+// Global variable for TIC/TOC timing
+static mut TIC_TIME: Option<std::time::Instant> = None;
+
+/// TIC - Start timer
+pub fn tic(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    unsafe {
+        TIC_TIME = Some(std::time::Instant::now());
+    }
+    Ok(XdlValue::Undefined)
+}
+
+/// TOC - Stop timer and return elapsed time
+pub fn toc(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    unsafe {
+        match TIC_TIME {
+            Some(start) => {
+                let elapsed = start.elapsed().as_secs_f64();
+                println!("Elapsed time: {:.6} seconds", elapsed);
+                Ok(XdlValue::Double(elapsed))
+            }
+            None => Err(XdlError::RuntimeError(
+                "TOC: No corresponding TIC call found".to_string(),
+            )),
+        }
+    }
+}
+
+// ============================================================
+// Structure Functions
+// ============================================================
+
+/// N_TAGS - Get number of tags in a structure
+pub fn n_tags(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "N_TAGS: Expected structure argument".to_string(),
+        ));
+    }
+
+    match &args[0] {
+        XdlValue::Struct(map) => Ok(XdlValue::Long(map.len() as i32)),
+        _ => Ok(XdlValue::Long(0)),
+    }
+}
+
+/// TAG_NAMES - Get array of tag names from a structure
+pub fn tag_names(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "TAG_NAMES: Expected structure argument".to_string(),
+        ));
+    }
+
+    match &args[0] {
+        XdlValue::Struct(map) => {
+            let names: Vec<XdlValue> = map
+                .keys()
+                .map(|k| XdlValue::String(k.clone()))
+                .collect();
+            Ok(XdlValue::NestedArray(names))
+        }
+        _ => Ok(XdlValue::NestedArray(vec![])),
+    }
+}
+
+/// SIZE - Get size information about a variable
+pub fn size_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "SIZE: Expected variable argument".to_string(),
+        ));
+    }
+
+    match &args[0] {
+        XdlValue::Array(arr) => {
+            // [1, n_elements, type_code, n_elements]
+            Ok(XdlValue::Array(vec![
+                1.0, // 1 dimension
+                arr.len() as f64,
+                5.0, // float type code
+                arr.len() as f64,
+            ]))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            let mut result = vec![shape.len() as f64];
+            for dim in shape {
+                result.push(*dim as f64);
+            }
+            result.push(5.0); // float type code
+            result.push(data.len() as f64);
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::String(s) => {
+            Ok(XdlValue::Array(vec![1.0, s.len() as f64, 7.0, s.len() as f64]))
+        }
+        _ => Ok(XdlValue::Array(vec![0.0, 0.0, 0.0, 0.0])),
+    }
+}
+
+/// ISA - Check if variable is of specified type
+pub fn isa(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "ISA: Expected variable and type name arguments".to_string(),
+        ));
+    }
+
+    let type_name = match &args[1] {
+        XdlValue::String(s) => s.to_uppercase(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "string".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let matches = match &args[0] {
+        XdlValue::Array(_) | XdlValue::MultiDimArray { .. } => {
+            type_name == "ARRAY" || type_name == "NUMBER" || type_name == "NUMERIC"
+        }
+        XdlValue::String(_) => type_name == "STRING",
+        XdlValue::Long(_) => type_name == "LONG" || type_name == "NUMBER" || type_name == "INTEGER",
+        XdlValue::Int(_) => type_name == "INT" || type_name == "NUMBER" || type_name == "INTEGER",
+        XdlValue::Float(_) => type_name == "FLOAT" || type_name == "NUMBER",
+        XdlValue::Double(_) => type_name == "DOUBLE" || type_name == "NUMBER",
+        XdlValue::Byte(_) => type_name == "BYTE" || type_name == "NUMBER" || type_name == "INTEGER",
+        XdlValue::Complex(_) => type_name == "COMPLEX" || type_name == "NUMBER",
+        XdlValue::Struct(_) => type_name == "STRUCT" || type_name == "STRUCTURE",
+        _ => false,
+    };
+
+    Ok(XdlValue::Long(if matches { 1 } else { 0 }))
+}

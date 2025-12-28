@@ -261,11 +261,19 @@ impl Interpreter {
 
             Statement::Goto { .. } => Err(XdlError::NotImplemented("GOTO statements".to_string())),
 
-            Statement::Case { .. } => Err(XdlError::NotImplemented("CASE statements".to_string())),
+            Statement::Case {
+                expr,
+                branches,
+                else_block,
+                ..
+            } => self.execute_case_statement(expr, branches, else_block, false),
 
-            Statement::Switch { .. } => {
-                Err(XdlError::NotImplemented("SWITCH statements".to_string()))
-            }
+            Statement::Switch {
+                expr,
+                branches,
+                else_block,
+                ..
+            } => self.execute_case_statement(expr, branches, else_block, true),
 
             // Object-oriented programming
             Statement::ClassDefinition { name, body, .. } => {
@@ -393,6 +401,90 @@ impl Interpreter {
             }
         }
         Ok(())
+    }
+
+    /// Execute a CASE or SWITCH statement
+    /// CASE: Executes the first matching branch and exits (no fall-through)
+    /// SWITCH: Same behavior in XDL (unlike C, XDL SWITCH doesn't fall-through)
+    fn execute_case_statement(
+        &mut self,
+        expr: &Expression,
+        branches: &[xdl_parser::CaseBranch],
+        else_block: &Option<Vec<Statement>>,
+        _is_switch: bool, // For future: SWITCH might support fall-through
+    ) -> XdlResult<()> {
+        // Evaluate the switch expression
+        let switch_val = self.evaluate_expression(expr)?;
+
+        // Try each branch
+        let mut matched = false;
+        for branch in branches {
+            // Check if any value in the branch matches
+            for case_expr in &branch.values {
+                let case_val = self.evaluate_expression(case_expr)?;
+
+                // Compare values
+                if self.values_equal(&switch_val, &case_val) {
+                    // Execute branch body
+                    for stmt in &branch.body {
+                        match self.execute_statement(stmt) {
+                            Ok(()) => continue,
+                            Err(XdlError::Break) => return Ok(()), // BREAK exits the CASE
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    matched = true;
+                    break;
+                }
+            }
+
+            if matched {
+                break;
+            }
+        }
+
+        // Execute else block if no match
+        if !matched {
+            if let Some(else_stmts) = else_block {
+                for stmt in else_stmts {
+                    self.execute_statement(stmt)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Compare two XdlValues for equality
+    fn values_equal(&self, a: &XdlValue, b: &XdlValue) -> bool {
+        match (a, b) {
+            // Numeric comparisons - convert to double for comparison
+            (XdlValue::Byte(x), XdlValue::Byte(y)) => x == y,
+            (XdlValue::Int(x), XdlValue::Int(y)) => x == y,
+            (XdlValue::Long(x), XdlValue::Long(y)) => x == y,
+            (XdlValue::Long64(x), XdlValue::Long64(y)) => x == y,
+            (XdlValue::UInt(x), XdlValue::UInt(y)) => x == y,
+            (XdlValue::ULong(x), XdlValue::ULong(y)) => x == y,
+            (XdlValue::ULong64(x), XdlValue::ULong64(y)) => x == y,
+            (XdlValue::Float(x), XdlValue::Float(y)) => (x - y).abs() < f32::EPSILON,
+            (XdlValue::Double(x), XdlValue::Double(y)) => (x - y).abs() < f64::EPSILON,
+            (XdlValue::String(x), XdlValue::String(y)) => x == y,
+            // Cross-type numeric comparisons
+            _ => {
+                if let (Ok(x), Ok(y)) = (a.to_double(), b.to_double()) {
+                    (x - y).abs() < f64::EPSILON
+                } else if let (XdlValue::String(x), _) = (a, b) {
+                    // String to string comparison
+                    if let XdlValue::String(y) = b {
+                        x == y
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     /// Execute a foreach loop

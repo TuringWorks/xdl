@@ -1,0 +1,95 @@
+; Test type conversion functions
+; BYTE, UINT, ULONG, LONG64, ULONG64
+
+PRINT, '=== Testing Type Conversion Functions ==='
+
+; Test BYTE (converts to unsigned 8-bit integer)
+PRINT, ''
+PRINT, '--- BYTE ---'
+PRINT, 'BYTE(100) = ', BYTE(100)
+PRINT, 'BYTE(255) = ', BYTE(255)
+PRINT, 'BYTE(256) = ', BYTE(256)        ; Wraps to 0
+PRINT, 'BYTE(-1) = ', BYTE(-1)          ; Wraps to 255
+PRINT, 'BYTE(3.7) = ', BYTE(3.7)        ; Truncates to 3
+
+; BYTE with array
+arr = [10.5, 20.5, 30.5, 40.5, 255.9]
+PRINT, 'arr = ', arr
+PRINT, 'BYTE(arr) = ', BYTE(arr)
+
+; Test INT (16-bit signed)
+PRINT, ''
+PRINT, '--- INT ---'
+PRINT, 'INT(100.7) = ', INT(100.7)
+PRINT, 'INT(-50.3) = ', INT(-50.3)
+PRINT, 'INT(32767) = ', INT(32767)
+
+; Test UINT (16-bit unsigned)
+PRINT, ''
+PRINT, '--- UINT ---'
+PRINT, 'UINT(100) = ', UINT(100)
+PRINT, 'UINT(65535) = ', UINT(65535)
+PRINT, 'UINT(-1) = ', UINT(-1)          ; Wraps to 65535
+
+; Test LONG (32-bit signed)
+PRINT, ''
+PRINT, '--- LONG ---'
+PRINT, 'LONG(100.9) = ', LONG(100.9)
+PRINT, 'LONG(-12345) = ', LONG(-12345)
+PRINT, 'LONG(2147483647) = ', LONG(2147483647)
+
+; Test ULONG (32-bit unsigned)
+PRINT, ''
+PRINT, '--- ULONG ---'
+PRINT, 'ULONG(100) = ', ULONG(100)
+PRINT, 'ULONG(4294967295) = ', ULONG(4294967295)
+
+; Test LONG64 (64-bit signed)
+PRINT, ''
+PRINT, '--- LONG64 ---'
+PRINT, 'LONG64(100) = ', LONG64(100)
+PRINT, 'LONG64(9223372036854775807) = ', LONG64(9223372036854775807)
+
+; Test ULONG64 (64-bit unsigned)
+PRINT, ''
+PRINT, '--- ULONG64 ---'
+PRINT, 'ULONG64(100) = ', ULONG64(100)
+
+; Test FLOAT
+PRINT, ''
+PRINT, '--- FLOAT ---'
+PRINT, 'FLOAT(100) = ', FLOAT(100)
+PRINT, 'FLOAT(3.14159) = ', FLOAT(3.14159)
+
+; Test DOUBLE
+PRINT, ''
+PRINT, '--- DOUBLE ---'
+PRINT, 'DOUBLE(100) = ', DOUBLE(100)
+PRINT, 'DOUBLE(3.14159265358979) = ', DOUBLE(3.14159265358979)
+
+; Test FIX (convert to integer)
+PRINT, ''
+PRINT, '--- FIX ---'
+PRINT, 'FIX(3.7) = ', FIX(3.7)
+PRINT, 'FIX(-3.7) = ', FIX(-3.7)
+PRINT, 'FIX(10.999) = ', FIX(10.999)
+
+; Test STRING
+PRINT, ''
+PRINT, '--- STRING ---'
+PRINT, 'STRING(42) = "', STRING(42), '"'
+PRINT, 'STRING(3.14159) = "', STRING(3.14159), '"'
+
+; Test type preservation in operations
+PRINT, ''
+PRINT, '--- Type in operations ---'
+b = BYTE(10)
+i = INT(10)
+l = LONG(10)
+f = FLOAT(10)
+d = DOUBLE(10)
+PRINT, 'BYTE + BYTE: ', BYTE(5) + BYTE(3)
+PRINT, 'FLOAT * FLOAT: ', FLOAT(2.5) * FLOAT(4.0)
+
+PRINT, ''
+PRINT, '=== Type conversion tests complete ==='

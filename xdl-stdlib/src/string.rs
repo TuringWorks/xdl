@@ -302,3 +302,309 @@ pub fn strtrim(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::String(result))
 }
+
+/// STRJOIN - Join string array with delimiter
+/// Syntax: result = STRJOIN(array [, delimiter])
+pub fn strjoin(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRJOIN: Expected 1-2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let delimiter = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::String(s) => s.as_str(),
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "string".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                })
+            }
+        }
+    } else {
+        ""
+    };
+
+    // Extract strings from the input array
+    let strings: Vec<String> = match &args[0] {
+        XdlValue::String(s) => vec![s.clone()],
+        XdlValue::NestedArray(arr) => {
+            let mut result = Vec::new();
+            for val in arr {
+                match val {
+                    XdlValue::String(s) => result.push(s.clone()),
+                    other => result.push(other.to_string_repr()),
+                }
+            }
+            result
+        }
+        XdlValue::Array(arr) => arr.iter().map(|v| v.to_string()).collect(),
+        other => vec![other.to_string_repr()],
+    };
+
+    Ok(XdlValue::String(strings.join(delimiter)))
+}
+
+/// STRSPLIT - Split string by delimiter
+/// Syntax: result = STRSPLIT(string, pattern [, /REGEX] [, /EXTRACT])
+pub fn strsplit(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRSPLIT: Expected at least 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let pattern = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Split the string by the delimiter
+    let parts: Vec<XdlValue> = s
+        .split(pattern.as_str())
+        .map(|part| XdlValue::String(part.to_string()))
+        .collect();
+
+    Ok(XdlValue::NestedArray(parts))
+}
+
+/// STRCOMPRESS - Remove or compress whitespace
+/// Syntax: result = STRCOMPRESS(string [, /REMOVE_ALL])
+pub fn strcompress(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "STRCOMPRESS: Expected at least 1 argument, got 0".to_string(),
+        ));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Check for /REMOVE_ALL flag (second argument as non-zero)
+    let remove_all = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::Long(n) => *n != 0,
+            XdlValue::Int(n) => *n != 0,
+            XdlValue::Byte(n) => *n != 0,
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    let result = if remove_all {
+        // Remove all whitespace
+        s.chars().filter(|c| !c.is_whitespace()).collect()
+    } else {
+        // Compress multiple whitespace to single space and trim
+        let compressed: String = s.split_whitespace().collect::<Vec<&str>>().join(" ");
+        compressed
+    };
+
+    Ok(XdlValue::String(result))
+}
+
+/// STRCMP - Compare strings
+/// Syntax: result = STRCMP(string1, string2 [, n] [, /FOLD_CASE])
+/// Returns 1 if equal, 0 if not equal (IDL convention)
+pub fn strcmp(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRCMP: Expected at least 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let s1 = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let s2 = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Optional: compare only first n characters
+    let (cmp_s1, cmp_s2) = if args.len() > 2 {
+        let n = match &args[2] {
+            XdlValue::Long(n) => *n as usize,
+            XdlValue::Int(n) => *n as usize,
+            _ => s1.len().max(s2.len()),
+        };
+        (
+            s1.chars().take(n).collect::<String>(),
+            s2.chars().take(n).collect::<String>(),
+        )
+    } else {
+        (s1.clone(), s2.clone())
+    };
+
+    // Check for /FOLD_CASE flag (case-insensitive comparison)
+    let fold_case = if args.len() > 3 {
+        match &args[3] {
+            XdlValue::Long(n) => *n != 0,
+            XdlValue::Int(n) => *n != 0,
+            XdlValue::Byte(n) => *n != 0,
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    let equal = if fold_case {
+        cmp_s1.to_lowercase() == cmp_s2.to_lowercase()
+    } else {
+        cmp_s1 == cmp_s2
+    };
+
+    // IDL convention: 1 if equal, 0 if not equal
+    Ok(XdlValue::Long(if equal { 1 } else { 0 }))
+}
+
+/// STREGEX - Regular expression matching
+/// Syntax: result = STREGEX(string, pattern [, /BOOLEAN] [, /EXTRACT])
+pub fn stregex(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STREGEX: Expected at least 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let pattern = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Try to compile the regex
+    let re = match regex::Regex::new(pattern) {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(XdlError::InvalidArgument(format!(
+                "STREGEX: Invalid regex pattern: {}",
+                e
+            )))
+        }
+    };
+
+    // Check for /BOOLEAN flag (just return 0 or 1)
+    let boolean_mode = if args.len() > 2 {
+        match &args[2] {
+            XdlValue::Long(n) => *n != 0,
+            XdlValue::Int(n) => *n != 0,
+            XdlValue::Byte(n) => *n != 0,
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    if boolean_mode {
+        // Return 1 if match, 0 if no match
+        Ok(XdlValue::Long(if re.is_match(s) { 1 } else { 0 }))
+    } else {
+        // Return position of match, or -1 if not found
+        match re.find(s) {
+            Some(m) => Ok(XdlValue::Long(m.start() as i32)),
+            None => Ok(XdlValue::Long(-1)),
+        }
+    }
+}
+
+/// STRREPLACE - Replace occurrences in string
+/// Syntax: result = STRREPLACE(string, pattern, replacement)
+/// Replaces all occurrences by default (IDL convention)
+pub fn strreplace(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(format!(
+            "STRREPLACE: Expected at least 3 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let s = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let pattern = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let replacement = match &args[2] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    // Replace all occurrences by default (IDL convention)
+    let result = s.replace(pattern.as_str(), replacement.as_str());
+
+    Ok(XdlValue::String(result))
+}

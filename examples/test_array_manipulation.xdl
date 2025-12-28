@@ -1,0 +1,87 @@
+; Test array manipulation functions
+; ROTATE, SHIFT, REPLICATE, MAKE_ARRAY, ARRAY_EQUAL, UNIQ, HISTOGRAM, REBIN, CONGRID
+
+PRINT, '=== Testing Array Manipulation Functions ==='
+
+; Test SHIFT
+PRINT, ''
+PRINT, '--- SHIFT ---'
+arr = [1, 2, 3, 4, 5]
+PRINT, 'Original: ', arr
+PRINT, 'SHIFT(arr, 1): ', SHIFT(arr, 1)    ; [5, 1, 2, 3, 4]
+PRINT, 'SHIFT(arr, -1): ', SHIFT(arr, -1)  ; [2, 3, 4, 5, 1]
+PRINT, 'SHIFT(arr, 3): ', SHIFT(arr, 3)    ; [3, 4, 5, 1, 2]
+
+; Test REPLICATE
+PRINT, ''
+PRINT, '--- REPLICATE ---'
+PRINT, 'REPLICATE(0, 5): ', REPLICATE(0, 5)      ; [0, 0, 0, 0, 0]
+PRINT, 'REPLICATE(3.14, 3): ', REPLICATE(3.14, 3) ; [3.14, 3.14, 3.14]
+PRINT, 'REPLICATE(1, 10): ', REPLICATE(1, 10)
+
+; Test MAKE_ARRAY
+PRINT, ''
+PRINT, '--- MAKE_ARRAY ---'
+PRINT, 'MAKE_ARRAY(5): ', MAKE_ARRAY(5)           ; [0, 0, 0, 0, 0]
+; Note: VALUE=n keyword syntax not yet supported by parser
+; PRINT, 'MAKE_ARRAY(3, VALUE=7): ', MAKE_ARRAY(3, VALUE=7)  ; [7, 7, 7]
+; PRINT, 'MAKE_ARRAY(4, /INDEX): ', MAKE_ARRAY(4, /INDEX)    ; [0, 1, 2, 3]
+
+; Test ARRAY_EQUAL
+PRINT, ''
+PRINT, '--- ARRAY_EQUAL ---'
+a = [1, 2, 3]
+b = [1, 2, 3]
+c = [1, 2, 4]
+PRINT, 'a = ', a
+PRINT, 'b = ', b
+PRINT, 'c = ', c
+PRINT, 'ARRAY_EQUAL(a, b): ', ARRAY_EQUAL(a, b)   ; 1 (true)
+PRINT, 'ARRAY_EQUAL(a, c): ', ARRAY_EQUAL(a, c)   ; 0 (false)
+
+; Test UNIQ
+PRINT, ''
+PRINT, '--- UNIQ ---'
+sorted_arr = [1, 1, 2, 2, 2, 3, 3, 4, 5, 5]
+PRINT, 'Sorted array: ', sorted_arr
+uniq_idx = UNIQ(sorted_arr)
+PRINT, 'UNIQ indices: ', uniq_idx
+PRINT, 'Unique values: ', sorted_arr[uniq_idx]
+
+; Test HISTOGRAM
+PRINT, ''
+PRINT, '--- HISTOGRAM ---'
+data = [1.2, 2.5, 2.7, 3.1, 3.5, 4.2, 4.8, 5.1, 5.5, 6.0]
+PRINT, 'Data: ', data
+hist = HISTOGRAM(data)
+PRINT, 'HISTOGRAM(data): ', hist
+
+; Test with bins specified
+; Note: NBINS=n keyword syntax not yet supported by parser
+; hist_binned = HISTOGRAM(data, NBINS=5)
+; PRINT, 'HISTOGRAM(data, NBINS=5): ', hist_binned
+
+; Test REBIN
+PRINT, ''
+PRINT, '--- REBIN ---'
+small_arr = [1.0, 2.0, 3.0, 4.0]
+PRINT, 'Original (4 elements): ', small_arr
+rebinned = REBIN(small_arr, 8)
+PRINT, 'REBIN to 8 elements: ', rebinned
+
+; Test CONGRID
+PRINT, ''
+PRINT, '--- CONGRID ---'
+PRINT, 'Original (4 elements): ', small_arr
+congrid_arr = CONGRID(small_arr, 8)
+PRINT, 'CONGRID to 8 elements: ', congrid_arr
+
+; Test ROTATE (requires 2D array)
+PRINT, ''
+PRINT, '--- ROTATE ---'
+; Note: ROTATE requires MultiDimArray format from REFORM/FLTARR
+; Skipping test - function implemented but requires proper 2D array support
+PRINT, 'ROTATE: Requires MultiDimArray format'
+
+PRINT, ''
+PRINT, '=== Array manipulation tests complete ==='

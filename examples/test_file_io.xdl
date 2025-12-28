@@ -1,0 +1,66 @@
+; Test file I/O functions
+; FILE_TEST, FILE_INFO, FILE_SEARCH, FILE_MKDIR, CD, GETENV, SETENV
+
+PRINT, '=== Testing File I/O Functions ==='
+
+; Test FILE_TEST
+PRINT, ''
+PRINT, '--- FILE_TEST ---'
+PRINT, 'FILE_TEST("."): ', FILE_TEST('.')
+PRINT, 'FILE_TEST(".."): ', FILE_TEST('..')
+PRINT, 'FILE_TEST("nonexistent_file.xyz"): ', FILE_TEST('nonexistent_file.xyz')
+
+; Test FILE_INFO
+PRINT, ''
+PRINT, '--- FILE_INFO ---'
+info = FILE_INFO('.')
+PRINT, 'FILE_INFO("."): ', info
+
+; Test FILE_SEARCH
+PRINT, ''
+PRINT, '--- FILE_SEARCH ---'
+xdl_files = FILE_SEARCH('*.xdl')
+PRINT, 'FILE_SEARCH("*.xdl") found files: ', N_ELEMENTS(xdl_files), ' files'
+
+; Test CD (get current directory)
+PRINT, ''
+PRINT, '--- CD ---'
+current_dir = CD()
+PRINT, 'Current directory: ', current_dir
+
+; Test GETENV
+PRINT, ''
+PRINT, '--- GETENV ---'
+home = GETENV('HOME')
+PRINT, 'HOME = ', home
+user = GETENV('USER')
+PRINT, 'USER = ', user
+
+; Test SETENV
+PRINT, ''
+PRINT, '--- SETENV ---'
+result = SETENV('XDL_TEST_VAR', 'Hello_XDL')
+PRINT, 'SETENV result: ', result
+test_var = GETENV('XDL_TEST_VAR')
+PRINT, 'XDL_TEST_VAR = ', test_var
+
+; Test SYSTIME
+PRINT, ''
+PRINT, '--- SYSTIME ---'
+PRINT, 'SYSTIME(): ', SYSTIME()
+
+; Test TIC/TOC
+PRINT, ''
+PRINT, '--- TIC/TOC ---'
+dummy = TIC()
+; Do some simple work
+sum = 0.0
+FOR i = 0, 999 DO BEGIN
+    sum = sum + i
+ENDFOR
+elapsed = TOC()
+PRINT, 'Sum of 0..999: ', sum
+PRINT, 'Time for loop: ', elapsed, ' seconds'
+
+PRINT, ''
+PRINT, '=== File I/O tests complete ==='

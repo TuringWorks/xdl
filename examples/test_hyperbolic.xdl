@@ -1,0 +1,54 @@
+; Test hyperbolic functions
+; SINH, COSH, TANH, ASINH, ACOSH, ATANH
+
+PRINT, '=== Testing Hyperbolic Functions ==='
+
+; Test with scalar values
+PRINT, 'SINH(0) = ', SINH(0)          ; Should be 0
+PRINT, 'SINH(1) = ', SINH(1)          ; Should be ~1.1752
+PRINT, 'COSH(0) = ', COSH(0)          ; Should be 1
+PRINT, 'COSH(1) = ', COSH(1)          ; Should be ~1.5431
+PRINT, 'TANH(0) = ', TANH(0)          ; Should be 0
+PRINT, 'TANH(1) = ', TANH(1)          ; Should be ~0.7616
+
+; Test identity: cosh^2(x) - sinh^2(x) = 1
+x = 2.0
+cosh_x = COSH(x)
+sinh_x = SINH(x)
+identity = cosh_x * cosh_x - sinh_x * sinh_x
+PRINT, 'cosh^2(2) - sinh^2(2) = ', identity, ' (should be 1)'
+
+; Test with arrays
+arr = [0.0, 0.5, 1.0, 1.5, 2.0]
+PRINT, ''
+PRINT, 'Array test: arr = ', arr
+PRINT, 'SINH(arr) = ', SINH(arr)
+PRINT, 'COSH(arr) = ', COSH(arr)
+PRINT, 'TANH(arr) = ', TANH(arr)
+
+; Inverse hyperbolic functions
+PRINT, ''
+PRINT, '=== Inverse Hyperbolic Functions ==='
+PRINT, 'ASINH(0) = ', ASINH(0)        ; Should be 0
+PRINT, 'ASINH(1.1752) = ', ASINH(1.1752)  ; Should be ~1
+PRINT, 'ACOSH(1) = ', ACOSH(1)        ; Should be 0
+PRINT, 'ACOSH(1.5431) = ', ACOSH(1.5431)  ; Should be ~1
+PRINT, 'ATANH(0) = ', ATANH(0)        ; Should be 0
+PRINT, 'ATANH(0.7616) = ', ATANH(0.7616)  ; Should be ~1
+
+; Round-trip test: ASINH(SINH(x)) = x
+x = 1.5
+PRINT, ''
+PRINT, 'Round-trip test:'
+PRINT, 'ASINH(SINH(1.5)) = ', ASINH(SINH(x)), ' (should be 1.5)'
+PRINT, 'ACOSH(COSH(1.5)) = ', ACOSH(COSH(x)), ' (should be 1.5)'
+PRINT, 'ATANH(TANH(1.5)) = ', ATANH(TANH(x)), ' (should be 1.5)'
+
+; Test with inverse array
+PRINT, ''
+PRINT, 'Inverse with arrays:'
+sinh_arr = SINH(arr)
+PRINT, 'ASINH(SINH(arr)) = ', ASINH(sinh_arr)
+
+PRINT, ''
+PRINT, '=== Hyperbolic function tests complete ==='

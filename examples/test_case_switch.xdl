@@ -1,0 +1,65 @@
+; Test CASE/SWITCH control flow statements
+
+PRINT, '=== Testing CASE/SWITCH Statements ==='
+
+; Basic CASE with integer
+PRINT, ''
+PRINT, '--- Integer CASE ---'
+FOR value = 1, 5 DO BEGIN
+    PRINT, 'Testing value = ', value
+    CASE value OF
+        1: PRINT, '  One'
+        2: PRINT, '  Two'
+        3: PRINT, '  Three'
+        ELSE: PRINT, '  Other'
+    ENDCASE
+ENDFOR
+
+; CASE with string
+PRINT, ''
+PRINT, '--- String CASE ---'
+color = 'red'
+PRINT, 'Color: ', color
+CASE color OF
+    'red': PRINT, '  RGB: 255, 0, 0'
+    'green': PRINT, '  RGB: 0, 255, 0'
+    'blue': PRINT, '  RGB: 0, 0, 255'
+    ELSE: PRINT, '  Unknown color'
+ENDCASE
+
+color = 'blue'
+PRINT, 'Color: ', color
+CASE color OF
+    'red': PRINT, '  RGB: 255, 0, 0'
+    'green': PRINT, '  RGB: 0, 255, 0'
+    'blue': PRINT, '  RGB: 0, 0, 255'
+    ELSE: PRINT, '  Unknown color'
+ENDCASE
+
+; CASE with expressions
+PRINT, ''
+PRINT, '--- CASE with expressions ---'
+x = 7
+CASE 1 OF
+    (x LT 5): PRINT, 'x is less than 5'
+    (x GE 5): PRINT, 'x is 5 or greater'
+ENDCASE
+
+; CASE with block
+PRINT, ''
+PRINT, '--- CASE with BEGIN/END blocks ---'
+n = 2
+CASE n OF
+    1: BEGIN
+        PRINT, '  n is 1'
+        PRINT, '  This is the first case'
+    END
+    2: BEGIN
+        PRINT, '  n is 2'
+        PRINT, '  This is the second case'
+    END
+    ELSE: PRINT, '  n is something else'
+ENDCASE
+
+PRINT, ''
+PRINT, '=== CASE/SWITCH tests complete ==='

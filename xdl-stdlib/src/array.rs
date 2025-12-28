@@ -995,3 +995,725 @@ pub fn transpose_2d(arr: &[f64], nrows: usize, ncols: usize) -> XdlResult<Vec<f6
 
     Ok(result)
 }
+
+/// SHIFT - Circular shift of array elements
+/// SHIFT(array, s1 [, s2, s3, ...])
+/// Shifts array elements by the specified amount(s) along each dimension
+/// Positive shift moves elements to higher indices (wrapping around)
+///
+/// Examples:
+///   arr = [1, 2, 3, 4, 5]
+///   SHIFT(arr, 2)   ; Returns [4, 5, 1, 2, 3]
+///   SHIFT(arr, -1)  ; Returns [2, 3, 4, 5, 1]
+pub fn shift_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "SHIFT: Expected at least 2 arguments (array, shift), got {}",
+            args.len()
+        )));
+    }
+
+    // Handle 1D arrays
+    match &args[0] {
+        XdlValue::Array(arr) => {
+            if arr.is_empty() {
+                return Ok(XdlValue::Array(vec![]));
+            }
+
+            let shift_amount = match &args[1] {
+                XdlValue::Long(n) => *n,
+                XdlValue::Int(n) => *n as i32,
+                XdlValue::Double(n) => *n as i32,
+                XdlValue::Float(n) => *n as i32,
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "integer".to_string(),
+                        actual: format!("{:?}", args[1].gdl_type()),
+                    })
+                }
+            };
+
+            let n = arr.len() as i32;
+            // Normalize shift to be within bounds
+            let normalized_shift = ((shift_amount % n) + n) % n;
+            let shift_idx = normalized_shift as usize;
+
+            // Perform circular shift
+            let mut result = vec![0.0; arr.len()];
+            for (i, &val) in arr.iter().enumerate() {
+                let new_idx = (i + shift_idx) % arr.len();
+                result[new_idx] = val;
+            }
+
+            Ok(XdlValue::Array(result))
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            // For multi-dimensional arrays, apply shift to first dimension
+            if data.is_empty() {
+                return Ok(XdlValue::MultiDimArray {
+                    data: vec![],
+                    shape: shape.clone(),
+                });
+            }
+
+            let shift_amount = match &args[1] {
+                XdlValue::Long(n) => *n,
+                XdlValue::Int(n) => *n as i32,
+                XdlValue::Double(n) => *n as i32,
+                XdlValue::Float(n) => *n as i32,
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "integer".to_string(),
+                        actual: format!("{:?}", args[1].gdl_type()),
+                    })
+                }
+            };
+
+            let n = data.len() as i32;
+            let normalized_shift = ((shift_amount % n) + n) % n;
+            let shift_idx = normalized_shift as usize;
+
+            let mut result = vec![0.0; data.len()];
+            for (i, &val) in data.iter().enumerate() {
+                let new_idx = (i + shift_idx) % data.len();
+                result[new_idx] = val;
+            }
+
+            Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: shape.clone(),
+            })
+        }
+        _ => Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    }
+}
+
+/// ROTATE - Rotate 2D array by 90, 180, or 270 degrees
+/// ROTATE(array, direction)
+/// direction: 0 = no rotation, 1 = 90° CCW, 2 = 180°, 3 = 270° CCW (90° CW)
+///            4 = transpose, 5 = transpose + 90°, 6 = transpose + 180°, 7 = transpose + 270°
+///
+/// For 1D arrays, ROTATE just reverses the array when direction is 2.
+///
+/// Examples:
+///   arr = [[1, 2], [3, 4]]  ; 2x2 matrix
+///   ROTATE(arr, 1)          ; Rotate 90° counter-clockwise
+pub fn rotate_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ROTATE: Expected 2 arguments (array, direction), got {}",
+            args.len()
+        )));
+    }
+
+    let direction = match &args[1] {
+        XdlValue::Long(n) => (*n % 8) as i32,
+        XdlValue::Int(n) => (*n % 8) as i32,
+        XdlValue::Double(n) => (*n as i32) % 8,
+        XdlValue::Float(n) => (*n as i32) % 8,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    match &args[0] {
+        XdlValue::Array(arr) => {
+            if arr.is_empty() {
+                return Ok(XdlValue::Array(vec![]));
+            }
+
+            match direction {
+                0 => Ok(XdlValue::Array(arr.clone())),
+                2 | 6 => {
+                    // 180° rotation for 1D = reverse
+                    let mut result = arr.clone();
+                    result.reverse();
+                    Ok(XdlValue::Array(result))
+                }
+                _ => {
+                    // Other rotations don't make sense for 1D arrays
+                    Ok(XdlValue::Array(arr.clone()))
+                }
+            }
+        }
+        XdlValue::MultiDimArray { data, shape } => {
+            if shape.len() != 2 {
+                return Err(XdlError::DimensionError(
+                    "ROTATE: Only 2D arrays are supported".to_string(),
+                ));
+            }
+
+            let nrows = shape[0];
+            let ncols = shape[1];
+
+            match direction {
+                0 => Ok(XdlValue::MultiDimArray {
+                    data: data.clone(),
+                    shape: shape.clone(),
+                }),
+                1 => {
+                    // 90° CCW: (i, j) -> (ncols - 1 - j, i)
+                    let mut result = vec![0.0; data.len()];
+                    for i in 0..nrows {
+                        for j in 0..ncols {
+                            let old_idx = i * ncols + j;
+                            let new_i = ncols - 1 - j;
+                            let new_j = i;
+                            let new_idx = new_i * nrows + new_j;
+                            result[new_idx] = data[old_idx];
+                        }
+                    }
+                    Ok(XdlValue::MultiDimArray {
+                        data: result,
+                        shape: vec![ncols, nrows],
+                    })
+                }
+                2 => {
+                    // 180°: (i, j) -> (nrows - 1 - i, ncols - 1 - j)
+                    let mut result = vec![0.0; data.len()];
+                    for i in 0..nrows {
+                        for j in 0..ncols {
+                            let old_idx = i * ncols + j;
+                            let new_idx = (nrows - 1 - i) * ncols + (ncols - 1 - j);
+                            result[new_idx] = data[old_idx];
+                        }
+                    }
+                    Ok(XdlValue::MultiDimArray {
+                        data: result,
+                        shape: shape.clone(),
+                    })
+                }
+                3 => {
+                    // 270° CCW (90° CW): (i, j) -> (j, nrows - 1 - i)
+                    let mut result = vec![0.0; data.len()];
+                    for i in 0..nrows {
+                        for j in 0..ncols {
+                            let old_idx = i * ncols + j;
+                            let new_i = j;
+                            let new_j = nrows - 1 - i;
+                            let new_idx = new_i * nrows + new_j;
+                            result[new_idx] = data[old_idx];
+                        }
+                    }
+                    Ok(XdlValue::MultiDimArray {
+                        data: result,
+                        shape: vec![ncols, nrows],
+                    })
+                }
+                4 => {
+                    // Transpose: (i, j) -> (j, i)
+                    let result = transpose_2d(data, nrows, ncols)?;
+                    Ok(XdlValue::MultiDimArray {
+                        data: result,
+                        shape: vec![ncols, nrows],
+                    })
+                }
+                5 | 6 | 7 => {
+                    // Transpose + rotation: first transpose, then rotate
+                    let transposed = transpose_2d(data, nrows, ncols)?;
+                    let rot_dir = direction - 4;
+                    let transposed_val = XdlValue::MultiDimArray {
+                        data: transposed,
+                        shape: vec![ncols, nrows],
+                    };
+                    rotate_func(&[transposed_val, XdlValue::Long(rot_dir)])
+                }
+                _ => Ok(XdlValue::MultiDimArray {
+                    data: data.clone(),
+                    shape: shape.clone(),
+                }),
+            }
+        }
+        _ => Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    }
+}
+
+/// REPLICATE - Create array by replicating a value or array
+/// REPLICATE(value, d1 [, d2, d3, ...])
+/// Creates an array with the specified dimensions filled with copies of value
+///
+/// Examples:
+///   REPLICATE(3.14, 5)       ; Returns [3.14, 3.14, 3.14, 3.14, 3.14]
+///   REPLICATE(0, 3, 3)       ; Returns 3x3 array of zeros
+pub fn replicate_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "REPLICATE: Expected at least 2 arguments (value, dimensions...), got {}",
+            args.len()
+        )));
+    }
+
+    // Get the value to replicate
+    let value = match &args[0] {
+        XdlValue::Double(v) => *v,
+        XdlValue::Float(v) => *v as f64,
+        XdlValue::Long(v) => *v as f64,
+        XdlValue::Int(v) => *v as f64,
+        XdlValue::Byte(v) => *v as f64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args.iter().skip(1) {
+        shape.push(extract_dimension(arg)?);
+    }
+
+    // Calculate total size
+    let total_size: usize = shape.iter().product();
+    let data = vec![value; total_size];
+
+    // Return appropriate type based on dimensions
+    if shape.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    }
+}
+
+/// MAKE_ARRAY - General array creation with various options
+/// MAKE_ARRAY([d1, d2, ...] [, /TYPE] [, VALUE=value] [, /INDEX])
+/// Creates an array with specified dimensions and initialization
+///
+/// Simplified implementation supporting basic usage patterns
+pub fn make_array_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "MAKE_ARRAY: At least one dimension required".to_string(),
+        ));
+    }
+
+    // Extract dimensions
+    let mut shape = Vec::new();
+    for arg in args {
+        shape.push(extract_dimension(arg)?);
+    }
+
+    let total_size: usize = shape.iter().product();
+
+    // Default to zeros (like most array creation functions)
+    let data = vec![0.0; total_size];
+
+    if shape.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray { data, shape })
+    }
+}
+
+/// ARRAY_EQUAL - Test if two arrays are equal
+/// ARRAY_EQUAL(array1, array2)
+/// Returns 1 if arrays are equal (same size and all elements match), 0 otherwise
+pub fn array_equal_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "ARRAY_EQUAL: Expected 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let equal = match (&args[0], &args[1]) {
+        (XdlValue::Array(a), XdlValue::Array(b)) => {
+            if a.len() != b.len() {
+                false
+            } else {
+                a.iter().zip(b.iter()).all(|(x, y)| (x - y).abs() < f64::EPSILON)
+            }
+        }
+        (XdlValue::MultiDimArray { data: a, shape: sa }, XdlValue::MultiDimArray { data: b, shape: sb }) => {
+            if sa != sb || a.len() != b.len() {
+                false
+            } else {
+                a.iter().zip(b.iter()).all(|(x, y)| (x - y).abs() < f64::EPSILON)
+            }
+        }
+        // Scalar comparisons
+        (a, b) => {
+            if let (Ok(x), Ok(y)) = (a.to_double(), b.to_double()) {
+                (x - y).abs() < f64::EPSILON
+            } else {
+                false
+            }
+        }
+    };
+
+    Ok(XdlValue::Long(if equal { 1 } else { 0 }))
+}
+
+/// UNIQ - Return indices of unique elements in a sorted array
+/// UNIQ(array [, indices])
+/// Returns indices of unique (non-repeating) elements
+/// Note: Array should be sorted for proper behavior (like IDL)
+///
+/// Examples:
+///   arr = [1, 1, 2, 2, 2, 3, 4, 4]
+///   UNIQ(arr)  ; Returns [1, 4, 5, 7] (last index of each unique run)
+pub fn uniq_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "UNIQ: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let arr = match &args[0] {
+        XdlValue::Array(a) => a,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if arr.is_empty() {
+        return Ok(XdlValue::Long(-1));
+    }
+
+    if arr.len() == 1 {
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Find indices where value changes (or last element)
+    let mut indices = Vec::new();
+    for i in 0..arr.len() - 1 {
+        if (arr[i] - arr[i + 1]).abs() > f64::EPSILON {
+            indices.push(i as f64);
+        }
+    }
+    // Always include the last element
+    indices.push((arr.len() - 1) as f64);
+
+    if indices.len() == 1 {
+        Ok(XdlValue::Long(indices[0] as i32))
+    } else {
+        Ok(XdlValue::Array(indices))
+    }
+}
+
+/// HISTOGRAM - Compute histogram of array values
+/// HISTOGRAM(array [, BINSIZE=value] [, MIN=value] [, MAX=value] [, NBINS=value])
+/// Returns array of counts for each bin
+///
+/// Simplified implementation with default binning
+pub fn histogram_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "HISTOGRAM: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let arr = match &args[0] {
+        XdlValue::Array(a) => a,
+        XdlValue::MultiDimArray { data, .. } => data,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if arr.is_empty() {
+        return Ok(XdlValue::Array(vec![]));
+    }
+
+    // Find min and max
+    let min_val = arr.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let max_val = arr.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+    // Default: 256 bins (like IDL for byte data)
+    let nbins = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::Long(n) => *n as usize,
+            XdlValue::Int(n) => *n as usize,
+            _ => 256,
+        }
+    } else {
+        // Compute reasonable number of bins
+        let range = max_val - min_val;
+        if range <= 0.0 {
+            1
+        } else {
+            (range.ceil() as usize).max(1).min(256)
+        }
+    };
+
+    let bin_size = (max_val - min_val) / nbins as f64;
+
+    // Count elements in each bin
+    let mut counts = vec![0.0; nbins];
+    for &val in arr {
+        let bin = if bin_size > 0.0 {
+            ((val - min_val) / bin_size).floor() as usize
+        } else {
+            0
+        };
+        let bin = bin.min(nbins - 1); // Clamp to last bin
+        counts[bin] += 1.0;
+    }
+
+    Ok(XdlValue::Array(counts))
+}
+
+/// REBIN - Resize array by averaging or replicating
+/// Syntax: result = REBIN(array, new_dim1 [, new_dim2, ...])
+pub fn rebin_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "REBIN: Expected array and at least one dimension".to_string(),
+        ));
+    }
+
+    // For 1D arrays
+    if let XdlValue::Array(arr) = &args[0] {
+        let new_len = match &args[1] {
+            XdlValue::Long(n) => *n as usize,
+            XdlValue::Int(n) => *n as usize,
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "integer".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                })
+            }
+        };
+
+        if new_len == 0 {
+            return Ok(XdlValue::Array(vec![]));
+        }
+
+        let old_len = arr.len();
+        let mut result = vec![0.0; new_len];
+
+        if new_len <= old_len {
+            // Shrinking: average values
+            let factor = old_len as f64 / new_len as f64;
+            for i in 0..new_len {
+                let start = (i as f64 * factor) as usize;
+                let end = ((i + 1) as f64 * factor) as usize;
+                let count = (end - start).max(1);
+                let sum: f64 = arr[start..end.min(old_len)].iter().sum();
+                result[i] = sum / count as f64;
+            }
+        } else {
+            // Expanding: replicate values
+            let factor = old_len as f64 / new_len as f64;
+            for i in 0..new_len {
+                let src_idx = ((i as f64 * factor) as usize).min(old_len - 1);
+                result[i] = arr[src_idx];
+            }
+        }
+
+        return Ok(XdlValue::Array(result));
+    }
+
+    // For MultiDimArrays
+    if let XdlValue::MultiDimArray { data, shape } = &args[0] {
+        // Collect new dimensions
+        let mut new_shape = Vec::new();
+        for i in 1..args.len() {
+            let dim = match &args[i] {
+                XdlValue::Long(n) => *n as usize,
+                XdlValue::Int(n) => *n as usize,
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "integer".to_string(),
+                        actual: format!("{:?}", args[i].gdl_type()),
+                    })
+                }
+            };
+            new_shape.push(dim);
+        }
+
+        // Pad new_shape if fewer dimensions given
+        while new_shape.len() < shape.len() {
+            new_shape.push(shape[new_shape.len()]);
+        }
+
+        // For 2D arrays, do proper rebin
+        if shape.len() == 2 && new_shape.len() == 2 {
+            let (old_rows, old_cols) = (shape[0], shape[1]);
+            let (new_rows, new_cols) = (new_shape[0], new_shape[1]);
+
+            let mut result = vec![0.0; new_rows * new_cols];
+
+            let row_factor = old_rows as f64 / new_rows as f64;
+            let col_factor = old_cols as f64 / new_cols as f64;
+
+            for new_row in 0..new_rows {
+                for new_col in 0..new_cols {
+                    let start_row = (new_row as f64 * row_factor) as usize;
+                    let end_row = (((new_row + 1) as f64 * row_factor) as usize).min(old_rows);
+                    let start_col = (new_col as f64 * col_factor) as usize;
+                    let end_col = (((new_col + 1) as f64 * col_factor) as usize).min(old_cols);
+
+                    let mut sum = 0.0;
+                    let mut count = 0;
+                    for r in start_row..end_row {
+                        for c in start_col..end_col {
+                            sum += data[r * old_cols + c];
+                            count += 1;
+                        }
+                    }
+
+                    result[new_row * new_cols + new_col] = if count > 0 {
+                        sum / count as f64
+                    } else {
+                        // Handle upsampling: nearest neighbor
+                        let src_row = (start_row).min(old_rows - 1);
+                        let src_col = (start_col).min(old_cols - 1);
+                        data[src_row * old_cols + src_col]
+                    };
+                }
+            }
+
+            return Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: new_shape,
+            });
+        }
+
+        // For other dimensions, just return with new shape (simplified)
+        return Ok(XdlValue::MultiDimArray {
+            data: data.clone(),
+            shape: new_shape,
+        });
+    }
+
+    Err(XdlError::TypeMismatch {
+        expected: "array".to_string(),
+        actual: format!("{:?}", args[0].gdl_type()),
+    })
+}
+
+/// CONGRID - Resize array with interpolation
+/// Syntax: result = CONGRID(array, new_dim1 [, new_dim2, ...] [, /INTERP])
+pub fn congrid_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "CONGRID: Expected array and at least one dimension".to_string(),
+        ));
+    }
+
+    // For 1D arrays
+    if let XdlValue::Array(arr) = &args[0] {
+        let new_len = match &args[1] {
+            XdlValue::Long(n) => *n as usize,
+            XdlValue::Int(n) => *n as usize,
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "integer".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                })
+            }
+        };
+
+        if new_len == 0 || arr.is_empty() {
+            return Ok(XdlValue::Array(vec![]));
+        }
+
+        // Use linear interpolation
+        let mut result = vec![0.0; new_len];
+        let scale = (arr.len() - 1) as f64 / (new_len - 1).max(1) as f64;
+
+        for i in 0..new_len {
+            let src_pos = i as f64 * scale;
+            let src_idx = src_pos.floor() as usize;
+            let frac = src_pos - src_idx as f64;
+
+            if src_idx + 1 < arr.len() {
+                result[i] = arr[src_idx] * (1.0 - frac) + arr[src_idx + 1] * frac;
+            } else {
+                result[i] = arr[arr.len() - 1];
+            }
+        }
+
+        return Ok(XdlValue::Array(result));
+    }
+
+    // For MultiDimArrays
+    if let XdlValue::MultiDimArray { data, shape } = &args[0] {
+        // Collect new dimensions
+        let mut new_shape = Vec::new();
+        for i in 1..args.len() {
+            let dim = match &args[i] {
+                XdlValue::Long(n) => *n as usize,
+                XdlValue::Int(n) => *n as usize,
+                _ => continue, // Skip non-integer args (could be keywords)
+            };
+            new_shape.push(dim);
+        }
+
+        // Pad new_shape if fewer dimensions given
+        while new_shape.len() < shape.len() {
+            new_shape.push(shape[new_shape.len()]);
+        }
+
+        // For 2D arrays, bilinear interpolation
+        if shape.len() == 2 && new_shape.len() == 2 {
+            let (old_rows, old_cols) = (shape[0], shape[1]);
+            let (new_rows, new_cols) = (new_shape[0], new_shape[1]);
+
+            let mut result = vec![0.0; new_rows * new_cols];
+
+            let row_scale = (old_rows - 1).max(1) as f64 / (new_rows - 1).max(1) as f64;
+            let col_scale = (old_cols - 1).max(1) as f64 / (new_cols - 1).max(1) as f64;
+
+            for new_row in 0..new_rows {
+                for new_col in 0..new_cols {
+                    let src_row = new_row as f64 * row_scale;
+                    let src_col = new_col as f64 * col_scale;
+
+                    let r0 = (src_row.floor() as usize).min(old_rows - 1);
+                    let r1 = (r0 + 1).min(old_rows - 1);
+                    let c0 = (src_col.floor() as usize).min(old_cols - 1);
+                    let c1 = (c0 + 1).min(old_cols - 1);
+
+                    let row_frac = src_row - r0 as f64;
+                    let col_frac = src_col - c0 as f64;
+
+                    // Bilinear interpolation
+                    let v00 = data[r0 * old_cols + c0];
+                    let v01 = data[r0 * old_cols + c1];
+                    let v10 = data[r1 * old_cols + c0];
+                    let v11 = data[r1 * old_cols + c1];
+
+                    let top = v00 * (1.0 - col_frac) + v01 * col_frac;
+                    let bottom = v10 * (1.0 - col_frac) + v11 * col_frac;
+                    let value = top * (1.0 - row_frac) + bottom * row_frac;
+
+                    result[new_row * new_cols + new_col] = value;
+                }
+            }
+
+            return Ok(XdlValue::MultiDimArray {
+                data: result,
+                shape: new_shape,
+            });
+        }
+
+        // For other dimensions, fall back to simple resize
+        return Ok(XdlValue::MultiDimArray {
+            data: data.clone(),
+            shape: new_shape,
+        });
+    }
+
+    Err(XdlError::TypeMismatch {
+        expected: "array".to_string(),
+        actual: format!("{:?}", args[0].gdl_type()),
+    })
+}

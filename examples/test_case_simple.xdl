@@ -1,0 +1,28 @@
+; Test simple CASE statement
+
+PRINT, '=== Testing CASE Statement ==='
+
+; Basic CASE with integer
+value = 2
+PRINT, 'Testing CASE with value = ', value
+
+CASE value OF
+    1: PRINT, '  One'
+    2: PRINT, '  Two'
+    3: PRINT, '  Three'
+    ELSE: PRINT, '  Other'
+ENDCASE
+
+; Test another value
+value = 5
+PRINT, 'Testing CASE with value = ', value
+
+CASE value OF
+    1: PRINT, '  One'
+    2: PRINT, '  Two'
+    3: PRINT, '  Three'
+    ELSE: PRINT, '  Other (not 1, 2, or 3)'
+ENDCASE
+
+PRINT, ''
+PRINT, '=== CASE test complete ==='

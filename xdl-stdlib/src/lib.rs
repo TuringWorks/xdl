@@ -164,6 +164,19 @@ impl StandardLibrary {
             "WAIT" => system::wait(args),
             "STOP" => system::stop(args),
 
+            // Time functions
+            "SYSTIME" => system::systime(args),
+            "JULDAY" => system::julday(args),
+            "CALDAT" => system::caldat(args),
+            "TIC" => system::tic(args),
+            "TOC" => system::toc(args),
+
+            // Structure and type functions
+            "N_TAGS" => system::n_tags(args),
+            "TAG_NAMES" => system::tag_names(args),
+            "SIZE" => system::size_func(args),
+            "ISA" => system::isa(args),
+
             // Signal processing procedures
             "A_CORRELATE" => signal::a_correlate(args),
             "C_CORRELATE" => signal::c_correlate(args),
@@ -221,7 +234,33 @@ impl StandardLibrary {
             "TAN" => math::tan(args),
             "ASIN" => math::asin(args),
             "ACOS" => math::acos(args),
-            "ATAN" => math::atan(args),
+            "ATAN" => {
+                // ATAN can take 1 or 2 arguments (ATAN(x) or ATAN(y, x))
+                if args.len() == 2 {
+                    math::atan2(args)
+                } else {
+                    math::atan(args)
+                }
+            }
+
+            // Hyperbolic functions
+            "SINH" => math::sinh(args),
+            "COSH" => math::cosh(args),
+            "TANH" => math::tanh(args),
+            "ASINH" => math::asinh(args),
+            "ACOSH" => math::acosh(args),
+            "ATANH" => math::atanh(args),
+
+            // Special math functions
+            "ERF" => math::erf(args),
+            "ERFC" => math::erfc(args),
+            "GAMMA" => math::gamma_func(args),
+            "LNGAMMA" => math::lngamma(args),
+            "FACTORIAL" => math::factorial(args),
+            "BESELJ" => math::beselj(args),
+            "BESELY" => math::besely(args),
+            "BESELI" => math::beseli(args),
+            "BESELK" => math::beselk(args),
 
             // Exponential and logarithmic functions
             "EXP" => math::exp(args),
@@ -235,6 +274,15 @@ impl StandardLibrary {
             "CEIL" => math::ceil(args),
             "ROUND" => math::round(args),
             "FIX" => math::fix(args),
+            "INT" => math::fix_func(args),
+            "LONG" => math::long_func(args),
+            "FLOAT" => math::float_func(args),
+            "DOUBLE" => math::double_func(args),
+            "BYTE" => math::byte_func(args),
+            "UINT" => math::uint_func(args),
+            "ULONG" => math::ulong_func(args),
+            "LONG64" => math::long64_func(args),
+            "ULONG64" => math::ulong64_func(args),
 
             // Array generation functions
             "FINDGEN" => math::findgen(args),
@@ -278,6 +326,15 @@ impl StandardLibrary {
             // Array manipulation functions
             "REFORM" => array::reform_func(args),
             "TRANSPOSE" => array::transpose_func(args),
+            "SHIFT" => array::shift_func(args),
+            "ROTATE" => array::rotate_func(args),
+            "REPLICATE" => array::replicate_func(args),
+            "MAKE_ARRAY" => array::make_array_func(args),
+            "ARRAY_EQUAL" => array::array_equal_func(args),
+            "UNIQ" => array::uniq_func(args),
+            "HISTOGRAM" => array::histogram_func(args),
+            "REBIN" => array::rebin_func(args),
+            "CONGRID" => array::congrid_func(args),
 
             // Array statistics functions
             "MIN" => array::min_func(args),
@@ -308,12 +365,51 @@ impl StandardLibrary {
             "T_PDF" => statistics::t_pdf(args),
             "CHISQR_PDF" => statistics::chisqr_pdf(args),
 
+            // Fitting functions
+            "LINFIT" => statistics::linfit(args),
+            "POLY_FIT" => statistics::poly_fit(args),
+            "REGRESS" => statistics::regress(args),
+            "CORRELATE" => statistics::correlate(args),
+
+            // Interpolation functions
+            "INTERPOL" => statistics::interpol(args),
+            "SPLINE" => statistics::spline(args),
+            "BILINEAR" => statistics::bilinear(args),
+
             // I/O functions
             "PRINT" => io::print(args),
             "GET_LUN" => io::get_lun(args),
             "FILEPATH" => io::filepath(args),
             "READ_JPEG" => io::read_jpeg(args),
             "READF" => io::readf(args),
+
+            // File system functions
+            "FILE_TEST" => io::file_test(args),
+            "FILE_INFO" => io::file_info(args),
+            "FILE_SEARCH" => io::file_search(args),
+            "FILE_MKDIR" => io::file_mkdir(args),
+            "FILE_DELETE" => io::file_delete(args),
+            "FILE_COPY" => io::file_copy(args),
+            "FILE_MOVE" => io::file_move(args),
+            "EOF" => io::eof_func(args),
+            "FLUSH" => io::flush_func(args),
+            "CD" => io::cd_func(args),
+            "GETENV" => io::getenv(args),
+            "SETENV" => io::setenv(args),
+            "SPAWN" => io::spawn_func(args),
+
+            // Time functions
+            "SYSTIME" => system::systime(args),
+            "JULDAY" => system::julday(args),
+            "CALDAT" => system::caldat(args),
+            "TIC" => system::tic(args),
+            "TOC" => system::toc(args),
+
+            // Structure and type functions
+            "N_TAGS" => system::n_tags(args),
+            "TAG_NAMES" => system::tag_names(args),
+            "SIZE" => system::size_func(args),
+            "ISA" => system::isa(args),
 
             // Data structure functions
             "HASH" => create_hash(args),
@@ -326,6 +422,12 @@ impl StandardLibrary {
             "STRLOWCASE" => string::strlowcase(args),
             "STRING" => string::string_fn(args),
             "STRTRIM" => string::strtrim(args),
+            "STRJOIN" => string::strjoin(args),
+            "STRSPLIT" => string::strsplit(args),
+            "STRCOMPRESS" => string::strcompress(args),
+            "STRCMP" => string::strcmp(args),
+            "STREGEX" => string::stregex(args),
+            "STRREPLACE" => string::strreplace(args),
 
             // Complex number functions
             "COMPLEX" => complex::complex(args),

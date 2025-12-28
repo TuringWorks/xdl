@@ -160,6 +160,8 @@ impl<'a> Parser<'a> {
             }
             Token::Pro | Token::Procedure => self.parse_procedure_definition(),
             Token::Function => self.parse_function_definition(),
+            Token::Case => self.parse_case_statement(),
+            Token::Switch => self.parse_switch_statement(),
             _ => {
                 // Try to parse as procedure call, expression statement, or assignment
                 if let Token::Identifier(name) = self.peek() {
@@ -497,6 +499,168 @@ impl<'a> Parser<'a> {
 
         Ok(Statement::Goto {
             label,
+            location: Location::unknown(),
+        })
+    }
+
+    /// Parse CASE statement
+    /// CASE expr OF
+    ///     value1: statement
+    ///     value2: BEGIN ... END
+    ///     ELSE: statement
+    /// ENDCASE
+    fn parse_case_statement(&mut self) -> XdlResult<Statement> {
+        self.consume(Token::Case, "Expected 'case'")?;
+        let expr = self.parse_expression()?;
+        self.consume(Token::Of, "Expected 'of' after case expression")?;
+
+        // Skip newlines after OF
+        while matches!(self.peek(), Token::Newline) {
+            self.advance();
+        }
+
+        let mut branches = Vec::new();
+        let mut else_block = None;
+
+        // Parse case branches until we hit ENDCASE
+        while !matches!(self.peek(), Token::Endcase | Token::EOF) {
+            // Skip newlines between branches
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+
+            if matches!(self.peek(), Token::Endcase) {
+                break;
+            }
+
+            // Check for ELSE branch
+            if matches!(self.peek(), Token::Else) {
+                self.advance(); // consume ELSE
+                self.consume(Token::Colon, "Expected ':' after ELSE")?;
+
+                // Parse ELSE body
+                let body = if matches!(self.peek(), Token::Begin) {
+                    self.parse_block_or_statement(&[Token::Endcase])?
+                } else {
+                    vec![self.parse_statement()?]
+                };
+                else_block = Some(body);
+
+                // Skip to ENDCASE
+                while matches!(self.peek(), Token::Newline) {
+                    self.advance();
+                }
+                break;
+            }
+
+            // Parse case value(s) - can be comma-separated
+            let mut values = Vec::new();
+            loop {
+                values.push(self.parse_expression()?);
+                if matches!(self.peek(), Token::Comma) {
+                    self.advance(); // consume comma
+                } else {
+                    break;
+                }
+            }
+
+            self.consume(Token::Colon, "Expected ':' after case value")?;
+
+            // Parse the body for this branch
+            let body = if matches!(self.peek(), Token::Begin) {
+                self.parse_block_or_statement(&[Token::Endcase])?
+            } else {
+                vec![self.parse_statement()?]
+            };
+
+            branches.push(CaseBranch { values, body, location: Location::unknown() });
+
+            // Skip newlines after the statement
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+        }
+
+        self.consume(Token::Endcase, "Expected 'endcase' to close case statement")?;
+
+        Ok(Statement::Case {
+            expr,
+            branches,
+            else_block,
+            location: Location::unknown(),
+        })
+    }
+
+    /// Parse SWITCH statement (alias for CASE)
+    fn parse_switch_statement(&mut self) -> XdlResult<Statement> {
+        self.consume(Token::Switch, "Expected 'switch'")?;
+        let expr = self.parse_expression()?;
+        self.consume(Token::Of, "Expected 'of' after switch expression")?;
+
+        // Skip newlines after OF
+        while matches!(self.peek(), Token::Newline) {
+            self.advance();
+        }
+
+        let mut branches = Vec::new();
+        let mut else_block = None;
+
+        // Parse switch branches until we hit ENDSWITCH
+        while !matches!(self.peek(), Token::Endswitch | Token::EOF) {
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+
+            if matches!(self.peek(), Token::Endswitch) {
+                break;
+            }
+
+            if matches!(self.peek(), Token::Else) {
+                self.advance();
+                self.consume(Token::Colon, "Expected ':' after ELSE")?;
+                let body = if matches!(self.peek(), Token::Begin) {
+                    self.parse_block_or_statement(&[Token::Endswitch])?
+                } else {
+                    vec![self.parse_statement()?]
+                };
+                else_block = Some(body);
+                while matches!(self.peek(), Token::Newline) {
+                    self.advance();
+                }
+                break;
+            }
+
+            let mut values = Vec::new();
+            loop {
+                values.push(self.parse_expression()?);
+                if matches!(self.peek(), Token::Comma) {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+
+            self.consume(Token::Colon, "Expected ':' after case value")?;
+
+            let body = if matches!(self.peek(), Token::Begin) {
+                self.parse_block_or_statement(&[Token::Endswitch])?
+            } else {
+                vec![self.parse_statement()?]
+            };
+
+            branches.push(CaseBranch { values, body, location: Location::unknown() });
+
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+        }
+
+        self.consume(Token::Endswitch, "Expected 'endswitch' to close switch statement")?;
+
+        Ok(Statement::Switch {
+            expr,
+            branches,
+            else_block,
             location: Location::unknown(),
         })
     }

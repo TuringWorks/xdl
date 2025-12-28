@@ -1,0 +1,78 @@
+; Test time and structure functions
+; SYSTIME, JULDAY, CALDAT, TIC, TOC, SIZE, ISA
+
+PRINT, '=== Testing Time and Structure Functions ==='
+
+; Test SYSTIME
+PRINT, ''
+PRINT, '--- SYSTIME ---'
+current_time = SYSTIME()
+PRINT, 'Current time: ', current_time
+
+; Test JULDAY (Julian Day Number)
+PRINT, ''
+PRINT, '--- JULDAY ---'
+; January 1, 2000 at noon
+jd_2000 = JULDAY(1, 1, 2000)
+PRINT, 'JULDAY(1, 1, 2000) = ', jd_2000
+
+; December 25, 2024
+jd_xmas = JULDAY(12, 25, 2024)
+PRINT, 'JULDAY(12, 25, 2024) = ', jd_xmas
+
+; July 4, 1776
+jd_usa = JULDAY(7, 4, 1776)
+PRINT, 'JULDAY(7, 4, 1776) = ', jd_usa
+
+; Test CALDAT (Calendar Date from Julian Day)
+PRINT, ''
+PRINT, '--- CALDAT ---'
+caldat_result = CALDAT(jd_2000)
+PRINT, 'CALDAT(', jd_2000, ') = ', caldat_result
+PRINT, '  [month, day, year, hour, minute, second]'
+
+caldat_xmas = CALDAT(jd_xmas)
+PRINT, 'CALDAT(', jd_xmas, ') = ', caldat_xmas
+
+; Test TIC/TOC (timing)
+PRINT, ''
+PRINT, '--- TIC/TOC ---'
+PRINT, 'Starting timer...'
+dummy = TIC()
+
+; Do some computation
+total = 0.0
+FOR i = 0, 9999 DO BEGIN
+    total = total + SQRT(i)
+ENDFOR
+
+elapsed = TOC()
+PRINT, 'Sum of sqrt(0..9999) = ', total
+PRINT, 'Elapsed time: ', elapsed, ' seconds'
+
+; Test SIZE
+PRINT, ''
+PRINT, '--- SIZE ---'
+arr1d = [1.0, 2.0, 3.0, 4.0, 5.0]
+PRINT, 'arr1d = ', arr1d
+size_1d = SIZE(arr1d)
+PRINT, 'SIZE(arr1d) = ', size_1d
+
+scalar = 42
+PRINT, 'scalar = ', scalar
+size_scalar = SIZE(scalar)
+PRINT, 'SIZE(scalar) = ', size_scalar
+
+; Test ISA
+PRINT, ''
+PRINT, '--- ISA ---'
+PRINT, 'ISA(42, "LONG") = ', ISA(42, 'LONG')
+PRINT, 'ISA(3.14, "DOUBLE") = ', ISA(3.14, 'DOUBLE')
+PRINT, 'ISA("hello", "STRING") = ', ISA('hello', 'STRING')
+
+; Note: N_TAGS and TAG_NAMES require structure syntax which is not fully supported
+PRINT, ''
+PRINT, 'N_TAGS and TAG_NAMES: Require structure syntax (CREATE_STRUCT)'
+
+PRINT, ''
+PRINT, '=== Time and structure tests complete ==='

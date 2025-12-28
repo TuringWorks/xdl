@@ -1,0 +1,79 @@
+; Test special math functions
+; ERF, ERFC, GAMMA, LNGAMMA, FACTORIAL, BESELJ, BESELY, BESELI, BESELK
+
+PRINT, '=== Testing Special Math Functions ==='
+
+; Test FACTORIAL
+PRINT, ''
+PRINT, '--- FACTORIAL ---'
+PRINT, 'FACTORIAL(0) = ', FACTORIAL(0)   ; 1
+PRINT, 'FACTORIAL(1) = ', FACTORIAL(1)   ; 1
+PRINT, 'FACTORIAL(5) = ', FACTORIAL(5)   ; 120
+PRINT, 'FACTORIAL(10) = ', FACTORIAL(10) ; 3628800
+
+; Test GAMMA
+PRINT, ''
+PRINT, '--- GAMMA ---'
+PRINT, 'GAMMA(1) = ', GAMMA(1)           ; 1 (0! = 1)
+PRINT, 'GAMMA(2) = ', GAMMA(2)           ; 1 (1! = 1)
+PRINT, 'GAMMA(5) = ', GAMMA(5)           ; 24 (4! = 24)
+PRINT, 'GAMMA(0.5) = ', GAMMA(0.5)       ; sqrt(pi) ~ 1.7725
+
+; Test LNGAMMA (natural log of gamma)
+PRINT, ''
+PRINT, '--- LNGAMMA ---'
+PRINT, 'LNGAMMA(1) = ', LNGAMMA(1)       ; 0
+PRINT, 'LNGAMMA(5) = ', LNGAMMA(5)       ; ln(24) ~ 3.178
+
+; Test ERF (error function)
+PRINT, ''
+PRINT, '--- ERF ---'
+PRINT, 'ERF(0) = ', ERF(0)               ; 0
+PRINT, 'ERF(1) = ', ERF(1)               ; ~0.8427
+PRINT, 'ERF(2) = ', ERF(2)               ; ~0.9953
+PRINT, 'ERF(-1) = ', ERF(-1)             ; ~-0.8427
+
+; Test ERFC (complementary error function = 1 - erf)
+PRINT, ''
+PRINT, '--- ERFC ---'
+PRINT, 'ERFC(0) = ', ERFC(0)             ; 1
+PRINT, 'ERFC(1) = ', ERFC(1)             ; ~0.1573
+PRINT, 'ERFC(2) = ', ERFC(2)             ; ~0.0047
+
+; Verify ERF + ERFC = 1
+x = 1.5
+PRINT, ''
+PRINT, 'Verify: ERF(1.5) + ERFC(1.5) = ', ERF(x) + ERFC(x), ' (should be 1)'
+
+; Test BESSEL functions
+PRINT, ''
+PRINT, '--- BESSEL FUNCTIONS ---'
+PRINT, 'BESELJ(0, 0) = ', BESELJ(0, 0)   ; J0(0) = 1
+PRINT, 'BESELJ(1, 0) = ', BESELJ(1, 0)   ; J0(1) ~ 0.7652
+PRINT, 'BESELJ(0, 1) = ', BESELJ(0, 1)   ; J1(0) = 0
+PRINT, 'BESELJ(1, 1) = ', BESELJ(1, 1)   ; J1(1) ~ 0.4401
+
+PRINT, ''
+PRINT, 'BESELY(1, 0) = ', BESELY(1, 0)   ; Y0(1) ~ 0.0883
+PRINT, 'BESELY(2, 0) = ', BESELY(2, 0)   ; Y0(2) ~ 0.5104
+
+PRINT, ''
+PRINT, 'BESELI(0, 0) = ', BESELI(0, 0)   ; I0(0) = 1
+PRINT, 'BESELI(1, 0) = ', BESELI(1, 0)   ; I0(1) ~ 1.2661
+PRINT, 'BESELI(0, 1) = ', BESELI(0, 1)   ; I1(0) = 0
+PRINT, 'BESELI(1, 1) = ', BESELI(1, 1)   ; I1(1) ~ 0.5652
+
+PRINT, ''
+PRINT, 'BESELK(1, 0) = ', BESELK(1, 0)   ; K0(1) ~ 0.4210
+PRINT, 'BESELK(1, 1) = ', BESELK(1, 1)   ; K1(1) ~ 0.6019
+
+; Test with arrays
+PRINT, ''
+PRINT, '--- Array tests ---'
+arr = [0.0, 0.5, 1.0, 1.5, 2.0]
+PRINT, 'arr = ', arr
+PRINT, 'ERF(arr) = ', ERF(arr)
+PRINT, 'GAMMA(arr + 1) = ', GAMMA(arr + 1)
+
+PRINT, ''
+PRINT, '=== Special math function tests complete ==='

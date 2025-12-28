@@ -1,0 +1,99 @@
+; Test statistics and fitting functions
+; LINFIT, POLY_FIT, REGRESS, CORRELATE
+
+PRINT, '=== Testing Statistics Functions ==='
+
+; Create sample data with linear relationship: y = 2x + 1 + noise
+PRINT, ''
+PRINT, '--- Sample Data ---'
+x = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+y = [3.1, 5.2, 6.8, 9.1, 10.9, 13.2, 14.8, 17.1, 19.0, 21.2]  ; ~2x + 1
+PRINT, 'x = ', x
+PRINT, 'y = ', y
+
+; Test LINFIT
+PRINT, ''
+PRINT, '--- LINFIT ---'
+coeffs = LINFIT(x, y)
+PRINT, 'LINFIT coefficients [intercept, slope]: ', coeffs
+PRINT, 'Expected: [1.0, 2.0] approximately'
+
+; Predict values
+y_pred = coeffs[0] + coeffs[1] * x
+PRINT, 'Predicted y: ', y_pred
+PRINT, 'Residuals: ', y - y_pred
+
+; Test POLY_FIT
+PRINT, ''
+PRINT, '--- POLY_FIT ---'
+; Quadratic data: y = x^2 + 2x + 1
+x_quad = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+y_quad = [1.0, 4.0, 9.0, 16.0, 25.0, 36.0]  ; (x+1)^2 = x^2 + 2x + 1
+PRINT, 'x_quad = ', x_quad
+PRINT, 'y_quad = ', y_quad
+
+poly_coeffs = POLY_FIT(x_quad, y_quad, 2)
+PRINT, 'POLY_FIT degree 2 coefficients [c0, c1, c2]: ', poly_coeffs
+PRINT, 'Expected: [1.0, 2.0, 1.0] approximately'
+
+; Test with linear fit
+lin_coeffs = POLY_FIT(x, y, 1)
+PRINT, 'POLY_FIT degree 1: ', lin_coeffs
+
+; Test REGRESS (multiple linear regression)
+PRINT, ''
+PRINT, '--- REGRESS ---'
+; Create data: z = 2*x1 + 3*x2 + 1
+x1 = [1.0, 2.0, 3.0, 4.0, 5.0]
+x2 = [2.0, 1.0, 3.0, 2.0, 4.0]
+z = [9.0, 8.0, 16.0, 15.0, 23.0]  ; 2*x1 + 3*x2 + 1
+PRINT, 'x1 = ', x1
+PRINT, 'x2 = ', x2
+PRINT, 'z = ', z
+
+reg_coeffs = REGRESS(x1, x2, z)
+PRINT, 'REGRESS coefficients [b0, b1, b2]: ', reg_coeffs
+PRINT, 'Expected: [1.0, 2.0, 3.0] approximately'
+
+; Test CORRELATE
+PRINT, ''
+PRINT, '--- CORRELATE ---'
+; Perfect positive correlation
+a = [1.0, 2.0, 3.0, 4.0, 5.0]
+b = [2.0, 4.0, 6.0, 8.0, 10.0]
+PRINT, 'a = ', a
+PRINT, 'b = ', b
+corr_ab = CORRELATE(a, b)
+PRINT, 'CORRELATE(a, b) = ', corr_ab, ' (expected: 1.0)'
+
+; Perfect negative correlation
+c = [5.0, 4.0, 3.0, 2.0, 1.0]
+PRINT, 'c = ', c
+corr_ac = CORRELATE(a, c)
+PRINT, 'CORRELATE(a, c) = ', corr_ac, ' (expected: -1.0)'
+
+; No correlation
+d = [3.0, 1.0, 4.0, 1.0, 5.0]
+PRINT, 'd = ', d
+corr_ad = CORRELATE(a, d)
+PRINT, 'CORRELATE(a, d) = ', corr_ad, ' (expected: near 0)'
+
+; Original x, y data
+corr_xy = CORRELATE(x, y)
+PRINT, 'CORRELATE(x, y) = ', corr_xy, ' (expected: ~0.99)'
+
+; Basic statistical functions test
+PRINT, ''
+PRINT, '--- Basic Statistics ---'
+data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+PRINT, 'data = ', data
+PRINT, 'MEAN(data) = ', MEAN(data)          ; 5.5
+PRINT, 'TOTAL(data) = ', TOTAL(data)        ; 55
+PRINT, 'MIN(data) = ', MIN(data)            ; 1
+PRINT, 'MAX(data) = ', MAX(data)            ; 10
+PRINT, 'MEDIAN(data) = ', MEDIAN(data)      ; 5.5
+PRINT, 'VARIANCE(data) = ', VARIANCE(data)  ; ~9.17
+PRINT, 'STDDEV(data) = ', STDDEV(data)      ; ~3.03
+
+PRINT, ''
+PRINT, '=== Statistics tests complete ==='
