@@ -47,17 +47,23 @@ The project is structured as a Cargo workspace with the following crates:
 ### Language Features
 - Variables and expressions
 - Control flow: IF/THEN/ELSE, FOR, WHILE, REPEAT, FOREACH, BREAK, CONTINUE, RETURN
-- Built-in function calls (100+ functions)
+- Built-in function calls (220+ functions)
 - Array operations and indexing (multi-dimensional arrays)
 - Structure definitions
 - **Not yet supported**: User-defined procedures (PRO/ENDPRO), GOTO/labels
 
-### Built-in Functions (150+ functions implemented)
-- **Mathematical functions**: SIN, COS, TAN, EXP, ALOG, SQRT, FFT, etc.
-- **Array functions**: TRANSPOSE, REFORM, REVERSE, SORT, WHERE, etc.
-- **Array creation**: FINDGEN, INDGEN, FLTARR, DBLARR, RANDOMU, etc.
-- **Statistics**: MEAN, VARIANCE, STDDEV, MEDIAN, MOMENT, KURTOSIS, etc.
-- **I/O operations**: PRINT, OPENR, OPENW, READF, WRITEF, etc.
+### Built-in Functions (220+ functions implemented)
+- **Mathematical functions**: SIN, COS, TAN, SINH, COSH, TANH, EXP, ALOG, SQRT, FFT, etc.
+- **Special math**: ERF, ERFC, GAMMA, LNGAMMA, FACTORIAL, BESELJ, BESELY, BESELI, BESELK
+- **Type conversion**: BYTE, INT, UINT, LONG, ULONG, LONG64, ULONG64, FLOAT, DOUBLE, FIX
+- **Array functions**: TRANSPOSE, REFORM, REVERSE, SORT, WHERE, SHIFT, ROTATE, REPLICATE, etc.
+- **Array creation**: FINDGEN, INDGEN, FLTARR, DBLARR, RANDOMU, MAKE_ARRAY, etc.
+- **Statistics**: MEAN, VARIANCE, STDDEV, MEDIAN, MOMENT, KURTOSIS, LINFIT, POLY_FIT, etc.
+- **Interpolation**: INTERPOL, SPLINE, BILINEAR
+- **I/O operations**: PRINT, OPENR, OPENW, READF, WRITEF, FILE_TEST, FILE_INFO, etc.
+- **File system**: FILE_SEARCH, FILE_MKDIR, FILE_DELETE, FILE_COPY, FILE_MOVE
+- **String functions**: STRLEN, STRPOS, STRMID, STRJOIN, STRSPLIT, STRCMP, STRREPLACE, etc.
+- **Time functions**: SYSTIME, JULDAY, CALDAT, TIC, TOC
 - **Python integration**: PYTHON_IMPORT, PYTHON_CALL, PYTHON_CALL_KW (PyO3 0.27)
 - **Graphics and plotting**: 50+ procedures (PLOT, SURFACE, CONTOUR, CHART_*, SURFACE3D, etc.)
 - **Machine learning (XDLML)**: 50+ functions (neural networks, K-means, SVM, cross-validation, activation functions, optimizers)
@@ -66,7 +72,6 @@ The project is structured as a Cargo workspace with the following crates:
 - **Linear algebra**: INVERT, DETERM, SVDC, LA_EIGENVAL, LUDC, etc.
 - **Image processing**: CONVOL, DILATE, ERODE, SOBEL, GAUSSIAN_FILTER, etc.
 - **Signal processing**: A_CORRELATE, C_CORRELATE, DIGITAL_FILTER, HILBERT, etc.
-- **String functions**: STRLEN, STRPOS, STRMID, STRUPCASE, STRING, etc.
 - **MATLAB transpilation**: Working transpiler for basic to moderate complexity .m files
 - **MATLAB compatibility**: LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
 - **GPU acceleration**: XDL-AMP module with multi-backend support
@@ -167,7 +172,7 @@ XDL provides seamless integration with Python. See [docs/PYTHON_INTEGRATION.md](
 
 Comprehensive documentation is available in the `docs/` directory:
 
-- **[Function Reference](docs/FUNCTION_REFERENCE.md)** - Complete list of 150+ functions
+- **[Function Reference](docs/FUNCTION_REFERENCE.md)** - Complete list of 220+ functions
 - **[LSP & VS Code Extension](docs/LSP_AND_VSCODE.md)** - IDE setup and features
 - **[DataFrame Reference](docs/DATAFRAMES_REFERENCE.md)** - Polars DataFrame operations
 - **[Linfa ML Reference](docs/LINFA_ML_REFERENCE.md)** - Native Rust ML functions
@@ -328,8 +333,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 XDL is a functional beta implementation with substantial language support and advanced features. The project totals **~200,000 lines of Rust code** across 150+ source files and includes:
 
-- **Core language**: Variables, expressions, control flow (FOR, WHILE, FOREACH, IF/THEN/ELSE)
-- **150+ built-in functions**: Math, arrays, statistics, I/O, graphics, ML
+- **Core language**: Variables, expressions, control flow (FOR, WHILE, FOREACH, IF/THEN/ELSE, CASE/SWITCH)
+- **220+ built-in functions**: Math, arrays, statistics, I/O, graphics, ML
 - **50+ ML functions**: Neural networks, K-means, SVM, cross-validation, optimizers
 - **Native ML (Linfa)**: K-Means, Linear/Logistic Regression, PCA (pure Rust)
 - **DataFrames (Polars)**: High-performance data manipulation (10-100x faster than Pandas)

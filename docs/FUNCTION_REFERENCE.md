@@ -1,8 +1,8 @@
 # XDL Complete Function Reference
 
-**Version**: 1.0
-**Date**: November 2025
-**Total Functions**: 150+
+**Version**: 1.1
+**Date**: December 2025
+**Total Functions**: 220+
 
 ---
 
@@ -37,6 +37,17 @@
 | `ACOS(x)` | Arc cosine | `y = ACOS(0)` |
 | `ATAN(x)` | Arc tangent | `y = ATAN(1)` |
 
+### Hyperbolic
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `SINH(x)` | Hyperbolic sine | `y = SINH(1)` |
+| `COSH(x)` | Hyperbolic cosine | `y = COSH(0)` |
+| `TANH(x)` | Hyperbolic tangent | `y = TANH(1)` |
+| `ASINH(x)` | Inverse hyperbolic sine | `y = ASINH(1)` |
+| `ACOSH(x)` | Inverse hyperbolic cosine | `y = ACOSH(1)` |
+| `ATANH(x)` | Inverse hyperbolic tangent | `y = ATANH(0.5)` |
+
 ### Exponential & Logarithmic
 
 | Function | Description | Example |
@@ -56,6 +67,23 @@
 | `ROUND(x)` | Round | `y = ROUND(3.5)` |
 | `FIX(x)` | Truncate to integer | `y = FIX(3.9)` |
 
+### Type Conversion
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `BYTE(x)` | Convert to byte (0-255) | `b = BYTE(100)` |
+| `INT(x)` | Convert to 16-bit integer | `i = INT(3.7)` |
+| `UINT(x)` | Convert to unsigned 16-bit | `u = UINT(100)` |
+| `LONG(x)` | Convert to 32-bit integer | `l = LONG(100)` |
+| `ULONG(x)` | Convert to unsigned 32-bit | `u = ULONG(100)` |
+| `LONG64(x)` | Convert to 64-bit integer | `l = LONG64(100)` |
+| `ULONG64(x)` | Convert to unsigned 64-bit | `u = ULONG64(100)` |
+| `FLOAT(x)` | Convert to 32-bit float | `f = FLOAT(100)` |
+| `DOUBLE(x)` | Convert to 64-bit double | `d = DOUBLE(100)` |
+| `STRING(x)` | Convert to string | `s = STRING(42)` |
+| `COMPLEX(re, im)` | Create complex number | `c = COMPLEX(1, 2)` |
+| `DCOMPLEX(re, im)` | Create double complex | `c = DCOMPLEX(1, 2)` |
+
 ### Special Functions
 
 | Function | Description | Example |
@@ -64,6 +92,15 @@
 | `RANDOMU(seed, n)` | Uniform random | `r = RANDOMU(seed, 100)` |
 | `RANDOMN(seed, n)` | Normal random | `r = RANDOMN(seed, 100)` |
 | `MESHGRID(x, y)` | Create mesh grid | `[xx, yy] = MESHGRID(x, y)` |
+| `ERF(x)` | Error function | `y = ERF(1.0)` |
+| `ERFC(x)` | Complementary error function | `y = ERFC(1.0)` |
+| `GAMMA(x)` | Gamma function | `y = GAMMA(5)` |
+| `LNGAMMA(x)` | Log gamma function | `y = LNGAMMA(100)` |
+| `FACTORIAL(n)` | Factorial (n!) | `y = FACTORIAL(5)` |
+| `BESELJ(x, n)` | Bessel J function | `y = BESELJ(1.0, 0)` |
+| `BESELY(x, n)` | Bessel Y function | `y = BESELY(1.0, 0)` |
+| `BESELI(x, n)` | Modified Bessel I | `y = BESELI(1.0, 0)` |
+| `BESELK(x, n)` | Modified Bessel K | `y = BESELK(1.0, 0)` |
 
 ---
 
@@ -95,6 +132,15 @@
 | `TRANSPOSE(arr)` | Transpose | `b = TRANSPOSE(a)` |
 | `REVERSE(arr)` | Reverse array | `b = REVERSE(a)` |
 | `SORT(arr)` | Sort indices | `idx = SORT(arr)` |
+| `SHIFT(arr, s)` | Circular shift elements | `b = SHIFT(arr, 2)` |
+| `ROTATE(arr, dir)` | Rotate 2D array | `b = ROTATE(img, 1)` |
+| `REPLICATE(val, n)` | Replicate value | `a = REPLICATE(0, 100)` |
+| `REBIN(arr, dims)` | Resize by averaging | `b = REBIN(a, 100, 100)` |
+| `CONGRID(arr, dims)` | Resize with interpolation | `b = CONGRID(a, 256, 256)` |
+| `MAKE_ARRAY(dims)` | Create array | `a = MAKE_ARRAY(10, 10)` |
+| `ARRAY_EQUAL(a, b)` | Compare arrays | `eq = ARRAY_EQUAL(a, b)` |
+| `UNIQ(arr)` | Find unique elements | `u = arr[UNIQ(arr)]` |
+| `HISTOGRAM(arr)` | Compute histogram | `h = HISTOGRAM(data)` |
 
 ### Array Statistics
 
@@ -119,6 +165,8 @@
 
 ## Statistical Functions
 
+### Basic Statistics
+
 | Function | Description | Example |
 |----------|-------------|---------|
 | `VARIANCE(arr)` | Variance | `v = VARIANCE(data)` |
@@ -128,9 +176,31 @@
 | `MEANABSDEV(arr)` | Mean absolute deviation | `mad = MEANABSDEV(data)` |
 | `SKEWNESS(arr)` | Skewness | `sk = SKEWNESS(data)` |
 | `KURTOSIS(arr)` | Kurtosis | `k = KURTOSIS(data)` |
+| `CORRELATE(x, y)` | Correlation coefficient | `r = CORRELATE(x, y)` |
+
+### Probability Distributions
+
+| Function | Description | Example |
+|----------|-------------|---------|
 | `GAUSS_PDF(x, mu, sigma)` | Gaussian PDF | `p = GAUSS_PDF(x, 0, 1)` |
 | `T_PDF(x, df)` | Student's t PDF | `p = T_PDF(x, 10)` |
 | `CHISQR_PDF(x, df)` | Chi-squared PDF | `p = CHISQR_PDF(x, 5)` |
+
+### Curve Fitting
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `LINFIT(x, y)` | Linear fit (y = a + bx) | `coef = LINFIT(x, y)` |
+| `POLY_FIT(x, y, n)` | Polynomial fit | `coef = POLY_FIT(x, y, 2)` |
+| `REGRESS(x, y)` | Multiple regression | `result = REGRESS(x, y)` |
+
+### Interpolation
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `INTERPOL(y, x, xnew)` | Linear interpolation | `ynew = INTERPOL(y, x, xnew)` |
+| `SPLINE(x, y, xnew)` | Cubic spline | `ynew = SPLINE(x, y, xnew)` |
+| `BILINEAR(z, x, y)` | Bilinear interpolation | `znew = BILINEAR(z, xnew, ynew)` |
 
 ---
 
@@ -145,21 +215,50 @@
 | `STRLOWCASE(s)` | Lowercase | `l = STRLOWCASE(s)` |
 | `STRING(x)` | Convert to string | `s = STRING(123)` |
 | `STRTRIM(s, flag)` | Trim whitespace | `t = STRTRIM(s, 2)` |
+| `STRJOIN(arr, delim)` | Join strings | `s = STRJOIN(['a','b'], ',')` |
+| `STRSPLIT(s, delim)` | Split string | `arr = STRSPLIT('a,b,c', ',')` |
+| `STRCOMPRESS(s)` | Compress whitespace | `c = STRCOMPRESS(s)` |
+| `STRCMP(s1, s2)` | Compare strings | `eq = STRCMP('abc', 'ABC')` |
+| `STRREPLACE(s, old, new)` | Replace in string | `r = STRREPLACE(s, 'old', 'new')` |
+| `STREGEX(s, pattern)` | Regex match | `m = STREGEX(s, '[0-9]+')` |
+| `STRMATCH(s, pattern)` | Wildcard match | `m = STRMATCH(s, '*.txt')` |
 
 ---
 
 ## I/O Functions
+
+### File Operations
 
 | Function/Procedure | Description | Example |
 |--------------------|-------------|---------|
 | `PRINT, args` | Print to console | `PRINT, 'Hello'` |
 | `OPENR, unit, file` | Open for reading | `OPENR, 1, 'data.txt'` |
 | `OPENW, unit, file` | Open for writing | `OPENW, 2, 'out.txt'` |
+| `OPENU, unit, file` | Open for read/write | `OPENU, 1, 'data.bin'` |
 | `READF, unit, var` | Read formatted | `READF, 1, data` |
 | `WRITEF, unit, data` | Write formatted | `WRITEF, 2, data` |
+| `READ, var` | Read from stdin | `READ, input` |
+| `READS, str, var` | Read from string | `READS, line, val` |
+| `READU, unit, var` | Read binary data | `READU, 1, arr` |
+| `WRITEU, unit, data` | Write binary data | `WRITEU, 1, arr` |
 | `CLOSE, unit` | Close file | `CLOSE, 1` |
 | `GET_LUN` | Get free unit | `lun = GET_LUN()` |
 | `FREE_LUN, unit` | Free unit | `FREE_LUN, lun` |
+| `POINT_LUN, unit, pos` | Seek position | `POINT_LUN, 1, 0` |
+| `EOF(unit)` | Check end of file | `IF EOF(1) THEN ...` |
+| `FLUSH, unit` | Flush buffer | `FLUSH, 1` |
+
+### File System
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `FILE_TEST(path)` | Test file exists | `IF FILE_TEST('f.txt') THEN ...` |
+| `FILE_INFO(path)` | Get file metadata | `info = FILE_INFO('f.txt')` |
+| `FILE_SEARCH(pattern)` | Search for files | `files = FILE_SEARCH('*.dat')` |
+| `FILE_MKDIR(path)` | Create directory | `FILE_MKDIR, 'subdir'` |
+| `FILE_DELETE(path)` | Delete file | `FILE_DELETE, 'temp.txt'` |
+| `FILE_COPY(src, dst)` | Copy file | `FILE_COPY, 's.txt', 'd.txt'` |
+| `FILE_MOVE(src, dst)` | Move/rename file | `FILE_MOVE, 'old', 'new'` |
 | `FILEPATH(file)` | Get full path | `p = FILEPATH('data.txt')` |
 | `READ_JPEG(file)` | Read JPEG image | `img = READ_JPEG('photo.jpg')` |
 
@@ -340,14 +439,44 @@ See [Python Integration](PYTHON_INTEGRATION.md) for full documentation.
 
 ## System Functions
 
-| Function/Procedure | Description |
-|--------------------|-------------|
-| `HELP` | Display help |
-| `CD, path` | Change directory |
-| `SPAWN, cmd` | Execute system command |
-| `WAIT, seconds` | Pause execution |
-| `STOP` | Stop execution |
-| `CATCH, var` | Error handling |
+### General
+
+| Function/Procedure | Description | Example |
+|--------------------|-------------|---------|
+| `HELP` | Display help | `HELP` |
+| `CD, path` | Change directory | `CD, '/home/user'` |
+| `SPAWN, cmd` | Execute system command | `SPAWN, 'ls -la'` |
+| `WAIT, seconds` | Pause execution | `WAIT, 2.5` |
+| `STOP` | Stop execution | `STOP` |
+| `CATCH, var` | Error handling | `CATCH, err` |
+
+### Timing
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `SYSTIME()` | Current time string | `t = SYSTIME()` |
+| `SYSTIME(1)` | Seconds since epoch | `s = SYSTIME(1)` |
+| `TIC()` | Start timer | `TIC` |
+| `TOC()` | Elapsed time (seconds) | `elapsed = TOC()` |
+| `JULDAY(m, d, y)` | Julian day number | `jd = JULDAY(12, 25, 2024)` |
+| `CALDAT(jd)` | Calendar date from Julian | `date = CALDAT(jd)` |
+
+### Type Inspection
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `SIZE(x)` | Array dimensions info | `dims = SIZE(arr)` |
+| `N_ELEMENTS(x)` | Number of elements | `n = N_ELEMENTS(arr)` |
+| `TYPENAME(x)` | Type name as string | `t = TYPENAME(x)` |
+| `ISA(x, type)` | Check type | `IF ISA(x, 'FLOAT') THEN ...` |
+
+### Structure Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `CREATE_STRUCT(tags, vals)` | Create structure | `s = CREATE_STRUCT('a', 1, 'b', 2)` |
+| `N_TAGS(struct)` | Number of fields | `n = N_TAGS(mystruct)` |
+| `TAG_NAMES(struct)` | Field names | `names = TAG_NAMES(mystruct)` |
 
 ---
 
