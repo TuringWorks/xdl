@@ -30,7 +30,7 @@ XDL implements a comprehensive set of IDL commands and functions:
 - **Graphics** - PLOT, SURFACE, CONTOUR, etc.
 - **Control Flow** - IF/THEN/ELSE, FOR, WHILE, FOREACH
 
-See [IDL Command Status]({% link IDL_COMMAND_STATUS.md %}) for complete list.
+See [IDL Command Status](../IDL_COMMAND_STATUS) for complete list.
 
 ### IDL Syntax Support
 
@@ -49,12 +49,12 @@ result = function_name(arg1, arg2, KEYWORD=value)
 
 ### Documentation
 
-- [IDL Command Status]({% link IDL_COMMAND_STATUS.md %}) - Command compatibility
-- [GDL/IDL Compatibility]({% link GDL_IDL_COMPATIBILITY.md %}) - Compatibility layer
-- [GDL/IDL Syntax]({% link GDL_IDL_SYNTAX.md %}) - Syntax reference
-- [Gap Analysis]({% link GDL_XDL_GAP_ANALYSIS.md %}) - Feature comparison
-- [Porting Status]({% link GDL_XDL_PORTING_STATUS.md %}) - Porting progress
-- [XDL Files Status]({% link XDL_FILES_STATUS.md %}) - File compatibility status
+- [IDL Command Status](../IDL_COMMAND_STATUS) - Command compatibility
+- [GDL/IDL Compatibility](../GDL_IDL_COMPATIBILITY) - Compatibility layer
+- [GDL/IDL Syntax](../GDL_IDL_SYNTAX) - Syntax reference
+- [Gap Analysis](../GDL_XDL_GAP_ANALYSIS) - Feature comparison
+- [Porting Status](../GDL_XDL_PORTING_STATUS) - Porting progress
+- [XDL Files Status](../XDL_FILES_STATUS) - File compatibility status
 
 ## MATLAB Compatibility
 
@@ -93,13 +93,13 @@ xdl script.m
 
 ### Documentation
 
-- [MATLAB Compatibility]({% link MATLAB_COMPATIBILITY.md %}) - Overview
-- [MATLAB Plotting Guide]({% link MATLAB_PLOTTING_GUIDE.md %}) - Plotting functions
-- [MATLAB Limitations]({% link MATLAB_LIMITATIONS.md %}) - Known limitations
-- [MATLAB Support]({% link MATLAB_SUPPORT.md %}) - Feature support
-- [MATLAB Real World]({% link MATLAB_REAL_WORLD_SUPPORT.md %}) - Real-world usage
-- [MATLAB Critical Fixes]({% link MATLAB_CRITICAL_FIXES.md %}) - Bug fixes
-- [Tiled Layout]({% link MATLAB_TILEDLAYOUT.md %}) - Tiled layout support
+- [MATLAB Compatibility](../MATLAB_COMPATIBILITY) - Overview
+- [MATLAB Plotting Guide](../MATLAB_PLOTTING_GUIDE) - Plotting functions
+- [MATLAB Limitations](../MATLAB_LIMITATIONS) - Known limitations
+- [MATLAB Support](../MATLAB_SUPPORT) - Feature support
+- [MATLAB Real World](../MATLAB_REAL_WORLD_SUPPORT) - Real-world usage
+- [MATLAB Critical Fixes](../MATLAB_CRITICAL_FIXES) - Bug fixes
+- [Tiled Layout](../MATLAB_TILEDLAYOUT) - Tiled layout support
 
 ## Migration Guide
 
@@ -126,7 +126,7 @@ A = [1, 2, 3];     % May need adjustment
 A = [1, 2, 3]      % Works in some cases
 ```
 
-See [MATLAB Limitations]({% link MATLAB_LIMITATIONS.md %}) for details.
+See [MATLAB Limitations](../MATLAB_LIMITATIONS) for details.
 
 ## Compatibility Status
 

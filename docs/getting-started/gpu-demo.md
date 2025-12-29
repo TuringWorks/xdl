@@ -9,7 +9,7 @@ nav_order: 3
 
 Quick introduction to XDL's GPU acceleration capabilities.
 
-For the complete GPU demo guide, see [QUICKSTART_GPU_DEMO.md]({% link QUICKSTART_GPU_DEMO.md %}).
+For the complete GPU demo guide, see [QUICKSTART_GPU_DEMO](../QUICKSTART_GPU_DEMO).
 
 ## Overview
 
@@ -58,6 +58,6 @@ XDL_GPU_PROFILE=1 xdl script.xdl
 
 ## Next Steps
 
-- [GPU Compute Implementation]({% link GPU_COMPUTE_IMPLEMENTATION.md %}) - Technical details
-- [Performance Analysis]({% link GPU_ACCELERATION_PERFORMANCE_IMPACT.md %}) - Benchmarks
-- [AMP Multi-Backend]({% link XDL_AMP_MULTI_BACKEND.md %}) - Backend configuration
+- [GPU Compute Implementation](../GPU_COMPUTE_IMPLEMENTATION) - Technical details
+- [Performance Analysis](../GPU_ACCELERATION_PERFORMANCE_IMPACT) - Benchmarks
+- [AMP Multi-Backend](../XDL_AMP_MULTI_BACKEND) - Backend configuration

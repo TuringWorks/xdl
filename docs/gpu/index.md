@@ -47,10 +47,10 @@ Typical speedups on GPU vs CPU:
 
 ## Documentation
 
-- [GPU Compute Implementation]({% link GPU_COMPUTE_IMPLEMENTATION.md %}) - Technical overview
-- [Performance Impact Analysis]({% link GPU_ACCELERATION_PERFORMANCE_IMPACT.md %}) - Benchmarks
-- [AMP Multi-Backend]({% link XDL_AMP_MULTI_BACKEND.md %}) - Backend configuration
-- [GPU Demo Guide]({% link README_XDL_AMP_DEMO.md %}) - Examples and tutorials
+- [GPU Compute Implementation](../GPU_COMPUTE_IMPLEMENTATION) - Technical overview
+- [Performance Impact Analysis](../GPU_ACCELERATION_PERFORMANCE_IMPACT) - Benchmarks
+- [AMP Multi-Backend](../XDL_AMP_MULTI_BACKEND) - Backend configuration
+- [GPU Demo Guide](../README_XDL_AMP_DEMO) - Examples and tutorials
 
 ## Supported Operations
 
@@ -121,7 +121,7 @@ Current limitations:
 
 ## Next Steps
 
-- [Quick Start]({% link QUICKSTART_GPU_DEMO.md %}) - Get started with GPU
-- [Performance Guide]({% link GPU_ACCELERATION_PERFORMANCE_IMPACT.md %}) - Optimization tips
-- [Technical Details]({% link GPU_COMPUTE_IMPLEMENTATION.md %}) - Implementation details
-- [GPU Demo Guide]({% link README_XDL_AMP_DEMO.md %}) - Examples and tutorials
+- [Quick Start](../QUICKSTART_GPU_DEMO) - Get started with GPU
+- [Performance Guide](../GPU_ACCELERATION_PERFORMANCE_IMPACT) - Optimization tips
+- [Technical Details](../GPU_COMPUTE_IMPLEMENTATION) - Implementation details
+- [GPU Demo Guide](../README_XDL_AMP_DEMO) - Examples and tutorials

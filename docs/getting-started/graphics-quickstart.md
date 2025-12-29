@@ -9,7 +9,7 @@ nav_order: 4
 
 Get started with 2D graphics and plotting in XDL.
 
-For the complete guide, see [QUICKSTART_GRAPHICS.md]({% link QUICKSTART_GRAPHICS.md %}).
+For the complete guide, see [QUICKSTART_GRAPHICS](../QUICKSTART_GRAPHICS).
 
 ## Basic Plotting
 
@@ -75,7 +75,7 @@ save_plot, 'myplot.png'
 
 ## Next Steps
 
-- [Graphics Overview]({% link GRAPHICS_IMPLEMENTATION.md %}) - Complete graphics guide
-- [Graphics Quick Reference]({% link GRAPHICS_QUICK_REF.md %}) - Command reference
+- [Graphics Overview](../GRAPHICS_IMPLEMENTATION) - Complete graphics guide
+- [Graphics Quick Reference](../GRAPHICS_QUICK_REF) - Command reference
 - [3D Visualization](viz3d-quickstart) - 3D graphics
-- [Charting]({% link CHARTING_FINAL_STATUS.md %}) - Advanced charts
+- [Charting](../CHARTING_FINAL_STATUS) - Advanced charts

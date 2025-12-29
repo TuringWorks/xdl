@@ -9,7 +9,7 @@ nav_order: 6
 
 Sample XDL code and tutorials.
 
-For the complete examples documentation, see the [Example Gallery]({% link examples-gallery.md %}).
+For the complete examples documentation, see the [Example Gallery](../examples-gallery).
 
 ## XDL Examples
 
@@ -96,11 +96,11 @@ disp(C);
 
 ### Rayleigh-Taylor Simulation
 
-See [Rayleigh-Taylor Demo]({% link README_RAYLEIGH_TAYLOR.md %}) for a complete physics simulation example.
+See [Rayleigh-Taylor Demo](../README_RAYLEIGH_TAYLOR) for a complete physics simulation example.
 
 ### Bezier Curves
 
-See [Bezier Demo]({% link BEZIER_DEMO_FEATURES.md %}) for curve drawing examples.
+See [Bezier Demo](../BEZIER_DEMO_FEATURES) for curve drawing examples.
 
 ### GPU Computation
 
@@ -121,7 +121,7 @@ xdl
 
 ## Next Steps
 
-- [Core Features]({% link core/index.md %}) - Language reference
-- [Graphics]({% link graphics/index.md %}) - Visualization features
-- [Advanced Topics]({% link advanced/index.md %}) - Complex examples
-- [Example Gallery]({% link examples-gallery.md %}) - Complete examples guide
+- [Core Features](../core/) - Language reference
+- [Graphics](../graphics/) - Visualization features
+- [Advanced Topics](../advanced/) - Complex examples
+- [Example Gallery](../examples-gallery) - Complete examples guide

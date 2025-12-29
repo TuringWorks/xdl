@@ -25,7 +25,7 @@ numpy = python_import("numpy")
 arr = python_call(numpy, "array", [1, 2, 3, 4, 5])
 ```
 
-See [Python Integration Guide]({% link PYTHON_INTEGRATION.md %}) for details.
+See [Python Integration Guide](../PYTHON_INTEGRATION) for details.
 
 ## Machine Learning
 
@@ -40,12 +40,12 @@ XDL includes machine learning capabilities:
 
 ### Documentation
 
-- [ML Implementation Plan]({% link ML_IMPLEMENTATION_PLAN.md %}) - Roadmap
-- [ML Complete Reference]({% link ML_COMPLETE_REFERENCE.md %}) - API reference
-- [ML Status]({% link ML_STATUS.md %}) - Current status
-- [ML Advanced Features]({% link ML_ADVANCED_FEATURES_STATUS.md %}) - Advanced features
-- [ML Final Summary]({% link ML_FINAL_SUMMARY.md %}) - Overview
-- [ML Phase 11]({% link ML_PHASE_11_ADVANCED_DEEPLEARNING.md %}) - Advanced deep learning
+- [ML Implementation Plan](../ML_IMPLEMENTATION_PLAN) - Roadmap
+- [ML Complete Reference](../ML_COMPLETE_REFERENCE) - API reference
+- [ML Status](../ML_STATUS) - Current status
+- [ML Advanced Features](../ML_ADVANCED_FEATURES_STATUS) - Advanced features
+- [ML Final Summary](../ML_FINAL_SUMMARY) - Overview
+- [ML Phase 11](../ML_PHASE_11_ADVANCED_DEEPLEARNING) - Advanced deep learning
 
 ### Example
 
@@ -62,10 +62,10 @@ predictions = predict(model, X_test)
 
 Complex visualization techniques:
 
-- [Advanced Visualization]({% link ADVANCED_VIZ_INTEGRATION.md %}) - Integration guide
-- [Advanced Reference]({% link ADVANCED_VIZ_REFERENCE.md %}) - API reference
-- [3D Plotting Complete]({% link 3D_PLOTTING_COMPLETE.md %}) - Complete 3D plotting guide
-- [3D Plotting with GUI]({% link 3D_PLOTTING_WITH_GUI.md %}) - GUI integration
+- [Advanced Visualization](../ADVANCED_VIZ_INTEGRATION) - Integration guide
+- [Advanced Reference](../ADVANCED_VIZ_REFERENCE) - API reference
+- [3D Plotting Complete](../3D_PLOTTING_COMPLETE) - Complete 3D plotting guide
+- [3D Plotting with GUI](../3D_PLOTTING_WITH_GUI) - GUI integration
 
 ### Features
 
@@ -78,8 +78,8 @@ Complex visualization techniques:
 
 Advanced signal processing:
 
-- [Moving Average]({% link MOVING_AVERAGE.md %}) - Signal filtering
-- [Moving Average Implementation]({% link MOVING_AVERAGE_IMPLEMENTATION.md %}) - Details
+- [Moving Average](../MOVING_AVERAGE) - Signal filtering
+- [Moving Average Implementation](../MOVING_AVERAGE_IMPLEMENTATION) - Details
 
 ### Example
 
@@ -95,8 +95,8 @@ oplot, filtered, color='red'
 
 Scientific simulation examples:
 
-- [Rayleigh-Taylor Demo]({% link README_RAYLEIGH_TAYLOR.md %}) - Physics simulation
-- [Rayleigh-Taylor Details]({% link RAYLEIGH_TAYLOR_README.md %}) - Implementation
+- [Rayleigh-Taylor Demo](../README_RAYLEIGH_TAYLOR) - Physics simulation
+- [Rayleigh-Taylor Details](../RAYLEIGH_TAYLOR_README) - Implementation
 
 ### Rayleigh-Taylor Instability
 
@@ -116,8 +116,8 @@ endfor
 
 Complex array operations:
 
-- [Array Features]({% link ARRAY_FEATURES.md %}) - Array capabilities
-- [Multi-dimensional Arrays]({% link MULTIDIM_ARRAY_SUPPORT.md %}) - N-D arrays
+- [Array Features](../ARRAY_FEATURES) - Array capabilities
+- [Multi-dimensional Arrays](../MULTIDIM_ARRAY_SUPPORT) - N-D arrays
 
 ### Operations
 
@@ -136,7 +136,7 @@ reshaped = reform(array, new_dims)
 
 Geographic Information Systems:
 
-- [GIS Setup]({% link GIS_SETUP.md %}) - GIS configuration
+- [GIS Setup](../GIS_SETUP) - GIS configuration
 
 Features:
 - Map projections
@@ -148,7 +148,7 @@ Features:
 
 Advanced function features:
 
-- [Nested Functions Plan]({% link NESTED_FUNCTIONS_PLAN.md %}) - Implementation
+- [Nested Functions Plan](../NESTED_FUNCTIONS_PLAN) - Implementation
 
 ```xdl
 ; Nested function definitions
@@ -170,4 +170,4 @@ Tips for high-performance XDL code:
 - Use appropriate data types
 - Profile your code
 
-See [GPU Performance]({% link GPU_ACCELERATION_PERFORMANCE_IMPACT.md %}) for GPU optimization tips.
+See [GPU Performance](../GPU_ACCELERATION_PERFORMANCE_IMPACT) for GPU optimization tips.

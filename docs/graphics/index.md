@@ -38,14 +38,14 @@ oplot, x, y2, color='red'
 
 ### Advanced 2D
 
-- [Graphics Overview]({% link GRAPHICS_IMPLEMENTATION.md %}) - Implementation details
-- [Graphics Quick Reference]({% link GRAPHICS_QUICK_REF.md %}) - Command reference
-- [Charting Final Status]({% link CHARTING_FINAL_STATUS.md %}) - Chart features
-- [Charting Implementation]({% link CHARTING_IMPLEMENTATION_STATUS.md %}) - Implementation details
-- [ECharts Integration]({% link ECHARTS_INTEGRATION_COMPLETE.md %}) - Web charts
-- [Bezier Curves]({% link BEZIER_IMPLEMENTATION_SUMMARY.md %}) - Curve drawing
-- [Bezier Demo Features]({% link BEZIER_DEMO_FEATURES.md %}) - Demo examples
-- [Graphics Demos]({% link GRAPHICS_DEMOS_STATUS.md %}) - Demo status
+- [Graphics Overview](../GRAPHICS_IMPLEMENTATION) - Implementation details
+- [Graphics Quick Reference](../GRAPHICS_QUICK_REF) - Command reference
+- [Charting Final Status](../CHARTING_FINAL_STATUS) - Chart features
+- [Charting Implementation](../CHARTING_IMPLEMENTATION_STATUS) - Implementation details
+- [ECharts Integration](../ECHARTS_INTEGRATION_COMPLETE) - Web charts
+- [Bezier Curves](../BEZIER_IMPLEMENTATION_SUMMARY) - Curve drawing
+- [Bezier Demo Features](../BEZIER_DEMO_FEATURES) - Demo examples
+- [Graphics Demos](../GRAPHICS_DEMOS_STATUS) - Demo status
 
 ## 3D Visualization
 
@@ -64,21 +64,21 @@ mesh, z, color_table='rainbow'
 
 ### 3D Documentation
 
-- [3D Visualization Complete]({% link VIZ3D_COMPLETE_FINAL.md %}) - Full guide
-- [3D Browser Guide]({% link VIZ3D_BROWSER_GUIDE.md %}) - Browser rendering
-- [Three.js Integration]({% link VIZ3D_THREEJS_COMPLETE.md %}) - Advanced features
-- [3D Performance]({% link VIZ3D_PERFORMANCE_IMPROVEMENTS.md %}) - Optimization
-- [3D Usage Guide]({% link VIZ3D_USAGE.md %}) - Using 3D features
-- [3D Quick Start]({% link VIZ3D_QUICK_START.md %}) - Getting started
-- [3D Showcase]({% link VIZ3D_SHOWCASE_README.md %}) - Demonstrations
+- [3D Visualization Complete](../VIZ3D_COMPLETE_FINAL) - Full guide
+- [3D Browser Guide](../VIZ3D_BROWSER_GUIDE) - Browser rendering
+- [Three.js Integration](../VIZ3D_THREEJS_COMPLETE) - Advanced features
+- [3D Performance](../VIZ3D_PERFORMANCE_IMPROVEMENTS) - Optimization
+- [3D Usage Guide](../VIZ3D_USAGE) - Using 3D features
+- [3D Quick Start](../VIZ3D_QUICK_START) - Getting started
+- [3D Showcase](../VIZ3D_SHOWCASE_README) - Demonstrations
 
 ## Scientific Visualization
 
 Specialized scientific plotting:
 
-- [Scientific Visualization Guide]({% link SCIENTIFIC_VISUALIZATION_GUIDE.md %}) - Scientific plots
-- [Advanced Visualization]({% link ADVANCED_VIZ_INTEGRATION.md %}) - Advanced features
-- [Advanced Reference]({% link ADVANCED_VIZ_REFERENCE.md %}) - API reference
+- [Scientific Visualization Guide](../SCIENTIFIC_VISUALIZATION_GUIDE) - Scientific plots
+- [Advanced Visualization](../ADVANCED_VIZ_INTEGRATION) - Advanced features
+- [Advanced Reference](../ADVANCED_VIZ_REFERENCE) - API reference
 
 ## Rendering Backends
 
@@ -93,6 +93,6 @@ XDL supports multiple rendering backends:
 
 ## Examples
 
-- [Graphics Demos]({% link GRAPHICS_DEMOS_STATUS.md %}) - Demo examples
-- [Bezier Demo]({% link BEZIER_DEMO_FEATURES.md %}) - Curve examples
-- [3D Showcase]({% link VIZ3D_SHOWCASE_README.md %}) - 3D demonstrations
+- [Graphics Demos](../GRAPHICS_DEMOS_STATUS) - Demo examples
+- [Bezier Demo](../BEZIER_DEMO_FEATURES) - Curve examples
+- [3D Showcase](../VIZ3D_SHOWCASE_README) - 3D demonstrations
