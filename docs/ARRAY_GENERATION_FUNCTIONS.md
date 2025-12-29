@@ -97,8 +97,8 @@ arr = INDGEN(2, 3)  ; 2×3 array with values 0-5
 
 ```text
 Result = LINDGEN(D1 [, ..., D8] [, INCREMENT=value] [, START=value])
+```
 
-```text
 Generates long integer arrays. Same as INDGEN in XDL implementation.
 
 ### 8. L64INDGEN - 64-bit Long Integer Array Generation
