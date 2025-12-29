@@ -200,6 +200,18 @@ impl GpuDevice for OnnxDevice {
             .ok_or(GpuError::ExecutionFailed("Empty array".to_string()))
     }
 
+    fn median_f32(&self, x: &[f32]) -> Result<f32> {
+        Ok(crate::simd_ops::median_f32(x))
+    }
+
+    fn variance_f32(&self, x: &[f32]) -> Result<f32> {
+        Ok(crate::simd_ops::variance_f32(x))
+    }
+
+    fn stddev_f32(&self, x: &[f32]) -> Result<f32> {
+        Ok(crate::simd_ops::stddev_f32(x))
+    }
+
     fn synchronize(&self) -> Result<()> {
         Ok(())
     }

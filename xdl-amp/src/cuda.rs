@@ -900,6 +900,21 @@ impl GpuDevice for CudaDevice {
         Ok(partial.iter().cloned().fold(f32::INFINITY, f32::min))
     }
 
+    fn median_f32(&self, x: &[f32]) -> Result<f32> {
+        // Use SIMD-optimized CPU implementation (GPU sorting less efficient for median)
+        Ok(crate::simd_ops::median_f32(x))
+    }
+
+    fn variance_f32(&self, x: &[f32]) -> Result<f32> {
+        // Use SIMD-optimized CPU implementation
+        Ok(crate::simd_ops::variance_f32(x))
+    }
+
+    fn stddev_f32(&self, x: &[f32]) -> Result<f32> {
+        // Use SIMD-optimized CPU implementation
+        Ok(crate::simd_ops::stddev_f32(x))
+    }
+
     fn synchronize(&self) -> Result<()> {
         self.device
             .synchronize()
@@ -983,6 +998,18 @@ impl GpuDevice for CudaDevice {
     }
 
     fn min_f32(&self, _x: &[f32]) -> Result<f32> {
+        Err(GpuError::UnsupportedBackend("CUDA not enabled".to_string()))
+    }
+
+    fn median_f32(&self, _x: &[f32]) -> Result<f32> {
+        Err(GpuError::UnsupportedBackend("CUDA not enabled".to_string()))
+    }
+
+    fn variance_f32(&self, _x: &[f32]) -> Result<f32> {
+        Err(GpuError::UnsupportedBackend("CUDA not enabled".to_string()))
+    }
+
+    fn stddev_f32(&self, _x: &[f32]) -> Result<f32> {
         Err(GpuError::UnsupportedBackend("CUDA not enabled".to_string()))
     }
 

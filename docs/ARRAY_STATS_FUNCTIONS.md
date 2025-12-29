@@ -45,9 +45,9 @@ This document details the implementation status of array manipulation and statis
 | `MAX(arr)` | Maximum value | `array.rs` | ✅ | ✅ | Updated 2025-11-09 |
 | `MEAN(arr)` | Arithmetic mean | `array.rs` | ✅ | ✅ | Updated 2025-11-09 |
 | `TOTAL(arr)` | Sum all elements | `array.rs` | ✅ | ✅ | Updated 2025-11-09 |
-| `MEDIAN(arr)` | Median value | `statistics.rs` | ✅ | ❌ | |
-| `VARIANCE(arr)` | Variance | `statistics.rs` | ✅ | ❌ | |
-| `STDDEV(arr)` | Standard deviation | `statistics.rs` | ✅ | ❌ | |
+| `MEDIAN(arr)` | Median value | `statistics.rs` | ✅ | ✅ | Updated 2025-12-29 |
+| `VARIANCE(arr)` | Variance | `statistics.rs` | ✅ | ✅ | Updated 2025-12-29 |
+| `STDDEV(arr)` | Standard deviation | `statistics.rs` | ✅ | ✅ | Updated 2025-12-29 |
 
 ### Advanced Statistical Functions
 
@@ -243,7 +243,7 @@ Potential additions:
 - [ ] Axis-specific operations (e.g., `MEAN(arr, axis=0)`)
 - [ ] Weighted statistics
 - [ ] Online/streaming statistics
-- [ ] GPU acceleration for additional statistical functions (VARIANCE, STDDEV, MEDIAN)
+- [x] ~~GPU acceleration for additional statistical functions (VARIANCE, STDDEV, MEDIAN)~~ - Implemented 2025-12-29
 
 ## See Also
 

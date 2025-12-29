@@ -25,6 +25,9 @@ pub enum OpType {
     Sum,
     Max,
     Min,
+    Median,
+    Variance,
+    Stddev,
     MemCopyH2D, // Host to Device
     MemCopyD2H, // Device to Host
     BufferAlloc,
@@ -48,6 +51,9 @@ impl OpType {
             OpType::Sum => "Sum",
             OpType::Max => "Max",
             OpType::Min => "Min",
+            OpType::Median => "Median",
+            OpType::Variance => "Variance",
+            OpType::Stddev => "Stddev",
             OpType::MemCopyH2D => "H2D Copy",
             OpType::MemCopyD2H => "D2H Copy",
             OpType::BufferAlloc => "Buffer Alloc",

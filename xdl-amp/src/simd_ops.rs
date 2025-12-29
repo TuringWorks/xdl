@@ -438,6 +438,125 @@ fn min_f32_parallel(x: &[f32]) -> f32 {
         .reduce(|| f32::INFINITY, f32::min)
 }
 
+/// Median: returns the middle value of a sorted array
+/// For even-length arrays, returns the average of the two middle values
+pub fn median_f32(x: &[f32]) -> f32 {
+    if x.is_empty() {
+        return f32::NAN;
+    }
+
+    if x.len() == 1 {
+        return x[0];
+    }
+
+    // Clone and sort (median requires sorting)
+    let sorted: Vec<f32> = if x.len() >= PARALLEL_THRESHOLD {
+        // Parallel sort for large arrays
+        let mut v = x.to_vec();
+        v.par_sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        v
+    } else {
+        let mut v = x.to_vec();
+        v.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        v
+    };
+
+    let mid = sorted.len() / 2;
+    if sorted.len() % 2 == 0 {
+        // Even length: average of two middle values
+        (sorted[mid - 1] + sorted[mid]) / 2.0
+    } else {
+        // Odd length: middle value
+        sorted[mid]
+    }
+}
+
+/// Variance: returns the population variance of elements
+/// Variance = sum((x - mean)^2) / n
+pub fn variance_f32(x: &[f32]) -> f32 {
+    if x.is_empty() {
+        return f32::NAN;
+    }
+
+    if x.len() == 1 {
+        return 0.0;
+    }
+
+    let n = x.len() as f32;
+    let mean = sum_f32(x) / n;
+
+    if x.len() >= PARALLEL_THRESHOLD {
+        variance_f32_parallel(x, mean)
+    } else {
+        variance_f32_simd(x, mean)
+    }
+}
+
+fn variance_f32_simd(x: &[f32], mean: f32) -> f32 {
+    let len = x.len();
+    let n = len as f32;
+    let chunks = len / SIMD_WIDTH;
+
+    let vmean = f32x8::splat(mean);
+    let mut acc = f32x8::ZERO;
+
+    for i in 0..chunks {
+        let offset = i * SIMD_WIDTH;
+        let vx = f32x8::new(x[offset..offset + SIMD_WIDTH].try_into().unwrap());
+        let diff = vx - vmean;
+        acc += diff * diff; // (x - mean)^2
+    }
+
+    // Horizontal sum of SIMD register
+    let arr: [f32; 8] = acc.into();
+    let mut sum_sq: f32 = arr.iter().sum();
+
+    // Add remainder
+    for val in x.iter().skip(chunks * SIMD_WIDTH) {
+        let diff = val - mean;
+        sum_sq += diff * diff;
+    }
+
+    sum_sq / n
+}
+
+fn variance_f32_parallel(x: &[f32], mean: f32) -> f32 {
+    const CHUNK_SIZE: usize = 8192;
+    let sum_sq: f32 = x
+        .par_chunks(CHUNK_SIZE)
+        .map(|chunk| {
+            let chunks = chunk.len() / SIMD_WIDTH;
+            let vmean = f32x8::splat(mean);
+            let mut acc = f32x8::ZERO;
+
+            for i in 0..chunks {
+                let offset = i * SIMD_WIDTH;
+                let vx = f32x8::new(chunk[offset..offset + SIMD_WIDTH].try_into().unwrap());
+                let diff = vx - vmean;
+                acc += diff * diff;
+            }
+
+            let arr: [f32; 8] = acc.into();
+            let mut partial: f32 = arr.iter().sum();
+
+            for val in chunk.iter().skip(chunks * SIMD_WIDTH) {
+                let diff = val - mean;
+                partial += diff * diff;
+            }
+
+            partial
+        })
+        .sum();
+
+    sum_sq / (x.len() as f32)
+}
+
+/// Standard deviation: returns the population standard deviation
+/// Stddev = sqrt(variance)
+pub fn stddev_f32(x: &[f32]) -> f32 {
+    variance_f32(x).sqrt()
+}
+
 // ============================================================================
 // Matrix Multiplication (using matrixmultiply crate)
 // ============================================================================
@@ -742,5 +861,57 @@ mod tests {
 
         let sum = sum_f32(&c);
         assert!((sum - 3.0 * n as f32).abs() < 1.0);
+    }
+
+    #[test]
+    fn test_median_f32_odd() {
+        // Odd-length array
+        let x = vec![3.0, 1.0, 4.0, 1.0, 5.0];
+        let median = median_f32(&x);
+        // Sorted: [1, 1, 3, 4, 5], median = 3
+        assert!((median - 3.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_median_f32_even() {
+        // Even-length array
+        let x = vec![3.0, 1.0, 4.0, 2.0];
+        let median = median_f32(&x);
+        // Sorted: [1, 2, 3, 4], median = (2 + 3) / 2 = 2.5
+        assert!((median - 2.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_variance_f32() {
+        // Simple variance test
+        let x = vec![2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+        let var = variance_f32(&x);
+        // Mean = 40/8 = 5
+        // Variance = ((2-5)^2 + (4-5)^2 + (4-5)^2 + (4-5)^2 + (5-5)^2 + (5-5)^2 + (7-5)^2 + (9-5)^2) / 8
+        //          = (9 + 1 + 1 + 1 + 0 + 0 + 4 + 16) / 8 = 32 / 8 = 4
+        assert!((var - 4.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_stddev_f32() {
+        // Stddev = sqrt(variance)
+        let x = vec![2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+        let std = stddev_f32(&x);
+        // Variance = 4, Stddev = 2
+        assert!((std - 2.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_variance_single_element() {
+        let x = vec![42.0];
+        let var = variance_f32(&x);
+        assert!((var - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_median_single_element() {
+        let x = vec![42.0];
+        let median = median_f32(&x);
+        assert!((median - 42.0).abs() < 1e-6);
     }
 }

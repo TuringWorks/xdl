@@ -317,15 +317,18 @@ pub mod cpu_ops {
         matmul_f32,
         matmul_f32_parallel,
         max_f32,
+        median_f32,
         min_f32,
         mul_f32,
         pow_f32,
         // Unary element-wise
         sin_f32,
         sqrt_f32,
+        stddev_f32,
         sub_f32,
         // Reductions
         sum_f32,
+        variance_f32,
     };
 }
 

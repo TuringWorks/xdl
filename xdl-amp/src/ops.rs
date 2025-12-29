@@ -160,6 +160,21 @@ impl GpuOps {
     pub fn min_1d(&self, a: &Array1<f32>) -> Result<f32> {
         self.device.min_f32(a.as_slice().unwrap())
     }
+
+    /// Median value
+    pub fn median_1d(&self, a: &Array1<f32>) -> Result<f32> {
+        self.device.median_f32(a.as_slice().unwrap())
+    }
+
+    /// Variance
+    pub fn variance_1d(&self, a: &Array1<f32>) -> Result<f32> {
+        self.device.variance_f32(a.as_slice().unwrap())
+    }
+
+    /// Standard deviation
+    pub fn stddev_1d(&self, a: &Array1<f32>) -> Result<f32> {
+        self.device.stddev_f32(a.as_slice().unwrap())
+    }
 }
 
 /// Accelerated operations with smart dispatch, caching, and statistics
@@ -728,6 +743,111 @@ impl AcceleratedOps {
                 let r = cpu_ops::min_f32(a.as_slice().unwrap());
                 GLOBAL_STATS.record_op(
                     OpType::Min,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
+                r
+            }
+        };
+
+        Ok(result)
+    }
+
+    /// Median with smart dispatch
+    pub fn median_1d(&self, a: &Array1<f32>) -> Result<f32> {
+        let elements = a.len();
+        let bytes = elements * std::mem::size_of::<f32>();
+        let target = self.dispatcher.dispatch_reduction(OpType::Median, elements);
+
+        let start = Instant::now();
+        let result = match target {
+            DispatchTarget::Gpu => {
+                let r = self.device.median_f32(a.as_slice().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Median,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
+                r
+            }
+            DispatchTarget::Cpu => {
+                let r = cpu_ops::median_f32(a.as_slice().unwrap());
+                GLOBAL_STATS.record_op(
+                    OpType::Median,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
+                r
+            }
+        };
+
+        Ok(result)
+    }
+
+    /// Variance with smart dispatch
+    pub fn variance_1d(&self, a: &Array1<f32>) -> Result<f32> {
+        let elements = a.len();
+        let bytes = elements * std::mem::size_of::<f32>();
+        let target = self.dispatcher.dispatch_reduction(OpType::Variance, elements);
+
+        let start = Instant::now();
+        let result = match target {
+            DispatchTarget::Gpu => {
+                let r = self.device.variance_f32(a.as_slice().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Variance,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
+                r
+            }
+            DispatchTarget::Cpu => {
+                let r = cpu_ops::variance_f32(a.as_slice().unwrap());
+                GLOBAL_STATS.record_op(
+                    OpType::Variance,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::Cpu,
+                );
+                r
+            }
+        };
+
+        Ok(result)
+    }
+
+    /// Standard deviation with smart dispatch
+    pub fn stddev_1d(&self, a: &Array1<f32>) -> Result<f32> {
+        let elements = a.len();
+        let bytes = elements * std::mem::size_of::<f32>();
+        let target = self.dispatcher.dispatch_reduction(OpType::Stddev, elements);
+
+        let start = Instant::now();
+        let result = match target {
+            DispatchTarget::Gpu => {
+                let r = self.device.stddev_f32(a.as_slice().unwrap())?;
+                GLOBAL_STATS.record_op(
+                    OpType::Stddev,
+                    start.elapsed(),
+                    elements,
+                    bytes,
+                    ExecutionLayer::GpuCompute,
+                );
+                r
+            }
+            DispatchTarget::Cpu => {
+                let r = cpu_ops::stddev_f32(a.as_slice().unwrap());
+                GLOBAL_STATS.record_op(
+                    OpType::Stddev,
                     start.elapsed(),
                     elements,
                     bytes,

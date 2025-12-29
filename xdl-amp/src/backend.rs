@@ -103,6 +103,15 @@ pub trait GpuDevice: Send + Sync + Debug {
     /// Min reduction: returns minimum element
     fn min_f32(&self, x: &[f32]) -> Result<f32>;
 
+    /// Median: returns the median value (middle element of sorted array)
+    fn median_f32(&self, x: &[f32]) -> Result<f32>;
+
+    /// Variance: returns the variance of elements
+    fn variance_f32(&self, x: &[f32]) -> Result<f32>;
+
+    /// Standard deviation: returns the standard deviation of elements
+    fn stddev_f32(&self, x: &[f32]) -> Result<f32>;
+
     /// Synchronize device (wait for all operations to complete)
     fn synchronize(&self) -> Result<()>;
 }
