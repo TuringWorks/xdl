@@ -40,6 +40,12 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - **Performance**: 10-50x speedup for large arrays (>10K elements)
 - **Smart Dispatch**: Automatic CPU/GPU selection based on array size
 
+### Function Keyword Arguments ✅ NEW
+- **Parser Support**: `NAME=value` and `/FLAG` syntax in function calls
+- **Array Generation**: All 12 functions support `START` and `INCREMENT` keywords
+- **MAKE_ARRAY**: Flexible array creation with `DIMENSION`, `VALUE`, `/INDEX` keywords
+- **Example**: `arr = FINDGEN(5, START=10, INCREMENT=2)` → `[10, 12, 14, 16, 18]`
+
 ### Partial/Deferred Phases ⏸️
 - **Phase 10: Image I/O** (Requires external image crates)
 - **Phase 19: Graphics** (Extensive - partially complete via existing modules)
@@ -466,12 +472,15 @@ When adding new functions:
 - Added 3D volume visualization to medical imaging demo
 - Added comprehensive user guides for medical and geophysical demos
 
-- **v0.1.2** (2025-12) - OOP syntax and expanded GPU acceleration
+- **v0.1.2** (2025-12) - OOP syntax, GPU acceleration, and keyword arguments
 - Full Object-Oriented syntax support (`arr->Sum()`, `str->ToUpper()`, etc.)
 - Added 17+ Array methods, 16+ String methods, 15+ DataFrame methods
 - GPU acceleration for MEDIAN, VARIANCE, STDDEV (SIMD-optimized)
 - STREGEX regular expression support complete
 - CONTINUE/BREAK control flow statements complete
+- Function keyword arguments (`NAME=value`, `/FLAG` syntax)
+- MAKE_ARRAY function with DIMENSION, VALUE, /INDEX keywords
+- All array generation functions support START/INCREMENT keywords
 - Documentation updates for 70+ new functions
 
 ---
