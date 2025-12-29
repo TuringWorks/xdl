@@ -77,8 +77,7 @@ i                5              Double         1x1
 1. **Start the GUI:**
 
    ```bash
-   cargo build --bin xdl-gui
-   cargo run --bin xdl-gui
+   xdl-gui
    ```
 
 2. **Load test file:**
@@ -175,7 +174,7 @@ impl OutputListener for GuiOutputHandler {
 Run scripts from the command line to see actual output:
 
 ```bash
-cargo run --bin xdl -- gui_test.xdl
+xdl gui_test.xdl
 ```
 
 This will show the real interpreter output in the terminal.

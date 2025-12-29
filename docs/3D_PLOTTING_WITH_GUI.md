@@ -62,7 +62,7 @@ Completed full 3D plotting with PNG generation AND GUI window display support. A
 ### With GUI (Recommended)
 
 ```bash
-cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
+xdl-gui examples/plot3d_demo.xdl
 ```
 
 **Behavior:**
@@ -76,7 +76,7 @@ cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
 ### Without GUI (CLI)
 
 ```bash
-cargo run --release --bin xdl examples/plot3d_demo.xdl
+xdl examples/plot3d_demo.xdl
 ```
 
 **Behavior:**
@@ -168,7 +168,7 @@ Each plot type has a descriptive window title:
 
 ```bash
 # Run the demo
-cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
+xdl-gui examples/plot3d_demo.xdl
 ```
 
 ### Expected Results
@@ -249,7 +249,7 @@ open xdl_surface.png  # macOS
 ### Run with GUI
 
 ```bash
-cargo run --release --bin xdl-gui <script>.xdl
+xdl-gui <script>.xdl
 ```
 
 - Plots open in windows automatically
@@ -258,7 +258,7 @@ cargo run --release --bin xdl-gui <script>.xdl
 ### Run without GUI
 
 ```bash
-cargo run --release --bin xdl <script>.xdl
+xdl <script>.xdl
 ```
 
 - Plots saved as PNG files
@@ -267,7 +267,7 @@ cargo run --release --bin xdl <script>.xdl
 ### Test Demo
 
 ```bash
-cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
+xdl-gui examples/plot3d_demo.xdl
 ```
 
 - See all 3D plot types

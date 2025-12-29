@@ -195,8 +195,8 @@ cargo build --workspace
 cargo test --workspace
 
 # Test control flow
-cargo run --bin xdl -- comprehensive_control_flow_demo.xdl
-cargo run --bin xdl -- simple_test.xdl
+xdl comprehensive_control_flow_demo.xdl
+xdl simple_test.xdl
 ```
 
 ## Conclusion

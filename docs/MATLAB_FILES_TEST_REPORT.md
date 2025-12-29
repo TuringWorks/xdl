@@ -111,8 +111,7 @@ All MATLAB files in `/examples` and `/tests` directories have been verified for 
 ### Method 1: GUI Testing (Recommended)
 
 ```bash
-cd /Users/ravindraboddipalli/sources/xdl
-cargo run --bin xdl-gui
+xdl-gui
 ```
 
 Then:
@@ -126,7 +125,7 @@ Then:
 
 ```bash
 # Test a specific file
-cargo run --bin xdl-gui &
+xdl-gui &
 sleep 2
 # Load file through GUI
 ```

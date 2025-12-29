@@ -212,7 +212,7 @@ CONTOUR, Z  ; Contour plot
 ### Test Command
 
 ```bash
-cargo run --bin xdl-gui
+xdl-gui
 # File > Open > examples/matlab/06_3d_surface_plot.m
 # Click Execute
 ```

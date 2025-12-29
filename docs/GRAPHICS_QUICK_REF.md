@@ -7,7 +7,7 @@
 Basic sine wave demonstration.
 
 ```bash
-cargo run --release --bin xdl-gui examples/plot_demo.xdl
+xdl-gui examples/plot_demo.xdl
 ```
 
 ### 2. `plot_working_demo.xdl` - Comprehensive 2D Tests
@@ -15,7 +15,7 @@ cargo run --release --bin xdl-gui examples/plot_demo.xdl
 Tests all 2D plotting features with 5 different plots.
 
 ```bash
-cargo run --release --bin xdl-gui examples/plot_working_demo.xdl
+xdl-gui examples/plot_working_demo.xdl
 ```
 
 ### 3. `plot3d_demo.xdl` - 3D Plotting Tests
@@ -23,7 +23,7 @@ cargo run --release --bin xdl-gui examples/plot_working_demo.xdl
 Tests 3D data structures with SURFACE, CONTOUR, SHADE_SURF, and PLOT3D.
 
 ```bash
-cargo run --release --bin xdl examples/plot3d_demo.xdl
+xdl examples/plot3d_demo.xdl
 ```
 
 ## Quick Examples
@@ -170,10 +170,10 @@ Make sure you're running the correct binary:
 
 ```bash
 # GUI mode
-cargo run --release --bin xdl-gui script.xdl
+xdl-gui script.xdl
 
 # CLI mode
-cargo run --release --bin xdl script.xdl
+xdl script.xdl
 ```
 
 ### "Type mismatch" errors

@@ -89,7 +89,7 @@ The transpiler automatically maps MATLAB functions to XDL equivalents:
 ### Method 1: Load .m file in GUI
 
 ```bash
-cargo run --bin xdl-gui
+xdl-gui
 ```
 
 Then:
@@ -110,7 +110,7 @@ You should see:
 
 ### Method 2: Type MATLAB code directly
 
-1. Launch GUI: `cargo run --bin xdl-gui`
+1. Launch GUI: `xdl-gui`
 2. Clear the command window
 3. Type or paste MATLAB code:
 

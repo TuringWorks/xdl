@@ -174,7 +174,7 @@ cargo build --no-default-features
 Run the test script to verify Python integration:
 
 ```bash
-cargo run --bin xdl test_python_integration.xdl
+xdl test_python_integration.xdl
 ```
 
 ---

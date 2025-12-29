@@ -60,7 +60,7 @@ All 3D procedures now:
 
 ### ✅ plot3d_demo.xdl - All Tests Pass
 
-Running: `cargo run --release --bin xdl examples/plot3d_demo.xdl`
+Running: `xdl examples/plot3d_demo.xdl`
 
 #### Test 1: Simple Surface Plot
 
@@ -246,10 +246,10 @@ cargo build --release
 
 ```bash
 # CLI mode (PNG output)
-cargo run --release --bin xdl examples/plot3d_demo.xdl
+xdl examples/plot3d_demo.xdl
 
-# GUI mode (future: might show PNG in window)
-cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
+# GUI mode (shows PNG in window)
+xdl-gui examples/plot3d_demo.xdl
 ```
 
 ### Verify Output

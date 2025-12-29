@@ -155,7 +155,7 @@ endfor
 1. **Start the GUI:**
 
    ```bash
-   cargo run --bin xdl-gui
+   xdl-gui
    ```
 
 2. **Load a test file:**

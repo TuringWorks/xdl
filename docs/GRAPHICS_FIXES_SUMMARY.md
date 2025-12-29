@@ -164,22 +164,22 @@ Array(arr) => {
 
 ```bash
 # 2D plots
-cargo run --release --bin xdl examples/plot_demo.xdl
-cargo run --release --bin xdl examples/plot_working_demo.xdl
+xdl examples/plot_demo.xdl
+xdl examples/plot_working_demo.xdl
 
-# 3D plots (data validation only, no file output yet)
-cargo run --release --bin xdl examples/plot3d_demo.xdl
+# 3D plots
+xdl examples/plot3d_demo.xdl
 ```
 
 ### GUI Mode (Interactive windows)
 
 ```bash
 # 2D plots with interactive windows
-cargo run --release --bin xdl-gui examples/plot_demo.xdl
-cargo run --release --bin xdl-gui examples/plot_working_demo.xdl
+xdl-gui examples/plot_demo.xdl
+xdl-gui examples/plot_working_demo.xdl
 
-# 3D plots (acknowledgment messages, rendering pending)
-cargo run --release --bin xdl-gui examples/plot3d_demo.xdl
+# 3D plots
+xdl-gui examples/plot3d_demo.xdl
 ```
 
 ---

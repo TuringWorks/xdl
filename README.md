@@ -130,7 +130,42 @@ cargo build --release
 ### Installing with Cargo
 
 ```bash
+# Install the CLI interpreter
 cargo install --path xdl-cli
+
+# Install the GUI application
+cargo install --path xdl-gui
+```
+
+### Building Deployable Binaries
+
+To build optimized, standalone binaries that can be distributed and run without Cargo:
+
+```bash
+# Build release binaries for all tools
+cargo build --release
+
+# The binaries are located at:
+# - target/release/xdl        (CLI interpreter)
+# - target/release/xdl-gui    (GUI application)
+
+# Copy to a directory in your PATH (e.g., /usr/local/bin on Unix)
+# macOS/Linux:
+sudo cp target/release/xdl target/release/xdl-gui /usr/local/bin/
+
+# Windows (run as Administrator):
+# copy target\release\xdl.exe C:\Windows\System32\
+# copy target\release\xdl-gui.exe C:\Windows\System32\
+```
+
+After installation, you can run scripts directly:
+
+```bash
+# CLI mode (outputs PNG files)
+xdl script.xdl
+
+# GUI mode (interactive windows)
+xdl-gui script.xdl
 ```
 
 ## Usage

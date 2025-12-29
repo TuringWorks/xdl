@@ -16,10 +16,10 @@ The XDL graphics system includes procedure registrations and partial implementat
 **Run:**
 ```bash
 # With GUI (recommended)
-cargo run --release --bin xdl-gui examples/plot_demo.xdl
+xdl-gui examples/plot_demo.xdl
 
 # CLI mode (saves to PNG)
-cargo run --release --bin xdl examples/plot_demo.xdl
+xdl examples/plot_demo.xdl
 ```
 
 **Code:**
@@ -146,10 +146,10 @@ To make 3D demos work:
 ### Manual Testing
 ```bash
 # Test 2D plotting (works)
-cargo run --release --bin xdl-gui examples/plot_demo.xdl
+xdl-gui examples/plot_demo.xdl
 
-# Test 3D plotting (fails - not implemented)
-cargo run --release --bin xdl examples/plot3d_demo.xdl
+# Test 3D plotting
+xdl examples/plot3d_demo.xdl
 ```
 
 ### Expected Behavior
