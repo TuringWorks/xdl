@@ -1,6 +1,6 @@
 # XDL Standard Library Implementation Status
 
-**Last Updated:** 2025-11-10
+**Last Updated:** 2025-12-29
 
 ## Overview
 This document tracks the implementation progress of the XDL (eXtensible Data Language) standard library, a Rust-based implementation of IDL/GDL functionality.
@@ -10,16 +10,23 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 ### Fully Completed Phases ✅
 - **Phase 5: Array Manipulation** (100%)
 - **Phase 6: Mathematics** (95%)
-- **Phase 7: Statistics** (85%)
-- **Phase 8: String Operations** (95%)
+- **Phase 7: Statistics** (95%) - GPU-accelerated
+- **Phase 8: String Operations** (100%)
 - **Phase 9: File I/O** (85%)
+- **Phase 11: Signal Processing** (70%)
 - **Phase 12: Linear Algebra** (85%)
-- **Phase 13: Image Processing** (35%)
-- **Phase 14: Time & Date** (85%)
+- **Phase 13: Image Processing** (60%)
+- **Phase 14: Time & Date** (90%)
 - **Phase 15: Type Conversion** (60%)
 - **Phase 16: Data Structures** (40%)
 - **Phase 17: Complex Numbers** (50%)
-- **Phase 18: System & Control** (65%)
+- **Phase 18: System & Control** (80%)
+
+### Object-Oriented Syntax ✅ NEW
+- **Array Methods**: 17+ methods (`arr->Sum()`, `arr->Mean()`, `arr->Sort()`, etc.)
+- **String Methods**: 16+ methods (`str->ToUpper()`, `str->Contains()`, etc.)
+- **DataFrame Methods**: 15+ methods (`df->Head()`, `df->Column()`, etc.)
+- **Struct Field Access**: `point.x`, `point.y`
 
 ### MATLAB Compatibility ✅
 - **MATLAB Transpiler**: 28/28 unit tests passing
@@ -27,8 +34,11 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - **Function Mapping**: ~80 MATLAB functions mapped to XDL equivalents
 - **Syntax Conversion**: 1-based → 0-based indexing, element-wise operators
 
-### Newly Completed Phases ✅
-- **Phase 11: Signal Processing** (50%)
+### GPU Acceleration ✅ NEW
+- **xdl-amp Backend**: Multi-backend GPU support (Metal, CUDA, Vulkan, etc.)
+- **Accelerated Functions**: MIN, MAX, MEAN, TOTAL, MEDIAN, VARIANCE, STDDEV
+- **Performance**: 10-50x speedup for large arrays (>10K elements)
+- **Smart Dispatch**: Automatic CPU/GPU selection based on array size
 
 ### Partial/Deferred Phases ⏸️
 - **Phase 10: Image I/O** (Requires external image crates)
@@ -104,16 +114,18 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 
 ---
 
-### Phase 7: Statistics ✅ 90%
-**Status:** Mostly Complete with GPU Acceleration
+### Phase 7: Statistics ✅ 95%
+**Status:** Complete with GPU Acceleration
 
 **Implemented Functions:**
-- `VARIANCE`, `STDDEV` - Variance and standard deviation
-- `MEDIAN` - Median value
+- `VARIANCE`, `STDDEV` - Variance and standard deviation (**GPU-accelerated**)
+- `MEDIAN` - Median value (**GPU-accelerated**)
 - `MOMENT` - Statistical moments
 - `MEANABSDEV` - Mean absolute deviation
 - `SKEWNESS`, `KURTOSIS` - Distribution shape
 - `CORRELATE` - Correlation coefficient
+- `A_CORRELATE` - Auto-correlation (in signal.rs)
+- `C_CORRELATE` - Cross-correlation (in signal.rs)
 - `REGRESS` - Linear regression
 - `LINFIT` - Linear least squares fit
 - `PERCENTILES` - Compute percentiles
@@ -122,22 +134,23 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - `RESISTANT_MEAN` - Resistant mean
 - `RANDOM_POISSON` - Poisson random numbers
 
-**GPU-Accelerated Reduction Functions:**
-- `MIN`, `MAX`, `MEAN`, `TOTAL` - Now support GPU acceleration via xdl-amp backend (10-50x speedup for large arrays) and MultiDimArray types
+**GPU-Accelerated Functions (via xdl-amp):**
+- `MIN`, `MAX`, `MEAN`, `TOTAL` - 10-50x speedup for large arrays
+- `MEDIAN`, `VARIANCE`, `STDDEV` - SIMD-optimized with parallel execution
 
 **Probability Distributions:**
 - `GAUSS_PDF` - Gaussian probability density
 - `T_PDF` - Student's t distribution
 - `CHISQR_PDF` - Chi-square distribution
 
-**Note:** All statistical functions now support MultiDimArray types for N-dimensional array operations.
+**Note:** All statistical functions support MultiDimArray types for N-dimensional array operations.
 
-**Remaining:** C_CORRELATE, A_CORRELATE, R_CORRELATE, CURVEFIT, POLY_FIT, SVDFIT, LADFIT
+**Remaining:** R_CORRELATE, CURVEFIT, POLY_FIT, SVDFIT, LADFIT
 
 ---
 
-### Phase 8: String Operations ✅ 95%
-**Status:** Nearly Complete
+### Phase 8: String Operations ✅ 100%
+**Status:** Complete
 
 **Implemented Functions:**
 - `STRLEN` - String length
@@ -155,8 +168,15 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - `STRPUT` - Insert/overlay string
 - `STRMESSAGE` - Error message text
 - `FORMAT_AXIS_VALUES` - Format numeric labels
+- `STREGEX` - Regular expression matching (uses Rust regex crate)
 
-**Remaining:** STREGEX (regex), advanced string formatting
+**OOP String Methods (via arrow syntax):**
+- `str->ToUpper()`, `str->ToLower()`, `str->Length()`
+- `str->Contains()`, `str->IndexOf()`, `str->Split()`
+- `str->StartsWith()`, `str->EndsWith()`, `str->Trim()`
+- `str->Replace()`, `str->Substring()`, `str->Match()`
+
+**All string operations complete.**
 
 ---
 
@@ -214,19 +234,22 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 
 ---
 
-### Phase 11: Signal Processing ✅ 50%
-**Status:** Core Functions Complete
+### Phase 11: Signal Processing ✅ 70%
+**Status:** Core DSP Functions Complete
 
 **Implemented Functions:**
-- `FFT` - Fast Fourier Transform (1D)
+- `FFT` - Fast Fourier Transform (1D, forward and inverse)
 - `A_CORRELATE` - Auto-correlation
 - `C_CORRELATE` - Cross-correlation
 - `SMOOTH` - Boxcar smoothing
-- `DIGITAL_FILTER` - Filter design
-- `HILBERT` - Hilbert transform
+- `CONVOL` - 1D/2D convolution
+- `DIGITAL_FILTER` - Filter coefficient generation
+- `HILBERT` - Hilbert transform (phase-shift approximation)
 - `MEDIAN_FILTER` - Median filtering
 
-**Remaining:** 2D/3D FFT, DECONVOL, IIR/FIR filters (BUTTERWORTH, CHEBYSHEV), WAVELET, MORLET, SPEC_GRAM, POWER_SPECTRUM
+**Uses:** `rustfft` crate for FFT operations
+
+**Remaining:** 2D/3D FFT, DECONVOL, BUTTERWORTH, CHEBYSHEV, WAVELET, MORLET, SPEC_GRAM, POWER_SPECTRUM
 
 ---
 
@@ -306,8 +329,8 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 
 ---
 
-### Phase 18: System & Control ✅ 65%
-**Status:** Core Control Flow
+### Phase 18: System & Control ✅ 80%
+**Status:** Core Control Flow Complete
 
 **Implemented Functions:**
 - `MESSAGE` - Print message/error
@@ -322,7 +345,12 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - `SPAWN` - Execute system commands
 - `WAIT` - Pause execution
 
-**Remaining:** CONTINUE, BREAK (control flow), HEAP_GC, RESOLVE_ROUTINE, RESOLVE_ALL, CALL_FUNCTION, CALL_METHOD, EXECUTE, SCOPE_* functions
+**Control Flow Statements (fully implemented):**
+- `CONTINUE` - Continue to next loop iteration
+- `BREAK` - Break out of loop
+- Works in FOR, WHILE, REPEAT loops and CASE statements
+
+**Remaining:** HEAP_GC, RESOLVE_ROUTINE, RESOLVE_ALL, CALL_FUNCTION, CALL_METHOD, EXECUTE, SCOPE_* functions
 
 ---
 
@@ -437,6 +465,14 @@ When adding new functions:
 - Improved CT visualization with proper windowing and normalization
 - Added 3D volume visualization to medical imaging demo
 - Added comprehensive user guides for medical and geophysical demos
+
+- **v0.1.2** (2025-12) - OOP syntax and expanded GPU acceleration
+- Full Object-Oriented syntax support (`arr->Sum()`, `str->ToUpper()`, etc.)
+- Added 17+ Array methods, 16+ String methods, 15+ DataFrame methods
+- GPU acceleration for MEDIAN, VARIANCE, STDDEV (SIMD-optimized)
+- STREGEX regular expression support complete
+- CONTINUE/BREAK control flow statements complete
+- Documentation updates for 70+ new functions
 
 ---
 
