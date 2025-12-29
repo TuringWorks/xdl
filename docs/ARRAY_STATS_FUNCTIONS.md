@@ -248,5 +248,5 @@ Potential additions:
 ## See Also
 
 - [Implementation Status](IMPLEMENTATION_STATUS.md)
-- [Scientific Visualization Workflows](scientific-viz-workflows/)
+- [3D Visualization Guide](QUICKSTART_VIZ3D.md)
 - [GPU Acceleration](GPU_ACCELERATION_PERFORMANCE_IMPACT.md)

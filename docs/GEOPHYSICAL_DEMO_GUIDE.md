@@ -388,7 +388,7 @@ Use valid colormap names:
 - [Array Functions](ARRAY_STATS_FUNCTIONS.md)
 - [VIZ3D Documentation](../xdl-viz3d/README.md)
 - [GPU Acceleration](GPU_ACCELERATION_PERFORMANCE_IMPACT.md)
-- [Scientific Workflows](scientific-viz-workflows/)
+- [3D Visualization Guide](QUICKSTART_VIZ3D.md)
 
 ## Author
 

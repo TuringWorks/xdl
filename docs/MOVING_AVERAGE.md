@@ -504,6 +504,6 @@ EMA converges to recent values with decay factor `(1 - alpha)`:
 
 ## See Also
 
-- [XDL Array Functions](ARRAY_FUNCTIONS.md)
-- [XDL Statistics Functions](STATISTICS.md)
-- [XDL Math Functions](MATH_FUNCTIONS.md)
+- [XDL Array Functions](FUNCTION_REFERENCE.md#array-functions)
+- [XDL Statistics Functions](FUNCTION_REFERENCE.md#statistical-functions)
+- [XDL Math Functions](FUNCTION_REFERENCE.md#mathematical-functions)

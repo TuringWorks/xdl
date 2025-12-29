@@ -170,4 +170,4 @@ Tips for high-performance XDL code:
 - Use appropriate data types
 - Profile your code
 
-See [GPU Performance](../gpu/performance) for GPU optimization tips.
+See [GPU Performance](../GPU_ACCELERATION_PERFORMANCE_IMPACT.md) for GPU optimization tips.

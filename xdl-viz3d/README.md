@@ -126,7 +126,7 @@ Expected performance on modern GPUs:
 
 ## Contributing
 
-See main XDL project [CONTRIBUTING.md](../CONTRIBUTING.md).
+See main XDL project [Contributing section](../README.md#contributing).
 
 ## License
 
