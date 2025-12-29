@@ -177,16 +177,6 @@ SURFACE3D, z, TITLE='Wave'
 - **Create** `xdl-stdlib/src/charting_procs.rs`:
 
    ```rust
-
-```toml
-[dependencies]
-xdl-charts = { path = "../xdl-charts" }
-xdl-viz3d-web = { path = "../xdl-viz3d-web" }
-```
-
-- **Create** `xdl-stdlib/src/charting_procs.rs`:
-
-   ```rust
    use xdl_charts::{ChartConfig, ChartType, Series2D, generate_2d_chart};
    use xdl_viz3d_web::launch_browser_visualization;
 
@@ -214,37 +204,6 @@ xdl-viz3d-web = { path = "../xdl-viz3d-web" }
        Ok(Value::None)
    }
    ```
-
-- **Register** in `xdl-stdlib/src/lib.rs`:
-
-```rust
-use xdl_charts::{ChartConfig, ChartType, Series2D, generate_2d_chart};
-use xdl_viz3d_web::launch_browser_visualization;
-
-pub fn plot(args: &[Value]) -> Result<Value> {
-    // Extract X, Y arrays from args
-    let x_data = extract_array(&args[0])?;
-    let y_data = extract_array(&args[1])?;
-
-    // Build chart
-    let config = ChartConfig {
-        chart_type: ChartType::Line,
-        title: "XDL Plot".to_string(),
-        ..Default::default()
-    };
-
-    let series = vec![Series2D {
-        name: "Data".to_string(),
-        x_data,
-        y_data,
-    }];
-
-    let html = generate_2d_chart(&config, &series)?;
-    launch_browser_visualization(html)?;
-
-    Ok(Value::None)
-}
-```
 
 - **Register** in `xdl-stdlib/src/lib.rs`:
 
