@@ -478,7 +478,7 @@ RUST_LOG=debug xdl examples/scientific/medical_imaging_demo.xdl
 ## References
 
 - [Array Functions](ARRAY_STATS_FUNCTIONS.md)
-- [VIZ3D Documentation](../xdl-viz3d/README.md)
+- [VIZ3D Documentation](VIZ3D_COMPLETE_FINAL.md)
 - [Geophysical Demo Guide](GEOPHYSICAL_DEMO_GUIDE.md)
 - [GPU Acceleration](GPU_ACCELERATION_PERFORMANCE_IMPACT.md)
 

@@ -9,7 +9,7 @@ nav_order: 5
 
 Get started with 3D visualization in XDL.
 
-For the complete guide, see [QUICKSTART_VIZ3D.md](../QUICKSTART_VIZ3D).
+For the complete guide, see [QUICKSTART_VIZ3D.md]({% link QUICKSTART_VIZ3D.md %}).
 
 ## Surface Plots
 
@@ -89,7 +89,7 @@ endfor
 
 ## Next Steps
 
-- [3D Visualization Complete](../VIZ3D_COMPLETE_FINAL) - Full guide
-- [3D Browser Guide](../VIZ3D_BROWSER_GUIDE) - Browser rendering
-- [Three.js Integration](../VIZ3D_THREEJS_COMPLETE) - Advanced features
-- [Scientific Visualization](../SCIENTIFIC_VISUALIZATION_GUIDE) - Scientific plots
+- [3D Visualization Complete]({% link VIZ3D_COMPLETE_FINAL.md %}) - Full guide
+- [3D Browser Guide]({% link VIZ3D_BROWSER_GUIDE.md %}) - Browser rendering
+- [Three.js Integration]({% link VIZ3D_THREEJS_COMPLETE.md %}) - Advanced features
+- [Scientific Visualization]({% link SCIENTIFIC_VISUALIZATION_GUIDE.md %}) - Scientific plots

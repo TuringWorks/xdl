@@ -32,7 +32,7 @@ cargo build --release --workspace
 cargo install --path xdl-cli
 ```
 
-See [Build Guide](../BUILD_SUCCESS) for detailed instructions.
+See [Build Guide]({% link BUILD_SUCCESS.md %}) for detailed instructions.
 
 ## Testing
 
@@ -58,7 +58,7 @@ cargo test -- --nocapture
 - **Slow tests** - Marked with `#[ignore]`, run separately
 - **Benchmark tests** - Performance benchmarks
 
-See [Slow Tests Changes](../SLOW_TESTS_CHANGES) for details.
+See [Slow Tests Changes]({% link SLOW_TESTS_CHANGES.md %}) for details.
 
 ## Code Quality
 
@@ -101,8 +101,8 @@ cargo clippy --workspace --fix
 
 Validation testing and reports:
 
-- [Validation Report](../VALIDATION_REPORT) - Test results
-- [Validation Status](../VALIDATION_STATUS) - Current status
+- [Validation Report]({% link VALIDATION_REPORT.md %}) - Test results
+- [Validation Status]({% link VALIDATION_STATUS.md %}) - Current status
 
 ### Running Validation
 
@@ -204,15 +204,15 @@ We welcome contributions!
 
 ## Development Status
 
-See [Session Summary](../SESSION_SUMMARY) for recent development updates.
+See [Session Summary]({% link SESSION_SUMMARY.md %}) for recent development updates.
 
 ### Implementation Status
 
-- [Implementation Status](../IMPLEMENTATION_STATUS) - Current progress
-- [Implementation Summary](../IMPLEMENTATION_SUMMARY) - Summary overview
-- [IDL Command Status](../IDL_COMMAND_STATUS) - IDL compatibility
-- [Build Success](../BUILD_SUCCESS) - Build system status
-- [Parser and Array Fixes](../PARSER_AND_ARRAY_FIXES) - Recent fixes
+- [Implementation Status]({% link IMPLEMENTATION_STATUS.md %}) - Current progress
+- [Implementation Summary]({% link IMPLEMENTATION_SUMMARY.md %}) - Summary overview
+- [IDL Command Status]({% link IDL_COMMAND_STATUS.md %}) - IDL compatibility
+- [Build Success]({% link BUILD_SUCCESS.md %}) - Build system status
+- [Parser and Array Fixes]({% link PARSER_AND_ARRAY_FIXES.md %}) - Recent fixes
 
 ## Release Process
 
