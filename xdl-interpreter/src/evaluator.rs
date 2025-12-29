@@ -1,5 +1,7 @@
 //! Expression and statement evaluator
 
+use std::collections::HashMap;
+
 use crate::context::Context;
 use crate::methods;
 use xdl_core::{XdlError, XdlResult, XdlValue};
@@ -82,9 +84,16 @@ impl Evaluator {
                     arg_values.push(self.evaluate(arg, context)?);
                 }
 
-                // TODO: Handle keywords
-                if !keywords.is_empty() {
-                    return Err(XdlError::NotImplemented("Function keywords".to_string()));
+                // Evaluate keywords into a HashMap
+                let mut keyword_values: HashMap<String, XdlValue> = HashMap::new();
+                for kw in keywords {
+                    let value = if let Some(ref expr) = kw.value {
+                        self.evaluate(expr, context)?
+                    } else {
+                        // Flag-style keyword (e.g., /INDEX) - set to 1 (true)
+                        XdlValue::Long(1)
+                    };
+                    keyword_values.insert(kw.name.to_uppercase(), value);
                 }
 
                 // Handle DataFrame functions that need Context access
@@ -125,8 +134,9 @@ impl Evaluator {
                         Ok(XdlValue::DataFrame(id))
                     }
                     _ => {
-                        // Call standard library function
-                        self.stdlib.call_function(name, &arg_values)
+                        // Call standard library function with keywords
+                        self.stdlib
+                            .call_function_with_keywords(name, &arg_values, &keyword_values)
                     }
                 }
             }

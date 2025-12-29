@@ -1,0 +1,51 @@
+; Test array generation functions with keyword arguments
+
+; Test 1: FINDGEN with START keyword
+PRINT, "Test 1: FINDGEN with START=10"
+arr1 = FINDGEN(5, START=10)
+PRINT, arr1
+; Expected: [10.0, 11.0, 12.0, 13.0, 14.0]
+
+; Test 2: FINDGEN with INCREMENT keyword
+PRINT, "Test 2: FINDGEN with INCREMENT=2"
+arr2 = FINDGEN(5, INCREMENT=2)
+PRINT, arr2
+; Expected: [0.0, 2.0, 4.0, 6.0, 8.0]
+
+; Test 3: FINDGEN with both START and INCREMENT
+PRINT, "Test 3: FINDGEN with START=5, INCREMENT=3"
+arr3 = FINDGEN(5, START=5, INCREMENT=3)
+PRINT, arr3
+; Expected: [5.0, 8.0, 11.0, 14.0, 17.0]
+
+; Test 4: INDGEN with START
+PRINT, "Test 4: INDGEN with START=100"
+arr4 = INDGEN(5, START=100)
+PRINT, arr4
+; Expected: [100, 101, 102, 103, 104]
+
+; Test 5: MAKE_ARRAY basic
+PRINT, "Test 5: MAKE_ARRAY(3, 4)"
+arr5 = MAKE_ARRAY(3, 4)
+PRINT, arr5
+; Expected: 3x4 array of zeros
+
+; Test 6: MAKE_ARRAY with VALUE
+PRINT, "Test 6: MAKE_ARRAY(5, VALUE=42)"
+arr6 = MAKE_ARRAY(5, VALUE=42)
+PRINT, arr6
+; Expected: [42.0, 42.0, 42.0, 42.0, 42.0]
+
+; Test 7: MAKE_ARRAY with /INDEX
+PRINT, "Test 7: MAKE_ARRAY(5, /INDEX)"
+arr7 = MAKE_ARRAY(5, /INDEX)
+PRINT, arr7
+; Expected: [0.0, 1.0, 2.0, 3.0, 4.0]
+
+; Test 8: MAKE_ARRAY with DIMENSION keyword
+PRINT, "Test 8: MAKE_ARRAY(DIMENSION=[2,3])"
+arr8 = MAKE_ARRAY(DIMENSION=[2,3], /INDEX)
+PRINT, arr8
+; Expected: 2x3 array with index values
+
+PRINT, "All tests completed!"

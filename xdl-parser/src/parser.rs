@@ -1380,9 +1380,60 @@ impl<'a> Parser<'a> {
                 if self.check(&Token::LeftParen) {
                     self.advance(); // consume '('
                     let mut args = Vec::new();
+                    let mut keywords = Vec::new();
 
                     if !self.check(&Token::RightParen) {
                         loop {
+                            // Check for /FLAG keyword (e.g., /INDEX)
+                            if self.check(&Token::Divide) {
+                                self.advance(); // consume '/'
+                                if let Token::Identifier(kw_name) = self.peek() {
+                                    let kw_name = kw_name.clone();
+                                    self.advance(); // consume keyword name
+                                    keywords.push(Keyword {
+                                        name: kw_name,
+                                        value: Some(Expression::Literal {
+                                            value: XdlValue::Long(1),
+                                            location: Location::unknown(),
+                                        }),
+                                        location: Location::unknown(),
+                                    });
+                                    if self.check(&Token::Comma) {
+                                        self.advance();
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // Check for keyword argument (identifier = expression)
+                            if let Token::Identifier(kw_name) = self.peek() {
+                                let kw_name_clone = kw_name.clone();
+                                let next_pos = self.current + 1;
+
+                                if next_pos < self.tokens.len()
+                                    && matches!(self.tokens[next_pos], Token::Assign)
+                                {
+                                    // This is a keyword argument
+                                    self.advance(); // consume identifier
+                                    self.advance(); // consume '='
+                                    let value = self.parse_expression()?;
+                                    keywords.push(Keyword {
+                                        name: kw_name_clone,
+                                        value: Some(value),
+                                        location: Location::unknown(),
+                                    });
+                                    if self.check(&Token::Comma) {
+                                        self.advance();
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // Regular positional argument
                             args.push(self.parse_expression()?);
                             if self.check(&Token::Comma) {
                                 self.advance();
@@ -1427,14 +1478,14 @@ impl<'a> Parser<'a> {
                         Ok(Expression::ObjectNew {
                             class_name,
                             args: constructor_args,
-                            keywords: Vec::new(), // TODO: implement keyword arguments
+                            keywords: keywords.clone(), // Pass through keywords
                             location: Location::unknown(),
                         })
                     } else {
                         Ok(Expression::FunctionCall {
                             name,
                             args,
-                            keywords: Vec::new(), // TODO: implement keyword arguments
+                            keywords, // Use parsed keywords
                             location: Location::unknown(),
                         })
                     }

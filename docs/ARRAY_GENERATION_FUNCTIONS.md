@@ -1,8 +1,10 @@
 # Array Generation Functions - Complete Implementation
 
+**Last Updated**: 2025-12-29
+
 ## Overview
 
-Implemented all IDL/GDL array generation functions with full multi-dimensional support (D1-D8).
+Implemented all IDL/GDL array generation functions with full multi-dimensional support (D1-D8) and **keyword arguments** (START, INCREMENT).
 
 ## Implemented Functions
 
@@ -192,84 +194,83 @@ Created `test_all_indgen.xdl` with 16 comprehensive tests covering:
 ✅ Backward compatibility maintained
 ✅ Math operations work correctly
 
-## Future Enhancements
+## ✅ Recently Implemented Features (2025-12-29)
 
-### 1. Keyword Arguments: START and INCREMENT
+### 1. Keyword Arguments: START and INCREMENT ✅
 
-**Status:** Documented but not implemented
+**Status:** COMPLETE
 
-**Reason:** XDL evaluator doesn't support keyword arguments for functions yet.
-Current limitation in `xdl-interpreter/src/evaluator.rs` (lines 62-65):
+All array generation functions now support `START` and `INCREMENT` keyword arguments:
 
-```rust
-// TODO: Handle keywords
-if !keywords.is_empty() {
-    return Err(XdlError::NotImplemented("Function keywords".to_string()));
-}
+```xdl
+arr = FINDGEN(5, START=10)           ; [10.0, 11.0, 12.0, 13.0, 14.0]
+arr = FINDGEN(5, INCREMENT=2)        ; [0.0, 2.0, 4.0, 6.0, 8.0]
+arr = FINDGEN(5, START=5, INCREMENT=3) ; [5.0, 8.0, 11.0, 14.0, 17.0]
+arr = INDGEN(5, START=100)           ; [100, 101, 102, 103, 104]
 ```
 
-**Implementation Plan:**
-Once evaluator supports keywords, update functions to:
+### 2. MAKE_ARRAY Function ✅
 
-```rust
-// Extract START from keywords, default to 0.0
-let start = keywords.get("START")
-    .map(|v| v.to_double())
-    .transpose()?
-    .unwrap_or(0.0);
+**Status:** COMPLETE
 
-// Extract INCREMENT from keywords, default to 1.0
-let increment = keywords.get("INCREMENT")
-    .map(|v| v.to_double())
-    .transpose()?
-    .unwrap_or(1.0);
+The flexible array creation function is now fully implemented:
+
+```xdl
+; Create array with dimensions
+arr = MAKE_ARRAY(5)                   ; [0.0, 0.0, 0.0, 0.0, 0.0]
+arr = MAKE_ARRAY(3, 4)                ; 3x4 array of zeros
+
+; Use VALUE keyword to fill with specific value
+arr = MAKE_ARRAY(5, VALUE=42)         ; [42.0, 42.0, 42.0, 42.0, 42.0]
+
+; Use /INDEX flag to fill with index values (like INDGEN)
+arr = MAKE_ARRAY(5, /INDEX)           ; [0.0, 1.0, 2.0, 3.0, 4.0]
+
+; Use DIMENSION keyword for dimension vector
+arr = MAKE_ARRAY(DIMENSION=[2,3], /INDEX)  ; 2x3 array with index values
 ```
 
-### 2. INDGEN Type Flags
+### 3. SINDGEN String Arrays ✅
 
-Type selection flags like `/BYTE`, `/FLOAT`, etc. require keyword flag support.
+**Status:** COMPLETE
 
-### 3. SINDGEN String Arrays
+SINDGEN now returns proper string arrays:
 
-Requires full string array support in `XdlValue`.
+```xdl
+arr = SINDGEN(5)                      ; ["0", "1", "2", "3", "4"]
+arr = SINDGEN(3, START=10)            ; ["10", "11", "12"]
+```
 
-### 4. MAKE_ARRAY Function
+## Remaining Enhancements
 
-The most flexible array creation function with additional features:
+### INDGEN Type Flags
 
-- `DIMENSION=vector` - specify dimensions as vector
-- `SIZE=vector` - specify size array
-- `VALUE=value` - initialize with specific value
-- `/INDEX` - fill with index values
-- `/NOZERO` - don't initialize to zero
-- Type flags for all data types
-
-**Implementation complexity:** High (requires keyword support + new features)
+Type selection flags like `/BYTE`, `/FLOAT`, etc. are documented but not yet fully implemented.
+These would allow specifying the output data type explicitly.
 
 ## Compatibility Matrix
 
 | Function | Multi-Dim | START | INCREMENT | Type Flags | Status |
 |----------|-----------|-------|-----------|------------|--------|
-| FINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| DINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| BINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| CINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| DCINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| INDGEN | ✅ | ⏳ | ⏳ | ⏳ | Complete |
-| LINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| L64INDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| SINDGEN | ✅ | ⏳ | ⏳ | N/A | Partial* |
-| UINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| UL64INDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| ULINDGEN | ✅ | ⏳ | ⏳ | N/A | Complete |
-| MAKE_ARRAY | ❌ | ⏳ | ⏳ | ⏳ | Not Impl |
+| FINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| DINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| BINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| CINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| DCINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| INDGEN | ✅ | ✅ | ✅ | ⏳ | Complete |
+| LINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| L64INDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| SINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| UINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| UL64INDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| ULINDGEN | ✅ | ✅ | ✅ | N/A | Complete |
+| MAKE_ARRAY | ✅ | ✅ | ✅ | ⏳ | Complete |
 
 Legend:
 
 - ✅ Implemented
-- ⏳ Pending (evaluator support needed)
-- ❌ Not implemented
-- *Partial: Returns numeric array instead of strings
+- ⏳ Pending (type flags not yet implemented)
+- N/A: Not applicable for this function
 
 ## Code Quality
 

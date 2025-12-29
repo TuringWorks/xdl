@@ -227,6 +227,16 @@ impl StandardLibrary {
 
     /// Call a XDL function
     pub fn call_function(&self, name: &str, args: &[XdlValue]) -> XdlResult<XdlValue> {
+        self.call_function_with_keywords(name, args, &HashMap::new())
+    }
+
+    /// Call a XDL function with keyword arguments
+    pub fn call_function_with_keywords(
+        &self,
+        name: &str,
+        args: &[XdlValue],
+        keywords: &HashMap<String, XdlValue>,
+    ) -> XdlResult<XdlValue> {
         match name.to_uppercase().as_str() {
             // Trigonometric functions
             "SIN" => math::sin(args),
@@ -284,19 +294,20 @@ impl StandardLibrary {
             "LONG64" => math::long64_func(args),
             "ULONG64" => math::ulong64_func(args),
 
-            // Array generation functions
-            "FINDGEN" => math::findgen(args),
-            "DINDGEN" => math::dindgen(args),
-            "BINDGEN" => math::bindgen(args),
-            "CINDGEN" => math::cindgen(args),
-            "DCINDGEN" => math::dcindgen(args),
-            "INDGEN" => math::indgen(args),
-            "LINDGEN" => math::lindgen(args),
-            "L64INDGEN" => math::l64indgen(args),
-            "SINDGEN" => math::sindgen(args),
-            "UINDGEN" => math::uindgen(args),
-            "UL64INDGEN" => math::ul64indgen(args),
-            "ULINDGEN" => math::ulindgen(args),
+            // Array generation functions (with keyword support for START/INCREMENT)
+            "FINDGEN" => math::findgen_with_keywords(args, keywords),
+            "DINDGEN" => math::dindgen_with_keywords(args, keywords),
+            "BINDGEN" => math::bindgen_with_keywords(args, keywords),
+            "CINDGEN" => math::cindgen_with_keywords(args, keywords),
+            "DCINDGEN" => math::dcindgen_with_keywords(args, keywords),
+            "INDGEN" => math::indgen_with_keywords(args, keywords),
+            "LINDGEN" => math::lindgen_with_keywords(args, keywords),
+            "L64INDGEN" => math::l64indgen_with_keywords(args, keywords),
+            "SINDGEN" => math::sindgen_with_keywords(args, keywords),
+            "UINDGEN" => math::uindgen_with_keywords(args, keywords),
+            "UL64INDGEN" => math::ul64indgen_with_keywords(args, keywords),
+            "ULINDGEN" => math::ulindgen_with_keywords(args, keywords),
+            "MAKE_ARRAY" => math::make_array(args, keywords),
             "RANDOMU" => math::randomu(args),
             "RANDOMN" => math::randomn(args),
             "MESHGRID" => math::meshgrid(args),
@@ -329,7 +340,7 @@ impl StandardLibrary {
             "SHIFT" => array::shift_func(args),
             "ROTATE" => array::rotate_func(args),
             "REPLICATE" => array::replicate_func(args),
-            "MAKE_ARRAY" => array::make_array_func(args),
+            // MAKE_ARRAY moved to keyword-aware section above
             "ARRAY_EQUAL" => array::array_equal_func(args),
             "UNIQ" => array::uniq_func(args),
             "HISTOGRAM" => array::histogram_func(args),

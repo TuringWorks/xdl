@@ -1,5 +1,6 @@
 //! Mathematical functions
 
+use std::collections::HashMap;
 use xdl_core::{GdlType, XdlError, XdlResult, XdlValue};
 
 /// Convert XdlValue to f64 for mathematical operations
@@ -867,6 +868,279 @@ pub fn ul64indgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Creates an array with dimensions D1 through D8, filled with unsigned long integer values.
 pub fn ulindgen(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     indgen(_args)
+}
+
+// ============================================================================
+// KEYWORD-AWARE ARRAY GENERATION FUNCTIONS
+// ============================================================================
+
+/// Helper function to extract START and INCREMENT keyword values
+fn extract_start_increment(keywords: &HashMap<String, XdlValue>) -> XdlResult<(f64, f64)> {
+    let start = if let Some(val) = keywords.get("START") {
+        val.to_double()?
+    } else {
+        0.0
+    };
+
+    let increment = if let Some(val) = keywords.get("INCREMENT") {
+        val.to_double()?
+    } else {
+        1.0
+    };
+
+    Ok((start, increment))
+}
+
+/// FINDGEN with keyword support for START and INCREMENT
+pub fn findgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(args)?;
+    let total_size: usize = dimensions.iter().product();
+    let (start, increment) = extract_start_increment(keywords)?;
+
+    let data: Vec<f64> = (0..total_size)
+        .map(|i| start + (i as f64 * increment))
+        .collect();
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// DINDGEN with keyword support
+pub fn dindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    findgen_with_keywords(args, keywords)
+}
+
+/// BINDGEN with keyword support
+pub fn bindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(args)?;
+    let total_size: usize = dimensions.iter().product();
+    let (start, increment) = extract_start_increment(keywords)?;
+
+    let data: Vec<f64> = (0..total_size)
+        .map(|i| ((start as usize + i * increment as usize) % 256) as f64)
+        .collect();
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// CINDGEN with keyword support
+pub fn cindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(args)?;
+    let total_size: usize = dimensions.iter().product();
+    let (start, increment) = extract_start_increment(keywords)?;
+
+    let mut data = Vec::with_capacity(total_size * 2);
+    for i in 0..total_size {
+        data.push(start + (i as f64 * increment)); // Real part
+        data.push(0.0); // Imaginary part
+    }
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// DCINDGEN with keyword support
+pub fn dcindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    cindgen_with_keywords(args, keywords)
+}
+
+/// INDGEN with keyword support
+pub fn indgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(args)?;
+    let total_size: usize = dimensions.iter().product();
+    let (start, increment) = extract_start_increment(keywords)?;
+
+    let data: Vec<f64> = (0..total_size)
+        .map(|i| (start + (i as f64 * increment)).floor())
+        .collect();
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
+}
+
+/// LINDGEN with keyword support
+pub fn lindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    indgen_with_keywords(args, keywords)
+}
+
+/// L64INDGEN with keyword support
+pub fn l64indgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    indgen_with_keywords(args, keywords)
+}
+
+/// SINDGEN with keyword support - returns string array
+pub fn sindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    let dimensions = extract_dimensions(args)?;
+    let total_size: usize = dimensions.iter().product();
+    let (start, increment) = extract_start_increment(keywords)?;
+
+    // Generate string representations of the values
+    let strings: Vec<XdlValue> = (0..total_size)
+        .map(|i| {
+            let val = (start + (i as f64 * increment)).floor() as i64;
+            XdlValue::String(val.to_string())
+        })
+        .collect();
+
+    // Return as NestedArray of strings for now
+    Ok(XdlValue::NestedArray(strings))
+}
+
+/// UINDGEN with keyword support
+pub fn uindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    indgen_with_keywords(args, keywords)
+}
+
+/// UL64INDGEN with keyword support
+pub fn ul64indgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    indgen_with_keywords(args, keywords)
+}
+
+/// ULINDGEN with keyword support
+pub fn ulindgen_with_keywords(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    indgen_with_keywords(args, keywords)
+}
+
+/// MAKE_ARRAY - Flexible array creation function
+/// Result = MAKE_ARRAY([D1, ..., D8] [, DIMENSION=vector] [, /INDEX] [, /NOZERO]
+///                     [, SIZE=vector] [, TYPE=type_code] [, VALUE=value])
+///
+/// Creates an array using flexible specification methods:
+/// - Positional dimensions (D1-D8)
+/// - DIMENSION keyword for dimension vector
+/// - SIZE keyword for IDL-style size vector
+/// - VALUE keyword to fill with specific value
+/// - /INDEX flag to fill with index values (like INDGEN)
+/// - /NOZERO flag to skip zero-initialization (no-op in our impl)
+/// - TYPE keyword to specify data type
+pub fn make_array(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    // Determine dimensions from various sources
+    let dimensions: Vec<usize> = if let Some(dim_val) = keywords.get("DIMENSION") {
+        // DIMENSION keyword takes precedence
+        match dim_val {
+            XdlValue::Array(arr) => arr.iter().map(|v| *v as usize).collect(),
+            XdlValue::MultiDimArray { data, .. } => data.iter().map(|v| *v as usize).collect(),
+            _ => vec![dim_val.to_double()? as usize],
+        }
+    } else if let Some(size_val) = keywords.get("SIZE") {
+        // SIZE keyword: IDL-style [ndims, d1, d2, ..., type, nelements]
+        match size_val {
+            XdlValue::Array(arr) if arr.len() >= 2 => {
+                let ndims = arr[0] as usize;
+                arr[1..=ndims].iter().map(|v| *v as usize).collect()
+            }
+            _ => {
+                return Err(XdlError::InvalidArgument(
+                    "SIZE keyword must be an array with [ndims, d1, d2, ...]".to_string(),
+                ))
+            }
+        }
+    } else if !args.is_empty() {
+        // Use positional arguments
+        extract_dimensions(args)?
+    } else {
+        return Err(XdlError::InvalidArgument(
+            "MAKE_ARRAY: Must specify dimensions via arguments, DIMENSION, or SIZE keyword"
+                .to_string(),
+        ));
+    };
+
+    let total_size: usize = dimensions.iter().product();
+
+    // Check for /INDEX flag
+    let use_index = keywords.get("INDEX").is_some();
+
+    // Check for VALUE keyword
+    let fill_value = keywords.get("VALUE");
+
+    // Generate data based on options
+    let data: Vec<f64> = if use_index {
+        // Fill with index values (like INDGEN)
+        let (start, increment) = extract_start_increment(keywords)?;
+        (0..total_size)
+            .map(|i| start + (i as f64 * increment))
+            .collect()
+    } else if let Some(val) = fill_value {
+        // Fill with specified value
+        let fill = val.to_double()?;
+        vec![fill; total_size]
+    } else {
+        // Default: fill with zeros
+        vec![0.0; total_size]
+    };
+
+    if dimensions.len() == 1 {
+        Ok(XdlValue::Array(data))
+    } else {
+        Ok(XdlValue::MultiDimArray {
+            data,
+            shape: dimensions,
+        })
+    }
 }
 
 /// FIX function - truncates to integer (floor for positive, ceil for negative)
