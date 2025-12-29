@@ -23,5 +23,5 @@ XDL (Extended Data Language) is a modern Rust implementation providing IDL-compa
 
 1. **Install XDL** - Follow the [installation guide]({% link getting-started/installation.md %})
 2. **Try the Quick Start** - Run your first XDL program
-3. **Explore Examples** - Learn from sample code
+3. **Explore Examples** - Browse the [Example Gallery]({% link examples-gallery.md %})
 4. **Read the Guides** - Dive into specific features
