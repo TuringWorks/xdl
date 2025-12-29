@@ -23,9 +23,12 @@ The XDL MATLAB transpiler provides basic MATLAB compatibility but has several li
 - ✅ Display output: `disp(value)` → transpiles to `PRINT, value`
 - ✅ Nested calls: `disp(sin(0.5))` works correctly
 
-### Control Flow (Limited)
-- ✅ Simple IF statements (with limitations)
-- ⚠️ FOR loops (limited - simple ranges may not work)
+### Control Flow
+- ✅ IF/ELSE/ENDIF statements
+- ✅ FOR loops with ranges
+- ✅ WHILE loops
+- ✅ SWITCH/CASE statements
+- ✅ BREAK and CONTINUE statements
 
 ## What Doesn't Work ❌
 
@@ -37,11 +40,11 @@ The XDL MATLAB transpiler provides basic MATLAB compatibility but has several li
 - ❌ Colon operator: `1:10`, `1:2:10`
 
 ### Array Generation Functions
-- ❌ `linspace(start, end, n)`
-- ❌ `logspace()`
-- ❌ `zeros()`, `ones()` (mapped but not fully supported)
-- ❌ `eye()` (identity matrix)
-- ❌ `rand()`, `randn()` (random arrays)
+- ✅ `linspace(start, end, n)` → transpiles to `LINSPACE()`
+- ✅ `logspace()` → transpiles to `LOGSPACE()`
+- ⚠️ `zeros()`, `ones()` - Use `REPLICATE(0, n)` or `DBLARR(n)` instead
+- ✅ `eye()` → transpiles to `IDENTITY()`
+- ✅ `rand()`, `randn()` → transpiles to `RANDOMU()`, `RANDOMN()`
 
 ### Plotting Features
 - ❌ `figure` - window management
@@ -64,11 +67,11 @@ The XDL MATLAB transpiler provides basic MATLAB compatibility but has several li
 - ❌ `fprintf` with format strings
 
 ### Control Flow Limitations
-- ❌ `switch/case` statements
-- ❌ `try/catch` error handling
-- ❌ Complex FOR loop ranges: `for i = 1:2:10`
-- ❌ `while` loops
-- ❌ `break`, `continue`
+- ✅ `switch/case` statements - Now supported
+- ❌ `try/catch` error handling - Not yet implemented
+- ✅ Complex FOR loop ranges: `for i = 1:2:10` - Supported
+- ✅ `while` loops - Now supported
+- ✅ `break`, `continue` - Now supported
 
 ## Workarounds
 
@@ -165,14 +168,23 @@ See `examples/matlab/` for working examples:
 - `03_simple_operations.m` - sqrt, exp, log ✅
 - `test_gui_output.m` - Output capture ✅
 
+## Recent Improvements ✅
+
+Enhancements completed in 2025:
+1. ✅ `linspace()` and `logspace()` functions
+2. ✅ Better FOR loop handling with ranges
+3. ✅ WHILE loop support
+4. ✅ SWITCH/CASE statement support
+5. ✅ BREAK and CONTINUE statements
+6. ✅ More complete function mapping (~80 functions)
+
 ## Future Improvements
 
-Planned enhancements to the transpiler:
-1. Array literal support
-2. `linspace()` function
-3. Better FOR loop handling
-4. More complete function mapping
-5. Plot style parsing (convert to XDL equivalents)
+Planned enhancements:
+1. Array literal support: `[1, 2, 3]`
+2. `try/catch` error handling
+3. Plot style parsing (convert to XDL equivalents)
+4. Low-level file I/O (`fopen`, `fread`, `fwrite`)
 
 ## Getting Help
 
