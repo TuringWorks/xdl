@@ -21,15 +21,6 @@ XDL provides a complete implementation of IDL-compatible language features:
 - **Structures** - Complex data types
 - **Keyword Arguments** - Named function parameters
 
-## Documentation
-
-- [Implementation Status](../IMPLEMENTATION_STATUS) - Current progress
-- [Control Flow](../CONTROL_FLOW_IMPLEMENTATION) - Loops and conditionals
-- [Array Features](../ARRAY_FEATURES) - Array operations
-- [Multi-dimensional Arrays](../MULTIDIM_ARRAY_SUPPORT) - N-D arrays
-- [Keyword Arguments](../KEYWORD_ARGS_IMPLEMENTATION) - Function keywords
-- [Nested Functions Plan](../NESTED_FUNCTIONS_PLAN) - Function nesting support
-
 ## Data Types
 
 XDL supports all IDL/GDL data types:
