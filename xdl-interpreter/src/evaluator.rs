@@ -1,6 +1,7 @@
 //! Expression and statement evaluator
 
 use crate::context::Context;
+use crate::methods;
 use xdl_core::{XdlError, XdlResult, XdlValue};
 use xdl_parser::{ArrayIndex, BinaryOp, Expression, UnaryOp};
 use xdl_stdlib::StandardLibrary;
@@ -201,24 +202,54 @@ impl Evaluator {
                 // Evaluate the object
                 let obj_val = self.evaluate(object, context)?;
 
+                // Evaluate method arguments for built-in type methods
+                let mut arg_values = Vec::new();
+                for arg in args {
+                    arg_values.push(self.evaluate(arg, context)?);
+                }
+
                 // Dispatch based on object type
                 match obj_val {
+                    // DataFrame methods (use unevaluated args for context access)
                     XdlValue::DataFrame(id) => {
                         self.call_dataframe_method(id, method, args, context)
                     }
+
+                    // User-defined object methods (use unevaluated args)
                     XdlValue::Object(obj_id) => {
                         self.call_user_method(obj_id, method, args, context)
                     }
-                    XdlValue::Struct(ref _map) => {
-                        // For structs, methods might be stored as function pointers
-                        // For now, return error
-                        Err(XdlError::NotImplemented(format!(
-                            "Struct method: {}",
-                            method
-                        )))
+
+                    // Array methods: arr->Sum(), arr->Mean(), arr->Sort(), etc.
+                    XdlValue::Array(ref arr) => {
+                        methods::call_array_method(arr, method, &arg_values)
                     }
+
+                    // MultiDimArray methods: arr->Shape(), arr->Flatten(), etc.
+                    XdlValue::MultiDimArray { ref data, ref shape } => {
+                        methods::call_multidim_method(data, shape, method, &arg_values)
+                    }
+
+                    // NestedArray methods: matrix->NRows(), matrix->Flatten(), etc.
+                    XdlValue::NestedArray(ref rows) => {
+                        methods::call_nested_array_method(rows, method, &arg_values)
+                    }
+
+                    // String methods: str->ToUpper(), str->Length(), str->Contains(), etc.
+                    XdlValue::String(ref s) => {
+                        methods::call_string_method(s, method, &arg_values)
+                    }
+
+                    // Structs don't have methods - use dot notation for field access
+                    XdlValue::Struct(ref _map) => Err(XdlError::TypeMismatch {
+                        expected: "object with methods (use obj.field for struct field access)"
+                            .to_string(),
+                        actual: "Struct".to_string(),
+                    }),
+
+                    // Unsupported types
                     _ => Err(XdlError::TypeMismatch {
-                        expected: "object with methods".to_string(),
+                        expected: "Array, String, DataFrame, or Object".to_string(),
                         actual: format!("{:?}", obj_val.gdl_type()),
                     }),
                 }
@@ -1446,22 +1477,38 @@ impl Evaluator {
         args: &[Expression],
         context: &mut Context,
     ) -> XdlResult<XdlValue> {
-        match method {
-            "Shape" | "shape" => {
+        match method.to_uppercase().as_str() {
+            // === Shape and size information ===
+            "SHAPE" => {
                 let df = context.get_dataframe(df_id)?;
                 let rows = df.nrows() as f64;
                 let cols = df.ncols() as f64;
                 Ok(XdlValue::Array(vec![rows, cols]))
             }
 
-            "ColumnNames" | "column_names" => {
+            "NROWS" | "HEIGHT" | "LEN" | "LENGTH" => {
                 let df = context.get_dataframe(df_id)?;
-                let names = df.column_names();
-                // Return as array of strings (for now, just return count)
-                Ok(XdlValue::Array(vec![names.len() as f64]))
+                Ok(XdlValue::Long(df.nrows() as i32))
             }
 
-            "Column" | "column" => {
+            "NCOLS" | "WIDTH" => {
+                let df = context.get_dataframe(df_id)?;
+                Ok(XdlValue::Long(df.ncols() as i32))
+            }
+
+            // === Column information ===
+            "COLUMNNAMES" | "COLUMN_NAMES" | "COLUMNS" => {
+                let df = context.get_dataframe(df_id)?;
+                let names: Vec<XdlValue> = df
+                    .column_names()
+                    .iter()
+                    .map(|s| XdlValue::String(s.clone()))
+                    .collect();
+                Ok(XdlValue::NestedArray(names))
+            }
+
+            // === Column access ===
+            "COLUMN" | "COL" => {
                 if args.is_empty() {
                     return Err(XdlError::RuntimeError(
                         "Column() requires a column name argument".to_string(),
@@ -1487,14 +1534,76 @@ impl Evaluator {
                         XdlValue::Long(n) => *n as f64,
                         XdlValue::Double(d) => *d,
                         XdlValue::Float(f) => *f as f64,
-                        _ => 0.0, // TODO: Better conversion
+                        _ => 0.0,
                     })
                     .collect();
 
                 Ok(XdlValue::Array(data))
             }
 
-            "WriteCSV" | "write_csv" => {
+            // === Row access ===
+            "ROW" => {
+                if args.is_empty() {
+                    return Err(XdlError::RuntimeError(
+                        "Row() requires a row index argument".to_string(),
+                    ));
+                }
+
+                let idx_val = self.evaluate(&args[0], context)?;
+                let idx = idx_val.to_long()? as usize;
+
+                let df = context.get_dataframe(df_id)?;
+                let row_map = df
+                    .row(idx)
+                    .map_err(|e| XdlError::RuntimeError(format!("Row error: {}", e)))?;
+
+                // Convert to struct
+                let struct_map: std::collections::HashMap<String, XdlValue> = row_map
+                    .into_iter()
+                    .map(|(k, v)| (k.to_uppercase(), v))
+                    .collect();
+                Ok(XdlValue::Struct(struct_map))
+            }
+
+            // === Slicing ===
+            "HEAD" => {
+                let n = if args.is_empty() {
+                    5
+                } else {
+                    self.evaluate(&args[0], context)?.to_long()? as usize
+                };
+
+                let df = context.get_dataframe(df_id)?;
+                let head_df = df
+                    .head(n)
+                    .map_err(|e| XdlError::RuntimeError(format!("Head error: {}", e)))?;
+                let new_id = context.store_dataframe(head_df);
+                Ok(XdlValue::DataFrame(new_id))
+            }
+
+            "TAIL" => {
+                let n = if args.is_empty() {
+                    5
+                } else {
+                    self.evaluate(&args[0], context)?.to_long()? as usize
+                };
+
+                let df = context.get_dataframe(df_id)?;
+                let tail_df = df
+                    .tail(n)
+                    .map_err(|e| XdlError::RuntimeError(format!("Tail error: {}", e)))?;
+                let new_id = context.store_dataframe(tail_df);
+                Ok(XdlValue::DataFrame(new_id))
+            }
+
+            // === Statistics ===
+            "DESCRIBE" | "INFO" => {
+                let df = context.get_dataframe(df_id)?;
+                Ok(XdlValue::String(df.info()))
+            }
+
+            // === I/O ===
+            "WRITECSV" | "WRITE_CSV" | "TOCSV" | "TO_CSV" => {
                 if args.is_empty() {
                     return Err(XdlError::RuntimeError(
                         "WriteCSV() requires a filename argument".to_string(),
@@ -1514,8 +1623,75 @@ impl Evaluator {
                 Ok(XdlValue::Undefined)
             }
 
+            "TOJSON" | "TO_JSON" => {
+                let df = context.get_dataframe(df_id)?;
+                let json = df.to_json();
+                Ok(XdlValue::String(format!("{:?}", json)))
+            }
+
+            // === Selection ===
+            "SELECT" => {
+                if args.is_empty() {
+                    return Err(XdlError::RuntimeError(
+                        "Select() requires column name arguments".to_string(),
+                    ));
+                }
+
+                // Evaluate all column name arguments
+                let mut col_names = Vec::new();
+                for arg in args {
+                    let val = self.evaluate(arg, context)?;
+                    match val {
+                        XdlValue::String(s) => col_names.push(s),
+                        _ => col_names.push(val.to_string_repr()),
+                    }
+                }
+
+                let col_refs: Vec<&str> = col_names.iter().map(|s| s.as_str()).collect();
+                let df = context.get_dataframe(df_id)?;
+                let selected = df
+                    .select(&col_refs)
+                    .map_err(|e| XdlError::RuntimeError(format!("Select error: {}", e)))?;
+                let new_id = context.store_dataframe(selected);
+                Ok(XdlValue::DataFrame(new_id))
+            }
+
+            // === Sorting ===
+            "SORTBY" | "SORT_BY" | "SORT" => {
+                if args.is_empty() {
+                    return Err(XdlError::RuntimeError(
+                        "SortBy() requires column name argument(s)".to_string(),
+                    ));
+                }
+
+                // First arg is column name(s), optional second arg is ascending (default true)
+                let col_val = self.evaluate(&args[0], context)?;
+                let col_names = match col_val {
+                    XdlValue::String(s) => vec![s],
+                    _ => vec![col_val.to_string_repr()],
+                };
+
+                let ascending = if args.len() > 1 {
+                    match self.evaluate(&args[1], context)? {
+                        XdlValue::Long(n) => n != 0,
+                        _ => true,
+                    }
+                } else {
+                    true
+                };
+
+                let col_refs: Vec<&str> = col_names.iter().map(|s| s.as_str()).collect();
+                let df = context.get_dataframe(df_id)?;
+                let sorted = df
+                    .sort_by(&col_refs, ascending)
+                    .map_err(|e| XdlError::RuntimeError(format!("Sort error: {}", e)))?;
+                let new_id = context.store_dataframe(sorted);
+                Ok(XdlValue::DataFrame(new_id))
+            }
+
             _ => Err(XdlError::NotImplemented(format!(
-                "DataFrame method: {}",
+                "DataFrame method '{}'. Available: Shape, NRows, NCols, ColumnNames, \
+                 Column, Row, Head, Tail, Describe, WriteCSV, ToJson, Select, SortBy",
                 method
             ))),
         }

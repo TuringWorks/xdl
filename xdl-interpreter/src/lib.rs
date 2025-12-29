@@ -4,6 +4,7 @@
 
 pub mod context;
 pub mod evaluator;
+pub mod methods;
 pub mod runtime;
 
 use std::cell::RefCell;
