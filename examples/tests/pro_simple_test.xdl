@@ -1,0 +1,9 @@
+; Simplest possible PRO/ENDPRO test
+
+PRO test_proc
+  PRINT, "Inside procedure"
+END
+
+PRINT, "Before call"
+test_proc
+PRINT, "After call"

@@ -1,0 +1,39 @@
+; Test user-defined functions (FUNCTION/ENDFUNCTION)
+
+; Simple function with no arguments
+FUNCTION get_greeting
+  RETURN, "Hello, World!"
+END
+
+; Function with one argument
+FUNCTION square, x
+  RETURN, x * x
+END
+
+; Function with multiple arguments
+FUNCTION add_values, a, b
+  RETURN, a + b
+END
+
+; Function that calls another function
+FUNCTION compute_sum_of_squares, x, y
+  result = square(x) + square(y)
+  RETURN, result
+END
+
+; Test the functions
+PRINT, "=== Testing FUNCTION/ENDFUNCTION ==="
+
+msg = get_greeting()
+PRINT, "Greeting: ", msg
+
+sq = square(5)
+PRINT, "square(5) = ", sq
+
+sum_val = add_values(10, 20)
+PRINT, "add_values(10, 20) = ", sum_val
+
+sos = compute_sum_of_squares(3, 4)
+PRINT, "sum of squares(3, 4) = ", sos
+
+PRINT, "=== Tests Complete ==="

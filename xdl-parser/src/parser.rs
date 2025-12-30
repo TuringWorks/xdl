@@ -59,7 +59,15 @@ impl<'a> Parser<'a> {
     fn parse_program(&mut self) -> XdlResult<Program> {
         let mut statements = Vec::new();
 
-        while !self.is_at_end() {
+        loop {
+            // Skip leading/trailing newlines
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+            // Check if we've reached the end
+            if self.is_at_end() {
+                break;
+            }
             statements.push(self.parse_statement()?);
         }
 
@@ -216,10 +224,26 @@ impl<'a> Parser<'a> {
             // Multi-line form: IF x THEN BEGIN ... END/ENDIF
             self.parse_block_or_statement(&[Token::Else, Token::Endif])?
         } else {
-            // Single-line form: IF x THEN statement [ELSE statement]
-            // Parse just one statement
-            vec![self.parse_statement()?]
+            // Non-block form: IF x THEN statement(s) ENDIF
+            // Parse statements until we hit ELSE or ENDIF
+            let mut stmts = Vec::new();
+            loop {
+                // Skip newlines before checking for ELSE/ENDIF
+                while matches!(self.peek(), Token::Newline) {
+                    self.advance();
+                }
+                if matches!(self.peek(), Token::Else | Token::Endif | Token::EOF) {
+                    break;
+                }
+                stmts.push(self.parse_statement()?);
+            }
+            stmts
         };
+
+        // Skip newlines before ELSE check
+        while matches!(self.peek(), Token::Newline) {
+            self.advance();
+        }
 
         let else_block = if self.check(&Token::Else) {
             self.advance(); // consume 'else'
@@ -227,15 +251,30 @@ impl<'a> Parser<'a> {
                 // Multi-line else block
                 Some(self.parse_block_or_statement(&[Token::Endif])?)
             } else {
-                // Single-line else: just one statement
-                Some(vec![self.parse_statement()?])
+                // Non-block else: parse until ENDIF
+                let mut stmts = Vec::new();
+                loop {
+                    while matches!(self.peek(), Token::Newline) {
+                        self.advance();
+                    }
+                    if matches!(self.peek(), Token::Endif | Token::EOF) {
+                        break;
+                    }
+                    stmts.push(self.parse_statement()?);
+                }
+                Some(stmts)
             }
         } else {
             None
         };
 
-        // ENDIF is only required for block form (BEGIN was used)
-        if (is_block || self.check(&Token::Endif)) && self.check(&Token::Endif) {
+        // Skip newlines before ENDIF check
+        while matches!(self.peek(), Token::Newline) {
+            self.advance();
+        }
+
+        // Consume ENDIF if present
+        if self.check(&Token::Endif) {
             self.advance(); // consume 'endif'
         }
 
@@ -280,7 +319,27 @@ impl<'a> Parser<'a> {
         }
 
         // Parse body - support both 'begin...end' and multiple statements until endfor
-        let body = self.parse_block_or_statement(&[Token::Endfor])?;
+        let body = if self.check(&Token::Begin) {
+            self.parse_block_or_statement(&[Token::Endfor])?
+        } else {
+            // Parse statements until ENDFOR
+            let mut stmts = Vec::new();
+            loop {
+                while matches!(self.peek(), Token::Newline) {
+                    self.advance();
+                }
+                if matches!(self.peek(), Token::Endfor | Token::EOF) {
+                    break;
+                }
+                stmts.push(self.parse_statement()?);
+            }
+            stmts
+        };
+
+        // Skip newlines before ENDFOR
+        while matches!(self.peek(), Token::Newline) {
+            self.advance();
+        }
 
         self.consume(Token::Endfor, "Expected 'endfor' to close for loop")?;
 
@@ -468,10 +527,20 @@ impl<'a> Parser<'a> {
     fn parse_return_statement(&mut self) -> XdlResult<Statement> {
         self.consume(Token::Return, "Expected 'return'")?;
 
+        // IDL syntax: RETURN or RETURN, value (comma is optional)
         let value = if matches!(self.peek(), Token::Newline | Token::EOF) {
             None
         } else {
-            Some(self.parse_expression()?)
+            // Skip optional comma after RETURN
+            if self.check(&Token::Comma) {
+                self.advance();
+            }
+            // Check again after comma - might be end of statement
+            if matches!(self.peek(), Token::Newline | Token::EOF) {
+                None
+            } else {
+                Some(self.parse_expression()?)
+            }
         };
 
         Ok(Statement::Return {
@@ -749,11 +818,27 @@ impl<'a> Parser<'a> {
 
         // Parse body
         let mut body = Vec::new();
-        while !matches!(self.peek(), Token::Endpro | Token::EOF) {
+        // Accept both ENDPRO and END as procedure terminators (IDL compatibility)
+        loop {
+            // Skip newlines before checking for terminator
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+            if matches!(self.peek(), Token::Endpro | Token::End | Token::EOF) {
+                break;
+            }
             body.push(self.parse_statement()?);
         }
 
-        self.consume(Token::Endpro, "Expected 'endpro' to close procedure")?;
+        // Consume either ENDPRO or END
+        if !matches!(self.peek(), Token::Endpro | Token::End) {
+            return Err(XdlError::ParseError {
+                message: "Expected 'END' or 'ENDPRO' to close procedure".to_string(),
+                line: 1,
+                column: self.current,
+            });
+        }
+        self.advance(); // consume ENDPRO or END
 
         Ok(Statement::ProcedureDef {
             name,
@@ -783,20 +868,99 @@ impl<'a> Parser<'a> {
             return self.parse_method_definition_body(name, true); // true = function
         }
 
-        // Parse parameters (simplified)
-        let params = Vec::new(); // TODO: implement parameter parsing
-        let keywords = Vec::new(); // TODO: implement keyword parsing
+        // Parse parameters and keywords
+        let mut params = Vec::new();
+        let mut keywords = Vec::new();
+
+        // Check if there's an opening paren or comma after the function name
+        let has_paren = self.check(&Token::LeftParen);
+        if has_paren {
+            self.advance(); // consume '('
+        }
+
+        // Check if there's a comma (for comma-separated params without parens)
+        if has_paren || self.check(&Token::Comma) {
+            if self.check(&Token::Comma) {
+                self.advance(); // consume first comma
+            }
+
+            // Parse comma-separated parameters and keywords
+            loop {
+                // Check if we've reached the end of the parameter list
+                if has_paren && self.check(&Token::RightParen) {
+                    self.advance(); // consume ')'
+                    break;
+                }
+                if !has_paren && matches!(self.peek(), Token::Newline | Token::EOF) {
+                    break;
+                }
+
+                // Get the parameter/keyword name
+                let param_name = if let Token::Identifier(name) = self.peek() {
+                    name.clone()
+                } else {
+                    break; // No more parameters
+                };
+
+                self.advance(); // consume identifier
+
+                // Check if this is a keyword (has '=' after it)
+                if self.check(&Token::Assign) {
+                    self.advance(); // consume '='
+                    keywords.push(KeywordDecl {
+                        name: param_name,
+                        by_reference: false,
+                        location: Location::unknown(),
+                    });
+                } else {
+                    // Regular parameter
+                    params.push(Parameter {
+                        name: param_name,
+                        by_reference: false,
+                        optional: false,
+                        location: Location::unknown(),
+                    });
+                }
+
+                // Check for next comma
+                if !self.check(&Token::Comma) {
+                    if has_paren && self.check(&Token::RightParen) {
+                        self.advance(); // consume ')'
+                    }
+                    break;
+                }
+                self.advance(); // consume comma
+            }
+        }
+
+        // Consume any remaining tokens until we hit a newline or start of body
+        while matches!(self.peek(), Token::Comma | Token::Newline) {
+            self.advance();
+        }
 
         // Parse body
         let mut body = Vec::new();
-        while !matches!(self.peek(), Token::Endfunction | Token::EOF) {
+        // Accept both ENDFUNCTION and END as function terminators (IDL compatibility)
+        loop {
+            // Skip newlines before checking for terminator
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+            if matches!(self.peek(), Token::Endfunction | Token::End | Token::EOF) {
+                break;
+            }
             body.push(self.parse_statement()?);
         }
 
-        self.consume(
-            Token::Endfunction,
-            "Expected 'endfunction' to close function",
-        )?;
+        // Consume either ENDFUNCTION or END
+        if !matches!(self.peek(), Token::Endfunction | Token::End) {
+            return Err(XdlError::ParseError {
+                message: "Expected 'END' or 'ENDFUNCTION' to close function".to_string(),
+                line: 1,
+                column: self.current,
+            });
+        }
+        self.advance(); // consume ENDFUNCTION or END
 
         Ok(Statement::FunctionDef {
             name,

@@ -70,13 +70,9 @@ impl Evaluator {
                 keywords,
                 ..
             } => {
-                // First check if it's a user-defined function
-                if let Some(_func_def) = context.get_function(name) {
-                    // TODO: Implement user-defined function calls
-                    return Err(XdlError::NotImplemented(
-                        "User-defined functions".to_string(),
-                    ));
-                }
+                // User-defined function calls are handled by the Interpreter
+                // (which intercepts them before calling the Evaluator)
+                // Here we only handle built-in stdlib functions
 
                 // Evaluate arguments
                 let mut arg_values = Vec::new();

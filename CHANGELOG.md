@@ -5,6 +5,31 @@ All notable changes to the XDL project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2025-12-30
+
+### Added
+- **User-Defined Procedures (PRO/ENDPRO)** - Major language feature!
+  - Full parser support for PRO/ENDPRO blocks
+  - Accepts both `END` and `ENDPRO` as terminator (IDL compatible)
+  - Positional and keyword arguments
+  - Procedure storage in Context with scoped execution
+- **User-Defined Functions (FUNCTION/ENDFUNCTION)** - Major language feature!
+  - Full parser support for FUNCTION/ENDFUNCTION blocks
+  - Accepts both `END` and `ENDFUNCTION` as terminator
+  - RETURN statement with optional value (RETURN, expr)
+  - Nested function calls in expressions work correctly
+- **RETURN Statement Enhancement**
+  - Now supports IDL syntax: `RETURN, value` (comma is optional)
+
+### Fixed
+- Lexer now preserves newlines as tokens (critical for statement separation)
+- Parser handles newlines correctly in IF/ENDIF and FOR/ENDFOR blocks
+- Expression evaluation correctly resolves nested user-defined function calls
+
+### Changed
+- IDL/GDL compatibility increased from ~82% to ~85%
+- Updated documentation to reflect new capabilities
+
 ## [0.1.5] - 2025-12-30
 
 ### Added

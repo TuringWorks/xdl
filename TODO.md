@@ -21,11 +21,10 @@ This document tracks remaining IDL/GDL features that need to be implemented in X
 
 ---
 
-## 🔴 CRITICAL Priority
+## ✅ Recently Implemented (Critical Features)
 
-### 1. User-Defined Procedures (PRO/ENDPRO)
-**Status**: Not implemented - Most critical missing feature
-**Effort**: High
+### 1. User-Defined Procedures (PRO/ENDPRO) ✅
+**Status**: IMPLEMENTED (2025-12-30)
 **Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
 
 IDL syntax:
@@ -36,17 +35,36 @@ PRO my_procedure, arg1, arg2, KEYWORD=keyword
 END
 ```
 
-**Tasks**:
-- [ ] Add AST node: `Statement::Procedure`
-- [ ] Implement parser for PRO/ENDPRO blocks
-- [ ] Implement procedure storage in Context
-- [ ] Implement procedure call evaluation
-- [ ] Support keyword arguments in procedures
-- [ ] Add tests
+**Completed**:
+- [x] Parser for PRO/ENDPRO blocks (accepts both END and ENDPRO)
+- [x] Procedure storage in Context
+- [x] Procedure call evaluation
+- [x] Positional and keyword arguments
+- [x] Tests in examples/tests/pro_endpro_test.xdl
 
-**Impact**: Cannot define reusable procedures - major limitation for real IDL/GDL code
+### 2. User-Defined Functions (FUNCTION/ENDFUNCTION) ✅
+**Status**: IMPLEMENTED (2025-12-30)
+**Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
 
-### 2. GOTO Statements
+IDL syntax:
+```idl
+FUNCTION add_values, a, b
+  RETURN, a + b
+END
+```
+
+**Completed**:
+- [x] Parser for FUNCTION/ENDFUNCTION blocks
+- [x] Function storage in Context
+- [x] Function call evaluation with return values
+- [x] Nested function calls in expressions
+- [x] Tests in examples/tests/function_test.xdl
+
+---
+
+## 🔴 CRITICAL Priority
+
+### 3. GOTO Statements
 **Status**: Not implemented
 **Effort**: Medium
 **Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
@@ -67,7 +85,7 @@ label2:
 - [ ] Handle forward references
 - [ ] Add tests
 
-### 3. CASE/SWITCH Statements (Enhancement)
+### 4. CASE/SWITCH Statements (Enhancement)
 **Status**: Tokens exist, limited implementation
 **Effort**: Medium
 **Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`

@@ -50,7 +50,136 @@ impl Interpreter {
     }
 
     pub fn evaluate_expression(&mut self, expr: &Expression) -> XdlResult<XdlValue> {
-        self.evaluator.evaluate(expr, &mut self.context)
+        // Resolve all user-defined function calls in the expression tree
+        let resolved = self.resolve_user_functions(expr)?;
+        self.evaluator.evaluate(&resolved, &mut self.context)
+    }
+
+    /// Recursively resolve user-defined function calls in an expression
+    fn resolve_user_functions(&mut self, expr: &Expression) -> XdlResult<Expression> {
+        match expr {
+            Expression::FunctionCall {
+                name,
+                args,
+                keywords,
+                location,
+            } => {
+                // Check if this is a user-defined function
+                if let Some(func_def) = self.context.get_function(name).cloned() {
+                    // First resolve any nested user function calls in arguments
+                    let resolved_args: Vec<Expression> = args
+                        .iter()
+                        .map(|arg| self.resolve_user_functions(arg))
+                        .collect::<XdlResult<Vec<_>>>()?;
+
+                    // Call the user function and get the result
+                    let result = self.call_user_function(name, &resolved_args, keywords, &func_def)?;
+
+                    // Return the result as a literal expression
+                    Ok(Expression::Literal {
+                        value: result,
+                        location: location.clone(),
+                    })
+                } else {
+                    // Not a user-defined function - resolve arguments and return as-is
+                    let resolved_args: Vec<Expression> = args
+                        .iter()
+                        .map(|arg| self.resolve_user_functions(arg))
+                        .collect::<XdlResult<Vec<_>>>()?;
+
+                    Ok(Expression::FunctionCall {
+                        name: name.clone(),
+                        args: resolved_args,
+                        keywords: keywords.clone(),
+                        location: location.clone(),
+                    })
+                }
+            }
+            Expression::Binary {
+                op,
+                left,
+                right,
+                location,
+            } => {
+                let resolved_left = self.resolve_user_functions(left)?;
+                let resolved_right = self.resolve_user_functions(right)?;
+                Ok(Expression::Binary {
+                    op: *op,
+                    left: Box::new(resolved_left),
+                    right: Box::new(resolved_right),
+                    location: location.clone(),
+                })
+            }
+            Expression::Unary { op, expr, location } => {
+                let resolved = self.resolve_user_functions(expr)?;
+                Ok(Expression::Unary {
+                    op: *op,
+                    expr: Box::new(resolved),
+                    location: location.clone(),
+                })
+            }
+            Expression::Ternary {
+                condition,
+                if_true,
+                if_false,
+                location,
+            } => {
+                let resolved_cond = self.resolve_user_functions(condition)?;
+                let resolved_true = self.resolve_user_functions(if_true)?;
+                let resolved_false = self.resolve_user_functions(if_false)?;
+                Ok(Expression::Ternary {
+                    condition: Box::new(resolved_cond),
+                    if_true: Box::new(resolved_true),
+                    if_false: Box::new(resolved_false),
+                    location: location.clone(),
+                })
+            }
+            Expression::ArrayRef {
+                array,
+                indices,
+                location,
+            } => {
+                let resolved_array = self.resolve_user_functions(array)?;
+                // Note: indices might contain expressions too, but for simplicity we skip those
+                Ok(Expression::ArrayRef {
+                    array: Box::new(resolved_array),
+                    indices: indices.clone(),
+                    location: location.clone(),
+                })
+            }
+            Expression::ArrayDef { elements, location } => {
+                let resolved_elements: Vec<Expression> = elements
+                    .iter()
+                    .map(|e| self.resolve_user_functions(e))
+                    .collect::<XdlResult<Vec<_>>>()?;
+                Ok(Expression::ArrayDef {
+                    elements: resolved_elements,
+                    location: location.clone(),
+                })
+            }
+            Expression::MethodCall {
+                object,
+                method,
+                args,
+                keywords,
+                location,
+            } => {
+                let resolved_object = self.resolve_user_functions(object)?;
+                let resolved_args: Vec<Expression> = args
+                    .iter()
+                    .map(|arg| self.resolve_user_functions(arg))
+                    .collect::<XdlResult<Vec<_>>>()?;
+                Ok(Expression::MethodCall {
+                    object: Box::new(resolved_object),
+                    method: method.clone(),
+                    args: resolved_args,
+                    keywords: keywords.clone(),
+                    location: location.clone(),
+                })
+            }
+            // For other expression types, return as-is
+            _ => Ok(expr.clone()),
+        }
     }
 
     /// Get all variables from the interpreter's context
@@ -839,6 +968,79 @@ impl Interpreter {
         self.context.pop_scope()?;
 
         result
+    }
+
+    /// Call a user-defined function
+    fn call_user_function(
+        &mut self,
+        name: &str,
+        args: &[Expression],
+        keywords: &[xdl_parser::Keyword],
+        func_def: &context::FunctionDef,
+    ) -> XdlResult<XdlValue> {
+        // Evaluate arguments in current scope
+        let mut arg_values = Vec::new();
+        for arg in args {
+            arg_values.push(self.evaluate_expression(arg)?);
+        }
+
+        // Evaluate keyword arguments
+        let mut keyword_map = HashMap::new();
+        for keyword in keywords {
+            if let Some(value_expr) = &keyword.value {
+                let value = self.evaluate_expression(value_expr)?;
+                keyword_map.insert(keyword.name.to_uppercase(), value);
+            }
+        }
+
+        // Push a new scope for the function execution
+        self.context.push_scope();
+
+        // Bind positional parameters to arguments
+        for (i, param) in func_def.params.iter().enumerate() {
+            if i < arg_values.len() {
+                self.context
+                    .set_variable(param.name.clone(), arg_values[i].clone());
+            } else if !param.optional {
+                self.context.pop_scope()?;
+                return Err(XdlError::RuntimeError(format!(
+                    "Missing required parameter '{}' for function '{}'",
+                    param.name, name
+                )));
+            }
+        }
+
+        // Bind keyword parameters
+        for keyword_decl in &func_def.keywords {
+            let key = keyword_decl.name.clone();
+            let value_opt = keyword_map
+                .get(&key)
+                .or_else(|| keyword_map.get(&key.to_uppercase()));
+            if let Some(value) = value_opt {
+                self.context.set_variable(key, value.clone());
+            }
+        }
+
+        // Execute function body and capture return value
+        let mut result = XdlValue::Undefined;
+        for stmt in &func_def.body {
+            match self.execute_statement(stmt) {
+                Ok(()) => continue,
+                Err(XdlError::Return(val)) => {
+                    result = val;
+                    break;
+                }
+                Err(e) => {
+                    self.context.pop_scope()?;
+                    return Err(e);
+                }
+            }
+        }
+
+        // Pop the function scope
+        self.context.pop_scope()?;
+
+        Ok(result)
     }
 
     /// Get a reference to the context (for testing/debugging)

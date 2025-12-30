@@ -48,9 +48,11 @@ The project is structured as a Cargo workspace with the following crates:
 - Variables and expressions
 - Control flow: IF/THEN/ELSE, FOR, WHILE, REPEAT, FOREACH, BREAK, CONTINUE, RETURN
 - Built-in function calls (360+ functions)
+- **User-defined procedures (PRO/ENDPRO)** ✅ NEW
+- **User-defined functions (FUNCTION/ENDFUNCTION)** ✅ NEW
 - Array operations and indexing (multi-dimensional arrays)
 - Structure definitions
-- **Not yet supported**: User-defined procedures (PRO/ENDPRO), GOTO/labels
+- **Not yet supported**: GOTO/labels
 
 ### Built-in Functions (360+ functions implemented)
 - **Mathematical functions**: SIN, COS, TAN, SINH, COSH, TANH, EXP, ALOG, SQRT, FFT, etc.
@@ -82,15 +84,14 @@ The project is structured as a Cargo workspace with the following crates:
 While XDL provides substantial functionality, the following features are not yet fully implemented:
 
 ### Language Features
-- **User-defined procedures**: PRO/ENDPRO syntax is not yet supported (this is the most critical missing feature)
 - **GOTO statements**: Label-based control flow is not implemented
 - **Complex numbers**: Partial support with some type conversion issues
 - **Advanced array indexing**: Some edge cases in multi-dimensional array slicing
 
 ### Compatibility
-- **IDL/GDL compatibility**: Approximately 82% compatible with common IDL/GDL features
+- **IDL/GDL compatibility**: Approximately 85% compatible with common IDL/GDL features
 - **MATLAB transpilation**: Works for basic to moderate complexity (28/28 tests passing)
-- **Key gaps**: PRO/ENDPRO procedures, GOTO statements, scientific data formats (FITS, HDF5, NetCDF)
+- **Key gaps**: GOTO statements, scientific data formats (FITS, HDF5, NetCDF)
 
 ### Testing & Quality
 - **Test runner**: `xdl test` command is a stub (not yet implemented)
@@ -341,10 +342,11 @@ Contributions are welcome! Please:
 - [x] Interactive chart viewers
 
 ### Phase 5: Compatibility & Optimization 🚧 **(Current Focus)**
-- [x] IDL/GDL compatibility layer (60-70% compatible)
+- [x] IDL/GDL compatibility layer (85% compatible)
 - [x] Legacy code migration tools
 - [x] Documentation and examples (150+ examples)
-- [ ] User-defined procedures (PRO/ENDPRO) **critical missing feature**
+- [x] User-defined procedures (PRO/ENDPRO) ✅
+- [x] User-defined functions (FUNCTION/ENDFUNCTION) ✅
 - [ ] Complete complex number support
 - [ ] GOTO and label support
 - [ ] Performance optimization
@@ -381,6 +383,6 @@ XDL is a functional beta implementation with substantial language support and ad
 - **Multiple interfaces**: CLI/REPL, GUI (egui), web-based viewers
 - **150+ examples**: Demonstrating features across basics, ML, visualization, and scientific computing
 
-**Compatibility**: Approximately **82% IDL/GDL compatible** with core features working well. See Known Limitations for missing features.
+**Compatibility**: Approximately **85% IDL/GDL compatible** with core features working well, including user-defined procedures (PRO/ENDPRO) and functions (FUNCTION/ENDFUNCTION). See Known Limitations for remaining gaps.
 
-Active development continues on completing user-defined procedures, improving edge case handling, and performance optimization. Contributions and feedback are welcome!
+Active development continues on improving edge case handling and performance optimization. Contributions and feedback are welcome!

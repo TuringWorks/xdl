@@ -1,0 +1,29 @@
+; Test user-defined procedures (PRO/ENDPRO)
+; This is the most critical missing feature for IDL compatibility
+
+; Simple procedure with no arguments
+PRO hello_world
+  PRINT, "Hello from procedure!"
+END
+
+; Procedure with positional arguments
+PRO greet, name
+  PRINT, "Hello, ", name
+END
+
+; Procedure with multiple arguments
+PRO add_numbers, a, b
+  result = a + b
+  PRINT, "Sum: ", result
+END
+
+; Test calling the procedures
+PRINT, "=== Testing PRO/ENDPRO ==="
+
+hello_world
+
+greet, "XDL User"
+
+add_numbers, 5, 3
+
+PRINT, "=== Tests Complete ==="

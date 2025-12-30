@@ -3,12 +3,18 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1},
-    character::complete::{char, digit1, multispace0, none_of},
+    character::complete::{char, digit1, none_of},
     combinator::{map, map_res, opt, recognize, value},
     multi::many0,
     sequence::{delimited, pair, preceded},
     IResult,
 };
+
+/// Skip whitespace but NOT newlines (unlike multispace0)
+/// This is critical for procedure call detection which relies on newline tokens
+fn ws0(input: &str) -> IResult<&str, &str> {
+    take_while(|c: char| c == ' ' || c == '\t' || c == '\r')(input)
+}
 use xdl_core::XdlResult;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -288,7 +294,7 @@ fn parse_delimiter(input: &str) -> ParseResult<'_, Token> {
 // Parse a single token
 fn parse_token(input: &str) -> ParseResult<'_, Token> {
     preceded(
-        multispace0,
+        ws0, // Use ws0 instead of multispace0 to preserve newlines as tokens
         alt((
             parse_comment,
             parse_string,
