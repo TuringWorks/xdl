@@ -106,6 +106,10 @@ pub use error::{GpuError, Result};
 pub use ops::{AcceleratedOps, GpuOps};
 pub use stats::{ExecutionStats, OpType, StatsReport, GLOBAL_STATS};
 
+// Re-export MLX for direct use (highest performance, single-threaded)
+#[cfg(all(target_os = "macos", feature = "mlx"))]
+pub use mlx::MLXOps;
+
 use std::sync::Arc;
 
 /// GPU compute context that automatically selects the best available backend
@@ -126,13 +130,14 @@ impl GpuContext {
 
         match backend {
             // Apple backends
+            // Note: MLX is available via mlx::MLXOps directly, but doesn't implement
+            // GpuDevice because MLX arrays are not thread-safe. Use MLXOps directly
+            // for single-threaded high-performance operations.
             #[cfg(all(target_os = "macos", feature = "mlx"))]
             GpuBackend::MLX => {
-                let device = mlx::MLXDevice::new()?;
-                Ok(Self {
-                    device: Arc::new(device),
-                    backend_name: "Apple MLX".to_string(),
-                })
+                // MLX is available but must be used directly via mlx::MLXOps
+                // Fall through to Metal for GpuContext
+                return Self::with_preference(Some(GpuBackend::Metal));
             }
 
             #[cfg(target_os = "macos")]
@@ -247,16 +252,14 @@ impl GpuContext {
 
     /// Get the default backend for the current platform
     /// Priority order:
-    /// - macOS: MLX > MPS > Metal > CoreML
+    /// - macOS: MPS > Metal > CoreML (MLX available via mlx::MLXOps directly)
     /// - Windows: cuDNN > CUDA > DirectML > DirectX12
     /// - Linux: cuDNN > CUDA > ROCm > OpenCL
     #[cfg(target_os = "macos")]
     fn default_backend() -> GpuBackend {
-        // Prefer MLX for unified memory and comprehensive operations on Apple Silicon
-        #[cfg(feature = "mlx")]
-        if mlx::MLXDevice::is_available() {
-            return GpuBackend::MLX;
-        }
+        // Note: MLX is the fastest backend but doesn't implement GpuDevice
+        // (not thread-safe). Use mlx::MLXOps directly for best performance.
+        // For GpuContext, we default to Metal/MPS which are thread-safe.
 
         // MPS for optimized operations on Apple Silicon
         #[cfg(feature = "mps")]
