@@ -521,6 +521,607 @@ pub fn lusol(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
+/// LA_EIGENVEC - Compute eigenvectors of a symmetric matrix
+/// LA_EIGENVEC(matrix) returns eigenvectors as columns
+pub fn la_eigenvec(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "LA_EIGENVEC: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "LA_EIGENVEC: Expected square matrix".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+    let matrix = DMatrix::from_row_slice(n, n, &data);
+
+    // Compute eigendecomposition
+    let eigen = matrix.symmetric_eigen();
+    let eigenvectors: Vec<f64> = eigen.eigenvectors.iter().copied().collect();
+
+    Ok(XdlValue::MultiDimArray {
+        data: eigenvectors,
+        shape,
+    })
+}
+
+/// LA_LINEAR_EQUATION - Solve a system of linear equations
+/// LA_LINEAR_EQUATION(A, b) solves A*x = b
+pub fn la_linear_equation(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "LA_LINEAR_EQUATION: Expected matrix A and vector b".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        XdlValue::Array(arr) => {
+            let n = (arr.len() as f64).sqrt() as usize;
+            if n * n != arr.len() {
+                return Err(XdlError::DimensionError(
+                    "LA_LINEAR_EQUATION: Matrix dimensions invalid".to_string(),
+                ));
+            }
+            (arr.clone(), vec![n, n])
+        }
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let b = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "LA_LINEAR_EQUATION: Expected square matrix".to_string(),
+        ));
+    }
+
+    if shape[0] != b.len() {
+        return Err(XdlError::DimensionError(
+            "LA_LINEAR_EQUATION: Matrix rows must match vector length".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+    let matrix = DMatrix::from_row_slice(n, n, &data);
+    let b_vec = nalgebra::DVector::from_vec(b);
+
+    // Solve using LU decomposition
+    let lu = matrix.lu();
+    match lu.solve(&b_vec) {
+        Some(x) => {
+            let result: Vec<f64> = x.iter().copied().collect();
+            Ok(XdlValue::Array(result))
+        }
+        None => Err(XdlError::RuntimeError(
+            "LA_LINEAR_EQUATION: System is singular".to_string(),
+        )),
+    }
+}
+
+/// LA_LEAST_SQUARES - Solve overdetermined linear system
+/// LA_LEAST_SQUARES(A, b) finds x that minimizes ||A*x - b||
+pub fn la_least_squares(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "LA_LEAST_SQUARES: Expected matrix A and vector b".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let b = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "LA_LEAST_SQUARES: Expected 2D matrix".to_string(),
+        ));
+    }
+
+    let m = shape[0];
+    let n = shape[1];
+    let matrix = DMatrix::from_row_slice(m, n, &data);
+    let b_vec = nalgebra::DVector::from_vec(b);
+
+    // Solve using SVD for least squares
+    let svd = matrix.svd(true, true);
+    match svd.solve(&b_vec, 1e-10) {
+        Ok(x) => {
+            let result: Vec<f64> = x.iter().copied().collect();
+            Ok(XdlValue::Array(result))
+        }
+        Err(_) => Err(XdlError::RuntimeError(
+            "LA_LEAST_SQUARES: Could not solve system".to_string(),
+        )),
+    }
+}
+
+/// LA_CHOLESKY - Cholesky decomposition for positive-definite matrices
+/// LA_CHOLESKY(matrix) returns lower triangular L such that A = L*L^T
+pub fn la_cholesky(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "LA_CHOLESKY: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "LA_CHOLESKY: Expected square matrix".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+    let matrix = DMatrix::from_row_slice(n, n, &data);
+
+    // Compute Cholesky decomposition
+    match matrix.cholesky() {
+        Some(chol) => {
+            let l = chol.l();
+            let result_data: Vec<f64> = l.iter().copied().collect();
+            Ok(XdlValue::MultiDimArray {
+                data: result_data,
+                shape,
+            })
+        }
+        None => Err(XdlError::RuntimeError(
+            "LA_CHOLESKY: Matrix is not positive definite".to_string(),
+        )),
+    }
+}
+
+/// LA_TRIDC - Tridiagonal decomposition
+/// LA_TRIDC(matrix) returns tridiagonal form
+pub fn la_tridc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "LA_TRIDC: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "LA_TRIDC: Expected square matrix".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+
+    // Extract tridiagonal elements
+    // Main diagonal
+    let mut diag = Vec::with_capacity(n);
+    // Sub-diagonal
+    let mut sub = Vec::with_capacity(n - 1);
+    // Super-diagonal
+    let mut sup = Vec::with_capacity(n - 1);
+
+    for i in 0..n {
+        diag.push(data[i * n + i]);
+        if i < n - 1 {
+            sub.push(data[(i + 1) * n + i]);
+            sup.push(data[i * n + i + 1]);
+        }
+    }
+
+    // Return as nested array: [diagonal, sub-diagonal, super-diagonal]
+    Ok(XdlValue::NestedArray(vec![
+        XdlValue::Array(diag),
+        XdlValue::Array(sub),
+        XdlValue::Array(sup),
+    ]))
+}
+
+/// QR - QR decomposition
+/// QR(matrix) returns [Q, R] where A = Q*R
+pub fn qr(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QR: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "QR: Expected 2D matrix".to_string(),
+        ));
+    }
+
+    let m = shape[0];
+    let n = shape[1];
+    let matrix = DMatrix::from_row_slice(m, n, &data);
+
+    // Compute QR decomposition
+    let qr = matrix.qr();
+    let q = qr.q();
+    let r = qr.r();
+
+    let q_data: Vec<f64> = q.iter().copied().collect();
+    let r_data: Vec<f64> = r.iter().copied().collect();
+
+    Ok(XdlValue::NestedArray(vec![
+        XdlValue::MultiDimArray {
+            data: q_data,
+            shape: vec![m, m],
+        },
+        XdlValue::MultiDimArray {
+            data: r_data,
+            shape: vec![m, n],
+        },
+    ]))
+}
+
+/// RANK - Compute matrix rank
+/// RANK(matrix [, tolerance])
+pub fn matrix_rank(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "RANK: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let tolerance = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::Double(v) => *v,
+            XdlValue::Float(v) => *v as f64,
+            _ => 1e-10,
+        }
+    } else {
+        1e-10
+    };
+
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "RANK: Expected 2D matrix".to_string(),
+        ));
+    }
+
+    let m = shape[0];
+    let n = shape[1];
+    let matrix = DMatrix::from_row_slice(m, n, &data);
+
+    // Compute rank via SVD
+    let svd = matrix.svd(false, false);
+    let rank = svd.singular_values.iter().filter(|&&s| s > tolerance).count();
+
+    Ok(XdlValue::Long(rank as i32))
+}
+
+/// CRAMER - Solve linear system using Cramer's rule
+/// CRAMER(A, b) solves A*x = b using determinants
+pub fn cramer(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "CRAMER: Expected matrix A and vector b".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let b = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 || shape[0] != shape[1] {
+        return Err(XdlError::DimensionError(
+            "CRAMER: Expected square matrix".to_string(),
+        ));
+    }
+
+    let n = shape[0];
+    if n != b.len() {
+        return Err(XdlError::DimensionError(
+            "CRAMER: Matrix size must match vector length".to_string(),
+        ));
+    }
+
+    let matrix = DMatrix::from_row_slice(n, n, &data);
+    let det_a = matrix.determinant();
+
+    if det_a.abs() < 1e-15 {
+        return Err(XdlError::RuntimeError(
+            "CRAMER: Matrix is singular".to_string(),
+        ));
+    }
+
+    let mut result = Vec::with_capacity(n);
+
+    for i in 0..n {
+        // Replace i-th column with b
+        let mut modified = data.clone();
+        for j in 0..n {
+            modified[j * n + i] = b[j];
+        }
+
+        let modified_matrix = DMatrix::from_row_slice(n, n, &modified);
+        let det_i = modified_matrix.determinant();
+        result.push(det_i / det_a);
+    }
+
+    Ok(XdlValue::Array(result))
+}
+
+/// MATRIX_MULTIPLY - Matrix multiplication
+/// MATRIX_MULTIPLY(A, B) or A ## B
+pub fn matrix_multiply(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "MATRIX_MULTIPLY: Expected two matrices".to_string(),
+        ));
+    }
+
+    let (data_a, shape_a) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        XdlValue::Array(arr) => {
+            // Treat as column vector
+            (arr.clone(), vec![arr.len(), 1])
+        }
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let (data_b, shape_b) = match &args[1] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        XdlValue::Array(arr) => {
+            // Treat as row vector
+            (arr.clone(), vec![1, arr.len()])
+        }
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if shape_a.len() != 2 || shape_b.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "MATRIX_MULTIPLY: Expected 2D matrices".to_string(),
+        ));
+    }
+
+    if shape_a[1] != shape_b[0] {
+        return Err(XdlError::DimensionError(format!(
+            "MATRIX_MULTIPLY: Incompatible dimensions: {}x{} and {}x{}",
+            shape_a[0], shape_a[1], shape_b[0], shape_b[1]
+        )));
+    }
+
+    let m = shape_a[0];
+    let k = shape_a[1];
+    let n = shape_b[1];
+
+    let a = DMatrix::from_row_slice(m, k, &data_a);
+    let b = DMatrix::from_row_slice(k, n, &data_b);
+
+    let c = a * b;
+    let result_data: Vec<f64> = c.iter().copied().collect();
+
+    Ok(XdlValue::MultiDimArray {
+        data: result_data,
+        shape: vec![m, n],
+    })
+}
+
+/// COND - Matrix condition number
+/// COND(matrix [, norm]) computes the condition number
+pub fn cond(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "COND: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "COND: Expected 2D matrix".to_string(),
+        ));
+    }
+
+    let m = shape[0];
+    let n = shape[1];
+    let matrix = DMatrix::from_row_slice(m, n, &data);
+
+    // Compute condition number via SVD
+    let svd = matrix.svd(false, false);
+    let singular_values: Vec<f64> = svd.singular_values.iter().copied().collect();
+
+    if singular_values.is_empty() {
+        return Ok(XdlValue::Double(f64::INFINITY));
+    }
+
+    let max_sv = singular_values
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
+    let min_sv = singular_values
+        .iter()
+        .copied()
+        .fold(f64::INFINITY, f64::min);
+
+    if min_sv < 1e-15 {
+        Ok(XdlValue::Double(f64::INFINITY))
+    } else {
+        Ok(XdlValue::Double(max_sv / min_sv))
+    }
+}
+
+/// PINV - Moore-Penrose pseudoinverse
+/// PINV(matrix [, tolerance])
+pub fn pinv(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "PINV: Expected matrix argument".to_string(),
+        ));
+    }
+
+    let (data, shape) = match &args[0] {
+        XdlValue::MultiDimArray { data, shape } => (data.clone(), shape.clone()),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "matrix".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let tolerance = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::Double(v) => *v,
+            XdlValue::Float(v) => *v as f64,
+            _ => 1e-10,
+        }
+    } else {
+        1e-10
+    };
+
+    if shape.len() != 2 {
+        return Err(XdlError::DimensionError(
+            "PINV: Expected 2D matrix".to_string(),
+        ));
+    }
+
+    let m = shape[0];
+    let n = shape[1];
+    let matrix = DMatrix::from_row_slice(m, n, &data);
+
+    // Compute pseudoinverse via SVD
+    let svd = matrix.svd(true, true);
+
+    // Get U, S, V^T
+    let u = svd.u.unwrap();
+    let v_t = svd.v_t.unwrap();
+    let singular_values = &svd.singular_values;
+
+    // Compute S^+
+    let mut s_plus = DMatrix::zeros(n, m);
+    for i in 0..singular_values.len().min(n).min(m) {
+        let s = singular_values[i];
+        if s > tolerance {
+            s_plus[(i, i)] = 1.0 / s;
+        }
+    }
+
+    // Pseudoinverse = V * S^+ * U^T
+    let pinv_matrix = v_t.transpose() * s_plus * u.transpose();
+    let result_data: Vec<f64> = pinv_matrix.iter().copied().collect();
+
+    Ok(XdlValue::MultiDimArray {
+        data: result_data,
+        shape: vec![n, m],
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

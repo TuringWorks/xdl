@@ -807,6 +807,617 @@ pub fn bilinear(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Array(result))
 }
 
+// ============================================================
+// Additional Statistical Functions (Phase 7 Completion)
+// ============================================================
+
+/// R_CORRELATE - Spearman rank correlation coefficient
+/// R_CORRELATE(x, y)
+pub fn r_correlate(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "R_CORRELATE: Expected 2 arguments (x, y)".to_string(),
+        ));
+    }
+
+    let x = extract_array(&args[0])?;
+    let y = extract_array(&args[1])?;
+
+    if x.len() != y.len() {
+        return Err(XdlError::InvalidArgument(
+            "R_CORRELATE: x and y arrays must have same length".to_string(),
+        ));
+    }
+
+    let n = x.len();
+    if n < 2 {
+        return Err(XdlError::InvalidArgument(
+            "R_CORRELATE: Need at least 2 points".to_string(),
+        ));
+    }
+
+    // Compute ranks for x
+    let mut x_indexed: Vec<(usize, f64)> = x.iter().enumerate().map(|(i, &v)| (i, v)).collect();
+    x_indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    let mut rank_x = vec![0.0; n];
+    for (rank, (idx, _)) in x_indexed.iter().enumerate() {
+        rank_x[*idx] = (rank + 1) as f64;
+    }
+
+    // Compute ranks for y
+    let mut y_indexed: Vec<(usize, f64)> = y.iter().enumerate().map(|(i, &v)| (i, v)).collect();
+    y_indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    let mut rank_y = vec![0.0; n];
+    for (rank, (idx, _)) in y_indexed.iter().enumerate() {
+        rank_y[*idx] = (rank + 1) as f64;
+    }
+
+    // Compute Spearman correlation using ranked data
+    // rho = 1 - (6 * sum(d^2)) / (n * (n^2 - 1))
+    let d_squared_sum: f64 = rank_x
+        .iter()
+        .zip(rank_y.iter())
+        .map(|(rx, ry)| (rx - ry).powi(2))
+        .sum();
+
+    let rho = 1.0 - (6.0 * d_squared_sum) / (n as f64 * ((n * n) as f64 - 1.0));
+
+    Ok(XdlValue::Double(rho))
+}
+
+/// LADFIT - Least Absolute Deviation (L1) linear fit
+/// LADFIT(x, y) - Robust linear regression
+/// Returns [intercept, slope]
+pub fn ladfit(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "LADFIT: Expected 2 arguments (x, y)".to_string(),
+        ));
+    }
+
+    let x = extract_array(&args[0])?;
+    let y = extract_array(&args[1])?;
+
+    if x.len() != y.len() {
+        return Err(XdlError::InvalidArgument(
+            "LADFIT: x and y arrays must have same length".to_string(),
+        ));
+    }
+
+    let n = x.len();
+    if n < 2 {
+        return Err(XdlError::InvalidArgument(
+            "LADFIT: Need at least 2 points".to_string(),
+        ));
+    }
+
+    // Use iterative weighted least squares (IRLS) for L1 regression
+    // Start with OLS solution
+    let sum_x: f64 = x.iter().sum();
+    let sum_y: f64 = y.iter().sum();
+    let sum_xy: f64 = x.iter().zip(y.iter()).map(|(xi, yi)| xi * yi).sum();
+    let sum_x2: f64 = x.iter().map(|xi| xi * xi).sum();
+
+    let n_f = n as f64;
+    let denom = n_f * sum_x2 - sum_x * sum_x;
+
+    let mut slope = if denom.abs() > 1e-15 {
+        (n_f * sum_xy - sum_x * sum_y) / denom
+    } else {
+        0.0
+    };
+    let mut intercept = (sum_y - slope * sum_x) / n_f;
+
+    // Iteratively refine using weighted least squares
+    let max_iter = 50;
+    let tol = 1e-8;
+
+    for _ in 0..max_iter {
+        // Compute residuals
+        let residuals: Vec<f64> = x
+            .iter()
+            .zip(y.iter())
+            .map(|(xi, yi)| yi - (intercept + slope * xi))
+            .collect();
+
+        // Compute weights (1 / |residual|, with small epsilon to avoid division by zero)
+        let weights: Vec<f64> = residuals
+            .iter()
+            .map(|r| 1.0 / (r.abs() + 1e-10))
+            .collect();
+
+        let total_weight: f64 = weights.iter().sum();
+
+        // Weighted sums
+        let w_sum_x: f64 = x.iter().zip(weights.iter()).map(|(xi, wi)| xi * wi).sum();
+        let w_sum_y: f64 = y.iter().zip(weights.iter()).map(|(yi, wi)| yi * wi).sum();
+        let w_sum_xy: f64 = x
+            .iter()
+            .zip(y.iter())
+            .zip(weights.iter())
+            .map(|((xi, yi), wi)| xi * yi * wi)
+            .sum();
+        let w_sum_x2: f64 = x
+            .iter()
+            .zip(weights.iter())
+            .map(|(xi, wi)| xi * xi * wi)
+            .sum();
+
+        let w_denom = total_weight * w_sum_x2 - w_sum_x * w_sum_x;
+        let new_slope = if w_denom.abs() > 1e-15 {
+            (total_weight * w_sum_xy - w_sum_x * w_sum_y) / w_denom
+        } else {
+            slope
+        };
+        let new_intercept = (w_sum_y - new_slope * w_sum_x) / total_weight;
+
+        // Check convergence
+        if (new_slope - slope).abs() < tol && (new_intercept - intercept).abs() < tol {
+            break;
+        }
+
+        slope = new_slope;
+        intercept = new_intercept;
+    }
+
+    Ok(XdlValue::Array(vec![intercept, slope]))
+}
+
+/// SVDFIT - Fitting using Singular Value Decomposition
+/// SVDFIT(x, y, m) - Fit polynomial of degree m-1 using SVD
+/// Returns array of coefficients
+pub fn svdfit(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "SVDFIT: Expected 3 arguments (x, y, m)".to_string(),
+        ));
+    }
+
+    let x = extract_array(&args[0])?;
+    let y = extract_array(&args[1])?;
+    let m = match &args[2] {
+        XdlValue::Long(n) => *n as usize,
+        XdlValue::Int(n) => *n as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    if x.len() != y.len() {
+        return Err(XdlError::InvalidArgument(
+            "SVDFIT: x and y arrays must have same length".to_string(),
+        ));
+    }
+
+    let n = x.len();
+    if n < m {
+        return Err(XdlError::InvalidArgument(
+            "SVDFIT: Need more data points than basis functions".to_string(),
+        ));
+    }
+
+    // Build design matrix A (n x m)
+    // Using polynomial basis: 1, x, x^2, ..., x^(m-1)
+    let mut a_flat = vec![0.0; n * m];
+    for i in 0..n {
+        for j in 0..m {
+            a_flat[i * m + j] = x[i].powi(j as i32);
+        }
+    }
+
+    // Perform SVD using Jacobi algorithm (simplified)
+    // A = U * S * V^T
+    // Solution: x = V * S^-1 * U^T * b
+
+    // For simplicity, use normal equations with regularization
+    // (A^T * A + lambda * I) * c = A^T * y
+
+    let lambda = 1e-10; // Small regularization
+
+    // Compute A^T * A
+    let mut ata = vec![vec![0.0; m]; m];
+    for i in 0..m {
+        for j in 0..m {
+            for k in 0..n {
+                ata[i][j] += a_flat[k * m + i] * a_flat[k * m + j];
+            }
+            if i == j {
+                ata[i][j] += lambda; // Add regularization
+            }
+        }
+    }
+
+    // Compute A^T * y
+    let mut aty = vec![0.0; m];
+    for i in 0..m {
+        for k in 0..n {
+            aty[i] += a_flat[k * m + i] * y[k];
+        }
+    }
+
+    // Solve using Gaussian elimination
+    let coeffs = solve_linear_system(&ata, &aty)?;
+
+    Ok(XdlValue::Array(coeffs))
+}
+
+/// CURVEFIT - Non-linear curve fitting (Levenberg-Marquardt)
+/// CURVEFIT(x, y, params, function_name)
+/// For now, implements Gaussian fitting: y = a[0] * exp(-((x - a[1])/a[2])^2)
+pub fn curvefit(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "CURVEFIT: Expected at least 3 arguments (x, y, initial_params)".to_string(),
+        ));
+    }
+
+    let x = extract_array(&args[0])?;
+    let y = extract_array(&args[1])?;
+    let mut params = extract_array(&args[2])?;
+
+    if x.len() != y.len() {
+        return Err(XdlError::InvalidArgument(
+            "CURVEFIT: x and y arrays must have same length".to_string(),
+        ));
+    }
+
+    // Ensure we have 3 parameters for Gaussian fit
+    while params.len() < 3 {
+        params.push(1.0);
+    }
+
+    // Gaussian model: f(x) = a[0] * exp(-((x - a[1])/a[2])^2)
+    let gaussian = |x: f64, a: &[f64]| -> f64 {
+        if a[2].abs() < 1e-15 {
+            return 0.0;
+        }
+        a[0] * (-(((x - a[1]) / a[2]).powi(2))).exp()
+    };
+
+    // Jacobian for Gaussian
+    let jacobian = |x: f64, a: &[f64]| -> Vec<f64> {
+        if a[2].abs() < 1e-15 {
+            return vec![0.0, 0.0, 0.0];
+        }
+        let z = (x - a[1]) / a[2];
+        let exp_term = (-z * z).exp();
+        vec![
+            exp_term,                              // df/da[0]
+            a[0] * exp_term * 2.0 * z / a[2],      // df/da[1]
+            a[0] * exp_term * 2.0 * z * z / a[2],  // df/da[2]
+        ]
+    };
+
+    // Levenberg-Marquardt optimization
+    let max_iter = 100;
+    let mut lambda = 0.001;
+    let n_params = params.len();
+
+    for _iter in 0..max_iter {
+        // Compute residuals and Jacobian
+        let mut residuals = Vec::with_capacity(x.len());
+        let mut jac_matrix = vec![vec![0.0; n_params]; x.len()];
+
+        for i in 0..x.len() {
+            residuals.push(y[i] - gaussian(x[i], &params));
+            let jac_row = jacobian(x[i], &params);
+            for j in 0..n_params {
+                jac_matrix[i][j] = jac_row[j];
+            }
+        }
+
+        // Compute J^T * J and J^T * r
+        let mut jtj = vec![vec![0.0; n_params]; n_params];
+        let mut jtr = vec![0.0; n_params];
+
+        for i in 0..n_params {
+            for j in 0..n_params {
+                for k in 0..x.len() {
+                    jtj[i][j] += jac_matrix[k][i] * jac_matrix[k][j];
+                }
+            }
+            for k in 0..x.len() {
+                jtr[i] += jac_matrix[k][i] * residuals[k];
+            }
+        }
+
+        // Add damping: (J^T*J + lambda*diag(J^T*J)) * delta = J^T * r
+        for i in 0..n_params {
+            jtj[i][i] *= 1.0 + lambda;
+        }
+
+        // Solve for delta
+        if let Ok(delta) = solve_linear_system(&jtj, &jtr) {
+            // Try new parameters
+            let new_params: Vec<f64> = params.iter().zip(delta.iter()).map(|(p, d)| p + d).collect();
+
+            // Compute new error
+            let old_error: f64 = residuals.iter().map(|r| r * r).sum();
+            let new_residuals: Vec<f64> = x
+                .iter()
+                .zip(y.iter())
+                .map(|(&xi, &yi)| yi - gaussian(xi, &new_params))
+                .collect();
+            let new_error: f64 = new_residuals.iter().map(|r| r * r).sum();
+
+            if new_error < old_error {
+                params = new_params;
+                lambda /= 10.0;
+
+                // Check convergence
+                let delta_norm: f64 = delta.iter().map(|d| d * d).sum::<f64>().sqrt();
+                if delta_norm < 1e-8 {
+                    break;
+                }
+            } else {
+                lambda *= 10.0;
+            }
+        } else {
+            lambda *= 10.0;
+        }
+
+        if lambda > 1e10 {
+            break; // Convergence failed
+        }
+    }
+
+    Ok(XdlValue::Array(params))
+}
+
+/// PERCENTILES - Calculate percentiles of data
+/// PERCENTILES(data, p) where p is percentile(s) from 0 to 100
+pub fn percentiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "PERCENTILES: Expected 2 arguments (data, percentile)".to_string(),
+        ));
+    }
+
+    let mut data = extract_array(&args[0])?;
+    if data.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "PERCENTILES: Data array is empty".to_string(),
+        ));
+    }
+
+    // Sort data
+    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let n = data.len();
+
+    // Get percentile values
+    let percentile_vals = extract_array(&args[1])?;
+
+    let mut results = Vec::with_capacity(percentile_vals.len());
+
+    for p in percentile_vals {
+        let p = p.clamp(0.0, 100.0);
+        let idx = (p / 100.0) * (n - 1) as f64;
+        let lower = idx.floor() as usize;
+        let upper = (lower + 1).min(n - 1);
+        let frac = idx - lower as f64;
+
+        let value = data[lower] * (1.0 - frac) + data[upper] * frac;
+        results.push(value);
+    }
+
+    if results.len() == 1 {
+        Ok(XdlValue::Double(results[0]))
+    } else {
+        Ok(XdlValue::Array(results))
+    }
+}
+
+/// ROBUST_MEAN - Compute mean with outlier rejection
+/// ROBUST_MEAN(data, sigma_clip)
+pub fn robust_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ROBUST_MEAN: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let data = extract_array(&args[0])?;
+    if data.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ROBUST_MEAN: Data array is empty".to_string(),
+        ));
+    }
+
+    let sigma_clip = if args.len() > 1 {
+        args[1].to_double().unwrap_or(3.0)
+    } else {
+        3.0 // Default 3-sigma clipping
+    };
+
+    // Iterative sigma-clipping
+    let mut filtered_data = data.clone();
+    let max_iter = 10;
+
+    for _ in 0..max_iter {
+        if filtered_data.is_empty() {
+            break;
+        }
+
+        let mean: f64 = filtered_data.iter().sum::<f64>() / filtered_data.len() as f64;
+        let variance: f64 = filtered_data.iter().map(|x| (x - mean).powi(2)).sum::<f64>()
+            / (filtered_data.len() - 1).max(1) as f64;
+        let std_dev = variance.sqrt();
+
+        let threshold = sigma_clip * std_dev;
+        let old_len = filtered_data.len();
+        filtered_data.retain(|&x| (x - mean).abs() <= threshold);
+
+        if filtered_data.len() == old_len {
+            break; // No more outliers removed
+        }
+    }
+
+    if filtered_data.is_empty() {
+        // Fall back to median if all points rejected
+        let mut sorted = data.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = sorted[sorted.len() / 2];
+        Ok(XdlValue::Double(median))
+    } else {
+        let mean: f64 = filtered_data.iter().sum::<f64>() / filtered_data.len() as f64;
+        Ok(XdlValue::Double(mean))
+    }
+}
+
+/// TRIMMED_MEAN - Mean with percentage of extreme values removed
+/// TRIMMED_MEAN(data, percent)
+pub fn trimmed_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "TRIMMED_MEAN: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let mut data = extract_array(&args[0])?;
+    if data.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "TRIMMED_MEAN: Data array is empty".to_string(),
+        ));
+    }
+
+    let percent = if args.len() > 1 {
+        args[1].to_double().unwrap_or(5.0).clamp(0.0, 49.0)
+    } else {
+        5.0 // Default 5% trimmed mean
+    };
+
+    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    let n = data.len();
+    let trim_count = ((percent / 100.0) * n as f64).ceil() as usize;
+
+    if 2 * trim_count >= n {
+        // Just return median
+        return Ok(XdlValue::Double(data[n / 2]));
+    }
+
+    let trimmed = &data[trim_count..n - trim_count];
+    let mean: f64 = trimmed.iter().sum::<f64>() / trimmed.len() as f64;
+
+    Ok(XdlValue::Double(mean))
+}
+
+/// RESISTANT_MEAN - Compute resistant mean using median-based estimate
+pub fn resistant_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "RESISTANT_MEAN: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let mut data = extract_array(&args[0])?;
+    if data.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "RESISTANT_MEAN: Data array is empty".to_string(),
+        ));
+    }
+
+    // Compute biweight mean (Tukey's biweight)
+    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let median = data[data.len() / 2];
+
+    // Compute MAD (median absolute deviation)
+    let mut abs_devs: Vec<f64> = data.iter().map(|x| (x - median).abs()).collect();
+    abs_devs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let mad = abs_devs[abs_devs.len() / 2];
+
+    if mad < 1e-15 {
+        return Ok(XdlValue::Double(median));
+    }
+
+    // Compute biweight mean
+    let c = 6.0; // Tuning constant
+    let mut sum_weights = 0.0;
+    let mut weighted_sum = 0.0;
+
+    for &x in &data {
+        let u = (x - median) / (c * mad);
+        if u.abs() < 1.0 {
+            let w = (1.0 - u * u).powi(2);
+            sum_weights += w;
+            weighted_sum += w * x;
+        }
+    }
+
+    let result = if sum_weights > 0.0 {
+        weighted_sum / sum_weights
+    } else {
+        median
+    };
+
+    Ok(XdlValue::Double(result))
+}
+
+/// RANDOM_POISSON - Generate Poisson distributed random numbers
+pub fn random_poisson(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "RANDOM_POISSON: Expected at least 1 argument (lambda)".to_string(),
+        ));
+    }
+
+    let lambda = args[0].to_double()?;
+    if lambda <= 0.0 {
+        return Err(XdlError::InvalidArgument(
+            "RANDOM_POISSON: lambda must be positive".to_string(),
+        ));
+    }
+
+    let n = if args.len() > 1 {
+        args[1].to_long()? as usize
+    } else {
+        1
+    };
+
+    let mut result = Vec::with_capacity(n);
+
+    // Use Knuth's algorithm for small lambda, or normal approximation for large lambda
+    // Simple deterministic seed for reproducibility
+    let mut seed: u64 = 12345;
+    let lcg = |s: &mut u64| -> f64 {
+        *s = s.wrapping_mul(6364136223846793005).wrapping_add(1);
+        (*s as f64) / (u64::MAX as f64)
+    };
+
+    for _ in 0..n {
+        let value: f64 = if lambda < 30.0 {
+            // Knuth's algorithm
+            let l = (-lambda).exp();
+            let mut k = 0i32;
+            let mut p = 1.0f64;
+            loop {
+                k += 1;
+                p *= lcg(&mut seed);
+                if p <= l {
+                    break;
+                }
+            }
+            (k - 1) as f64
+        } else {
+            // Normal approximation using Box-Muller transform
+            let u1: f64 = lcg(&mut seed);
+            let u2: f64 = lcg(&mut seed);
+            let z = ((-2.0f64 * u1.ln()).sqrt()) * (2.0 * std::f64::consts::PI * u2).cos();
+            (lambda + (lambda as f64).sqrt() * z).round().max(0.0)
+        };
+        result.push(value);
+    }
+
+    if result.len() == 1 {
+        Ok(XdlValue::Double(result[0]))
+    } else {
+        Ok(XdlValue::Array(result))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

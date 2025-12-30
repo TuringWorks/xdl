@@ -2187,3 +2187,534 @@ mod more_tests {
         assert!(cos(&args).is_err());
     }
 }
+
+// ============================================================================
+// Additional Mathematical Functions (Phase 6 Completion)
+// ============================================================================
+
+/// PRIME - Check if a number is prime, or return the N-th prime
+/// Usage: PRIME(n) - returns 1 if n is prime, 0 otherwise
+/// Usage: PRIME(n, /NTH) - returns the n-th prime number
+pub fn prime(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "PRIME: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    fn is_prime(n: u64) -> bool {
+        if n < 2 {
+            return false;
+        }
+        if n == 2 || n == 3 {
+            return true;
+        }
+        if n % 2 == 0 || n % 3 == 0 {
+            return false;
+        }
+        let mut i = 5;
+        while i * i <= n {
+            if n % i == 0 || n % (i + 2) == 0 {
+                return false;
+            }
+            i += 6;
+        }
+        true
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| if is_prime(x as u64) { 1.0 } else { 0.0 })
+            .collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| if is_prime(x as u64) { 1.0 } else { 0.0 })
+            .collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let n = input.to_long()? as u64;
+    Ok(XdlValue::Long(if is_prime(n) { 1 } else { 0 }))
+}
+
+/// PRIMES - Generate array of prime numbers up to N
+pub fn primes(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "PRIMES: Expected 1 argument (max_value)".to_string(),
+        ));
+    }
+
+    let max_val = args[0].to_long()? as usize;
+
+    // Sieve of Eratosthenes
+    if max_val < 2 {
+        return Ok(XdlValue::Array(vec![]));
+    }
+
+    let mut sieve = vec![true; max_val + 1];
+    sieve[0] = false;
+    sieve[1] = false;
+
+    let mut i = 2;
+    while i * i <= max_val {
+        if sieve[i] {
+            let mut j = i * i;
+            while j <= max_val {
+                sieve[j] = false;
+                j += i;
+            }
+        }
+        i += 1;
+    }
+
+    let primes: Vec<f64> = sieve
+        .iter()
+        .enumerate()
+        .filter_map(|(n, &is_prime)| if is_prime { Some(n as f64) } else { None })
+        .collect();
+
+    Ok(XdlValue::Array(primes))
+}
+
+/// BINOMIAL - Binomial coefficient C(n, k) = n! / (k! * (n-k)!)
+pub fn binomial(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "BINOMIAL: Expected 2 arguments (n, k)".to_string(),
+        ));
+    }
+
+    fn binom(n: i64, k: i64) -> f64 {
+        if k < 0 || k > n {
+            return 0.0;
+        }
+        if k == 0 || k == n {
+            return 1.0;
+        }
+        // Use symmetry
+        let k = if k > n - k { n - k } else { k };
+        let mut result = 1.0;
+        for i in 0..k {
+            result *= (n - i) as f64;
+            result /= (i + 1) as f64;
+        }
+        result
+    }
+
+    let n = args[0].to_long()? as i64;
+    let k = args[1].to_long()? as i64;
+
+    Ok(XdlValue::Double(binom(n, k)))
+}
+
+/// GCD - Greatest Common Divisor
+pub fn gcd(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "GCD: Expected 2 arguments".to_string(),
+        ));
+    }
+
+    fn gcd_impl(mut a: i64, mut b: i64) -> i64 {
+        a = a.abs();
+        b = b.abs();
+        while b != 0 {
+            let t = b;
+            b = a % b;
+            a = t;
+        }
+        a
+    }
+
+    let a = args[0].to_long()? as i64;
+    let b = args[1].to_long()? as i64;
+
+    Ok(XdlValue::Long(gcd_impl(a, b) as i32))
+}
+
+/// LCM - Least Common Multiple
+pub fn lcm(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "LCM: Expected 2 arguments".to_string(),
+        ));
+    }
+
+    fn gcd_impl(mut a: i64, mut b: i64) -> i64 {
+        a = a.abs();
+        b = b.abs();
+        while b != 0 {
+            let t = b;
+            b = a % b;
+            a = t;
+        }
+        a
+    }
+
+    let a = args[0].to_long()? as i64;
+    let b = args[1].to_long()? as i64;
+
+    if a == 0 || b == 0 {
+        return Ok(XdlValue::Long(0));
+    }
+
+    let result = (a.abs() / gcd_impl(a, b)) * b.abs();
+    Ok(XdlValue::Long(result as i32))
+}
+
+/// BETA - Beta function B(a, b) = Gamma(a) * Gamma(b) / Gamma(a + b)
+pub fn beta(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "BETA: Expected 2 arguments (a, b)".to_string(),
+        ));
+    }
+
+    let a = args[0].to_double()?;
+    let b = args[1].to_double()?;
+
+    // B(a, b) = exp(lngamma(a) + lngamma(b) - lngamma(a + b))
+    let result = (libm::lgamma(a) + libm::lgamma(b) - libm::lgamma(a + b)).exp();
+
+    Ok(XdlValue::Double(result))
+}
+
+/// DERIV - Numerical derivative using central differences
+/// Usage: DERIV(y [, x])
+/// If x is not provided, assumes unit spacing
+pub fn deriv(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "DERIV: Expected at least 1 argument (y array)".to_string(),
+        ));
+    }
+
+    let y = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, .. } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let n = y.len();
+    if n < 2 {
+        return Err(XdlError::InvalidArgument(
+            "DERIV: Array must have at least 2 elements".to_string(),
+        ));
+    }
+
+    // Get x values or use indices
+    let x: Vec<f64> = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::Array(arr) => arr.clone(),
+            XdlValue::MultiDimArray { data, .. } => data.clone(),
+            _ => (0..n).map(|i| i as f64).collect(),
+        }
+    } else {
+        (0..n).map(|i| i as f64).collect()
+    };
+
+    if x.len() != n {
+        return Err(XdlError::InvalidArgument(
+            "DERIV: x and y arrays must have same length".to_string(),
+        ));
+    }
+
+    // Compute derivative using central differences (forward/backward at ends)
+    let mut dy = vec![0.0; n];
+
+    // Forward difference at first point
+    dy[0] = (y[1] - y[0]) / (x[1] - x[0]);
+
+    // Central differences for interior points
+    for i in 1..n - 1 {
+        dy[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1]);
+    }
+
+    // Backward difference at last point
+    dy[n - 1] = (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]);
+
+    Ok(XdlValue::Array(dy))
+}
+
+/// INT_TABULATED - Numerical integration using trapezoidal rule
+/// Usage: INT_TABULATED(x, y)
+pub fn int_tabulated(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "INT_TABULATED: Expected 2 arguments (x, y)".to_string(),
+        ));
+    }
+
+    let x = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, .. } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let y = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, .. } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if x.len() != y.len() {
+        return Err(XdlError::InvalidArgument(
+            "INT_TABULATED: x and y arrays must have same length".to_string(),
+        ));
+    }
+
+    if x.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "INT_TABULATED: Arrays must have at least 2 elements".to_string(),
+        ));
+    }
+
+    // Trapezoidal rule: sum of (x[i+1] - x[i]) * (y[i+1] + y[i]) / 2
+    let mut integral = 0.0;
+    for i in 0..x.len() - 1 {
+        integral += (x[i + 1] - x[i]) * (y[i + 1] + y[i]) / 2.0;
+    }
+
+    Ok(XdlValue::Double(integral))
+}
+
+/// POLY - Polynomial evaluation
+/// Usage: POLY(x, coefficients)
+/// Evaluates polynomial: c[0] + c[1]*x + c[2]*x^2 + ...
+pub fn poly(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "POLY: Expected 2 arguments (x, coefficients)".to_string(),
+        ));
+    }
+
+    let coeffs = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, .. } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if coeffs.is_empty() {
+        return Ok(XdlValue::Double(0.0));
+    }
+
+    // Horner's method for polynomial evaluation
+    fn eval_poly(x: f64, coeffs: &[f64]) -> f64 {
+        let mut result = coeffs[coeffs.len() - 1];
+        for i in (0..coeffs.len() - 1).rev() {
+            result = result * x + coeffs[i];
+        }
+        result
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| eval_poly(x, &coeffs)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| eval_poly(x, &coeffs)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let x = input.to_double()?;
+    Ok(XdlValue::Double(eval_poly(x, &coeffs)))
+}
+
+/// PRODUCT - Compute product of array elements
+pub fn product(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "PRODUCT: Expected 1 argument".to_string(),
+        ));
+    }
+
+    match &args[0] {
+        XdlValue::Array(arr) => {
+            let prod: f64 = arr.iter().product();
+            Ok(XdlValue::Double(prod))
+        }
+        XdlValue::MultiDimArray { data, .. } => {
+            let prod: f64 = data.iter().product();
+            Ok(XdlValue::Double(prod))
+        }
+        _ => {
+            // Single value
+            Ok(args[0].clone())
+        }
+    }
+}
+
+/// POW - Power function (x^y)
+pub fn pow(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "POW: Expected 2 arguments (base, exponent)".to_string(),
+        ));
+    }
+
+    let base = &args[0];
+    let exp_val = args[1].to_double()?;
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = base {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::pow(x, exp_val)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = base {
+        let result: Vec<f64> = data.iter().map(|&x| libm::pow(x, exp_val)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let x = base.to_double()?;
+    Ok(XdlValue::Double(libm::pow(x, exp_val)))
+}
+
+/// ALOG2 - Base-2 logarithm
+pub fn alog2(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ALOG2: Expected 1 argument".to_string(),
+        ));
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| libm::log2(x)).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| libm::log2(x)).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let x = input.to_double()?;
+    if x <= 0.0 {
+        return Err(XdlError::MathError(
+            "ALOG2: Argument must be positive".to_string(),
+        ));
+    }
+    Ok(XdlValue::Double(libm::log2(x)))
+}
+
+/// FINITE - Test if values are finite (not NaN or Inf)
+pub fn finite(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FINITE: Expected 1 argument".to_string(),
+        ));
+    }
+
+    let input = &args[0];
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| if x.is_finite() { 1.0 } else { 0.0 })
+            .collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| if x.is_finite() { 1.0 } else { 0.0 })
+            .collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle scalar
+    let x = input.to_double()?;
+    Ok(XdlValue::Long(if x.is_finite() { 1 } else { 0 }))
+}
+
+/// CHECK_MATH - Check for math errors (NaN, Inf)
+pub fn check_math(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Ok(XdlValue::Long(0)); // No errors
+    }
+
+    let input = &args[0];
+
+    let has_error = match input {
+        XdlValue::Array(arr) => arr.iter().any(|&x| !x.is_finite()),
+        XdlValue::MultiDimArray { data, .. } => data.iter().any(|&x| !x.is_finite()),
+        _ => {
+            if let Ok(x) = input.to_double() {
+                !x.is_finite()
+            } else {
+                false
+            }
+        }
+    };
+
+    Ok(XdlValue::Long(if has_error { 1 } else { 0 }))
+}
+
+/// MACHAR - Machine characteristics (precision parameters)
+pub fn machar(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Return machine epsilon and other floating-point parameters
+    // as a structure-like array
+    let eps = f64::EPSILON;
+    let min_val = f64::MIN_POSITIVE;
+    let max_val = f64::MAX;
+    let mantissa_bits = 53.0; // IEEE 754 double
+
+    Ok(XdlValue::Array(vec![eps, min_val, max_val, mantissa_bits]))
+}

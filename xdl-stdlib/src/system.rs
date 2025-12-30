@@ -659,3 +659,361 @@ pub fn isa(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::Long(if matches { 1 } else { 0 }))
 }
+
+// ============================================================
+// Additional Time & Date Functions (Phase 14 Completion)
+// ============================================================
+
+/// WEEKDAY - Return day of week (0=Sunday, 6=Saturday)
+/// WEEKDAY(julian_day) or WEEKDAY(year, month, day)
+pub fn weekday(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WEEKDAY: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let julian_day = if args.len() >= 3 {
+        // Year, month, day provided
+        let year = args[0].to_long()? as i32;
+        let month = args[1].to_long()? as i32;
+        let day = args[2].to_long()? as i32;
+
+        // Calculate Julian day
+        let a = (14 - month) / 12;
+        let y = year + 4800 - a;
+        let m = month + 12 * a - 3;
+        day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045
+    } else {
+        args[0].to_long()? as i32
+    };
+
+    // Day of week from Julian day (0 = Sunday)
+    let dow = (julian_day + 1) % 7;
+
+    Ok(XdlValue::Long(dow))
+}
+
+/// BIN_DATE - Return date/time as binary array
+/// BIN_DATE([julian_time])
+pub fn bin_date(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let (year, month, day, hour, minute, second) = if args.is_empty() {
+        // Current date/time
+        let duration = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default();
+        let secs = duration.as_secs() as i64;
+
+        // Convert to date components (simplified)
+        let days = secs / 86400;
+        let secs_in_day = secs % 86400;
+        let hour = (secs_in_day / 3600) as i32;
+        let minute = ((secs_in_day % 3600) / 60) as i32;
+        let second = (secs_in_day % 60) as i32;
+
+        // Calculate date from days since epoch
+        let mut y = 1970;
+        let mut remaining_days = days as i32;
+
+        loop {
+            let days_in_year = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+                366
+            } else {
+                365
+            };
+            if remaining_days < days_in_year {
+                break;
+            }
+            remaining_days -= days_in_year;
+            y += 1;
+        }
+
+        let is_leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+        let days_in_months = if is_leap {
+            [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        } else {
+            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        };
+
+        let mut m = 0;
+        while m < 12 && remaining_days >= days_in_months[m] {
+            remaining_days -= days_in_months[m];
+            m += 1;
+        }
+
+        (y, (m + 1) as i32, remaining_days + 1, hour, minute, second)
+    } else {
+        // Parse Julian time
+        let jd = args[0].to_double()?;
+        let z = (jd + 0.5).floor() as i32;
+        let f = jd + 0.5 - z as f64;
+
+        let alpha = ((z as f64 - 1867216.25) / 36524.25).floor() as i32;
+        let a = z + 1 + alpha - alpha / 4;
+        let b = a + 1524;
+        let c = ((b as f64 - 122.1) / 365.25).floor() as i32;
+        let d = (365.25 * c as f64).floor() as i32;
+        let e = ((b - d) as f64 / 30.6001).floor() as i32;
+
+        let day = b - d - (30.6001 * e as f64).floor() as i32;
+        let month = if e < 14 { e - 1 } else { e - 13 };
+        let year = if month > 2 { c - 4716 } else { c - 4715 };
+
+        let hours = f * 24.0;
+        let hour = hours.floor() as i32;
+        let mins = (hours - hour as f64) * 60.0;
+        let minute = mins.floor() as i32;
+        let second = ((mins - minute as f64) * 60.0).floor() as i32;
+
+        (year, month, day, hour, minute, second)
+    };
+
+    Ok(XdlValue::Array(vec![
+        year as f64,
+        month as f64,
+        day as f64,
+        hour as f64,
+        minute as f64,
+        second as f64,
+    ]))
+}
+
+/// TIMESTAMP - Generate ISO 8601 timestamp string
+pub fn timestamp(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    let secs = duration.as_secs();
+    let millis = duration.subsec_millis();
+
+    // Convert to date (simplified)
+    let total_days = (secs / 86400) as i32;
+    let secs_in_day = secs % 86400;
+
+    let mut y = 1970;
+    let mut remaining = total_days;
+    loop {
+        let days_in_year = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+            366
+        } else {
+            365
+        };
+        if remaining < days_in_year {
+            break;
+        }
+        remaining -= days_in_year;
+        y += 1;
+    }
+
+    let is_leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let days_in_months = if is_leap {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    };
+
+    let mut m = 0;
+    while m < 12 && remaining >= days_in_months[m] {
+        remaining -= days_in_months[m];
+        m += 1;
+    }
+
+    let hour = secs_in_day / 3600;
+    let minute = (secs_in_day % 3600) / 60;
+    let second = secs_in_day % 60;
+
+    let timestamp = format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+        y,
+        m + 1,
+        remaining + 1,
+        hour,
+        minute,
+        second,
+        millis
+    );
+
+    Ok(XdlValue::String(timestamp))
+}
+
+/// TIMEGEN - Generate array of time values
+/// TIMEGEN(n, [start, [step]])
+pub fn timegen(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "TIMEGEN: Expected at least 1 argument (count)".to_string(),
+        ));
+    }
+
+    let n = args[0].to_long()? as usize;
+    let start = if args.len() > 1 {
+        args[1].to_double()?
+    } else {
+        0.0
+    };
+    let step = if args.len() > 2 {
+        args[2].to_double()?
+    } else {
+        1.0
+    };
+
+    let result: Vec<f64> = (0..n).map(|i| start + (i as f64) * step).collect();
+
+    Ok(XdlValue::Array(result))
+}
+
+/// DAYOFYEAR - Return day of year (1-366)
+pub fn dayofyear(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "DAYOFYEAR: Expected 3 arguments (year, month, day)".to_string(),
+        ));
+    }
+
+    let year = args[0].to_long()? as i32;
+    let month = args[1].to_long()? as i32;
+    let day = args[2].to_long()? as i32;
+
+    let is_leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    let days_before_month = if is_leap {
+        [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
+    } else {
+        [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+    };
+
+    let doy = if month >= 1 && month <= 12 {
+        days_before_month[(month - 1) as usize] + day
+    } else {
+        day
+    };
+
+    Ok(XdlValue::Long(doy))
+}
+
+/// JS2JD - Convert Julian seconds to Julian date
+pub fn js2jd(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "JS2JD: Expected 1 argument (julian_seconds)".to_string(),
+        ));
+    }
+
+    let js = args[0].to_double()?;
+
+    // Julian seconds since J2000.0 (2000-01-01 12:00:00 TT)
+    // J2000.0 = JD 2451545.0
+    let jd = js / 86400.0 + 2451545.0;
+
+    Ok(XdlValue::Double(jd))
+}
+
+// ============================================================
+// Additional System & Control Functions (Phase 18)
+// ============================================================
+
+/// MEMORY - Return memory usage information
+pub fn memory(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Return placeholder memory information
+    // Real implementation would query system memory
+    let _ = args;
+    Ok(XdlValue::Array(vec![
+        1024.0 * 1024.0 * 100.0, // Heap usage estimate (100MB)
+        1024.0 * 1024.0 * 1024.0, // Available memory (1GB)
+    ]))
+}
+
+/// EXIT - Exit the XDL session
+pub fn exit_session(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let code = if !args.is_empty() {
+        args[0].to_long()? as i32
+    } else {
+        0
+    };
+
+    println!("EXIT: Session exit requested with code {}", code);
+    // In a real implementation, this would trigger session termination
+    Ok(XdlValue::Undefined)
+}
+
+/// RETALL - Return to top level
+pub fn retall(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    println!("RETALL: Return to top level");
+    Ok(XdlValue::Undefined)
+}
+
+/// ROUTINE_INFO - Query routine information
+pub fn routine_info(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ROUTINE_INFO: Expected routine name argument".to_string(),
+        ));
+    }
+
+    let name = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => args[0].to_string_repr(),
+    };
+
+    // Return placeholder information
+    Ok(XdlValue::String(format!("Routine '{}' information not available", name)))
+}
+
+/// MESSAGE - Print a message/error
+pub fn message(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Ok(XdlValue::Undefined);
+    }
+
+    let msg = args[0].to_string_repr();
+    eprintln!("MESSAGE: {}", msg);
+
+    Ok(XdlValue::Undefined)
+}
+
+/// ON_ERROR - Set error handling mode
+pub fn on_error(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ON_ERROR: Expected error handling mode".to_string(),
+        ));
+    }
+
+    let mode = args[0].to_long()?;
+    println!("ON_ERROR: Error handling mode set to {}", mode);
+
+    Ok(XdlValue::Undefined)
+}
+
+/// EXECUTE - Execute a string as XDL code (placeholder)
+pub fn execute(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "EXECUTE: Expected code string argument".to_string(),
+        ));
+    }
+
+    let code = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    println!("EXECUTE: Would execute: {}", code);
+    // In a real implementation, this would parse and execute the code
+    Ok(XdlValue::Undefined)
+}
+
+/// N_PARAMS - Return number of parameters passed to routine
+pub fn n_params(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // This would need to be called from within a procedure/function context
+    // Return 0 as placeholder
+    Ok(XdlValue::Long(0))
+}

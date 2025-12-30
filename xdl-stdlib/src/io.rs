@@ -953,6 +953,532 @@ pub fn spawn_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::String(result.trim().to_string()))
 }
 
+// ============================================================
+// Additional I/O Functions (Phase 9 Completion)
+// ============================================================
+
+/// FILE_EXPAND_PATH - Expand file path to absolute path
+/// FILE_EXPAND_PATH(path)
+pub fn file_expand_path(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_EXPAND_PATH: Expected 1 argument (path)".to_string(),
+        ));
+    }
+
+    let path_str = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(path_str);
+
+    // Handle home directory expansion
+    let expanded = if path_str.starts_with('~') {
+        if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+            let home_str = home.to_string_lossy().to_string();
+            path_str.replacen('~', &home_str, 1)
+        } else {
+            path_str.to_string()
+        }
+    } else {
+        path_str.to_string()
+    };
+
+    // Canonicalize if path exists, otherwise just absolutize
+    let result = if Path::new(&expanded).exists() {
+        match std::fs::canonicalize(&expanded) {
+            Ok(p) => p.to_string_lossy().to_string(),
+            Err(_) => expanded,
+        }
+    } else {
+        // Create absolute path from current directory
+        match std::env::current_dir() {
+            Ok(cwd) => cwd.join(&expanded).to_string_lossy().to_string(),
+            Err(_) => expanded,
+        }
+    };
+
+    Ok(XdlValue::String(result))
+}
+
+/// FILE_SAME - Check if two paths refer to the same file
+/// FILE_SAME(path1, path2)
+pub fn file_same(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "FILE_SAME: Expected 2 arguments (path1, path2)".to_string(),
+        ));
+    }
+
+    let path1 = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path2 = match &args[1] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    // Canonicalize both paths and compare
+    let p1 = Path::new(path1);
+    let p2 = Path::new(path2);
+
+    // If paths don't exist, they can't be the same file
+    if !p1.exists() || !p2.exists() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Compare canonical paths
+    let result = match (std::fs::canonicalize(p1), std::fs::canonicalize(p2)) {
+        (Ok(c1), Ok(c2)) => c1 == c2,
+        _ => false,
+    };
+
+    Ok(XdlValue::Long(if result { 1 } else { 0 }))
+}
+
+/// FILE_CHMOD - Change file permissions (Unix-like systems)
+/// FILE_CHMOD(path, mode)
+#[cfg(unix)]
+pub fn file_chmod(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::os::unix::fs::PermissionsExt;
+
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "FILE_CHMOD: Expected 2 arguments (path, mode)".to_string(),
+        ));
+    }
+
+    let path = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let mode = match &args[1] {
+        XdlValue::Long(n) => *n as u32,
+        XdlValue::Int(n) => *n as u32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let permissions = std::fs::Permissions::from_mode(mode);
+
+    std::fs::set_permissions(path, permissions)
+        .map_err(|e| XdlError::RuntimeError(format!("FILE_CHMOD: {}", e)))?;
+
+    Ok(XdlValue::Undefined)
+}
+
+/// FILE_CHMOD - Windows version (placeholder)
+#[cfg(not(unix))]
+pub fn file_chmod(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "FILE_CHMOD: Expected 2 arguments (path, mode)".to_string(),
+        ));
+    }
+
+    // Windows doesn't support Unix-style permissions directly
+    // Just return success as a placeholder
+    println!("FILE_CHMOD: Unix-style permissions not supported on Windows");
+    Ok(XdlValue::Undefined)
+}
+
+/// FINDFILE - Find files in search path
+/// FINDFILE(filename [, path])
+pub fn findfile(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FINDFILE: Expected at least 1 argument (filename)".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Get search path
+    let search_paths: Vec<String> = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::String(s) => s.split(':').map(|p| p.to_string()).collect(),
+            XdlValue::Array(arr) => arr
+                .iter()
+                .map(|v| format!("{}", v))
+                .collect(),
+            _ => vec![".".to_string()],
+        }
+    } else {
+        // Use current directory and PATH environment variable
+        let mut paths = vec![".".to_string()];
+        if let Ok(path_env) = std::env::var("PATH") {
+            let sep = if cfg!(target_os = "windows") { ';' } else { ':' };
+            paths.extend(path_env.split(sep).map(|s| s.to_string()));
+        }
+        paths
+    };
+
+    // Search for file
+    for dir in search_paths {
+        let full_path = Path::new(&dir).join(filename);
+        if full_path.exists() {
+            return Ok(XdlValue::String(full_path.to_string_lossy().to_string()));
+        }
+    }
+
+    // File not found
+    Ok(XdlValue::String(String::new()))
+}
+
+/// FILE_BASENAME - Extract filename from path
+pub fn file_basename(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_BASENAME: Expected 1 argument (path)".to_string(),
+        ));
+    }
+
+    let path_str = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(path_str);
+    let basename = path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+
+    // Check for extension removal
+    if args.len() > 1 {
+        if let XdlValue::String(ext) = &args[1] {
+            if basename.ends_with(ext) {
+                return Ok(XdlValue::String(basename[..basename.len() - ext.len()].to_string()));
+            }
+        }
+    }
+
+    Ok(XdlValue::String(basename))
+}
+
+/// FILE_DIRNAME - Extract directory from path
+pub fn file_dirname(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_DIRNAME: Expected 1 argument (path)".to_string(),
+        ));
+    }
+
+    let path_str = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(path_str);
+    let dirname = path.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+
+    Ok(XdlValue::String(dirname))
+}
+
+/// FILE_LINES - Count number of lines in a file
+pub fn file_lines(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::io::{BufRead, BufReader};
+
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "FILE_LINES: Expected 1 argument (path)".to_string(),
+        ));
+    }
+
+    let path = match &args[0] {
+        XdlValue::String(s) => s,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let file = File::open(path)
+        .map_err(|e| XdlError::RuntimeError(format!("FILE_LINES: Cannot open file: {}", e)))?;
+
+    let reader = BufReader::new(file);
+    let count = reader.lines().count();
+
+    Ok(XdlValue::Long(count as i32))
+}
+
+/// POINT_LUN - Get/set file pointer position
+pub fn point_lun(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::io::{Seek, SeekFrom};
+
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "POINT_LUN: Expected at least 1 argument (LUN)".to_string(),
+        ));
+    }
+
+    let lun = match &args[0] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let mut handles = FILE_HANDLES.lock().unwrap();
+
+    if let Some(handle) = handles.get_mut(&lun) {
+        if args.len() > 1 {
+            // Set position
+            let position = match &args[1] {
+                XdlValue::Long(n) => *n as u64,
+                XdlValue::Int(n) => *n as u64,
+                XdlValue::Long64(n) => *n as u64,
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "integer".to_string(),
+                        actual: format!("{:?}", args[1].gdl_type()),
+                    })
+                }
+            };
+
+            if let Some(ref mut reader) = handle.reader {
+                reader.seek(SeekFrom::Start(position))
+                    .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?;
+            }
+            if let Some(ref mut writer) = handle.writer {
+                writer.seek(SeekFrom::Start(position))
+                    .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?;
+            }
+
+            Ok(XdlValue::Undefined)
+        } else {
+            // Get position
+            let pos = if let Some(ref mut reader) = handle.reader {
+                reader.stream_position()
+                    .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?
+            } else if let Some(ref mut writer) = handle.writer {
+                writer.stream_position()
+                    .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?
+            } else {
+                0
+            };
+
+            Ok(XdlValue::Long64(pos as i64))
+        }
+    } else {
+        Err(XdlError::RuntimeError(format!("POINT_LUN: Invalid LUN {}", lun)))
+    }
+}
+
+/// READU - Read unformatted data from file
+pub fn readu(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::io::Read;
+
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "READU: Expected at least 2 arguments (LUN, variable)".to_string(),
+        ));
+    }
+
+    let lun = match &args[0] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Determine how many bytes to read based on the variable type
+    let n_bytes = match &args[1] {
+        XdlValue::Byte(_) => 1,
+        XdlValue::Int(_) => 2,
+        XdlValue::Long(_) => 4,
+        XdlValue::Long64(_) => 8,
+        XdlValue::Float(_) => 4,
+        XdlValue::Double(_) => 8,
+        XdlValue::Array(arr) => arr.len() * 8, // Assume f64 array
+        _ => 8, // Default to 8 bytes
+    };
+
+    let mut handles = FILE_HANDLES.lock().unwrap();
+
+    if let Some(handle) = handles.get_mut(&lun) {
+        if let Some(ref mut reader) = handle.reader {
+            let mut buffer = vec![0u8; n_bytes];
+            reader.read_exact(&mut buffer)
+                .map_err(|e| XdlError::RuntimeError(format!("READU: {}", e)))?;
+
+            // Convert bytes to value
+            match &args[1] {
+                XdlValue::Byte(_) => Ok(XdlValue::Byte(buffer[0])),
+                XdlValue::Int(_) => {
+                    let val = i16::from_le_bytes([buffer[0], buffer[1]]);
+                    Ok(XdlValue::Int(val))
+                }
+                XdlValue::Long(_) => {
+                    let val = i32::from_le_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
+                    Ok(XdlValue::Long(val))
+                }
+                XdlValue::Float(_) => {
+                    let val = f32::from_le_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
+                    Ok(XdlValue::Float(val))
+                }
+                XdlValue::Double(_) => {
+                    let val = f64::from_le_bytes([
+                        buffer[0], buffer[1], buffer[2], buffer[3],
+                        buffer[4], buffer[5], buffer[6], buffer[7],
+                    ]);
+                    Ok(XdlValue::Double(val))
+                }
+                XdlValue::Array(arr) => {
+                    let mut result = Vec::with_capacity(arr.len());
+                    for i in 0..arr.len() {
+                        let val = f64::from_le_bytes([
+                            buffer[i*8], buffer[i*8+1], buffer[i*8+2], buffer[i*8+3],
+                            buffer[i*8+4], buffer[i*8+5], buffer[i*8+6], buffer[i*8+7],
+                        ]);
+                        result.push(val);
+                    }
+                    Ok(XdlValue::Array(result))
+                }
+                _ => Ok(XdlValue::Array(vec![])),
+            }
+        } else {
+            Err(XdlError::RuntimeError("READU: File not opened for reading".to_string()))
+        }
+    } else {
+        Err(XdlError::RuntimeError(format!("READU: Invalid LUN {}", lun)))
+    }
+}
+
+/// WRITEU - Write unformatted data to file
+pub fn writeu(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    use std::io::Write;
+
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "WRITEU: Expected at least 2 arguments (LUN, data)".to_string(),
+        ));
+    }
+
+    let lun = match &args[0] {
+        XdlValue::Long(n) => *n,
+        XdlValue::Int(n) => *n as i32,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let mut handles = FILE_HANDLES.lock().unwrap();
+
+    if let Some(handle) = handles.get_mut(&lun) {
+        if let Some(ref mut writer) = handle.writer {
+            // Write data in binary format
+            for arg in args.iter().skip(1) {
+                match arg {
+                    XdlValue::Byte(v) => {
+                        writer.write_all(&[*v])
+                            .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
+                    }
+                    XdlValue::Int(v) => {
+                        writer.write_all(&v.to_le_bytes())
+                            .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
+                    }
+                    XdlValue::Long(v) => {
+                        writer.write_all(&v.to_le_bytes())
+                            .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
+                    }
+                    XdlValue::Float(v) => {
+                        writer.write_all(&v.to_le_bytes())
+                            .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
+                    }
+                    XdlValue::Double(v) => {
+                        writer.write_all(&v.to_le_bytes())
+                            .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
+                    }
+                    XdlValue::Array(arr) => {
+                        for v in arr {
+                            writer.write_all(&v.to_le_bytes())
+                                .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Ok(XdlValue::Undefined)
+        } else {
+            Err(XdlError::RuntimeError("WRITEU: File not opened for writing".to_string()))
+        }
+    } else {
+        Err(XdlError::RuntimeError(format!("WRITEU: Invalid LUN {}", lun)))
+    }
+}
+
+/// ASSOC - Associate a variable with a portion of a file
+pub fn assoc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "ASSOC: Expected at least 2 arguments (LUN, variable)".to_string(),
+        ));
+    }
+
+    // ASSOC is more complex to implement properly - would need to track
+    // the file association and return a special value type
+    // For now, return a placeholder
+    println!("ASSOC: File association placeholder - not fully implemented");
+    Ok(XdlValue::Undefined)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

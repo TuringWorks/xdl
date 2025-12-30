@@ -170,12 +170,29 @@ impl StandardLibrary {
             "CALDAT" => system::caldat(args),
             "TIC" => system::tic(args),
             "TOC" => system::toc(args),
+            // Additional time functions (Phase 14)
+            "WEEKDAY" => system::weekday(args),
+            "BIN_DATE" => system::bin_date(args),
+            "TIMESTAMP" => system::timestamp(args),
+            "TIMEGEN" => system::timegen(args),
+            "DAYOFYEAR" => system::dayofyear(args),
+            "JS2JD" => system::js2jd(args),
 
             // Structure and type functions
             "N_TAGS" => system::n_tags(args),
             "TAG_NAMES" => system::tag_names(args),
             "SIZE" => system::size_func(args),
             "ISA" => system::isa(args),
+
+            // System control functions (Phase 18)
+            "MEMORY" => system::memory(args),
+            "ROUTINE_INFO" => system::routine_info(args),
+            "N_PARAMS" => system::n_params(args),
+            "EXIT" => system::exit_session(args),
+            "RETALL" => system::retall(args),
+            "MESSAGE" => system::message(args),
+            "ON_ERROR" => system::on_error(args),
+            "EXECUTE" => system::execute(args),
 
             // Signal processing procedures
             "A_CORRELATE" => signal::a_correlate(args),
@@ -271,6 +288,23 @@ impl StandardLibrary {
             "BESELY" => math::besely(args),
             "BESELI" => math::beseli(args),
             "BESELK" => math::beselk(args),
+
+            // Additional math functions (Phase 6)
+            "PRIME" => math::prime(args),
+            "PRIMES" => math::primes(args),
+            "BINOMIAL" => math::binomial(args),
+            "GCD" => math::gcd(args),
+            "LCM" => math::lcm(args),
+            "BETA" => math::beta(args),
+            "DERIV" => math::deriv(args),
+            "INT_TABULATED" => math::int_tabulated(args),
+            "POLY" => math::poly(args),
+            "PRODUCT" => math::product(args),
+            "POW" => math::pow(args),
+            "ALOG2" => math::alog2(args),
+            "FINITE" => math::finite(args),
+            "CHECK_MATH" => math::check_math(args),
+            "MACHAR" => math::machar(args),
 
             // Exponential and logarithmic functions
             "EXP" => math::exp(args),
@@ -381,6 +415,17 @@ impl StandardLibrary {
             "POLY_FIT" => statistics::poly_fit(args),
             "REGRESS" => statistics::regress(args),
             "CORRELATE" => statistics::correlate(args),
+            "R_CORRELATE" => statistics::r_correlate(args),
+            "LADFIT" => statistics::ladfit(args),
+            "SVDFIT" => statistics::svdfit(args),
+            "CURVEFIT" => statistics::curvefit(args),
+
+            // Additional statistical functions
+            "PERCENTILES" => statistics::percentiles(args),
+            "ROBUST_MEAN" => statistics::robust_mean(args),
+            "TRIMMED_MEAN" => statistics::trimmed_mean(args),
+            "RESISTANT_MEAN" => statistics::resistant_mean(args),
+            "RANDOM_POISSON" => statistics::random_poisson(args),
 
             // Interpolation functions
             "INTERPOL" => statistics::interpol(args),
@@ -409,18 +454,43 @@ impl StandardLibrary {
             "SETENV" => io::setenv(args),
             "SPAWN" => io::spawn_func(args),
 
+            // Additional file I/O functions (Phase 9)
+            "FILE_EXPAND_PATH" => io::file_expand_path(args),
+            "FILE_SAME" => io::file_same(args),
+            "FILE_CHMOD" => io::file_chmod(args),
+            "FINDFILE" => io::findfile(args),
+            "FILE_BASENAME" => io::file_basename(args),
+            "FILE_DIRNAME" => io::file_dirname(args),
+            "FILE_LINES" => io::file_lines(args),
+            "POINT_LUN" => io::point_lun(args),
+            "READU" => io::readu(args),
+            "WRITEU" => io::writeu(args),
+            "ASSOC" => io::assoc(args),
+
             // Time functions
             "SYSTIME" => system::systime(args),
             "JULDAY" => system::julday(args),
             "CALDAT" => system::caldat(args),
             "TIC" => system::tic(args),
             "TOC" => system::toc(args),
+            // Additional time functions (Phase 14)
+            "WEEKDAY" => system::weekday(args),
+            "BIN_DATE" => system::bin_date(args),
+            "TIMESTAMP" => system::timestamp(args),
+            "TIMEGEN" => system::timegen(args),
+            "DAYOFYEAR" => system::dayofyear(args),
+            "JS2JD" => system::js2jd(args),
 
             // Structure and type functions
             "N_TAGS" => system::n_tags(args),
             "TAG_NAMES" => system::tag_names(args),
             "SIZE" => system::size_func(args),
             "ISA" => system::isa(args),
+
+            // System control functions (Phase 18)
+            "MEMORY" => system::memory(args),
+            "ROUTINE_INFO" => system::routine_info(args),
+            "N_PARAMS" => system::n_params(args),
 
             // Data structure functions
             "HASH" => create_hash(args),
@@ -445,6 +515,17 @@ impl StandardLibrary {
             "REAL" => complex::real_part(args),
             "IMAGINARY" | "IMAG" => complex::imaginary_part(args),
             "CONJ" => complex::conj(args),
+            // Additional complex functions (Phase 17)
+            "DCOMPLEX" => complex::dcomplex(args),
+            "COMPLEXARR" => complex::complexarr(args),
+            "DCOMPLEXARR" => complex::dcomplexarr(args),
+            "ARG" | "PHASE" => complex::arg(args),
+            "COMPLEX_EXP" => complex::complex_exp(args),
+            "COMPLEX_LOG" => complex::complex_log(args),
+            "COMPLEX_SQRT" => complex::complex_sqrt(args),
+            "COMPLEX_SIN" => complex::complex_sin(args),
+            "COMPLEX_COS" => complex::complex_cos(args),
+            "POLAR" => complex::polar(args),
 
             // Linear algebra functions
             "IDENTITY" => linalg::identity(args),
@@ -459,6 +540,18 @@ impl StandardLibrary {
             "LA_EIGENVAL" => linalg::la_eigenval(args),
             "LUDC" => linalg::ludc(args),
             "LUSOL" => linalg::lusol(args),
+            // Additional linear algebra (Phase 12)
+            "LA_EIGENVEC" => linalg::la_eigenvec(args),
+            "LA_LINEAR_EQUATION" => linalg::la_linear_equation(args),
+            "LA_LEAST_SQUARES" => linalg::la_least_squares(args),
+            "LA_CHOLESKY" | "CHOLESKY" => linalg::la_cholesky(args),
+            "LA_TRIDC" | "TRIDC" => linalg::la_tridc(args),
+            "QR" => linalg::qr(args),
+            "RANK" | "MATRIX_RANK" => linalg::matrix_rank(args),
+            "CRAMER" => linalg::cramer(args),
+            "MATRIX_MULTIPLY" => linalg::matrix_multiply(args),
+            "COND" => linalg::cond(args),
+            "PINV" => linalg::pinv(args),
 
             // Signal processing functions
             "A_CORRELATE" => signal::a_correlate(args),
@@ -466,6 +559,18 @@ impl StandardLibrary {
             "DIGITAL_FILTER" => signal::digital_filter(args),
             "HILBERT" => signal::hilbert(args),
             "MEDIAN_FILTER" => signal::median_filter(args),
+            // Additional signal processing (Phase 11)
+            "FFT_2D" | "FFT2" => signal::fft_2d(args),
+            "HANNING" => signal::hanning(args),
+            "HAMMING" => signal::hamming(args),
+            "BLACKMAN" => signal::blackman(args),
+            "BUTTERWORTH" => signal::butterworth(args),
+            "SAVGOL" => signal::savgol(args),
+            "LEEFILT" => signal::leefilt(args),
+            "WV_HAAR" => signal::wv_haar(args),
+            "WV_IHAAR" => signal::wv_ihaar(args),
+            "WV_DWT" => signal::wv_dwt(args),
+            "POWER_SPECTRUM" => signal::power_spectrum(args),
 
             // Image processing functions
             "CONVOL" => image::convol(args),
@@ -476,6 +581,18 @@ impl StandardLibrary {
             "PREWITT" => image::prewitt(args),
             "GAUSSIAN_FILTER" => image::gaussian_filter(args),
             "THRESHOLD" => image::threshold(args),
+            // Additional image processing (Phase 13)
+            "CANNY" => image::canny(args),
+            "HOUGH" => image::hough(args),
+            "RADON" => image::radon(args),
+            "WATERSHED" => image::watershed(args),
+            "LABEL_REGION" => image::label_region(args),
+            "MORPH_OPEN" => image::morph_open(args),
+            "MORPH_CLOSE" => image::morph_close(args),
+            "HIST_EQUAL" => image::hist_equal(args),
+            "EDGE_DOG" => image::edge_dog(args),
+            "LAPLACIAN" => image::laplacian(args),
+            "MEDIAN_2D" => image::median_2d(args),
 
             // Python integration functions (requires "python" feature)
             #[cfg(feature = "python")]
