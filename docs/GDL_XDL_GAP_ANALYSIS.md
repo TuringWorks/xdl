@@ -1,662 +1,475 @@
 # GDL/IDL to XDL Gap Analysis
 
-This document identifies GDL/IDL functionality that has **not yet been ported** to XDL.
+**Last Updated:** 2025-12-30
+
+This document identifies GDL/IDL functionality implementation status in XDL.
 
 ---
 
 ## Summary
 
-**Currently Implemented in XDL:** ~60 functions/procedures
-**Missing from GDL/IDL:** ~400+ functions/procedures
-**Completion:** ~13% of full GDL/IDL functionality
+| Category | Implemented | Pending | Coverage |
+|----------|-------------|---------|----------|
+| **Core Functions** | 250+ | ~50 | ~83% |
+| **ML Functions** | 60+ | ~10 | ~86% |
+| **Graphics Procedures** | 50+ | ~20 | ~71% |
+| **Total** | **360+** | ~80 | **~82%** |
+
+**Completion:** ~82% of common GDL/IDL functionality
 
 ---
 
-## ✅ Already Implemented in XDL
+## Implementation Status by Category
 
-### Math Functions (15 functions)
+### 1. Array Creation Functions ✅ COMPLETE
 
-- ✅ SIN, COS, TAN, ASIN, ACOS, ATAN
-- ✅ EXP, ALOG (LN), ALOG10
-- ✅ SQRT, ABS
-- ✅ FLOOR, CEIL, ROUND
-- ✅ FIX, LONG, FLOAT, DOUBLE (type conversion)
-- ✅ FINDGEN, INDGEN, RANDOMU
+| Function | Status | Notes |
+|----------|--------|-------|
+| BYTARR | ✅ | Fully functional |
+| INTARR | ✅ | Fully functional |
+| LONARR | ✅ | Fully functional |
+| FLTARR | ✅ | Fully functional |
+| DBLARR | ✅ | Fully functional |
+| STRARR | ✅ | Fully functional |
+| COMPLEXARR | ✅ | Implemented |
+| DCOMPLEXARR | ✅ | Implemented |
+| MAKE_ARRAY | ✅ | With DIMENSION, VALUE, /INDEX keywords |
 
-### Array Functions (16 functions)
+### 2. Array Generation Functions ✅ COMPLETE
 
-- ✅ BYTARR, FLTARR (placeholders, need full implementation)
-- ✅ N_ELEMENTS
-- ✅ WHERE (placeholder)
-- ✅ MIN, MAX, MEAN, TOTAL
-- ✅ REVERSE, SORT
-- ✅ SMOOTH, MOVING_AVERAGE, WMA, EMA, CUMULATIVE_AVERAGE
+| Function | Status | Notes |
+|----------|--------|-------|
+| FINDGEN | ✅ | With START, INCREMENT keywords |
+| INDGEN | ✅ | With START, INCREMENT keywords |
+| DINDGEN | ✅ | Double precision |
+| BINDGEN | ✅ | Byte generation |
+| LINDGEN | ✅ | Long integer |
+| L64INDGEN | ✅ | 64-bit integer |
+| UINDGEN | ✅ | Unsigned |
+| ULINDGEN | ✅ | Unsigned long |
+| RANDOMU | ✅ | Uniform random |
+| RANDOMN | ✅ | Gaussian random |
 
-### Statistics Functions (10 functions)
+### 3. Array Manipulation Functions ✅ COMPLETE
 
-- ✅ VARIANCE, STDDEV, MEDIAN
-- ✅ MOMENT, MEANABSDEV, SKEWNESS, KURTOSIS
-- ✅ GAUSS_PDF, T_PDF, CHISQR_PDF (basic placeholders)
+| Function | Status | Notes |
+|----------|--------|-------|
+| REFORM | ✅ | Reshape arrays |
+| TRANSPOSE | ✅ | Matrix transpose |
+| ROTATE | ✅ | Rotate arrays |
+| SHIFT | ✅ | Shift elements |
+| REBIN | ✅ | Resize by integer factors |
+| CONGRID | ✅ | Resample/resize |
+| REPLICATE | ✅ | Replicate values |
+| ARRAY_INDICES | ✅ | Convert indices |
+| ARRAY_EQUAL | ✅ | Compare arrays |
+| UNIQ | ✅ | Find unique elements |
+| HISTOGRAM | ✅ | Compute histogram |
+| WHERE | ✅ | Full implementation |
+| REVERSE | ✅ | Reverse order |
+| SORT | ✅ | Sort elements |
+| PERMUTE | ✅ | Permute dimensions |
+| INTERPOL | ✅ | Linear interpolation |
+| MESHGRID | ✅ | Coordinate matrices |
 
-### Graphics Procedures (11 procedures)
+### 4. Matrix/Linear Algebra Functions ✅ COMPLETE
 
-- ✅ PLOT, OPLOT, CONTOUR, SURFACE
-- ✅ WINDOW, WSET, ERASE
-- ✅ DEVICE, LOADCT, TVSCL, AXIS
+| Function | Status | Notes |
+|----------|--------|-------|
+| IDENTITY | ✅ | Identity matrix |
+| INVERT | ✅ | Matrix inversion |
+| DETERM | ✅ | Determinant |
+| TRACE | ✅ | Matrix trace |
+| DIAGONAL | ✅ | Extract diagonal |
+| CROSSP | ✅ | Cross product |
+| DOTP | ✅ | Dot product |
+| NORM | ✅ | Vector/matrix norm |
+| SVDC | ✅ | SVD decomposition |
+| LA_EIGENVAL | ✅ | Eigenvalues |
+| LA_EIGENVEC | ✅ | Eigenvectors |
+| LUDC | ✅ | LU decomposition |
+| LUSOL | ✅ | LU solve |
+| LA_LINEAR_EQUATION | ✅ | Solve Ax=b |
+| LA_LEAST_SQUARES | ✅ | Least squares |
+| LA_CHOLESKY | ✅ | Cholesky decomposition |
+| LA_TRIDC | ✅ | Tridiagonal decomposition |
+| QR | ✅ | QR decomposition |
+| RANK | ✅ | Matrix rank |
+| CRAMER | ✅ | Cramer's rule |
+| MATRIX_MULTIPLY | ✅ | Matrix multiplication |
+| COND | ✅ | Condition number |
+| PINV | ✅ | Pseudoinverse |
 
-### I/O Functions (6 functions)
+### 5. Mathematical Functions ✅ COMPLETE
 
-- ✅ PRINT
-- ✅ GET_LUN, FREE_LUN
-- ✅ OPEN, CLOSE
-- ✅ FILEPATH, READ_JPEG
+| Function | Status | Notes |
+|----------|--------|-------|
+| SIN, COS, TAN | ✅ | Trigonometric |
+| ASIN, ACOS, ATAN, ATAN2 | ✅ | Inverse trig |
+| SINH, COSH, TANH | ✅ | Hyperbolic |
+| ASINH, ACOSH, ATANH | ✅ | Inverse hyperbolic |
+| EXP, ALOG, ALOG10, ALOG2 | ✅ | Exponential/logarithmic |
+| SQRT, ABS, POW | ✅ | Basic math |
+| FLOOR, CEIL, ROUND | ✅ | Rounding |
+| GAMMA, LNGAMMA | ✅ | Gamma function |
+| ERF, ERFC | ✅ | Error function |
+| BESSEL_J | ✅ | Bessel function |
+| BETA | ✅ | Beta function |
+| FACTORIAL | ✅ | Factorial |
+| GCD, LCM | ✅ | Number theory |
+| POLY | ✅ | Polynomial evaluation |
+| BINOMIAL | ✅ | Binomial coefficient |
+| PRIME, PRIMES | ✅ | Primality |
+| PRODUCT | ✅ | Array product |
+| DERIV | ✅ | Numerical derivative |
+| INT_TABULATED | ✅ | Numerical integration |
+| FINITE | ✅ | Test finite values |
+| CHECK_MATH | ✅ | Check math errors |
+| MACHAR | ✅ | Machine parameters |
 
-### String Functions (5 functions)
+### 6. Statistics Functions ✅ COMPLETE
 
-- ✅ STRLEN, STRPOS, STRMID
-- ✅ STRUPCASE, STRLOWCASE
+| Function | Status | Notes |
+|----------|--------|-------|
+| MIN, MAX, MEAN, TOTAL | ✅ | GPU-accelerated |
+| VARIANCE, STDDEV | ✅ | GPU-accelerated |
+| MEDIAN | ✅ | GPU-accelerated |
+| MOMENT | ✅ | Statistical moments |
+| MEANABSDEV | ✅ | Mean absolute deviation |
+| SKEWNESS, KURTOSIS | ✅ | Distribution shape |
+| CORRELATE | ✅ | Correlation coefficient |
+| R_CORRELATE | ✅ | Spearman rank correlation |
+| REGRESS | ✅ | Linear regression |
+| LINFIT | ✅ | Linear least squares |
+| POLY_FIT | ✅ | Polynomial fitting |
+| CURVEFIT | ✅ | Levenberg-Marquardt |
+| LADFIT | ✅ | L1 regression |
+| SVDFIT | ✅ | SVD-based fitting |
+| PERCENTILES | ✅ | Compute percentiles |
+| ROBUST_MEAN | ✅ | Robust mean |
+| TRIMMED_MEAN | ✅ | Trimmed mean |
+| RESISTANT_MEAN | ✅ | Resistant mean |
+| RANDOM_POISSON | ✅ | Poisson random |
+| GAUSS_PDF | ✅ | Gaussian PDF |
+| T_PDF | ✅ | Student's t |
+| CHISQR_PDF | ✅ | Chi-square |
 
-### System Functions (7 procedures)
+### 7. String Functions ✅ COMPLETE
 
-- ✅ HELP, CD, SPAWN
-- ✅ CALL_PROCEDURE, DEFSYSV
-- ✅ @, .COMPILE, .CONTINUE, CATCH
+| Function | Status | Notes |
+|----------|--------|-------|
+| STRLEN | ✅ | String length |
+| STRPOS | ✅ | Find substring |
+| STRMID | ✅ | Extract substring |
+| STRUPCASE, STRLOWCASE | ✅ | Case conversion |
+| STRTRIM | ✅ | Trim whitespace |
+| STRJOIN | ✅ | Join strings |
+| STRSPLIT | ✅ | Split strings |
+| STRCMP | ✅ | Compare strings |
+| STRCOMPRESS | ✅ | Compress whitespace |
+| STRMATCH | ✅ | Wildcard matching |
+| STRING | ✅ | Convert to string |
+| STRREPLACE | ✅ | Replace substrings |
+| STRPUT | ✅ | Insert substring |
+| STRMESSAGE | ✅ | Error messages |
+| STREGEX | ✅ | Regular expressions |
 
-### Python Integration (3 functions)
+### 8. File I/O Functions ✅ COMPLETE
 
-- ✅ PYTHON_IMPORT, PYTHON_CALL, PYTHON_CALL_KW
+| Function | Status | Notes |
+|----------|--------|-------|
+| GET_LUN, FREE_LUN | ✅ | LUN management |
+| OPEN, OPENR, OPENW, OPENU | ✅ | File opening |
+| CLOSE | ✅ | Close files |
+| READF, READU | ✅ | Read operations |
+| WRITEF, PRINTF, WRITEU | ✅ | Write operations |
+| FLUSH | ✅ | Flush buffer |
+| POINT_LUN | ✅ | Position pointer |
+| EOF | ✅ | End of file test |
+| ASSOC | ✅ | Associate file |
+| FILE_BASENAME | ✅ | Extract filename |
+| FILE_DIRNAME | ✅ | Extract directory |
+| FILE_MKDIR | ✅ | Create directory |
+| FILE_DELETE | ✅ | Delete files |
+| FILE_COPY | ✅ | Copy files |
+| FILE_MOVE | ✅ | Move files |
+| FILE_TEST | ✅ | Test existence |
+| FILE_LINES | ✅ | Count lines |
+| FILE_INFO | ✅ | File metadata |
+| FILE_EXPAND_PATH | ✅ | Expand path |
+| FILE_SAME | ✅ | Compare paths |
+| FILE_CHMOD | ✅ | Change permissions |
+| FINDFILE | ✅ | Search files |
+| FILEPATH | ✅ | Locate files |
 
-### Data Structures (1 function)
+### 9. Image I/O Functions ✅ COMPLETE
 
-- ✅ HASH (placeholder)
+| Function | Status | Notes |
+|----------|--------|-------|
+| READ_PNG, WRITE_PNG | ✅ | PNG format |
+| READ_JPEG, WRITE_JPEG | ✅ | JPEG format |
+| READ_TIFF, WRITE_TIFF | ✅ | TIFF format |
+| READ_BMP, WRITE_BMP | ✅ | BMP format |
+| READ_GIF, WRITE_GIF | ✅ | GIF format |
+| READ_IMAGE, WRITE_IMAGE | ✅ | Auto-detect |
+| QUERY_IMAGE | ✅ | Image dimensions |
+| TV, TVSCL | ✅ | Display image |
 
-**Total Implemented:** ~60 functions/procedures
+### 10. Signal Processing Functions ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| FFT | ✅ | 1D FFT (forward/inverse) |
+| FFT_2D / FFT2 | ✅ | 2D FFT |
+| A_CORRELATE | ✅ | Auto-correlation |
+| C_CORRELATE | ✅ | Cross-correlation |
+| SMOOTH | ✅ | Boxcar smoothing |
+| CONVOL | ✅ | 1D/2D convolution |
+| DIGITAL_FILTER | ✅ | Filter coefficients |
+| HILBERT | ✅ | Hilbert transform |
+| MEDIAN_FILTER | ✅ | Median filtering |
+| BUTTERWORTH | ✅ | Butterworth filter |
+| HANNING | ✅ | Hanning window |
+| HAMMING | ✅ | Hamming window |
+| BLACKMAN | ✅ | Blackman window |
+| SAVGOL | ✅ | Savitzky-Golay |
+| LEEFILT | ✅ | Lee filter |
+| WV_HAAR | ✅ | Haar wavelet |
+| WV_IHAAR | ✅ | Inverse Haar |
+| WV_DWT | ✅ | Discrete wavelet |
+| POWER_SPECTRUM | ✅ | Power spectral density |
+
+### 11. Image Processing Functions ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| SOBEL | ✅ | Sobel edge detection |
+| ROBERTS | ✅ | Roberts cross |
+| PREWITT | ✅ | Prewitt edge |
+| CANNY | ✅ | Canny edge |
+| LAPLACIAN | ✅ | Laplacian edge |
+| EDGE_DOG | ✅ | Difference of Gaussians |
+| DILATE | ✅ | Morphological dilation |
+| ERODE | ✅ | Morphological erosion |
+| MORPH_OPEN | ✅ | Morphological opening |
+| MORPH_CLOSE | ✅ | Morphological closing |
+| GAUSSIAN_FILTER | ✅ | Gaussian blur |
+| THRESHOLD | ✅ | Binary thresholding |
+| MEDIAN_2D | ✅ | 2D median filter |
+| HIST_EQUAL | ✅ | Histogram equalization |
+| HOUGH | ✅ | Hough transform |
+| RADON | ✅ | Radon transform |
+| WATERSHED | ✅ | Watershed segmentation |
+| LABEL_REGION | ✅ | Connected components |
+
+### 12. Time & Date Functions ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| SYSTIME | ✅ | System time |
+| JULDAY | ✅ | Julian day |
+| CALDAT | ✅ | Calendar date |
+| BIN_DATE | ✅ | Binary date/time |
+| TIMESTAMP | ✅ | ISO 8601 timestamp |
+| TIMEGEN | ✅ | Generate time array |
+| DAYOFYEAR | ✅ | Day of year |
+| JS2JD | ✅ | Julian seconds to date |
+| WEEKDAY | ✅ | Day of week |
+| TIC, TOC | ✅ | Timing functions |
+
+### 13. Type Conversion Functions ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| BYTE | ✅ | To byte |
+| INT (FIX) | ✅ | To integer |
+| LONG | ✅ | To long |
+| FLOAT (FLT) | ✅ | To float |
+| DOUBLE (DBL) | ✅ | To double |
+| UINT | ✅ | Unsigned 16-bit |
+| ULONG | ✅ | Unsigned 32-bit |
+| LONG64 | ✅ | Signed 64-bit |
+| ULONG64 | ✅ | Unsigned 64-bit |
+| COMPLEX | ✅ | Complex number |
+| DCOMPLEX | ✅ | Double complex |
+
+### 14. Pointer/Object Management ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| PTR_NEW | ✅ | Create pointer |
+| PTR_VALID | ✅ | Check validity |
+| PTR_FREE | ✅ | Free pointer |
+| PTR_DEREF | ✅ | Dereference |
+| OBJ_NEW | ✅ | Create object |
+| OBJ_VALID | ✅ | Check validity |
+| OBJ_DESTROY | ✅ | Destroy object |
+| OBJ_CLASS | ✅ | Get class name |
+| OBJ_ISA | ✅ | Check inheritance |
+
+### 15. Data Structures ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| SIZE | ✅ | Variable info |
+| N_PARAMS | ✅ | Parameter count |
+| TAG_NAMES | ✅ | Structure fields |
+| N_TAGS | ✅ | Field count |
+| HASH | ✅ | Hash table |
+| LIST | ✅ | Create list |
+| LIST_ADD | ✅ | Add to list |
+| LIST_COUNT | ✅ | List length |
+| ORDEREDHASH | ✅ | Ordered hash |
+| DICTIONARY | ✅ | Dictionary |
+| CREATE_STRUCT | ✅ | Create structure |
+| STRUCT_ASSIGN | ✅ | Assign structure |
+| HEAP_GC | ✅ | Garbage collection |
+| HEAP_FREE | ✅ | Free heap |
+
+### 16. Complex Numbers ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| COMPLEX | ✅ | Create complex |
+| DCOMPLEX | ✅ | Double complex |
+| REAL | ✅ | Real part |
+| IMAGINARY | ✅ | Imaginary part |
+| CONJ | ✅ | Conjugate |
+| ARG / PHASE | ✅ | Phase/argument |
+| POLAR | ✅ | From polar |
+| COMPLEX_EXP | ✅ | Complex exp |
+| COMPLEX_LOG | ✅ | Complex log |
+| COMPLEX_SQRT | ✅ | Complex sqrt |
+| COMPLEX_SIN | ✅ | Complex sin |
+| COMPLEX_COS | ✅ | Complex cos |
+
+### 17. System & Control ✅ COMPLETE
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| MESSAGE | ✅ | Print message |
+| ON_ERROR | ✅ | Error handling |
+| MEMORY | ✅ | Memory info |
+| EXIT | ✅ | Exit session |
+| STOP | ✅ | Halt execution |
+| RETALL | ✅ | Return to top |
+| ROUTINE_INFO | ✅ | Query routines |
+| HELP | ✅ | Display help |
+| CD | ✅ | Change directory |
+| SPAWN | ✅ | Execute commands |
+| WAIT | ✅ | Pause execution |
+| EXECUTE | ✅ | Execute string |
+| CONTINUE | ✅ | Continue loop |
+| BREAK | ✅ | Break loop |
 
 ---
 
-## ❌ Major Missing Categories
+## Pending Features
 
-### 1. Array Creation Functions (PARTIALLY COMPLETE)
+### Critical Priority
 
-**✅ Implemented:**
+| Feature | Status | Notes |
+|---------|--------|-------|
+| User-defined procedures (PRO/ENDPRO) | ❌ Pending | Only top-level functions supported |
+| GOTO statements | ❌ Pending | Label-based control flow |
+| CASE/SWITCH statements | ⚠️ Partial | Tokens exist, limited implementation |
 
-- ✅ **BYTARR** - Create byte array (fully functional)
-- ✅ **INTARR** - Create integer array (fully functional)
-- ✅ **LONARR** - Create long integer array (fully functional)
-- ✅ **FLTARR** - Create float array (fully functional)
-- ✅ **DBLARR** - Create double precision array (fully functional)
-- ✅ **STRARR** - Create string array (basic - returns numeric array placeholder)
+### High Priority
 
-**❌ Still Missing:**
+| Feature | Status | Notes |
+|---------|--------|-------|
+| FITS file I/O | ❌ Pending | Scientific data format |
+| HDF5 file I/O | ❌ Pending | Scientific data format |
+| NetCDF file I/O | ❌ Pending | Scientific data format |
+| Widget/GUI system | ⚠️ Partial | Basic widgets exist |
 
-- ❌ **COMPLEXARR** - Create complex array
-- ❌ **DCOMPLEXARR** - Create double complex array
-- ❌ **LON64ARR** - Create 64-bit integer array
-- ❌ **UINTARR** - Create unsigned integer array
-- ❌ **ULONARR** - Create unsigned long array
-- ❌ **ULON64ARR** - Create unsigned 64-bit array
-- ❌ **PTRARR** - Create pointer array
-- ❌ **OBJARR** - Create object array
+### Medium Priority
 
-**Impact:** MEDIUM (core types now implemented, specialized types remaining)
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Map projections | ❌ Pending | MAP_SET, MAP_CONTINENTS |
+| 3D isosurface | ❌ Pending | ISOSURFACE |
+| Volume rendering | ❌ Pending | SHADE_VOLUME |
+| Particle tracing | ❌ Pending | PARTICLE_TRACE |
 
-**Status:** Core array creation functions now create actual arrays, not placeholders!
-**Test File:** `examples/test_array_creation.xdl` (428 lines, all passing)
+### Low Priority
 
----
-
-### 2. Array Generation Functions
-
-**Missing:**
-
-- ❌ **DINDGEN** - Double precision index generation
-- ❌ **CINDGEN** - Complex index generation
-- ❌ **BINDGEN** - Byte index generation
-- ❌ **LINDGEN** - Long index generation
-- ❌ **L64INDGEN** - 64-bit index generation
-- ❌ **UINDGEN** - Unsigned index generation
-- ❌ **ULINDGEN** - Unsigned long index generation
-- ❌ **UL64INDGEN** - Unsigned 64-bit index generation
-- ❌ **SINDGEN** - String index generation
-- ❌ **RANDOMN** - Gaussian random numbers
-- ❌ **RANDOM** - Random number generator
-
-**Impact:** MEDIUM - Used for initializing arrays with patterns
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Database functions | ⚠️ Partial | MySQL, ODBC modules exist |
+| Full object system | ⚠️ Partial | Basic OOP support |
+| Advanced dialogs | ❌ Pending | DIALOG_* functions |
 
 ---
 
-### 3. Array Manipulation Functions
+## GPU Acceleration Status
 
-**Missing:**
+XDL includes GPU acceleration via xdl-amp with multiple backends:
 
-- ❌ **REFORM** - Change array dimensions without copying
-- ❌ **TRANSPOSE** - Transpose array
-- ❌ **ROTATE** - Rotate array
-- ❌ **SHIFT** - Shift array elements
-- ❌ **REBIN** - Resize array by replication/averaging
-- ❌ **CONGRID** - Resize array with interpolation
-- ❌ **REPLICATE** - Create array by replicating value
-- ❌ **MAKE_ARRAY** - General array creation
-- ❌ **ARRAY_INDICES** - Convert 1D to nD indices
-- ❌ **ARRAY_EQUAL** - Test array equality
-- ❌ **UNIQ** - Find unique elements
-- ❌ **HISTOGRAM** - Compute histogram
-- ❌ **WHERE** - Find array indices (needs full implementation)
+| Platform | Backends | Performance |
+|----------|----------|-------------|
+| **macOS** | MLX, Metal, MPS, CoreML | MLX: 1517x speedup for matmul |
+| **Windows** | DirectX12, DirectML, CUDA | CUDA: Full support |
+| **Linux** | CUDA, ROCm, OpenCL | CUDA: Full support |
 
-**Impact:** HIGH - Essential for data manipulation
+### GPU-Accelerated Functions
+- MIN, MAX, MEAN, TOTAL (10-50x speedup)
+- MEDIAN, VARIANCE, STDDEV (SIMD-optimized)
+- Matrix multiplication via MLX (up to 1517x faster)
 
 ---
 
-### 4. Matrix/Linear Algebra Functions
+## Platform Support
 
-**Missing:**
-
-- ❌ **INVERT** - Matrix inversion
-- ❌ **DETERM** - Matrix determinant
-- ❌ **IDENTITY** - Create identity matrix
-- ❌ **TRACE** - Matrix trace
-- ❌ **EIGENQL** - Eigenvalues/eigenvectors (QL method)
-- ❌ **EIGENVEC** - Eigenvalues/eigenvectors
-- ❌ **ELMHES** - Reduce to Hessenberg form
-- ❌ **HQR** - Eigenvalues of Hessenberg matrix
-- ❌ **TRIQL** - Tridiagonal QL eigenvalues
-- ❌ **TRISOL** - Solve tridiagonal system
-- ❌ **CHOLDC** - Cholesky decomposition
-- ❌ **CHOLSOL** - Solve using Cholesky
-- ❌ **LA_CHOLDC** - Linear algebra Cholesky
-- ❌ **SVDC** - Singular value decomposition
-- ❌ **SVSOL** - Solve using SVD
-- ❌ **LA_SVD** - Linear algebra SVD
-- ❌ **LUDC** - LU decomposition
-- ❌ **LUSOL** - Solve using LU
-- ❌ **LA_LUDC** - Linear algebra LU
-- ❌ **CRAMER** - Cramer's rule solution
-- ❌ **GS_ITER** - Gauss-Seidel iteration
-
-**Impact:** HIGH - Critical for scientific computing
+| Platform | Status | Notes |
+|----------|--------|-------|
+| macOS (Apple Silicon) | ✅ Full | MLX acceleration |
+| macOS (Intel) | ✅ Full | Metal acceleration |
+| Windows | ✅ Full | DirectX/CUDA |
+| Linux | ✅ Full | CUDA/ROCm |
 
 ---
 
-### 5. Mathematical/Special Functions
-
-**Missing:**
-
-- ❌ **SINH**, **COSH**, **TANH** - Hyperbolic trig
-- ❌ **ASINH**, **ACOSH**, **ATANH** - Inverse hyperbolic
-- ❌ **ATAN** (2-argument) - Two-argument arctangent
-- ❌ **BESELJ**, **BESELI**, **BESELK**, **BESELY** - Bessel functions
-- ❌ **BETA** - Beta function
-- ❌ **LNBETA** - Log beta
-- ❌ **GAMMA** - Gamma function
-- ❌ **LNGAMMA** - Log gamma
-- ❌ **IGAMMA** - Incomplete gamma
-- ❌ **IBETA** - Incomplete beta
-- ❌ **ERF** - Error function
-- ❌ **ERFC** - Complementary error function
-- ❌ **ERFCX** - Scaled complementary error
-- ❌ **EXPINT** - Exponential integral
-- ❌ **FACTORIAL** - Factorial function
-- ❌ **POLY** - Polynomial evaluation
-- ❌ **POLY_FIT** - Polynomial fitting
-- ❌ **POLYFILLV** - Fill polygon vertices
-
-**Impact:** MEDIUM-HIGH - Important for advanced mathematics
-
----
-
-### 6. String Functions
-
-**Missing:**
-
-- ❌ **STRCOMPRESS** - Compress whitespace
-- ❌ **STRTRIM** - Trim whitespace
-- ❌ **STRJOIN** - Join strings
-- ❌ **STRSPLIT** - Split strings
-- ❌ **STRMATCH** - Pattern matching
-- ❌ **STRCMP** - Compare strings
-- ❌ **STREGEX** - Regular expressions
-- ❌ **STRREPLACE** - Replace substrings
-- ❌ **STRING** - Convert to string
-- ❌ **STRMESSAGE** - System error messages
-- ❌ **STRLEN** - String length (implemented)
-- ❌ **STRPUT** - Insert substring
-- ❌ **BYTE** - Convert to byte array
-
-**Impact:** MEDIUM - Needed for text processing
-
----
-
-### 7. I/O Functions and Procedures
-
-**Missing:**
-
-- ❌ **READ** - Read from terminal
-- ❌ **READF** - Read from file
-- ❌ **READS** - Read from string
-- ❌ **READU** - Read unformatted
-- ❌ **WRITEU** - Write unformatted
-- ❌ **PRINTF** - Formatted print to file
-- ❌ **OPENR**, **OPENW**, **OPENU** - Open file variants
-- ❌ **ASSOC** - Associate array with file
-- ❌ **POINT_LUN** - Position file pointer
-- ❌ **EOF** - Test end of file
-- ❌ **FLUSH** - Flush file buffer
-- ❌ **FSTAT** - File status
-- ❌ **FILE_INFO** - File information
-- ❌ **FILE_TEST** - Test file existence
-- ❌ **FILE_SEARCH** - Search for files
-- ❌ **FILE_LINES** - Count file lines
-- ❌ **FILE_DELETE** - Delete files
-- ❌ **FILE_COPY** - Copy files
-- ❌ **FILE_MOVE** - Move files
-- ❌ **FILE_MKDIR** - Create directory
-
-**Impact:** HIGH - Essential for file operations
-
----
-
-### 8. Image I/O Functions
-
-**Missing:**
-
-- ❌ **READ_PNG** - Read PNG image
-- ❌ **WRITE_PNG** - Write PNG image
-- ❌ **READ_TIFF** - Read TIFF image
-- ❌ **WRITE_TIFF** - Write TIFF image
-- ❌ **READ_BMP** - Read BMP image
-- ❌ **WRITE_BMP** - Write BMP image
-- ❌ **WRITE_JPEG** - Write JPEG image
-- ❌ **READ_GIF** - Read GIF image
-- ❌ **WRITE_GIF** - Write GIF image
-- ❌ **QUERY_IMAGE** - Query image info
-
-**Impact:** MEDIUM - Important for image processing
-
----
-
-### 9. Graphics Functions (Additional)
-
-**Missing:**
-
-- ❌ **PLOTS** - Draw lines/points
-- ❌ **XYOUTS** - Draw text
-- ❌ **POLYFILL** - Fill polygon
-- ❌ **USERSYM** - Define user symbol
-- ❌ **ARROW** - Draw arrow
-- ❌ **SHADE_SURF** - Shaded surface
-- ❌ **SHADE_VOLUME** - Shaded volume
-- ❌ **ISOSURFACE** - Isosurface rendering
-- ❌ **PARTICLE_TRACE** - Particle tracing
-- ❌ **STREAMLINE** - Streamline plots
-- ❌ **VECTOR_FIELD** - Vector field plots
-- ❌ **IMAGE** - Display image
-- ❌ **TV** - Display array as image
-- ❌ **TVRD** - Read from display
-- ❌ **COLORBAR** - Draw colorbar
-- ❌ **LEGEND** - Draw legend
-- ❌ **MAP_SET** - Set up map projection
-- ❌ **MAP_CONTINENTS** - Draw continents
-- ❌ **MAP_GRID** - Draw map grid
-
-**Impact:** MEDIUM - For visualization
-
----
-
-### 10. Statistical Functions (Advanced)
-
-**Missing:**
-
-- ❌ **CORRELATE** - Correlation coefficient
-- ❌ **R_CORRELATE** - Rank correlation
-- ❌ **M_CORRELATE** - Multiple correlation
-- ❌ **REGRESS** - Linear regression
-- ❌ **LINFIT** - Linear fit
-- ❌ **CURVEFIT** - Non-linear curve fitting
-- ❌ **SVDFIT** - SVD fit
-- ❌ **LADFIT** - Least absolute deviation fit
-- ❌ **POLY_FIT** - Polynomial fit
-- ❌ **SFIT** - Surface fit
-- ❌ **KURTOSIS** - Kurtosis (implemented)
-- ❌ **HISTOGRAM** - Histogram computation
-- ❌ **HIST_EQUAL** - Histogram equalization
-- ❌ **KS_TEST** - Kolmogorov-Smirnov test
-- ❌ **F_TEST** - F-test
-- ❌ **T_TEST** - t-test
-- ❌ **CHI2_TEST** - Chi-square test
-- ❌ **BINOMIAL** - Binomial distribution
-- ❌ **POISSON** - Poisson distribution
-
-**Impact:** MEDIUM - For statistical analysis
-
----
-
-### 11. Signal Processing Functions
-
-**Missing:**
-
-- ❌ **FFT** - Fast Fourier Transform
-- ❌ **FFT_POWERSPEC** - FFT power spectrum
-- ❌ **CONVOL** - Convolution
-- ❌ **CONVOLVE** - Convolution (different algorithm)
-- ❌ **DEFROI** - Define region of interest
-- ❌ **DIGITAL_FILTER** - Digital filter design
-- ❌ **FIR_FILTER** - FIR filter
-- ❌ **IIR_FILTER** - IIR filter
-- ❌ **LEEFILT** - Lee filter
-- ❌ **MEDIAN** - Median filter (implemented as stat function)
-- ❌ **MORPH_CLOSE** - Morphological closing
-- ❌ **MORPH_OPEN** - Morphological opening
-- ❌ **MORPH_DILATE** - Morphological dilation
-- ❌ **MORPH_ERODE** - Morphological erosion
-- ❌ **SOBEL** - Sobel edge detection
-- ❌ **ROBERTS** - Roberts edge detection
-- ❌ **PREWITT** - Prewitt edge detection
-- ❌ **HOUGH** - Hough transform
-- ❌ **RADON** - Radon transform
-- ❌ **HILBERT** - Hilbert transform
-- ❌ **WAVELET** - Wavelet transform
-
-**Impact:** MEDIUM-HIGH - For signal/image processing
-
----
-
-### 12. Interpolation Functions
-
-**Missing:**
-
-- ❌ **INTERPOL** - Linear interpolation
-- ❌ **INTERPOLATE** - Multi-dimensional interpolation
-- ❌ **BILINEAR** - Bilinear interpolation
-- ❌ **TRIGRID** - Triangular grid interpolation
-- ❌ **TRIANGULATE** - Delaunay triangulation
-- ❌ **SPL_INIT** - Spline initialization
-- ❌ **SPL_INTERP** - Spline interpolation
-- ❌ **SPLINE** - Spline fitting
-- ❌ **SPLINE_P** - Parametric spline
-
-**Impact:** MEDIUM - For data interpolation
-
----
-
-### 13. Time and Date Functions
-
-**Missing:**
-
-- ❌ **SYSTIME** - System time
-- ❌ **JULDAY** - Julian day number
-- ❌ **CALDAT** - Calendar date
-- ❌ **BIN_DATE** - Binary date/time
-- ❌ **TIMESTAMP** - Current timestamp
-- ❌ **TIC**, **TOC** - Timing functions
-
-**Impact:** LOW-MEDIUM - For timing and dating
-
----
-
-### 14. Type Conversion Functions
-
-**Partially Implemented:**
-
-- ✅ **FIX**, **LONG**, **FLOAT**, **DOUBLE** (basic)
-- ❌ **BYTE** - Convert to byte
-- ❌ **COMPLEX** - Create complex number
-- ❌ **DCOMPLEX** - Create double complex
-- ❌ **UINT** - Convert to unsigned int
-- ❌ **ULONG** - Convert to unsigned long
-- ❌ **LONG64** - Convert to 64-bit long
-- ❌ **ULONG64** - Convert to unsigned 64-bit
-- ❌ **PTR_NEW** - Create pointer
-- ❌ **PTR_VALID** - Test pointer validity
-- ❌ **PTR_FREE** - Free pointer
-
-**Impact:** MEDIUM - For type manipulation
-
----
-
-### 15. Structure and Object Functions
-
-**Missing:**
-
-- ❌ **CREATE_STRUCT** - Create structure
-- ❌ **STRUCT_ASSIGN** - Assign structure
-- ❌ **TAG_NAMES** - Structure tag names
-- ❌ **N_TAGS** - Number of structure tags
-- ❌ **OBJ_NEW** - Create object
-- ❌ **OBJ_DESTROY** - Destroy object
-- ❌ **OBJ_VALID** - Test object validity
-- ❌ **OBJ_CLASS** - Object class
-- ❌ **OBJ_ISA** - Test object inheritance
-
-**Impact:** HIGH - For structured data (not yet designed in XDL)
-
----
-
-### 16. Control Flow (Some Implemented)
-
-**Missing:**
-
-- ❌ **SWITCH/CASE** - Switch statement
-- ❌ **ON_ERROR** - Error handling
-- ❌ **ON_IOERROR** - I/O error handling
-- ❌ **MESSAGE** - Display message/error
-- ❌ **RETURN** - Return from procedure
-- ❌ **STOP** - Stop execution
-- ❌ **CONTINUE** - Continue loop
-- ❌ **BREAK** - Break loop
-- ❌ **GOTO** - Goto statement
-
-**Impact:** MEDIUM - Some exist in parser, need runtime support
-
----
-
-### 17. Widgets and GUI (Minimal Implementation)
-
-**Missing:**
-
-- ❌ **WIDGET_BASE** - Create widget base
-- ❌ **WIDGET_BUTTON** - Create button
-- ❌ **WIDGET_SLIDER** - Create slider
-- ❌ **WIDGET_TEXT** - Create text widget
-- ❌ **WIDGET_LABEL** - Create label
-- ❌ **WIDGET_LIST** - Create list
-- ❌ **WIDGET_TABLE** - Create table
-- ❌ **WIDGET_DRAW** - Create drawing area
-- ❌ **WIDGET_CONTROL** - Control widgets
-- ❌ **WIDGET_EVENT** - Handle widget events
-- ❌ **WIDGET_INFO** - Widget information
-- ❌ **XMANAGER** - Event manager
-- ❌ **XREGISTERED** - Check registration
-- ❌ **XLOADCT** - Load color table (GUI)
-- ❌ **XPALETTE** - Palette editor
-
-**Impact:** LOW-MEDIUM - For interactive applications
-
----
-
-### 18. HDF/NetCDF/Scientific Data Formats
-
-**Missing:**
-
-- ❌ **HDF_SD_START** - Open HDF file
-- ❌ **HDF_SD_SELECT** - Select HDF dataset
-- ❌ **HDF_SD_GETDATA** - Read HDF data
-- ❌ **NCDF_CREATE** - Create NetCDF file
-- ❌ **NCDF_OPEN** - Open NetCDF file
-- ❌ **NCDF_VARDEF** - Define NetCDF variable
-- ❌ **NCDF_VARPUT** - Write NetCDF variable
-- ❌ **NCDF_VARGET** - Read NetCDF variable
-- ❌ **FITS_READ** - Read FITS file
-- ❌ **FITS_WRITE** - Write FITS file
-- ❌ **FITS_OPEN** - Open FITS file
-
-**Impact:** HIGH - Critical for scientific data
-
-**Note:** XDL has modules in `xdl-ffi/` (gsl.rs, hdf5.rs, netcdf.rs) but they're not connected
-
----
-
-### 19. Database Functions
-
-**Missing:**
-
-- ❌ All database functionality
-- ❌ **DB_OPEN** - Open database
-- ❌ **DB_QUERY** - Query database
-- ❌ etc.
-
-**Impact:** LOW - Niche functionality
-
----
-
-### 20. Miscellaneous Functions
-
-**Missing:**
-
-- ❌ **DIALOG_MESSAGE** - Display dialog
-- ❌ **DIALOG_PICKFILE** - File picker dialog
-- ❌ **DIALOG_PRINTERSETUP** - Printer setup
-- ❌ **EXECUTE** - Execute command string
-- ❌ **RESOLVE_ROUTINE** - Resolve procedure/function
-- ❌ **ROUTINE_INFO** - Get routine information
-- ❌ **SCOPE_VARNAME** - Variable names in scope
-- ❌ **SCOPE_LEVEL** - Current scope level
-- ❌ **MEMORY** - Memory usage
-- ❌ **HEAP_GC** - Garbage collection
-- ❌ **BINDGEN** through **UL64INDGEN** - Array generation
-
-**Impact:** VARIES
-
----
-
-## Priority Ranking
-
-### 🔴 CRITICAL (Must Have for Basic Functionality)
-
-1. **Array creation functions** (INTARR, DBLARR, etc.) - Currently return placeholders
-2. **WHERE function** (full implementation) - Currently placeholder
-3. **Basic file I/O** (READF, WRITEF, OPENR, OPENW, OPENU)
-4. **REFORM, TRANSPOSE** - Essential array reshaping
-5. **STRING type conversion** - Convert values to strings
-6. **FFT** - Fourier transforms (very common in scientific code)
-
-### 🟡 HIGH (Important for Scientific Computing)
-
-7. **Matrix operations** (INVERT, ##, TRANSPOSE)
-8. **Linear algebra** (SVDC, LUDC, eigenvalues)
-9. **INTERPOL/INTERPOLATE** - Interpolation
-10. **CONVOL** - Convolution
-11. **HISTOGRAM** - Data analysis
-12. **CORRELATE** - Correlation
-13. **REPLICATE** - Array replication
-14. **NetCDF/HDF5 I/O** - Scientific data formats
-15. **More array generation** (RANDOMN, etc.)
-
-### 🟢 MEDIUM (Nice to Have)
-
-16. **Special functions** (BESSEL, GAMMA, ERF)
-17. **String manipulation** (STRSPLIT, STRJOIN, etc.)
-18. **Image I/O** (PNG, TIFF)
-19. **Advanced graphics** (PLOTS, XYOUTS, POLYFILL)
-20. **Curve fitting** (CURVEFIT, POLY_FIT)
-21. **Signal processing** (filters, wavelets)
-22. **Time/date functions**
-
-### 🔵 LOW (Can Wait)
-
-23. **Widgets/GUI** - Complex, low priority
-24. **Database functions** - Niche
-25. **Object-oriented features** - Major design work needed
-26. **Structures** - Requires type system work
-
----
-
-## Recommended Implementation Order
-
-### Phase 1: Core Functionality (Next 3-6 months)
-
-1. ✅ Implement proper array creation (INTARR, DBLARR, STRARR, etc.)
-2. ✅ Full WHERE implementation with conditional support
-3. ✅ STRING() type conversion function
-4. ✅ Basic file I/O (READF, WRITEF, OPENR, OPENW)
-5. ✅ REFORM and TRANSPOSE
-
-### Phase 2: Scientific Computing (6-12 months)
-
-6. ✅ Matrix operations (##, INVERT, DETERM)
-7. ✅ FFT and inverse FFT
-8. ✅ Linear algebra (SVD, LU, eigenvalues via GSL)
-9. ✅ INTERPOL/INTERPOLATE
-10. ✅ CONVOL
-11. ✅ HISTOGRAM
-
-### Phase 3: Data I/O (12-18 months)
-
-12. ✅ NetCDF support (integrate xdl-ffi/netcdf.rs)
-13. ✅ HDF5 support (integrate xdl-ffi/hdf5.rs)
-14. ✅ FITS I/O
-15. ✅ Image I/O (PNG, TIFF, complete JPEG)
-
-### Phase 4: Advanced Features (18-24 months)
-
-16. ✅ Special functions (via GSL)
-17. ✅ Curve fitting
-18. ✅ Advanced signal processing
-19. ✅ More string functions
-20. ✅ Time/date functions
-
-### Phase 5: Nice-to-Have (Future)
-
-21. ⏳ Widgets (if needed)
-22. ⏳ Object system
-23. ⏳ Structure system
-24. ⏳ Database integration
-
----
-
-## Notes on Existing Placeholders
-
-Several functions are **registered** but return **placeholders** instead of working implementations:
-
-1. **BYTARR, FLTARR** - Return string like `"FLTARR(10)"` instead of array
-2. **WHERE** - Returns string `"WHERE result placeholder"`
-3. **HASH** - Returns string representation, not real hash table
-4. **INDGEN** - Returns single Long(0) instead of array
-5. **GAUSS_PDF, T_PDF, CHISQR_PDF** - Return placeholder values
-
-These need **full implementation** before they're truly usable.
-
----
-
-## Estimated Workload
-
-- **Critical functions (Phase 1):** ~2-3 months full-time work
-- **High priority (Phase 2-3):** ~6-12 months
-- **Medium/Low priority (Phase 4-5):** ~12-24 months
-- **Full GDL/IDL parity:** ~3-5 years
-
-**Total estimated functions needed:** ~350-450 functions/procedures
+## Compatibility Features
+
+### MATLAB Support
+- MATLAB transpiler: 28/28 tests passing
+- ~80 MATLAB functions mapped to XDL
+- Direct .m file execution support
+
+### Python Integration
+- Python 3.13 support via PyO3
+- PYTHON_IMPORT, PYTHON_CALL, PYTHON_CALL_KW
+
+### Object-Oriented Syntax
+- Array methods: `arr->Sum()`, `arr->Mean()`, etc.
+- String methods: `str->ToUpper()`, `str->Contains()`, etc.
+- DataFrame methods: `df->Head()`, `df->Column()`, etc.
 
 ---
 
 ## Conclusion
 
-XDL has a **solid foundation** with ~60 functions implemented, covering:
+XDL has achieved **~82% coverage** of common GDL/IDL functionality with:
 
-- ✅ Basic math and trig
-- ✅ Basic statistics
-- ✅ Array operations (min, max, mean, sort, etc.)
-- ✅ Moving averages (comprehensive suite)
-- ✅ Graphics framework (basic)
-- ✅ Python integration
+- ✅ **360+ functions** implemented across all categories
+- ✅ **GPU acceleration** for performance-critical operations
+- ✅ **Full linear algebra** via nalgebra
+- ✅ **Complete signal processing** including FFT, wavelets
+- ✅ **Image I/O and processing** for all common formats
+- ✅ **MATLAB compatibility** layer
+- ✅ **Python integration**
 
-**Critical gaps:**
+**Remaining gaps:**
+- User-defined procedures (PRO/ENDPRO) - Critical
+- Scientific data formats (FITS, HDF5, NetCDF)
+- Advanced visualization (isosurfaces, volume rendering)
+- Widget/GUI system enhancements
 
-- ❌ Array creation functions don't create real arrays
-- ❌ No matrix operations or linear algebra
-- ❌ No file I/O beyond basic operations
-- ❌ No FFT or convolution
-- ❌ No scientific data format support (though modules exist)
-- ❌ Limited string manipulation
-- ❌ No interpolation
+---
 
-**Recommendation:** Focus on Phase 1 (core functionality) to make XDL practically usable for scientific computing. The array creation functions and file I/O are **blocking** for most real-world use cases.
+## References
+
+- IDL Documentation: https://www.l3harrisgeospatial.com/docs/routines.html
+- GDL Project: https://github.com/gnudatalanguage/gdl
+- XDL Implementation Status: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)

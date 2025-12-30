@@ -1,6 +1,17 @@
 # XDL Implementation TODO
 
-This document tracks missing IDL/GDL features that need to be implemented in XDL for full compatibility.
+**Last Updated:** 2025-12-30
+
+This document tracks remaining IDL/GDL features that need to be implemented in XDL for full compatibility.
+
+## Current Status
+
+| Category | Status | Coverage |
+|----------|--------|----------|
+| Core Functions | 250+ implemented | ~83% |
+| ML Functions | 60+ implemented | ~86% |
+| Graphics | 50+ implemented | ~71% |
+| **Total** | **360+ functions** | **~82%** |
 
 ## Priority Legend
 - 🔴 **CRITICAL** - Fundamental language features required for basic programs
@@ -12,251 +23,257 @@ This document tracks missing IDL/GDL features that need to be implemented in XDL
 
 ## 🔴 CRITICAL Priority
 
-### 1. CASE/SWITCH Control Structures
-**Status**: Tokens exist, no parser/evaluator implementation
+### 1. User-Defined Procedures (PRO/ENDPRO)
+**Status**: Not implemented - Most critical missing feature
+**Effort**: High
+**Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
+
+IDL syntax:
+```idl
+PRO my_procedure, arg1, arg2, KEYWORD=keyword
+  ; procedure body
+  PRINT, arg1, arg2
+END
+```
+
+**Tasks**:
+- [ ] Add AST node: `Statement::Procedure`
+- [ ] Implement parser for PRO/ENDPRO blocks
+- [ ] Implement procedure storage in Context
+- [ ] Implement procedure call evaluation
+- [ ] Support keyword arguments in procedures
+- [ ] Add tests
+
+**Impact**: Cannot define reusable procedures - major limitation for real IDL/GDL code
+
+### 2. GOTO Statements
+**Status**: Not implemented
 **Effort**: Medium
 **Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
 
 IDL syntax:
 ```idl
-CASE variable OF
-  1: statement1
-  2: statement2
-  ELSE: default_statement
-ENDCASE
-
-SWITCH variable OF
-  1: BEGIN
-    statement1
-    ; Falls through to next case
-  END
-  2: statement2
-  ELSE: default_statement
-ENDSWITCH
+label1:
+  ; code
+  GOTO, label2
+label2:
+  ; more code
 ```
 
 **Tasks**:
-- [ ] Add AST nodes: `Statement::Case` and `Statement::Switch`
-- [ ] Implement parser for CASE statement
-- [ ] Implement parser for SWITCH statement
-- [ ] Implement evaluator for CASE (no fallthrough)
-- [ ] Implement evaluator for SWITCH (with fallthrough)
+- [ ] Add label parsing
+- [ ] Add GOTO statement parsing
+- [ ] Implement label resolution in evaluator
+- [ ] Handle forward references
 - [ ] Add tests
 
-### 2. Pointer Operations
-**Status**: Pointer type exists, no operations
+### 3. CASE/SWITCH Statements (Enhancement)
+**Status**: Tokens exist, limited implementation
 **Effort**: Medium
-**Files**: `xdl-stdlib/src/system.rs`, `xdl-core/src/types.rs`
+**Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
 
 **Tasks**:
-- [ ] Implement `PTR_NEW([value])` - Create pointer
-- [ ] Implement `PTR_VALID(ptr)` - Check if pointer valid
-- [ ] Implement `PTR_FREE, ptr` - Free pointer memory
-- [ ] Add pointer storage to Context (similar to objects)
-- [ ] Implement dereference operator `*ptr`
-- [ ] Implement pointer assignment `*ptr = value`
-- [ ] Add garbage collection/reference counting
+- [ ] Complete CASE parser (no fallthrough)
+- [ ] Complete SWITCH parser (with fallthrough)
+- [ ] Implement ELSE clause handling
+- [ ] Support BEGIN/END blocks in cases
 - [ ] Add tests
-
-### 3. Critical Array Functions
-**Status**: Some exist, many missing
-**Effort**: Medium-High
-**Files**: `xdl-stdlib/src/array.rs`
-
-**Tasks**:
-- [ ] Implement `REFORM(array, dims)` - Reshape without copying
-- [ ] Implement `TRANSPOSE(array, [permutation])` - Matrix transpose
-- [ ] Implement `REPLICATE(value, dims)` - Create filled array
-- [ ] Implement `REBIN(array, dims, [SAMPLE=])` - Resize with interpolation
-- [ ] Implement `REVERSE(array, [dim])` - Reverse array order
-- [ ] Implement `SHIFT(array, shift)` - Circular shift
-- [ ] Implement `ROTATE(array, direction)` - Rotate 90°
-- [ ] Add tests for each function
 
 ---
 
 ## 🟠 HIGH Priority
 
-### 4. File I/O Improvements
-**Status**: Basic I/O exists, missing formats
+### 4. Scientific Data Formats
+**Status**: Modules exist in xdl-ffi but not integrated
 **Effort**: High
-**Files**: `xdl-stdlib/src/io.rs`, create `xdl-fits/`, `xdl-hdf5/`
+**Files**: `xdl-ffi/src/fits.rs`, `xdl-ffi/src/hdf5.rs`, `xdl-ffi/src/netcdf.rs`
 
 **Tasks**:
-- [ ] Implement FITS file support
+- [ ] FITS support
   - [ ] `READFITS(filename)` - Read FITS file
   - [ ] `WRITEFITS, filename, data, [header]` - Write FITS file
   - [ ] `HEADFITS(filename)` - Read FITS header
   - [ ] `SXPAR(header, keyword)` - Extract header keyword
-- [ ] Implement binary file I/O with structures
-  - [ ] `READU, unit, structure` - Read binary struct
-  - [ ] `WRITEU, unit, structure` - Write binary struct
-- [ ] Add HDF5 support (optional module)
+- [ ] HDF5 support
   - [ ] `H5F_OPEN/H5F_CREATE` - Open/create HDF5 file
   - [ ] `H5D_READ/H5D_WRITE` - Read/write datasets
-- [ ] Add NetCDF support (optional module)
-- [ ] Add tests
+- [ ] NetCDF support
+  - [ ] `NCDF_OPEN/NCDF_CREATE` - Open/create files
+  - [ ] `NCDF_VARGET/NCDF_VARPUT` - Read/write variables
 
-### 5. Structure Functions
-**Status**: Basic struct support exists
-**Effort**: Medium
-**Files**: `xdl-stdlib/src/system.rs`
-
-**Tasks**:
-- [ ] Implement `CREATE_STRUCT(name, tag1, value1, ...)` - Dynamic struct creation
-- [ ] Implement `TAG_NAMES(structure, [STRUCTURE_NAME=])` - Get field names
-- [ ] Implement `N_TAGS(structure)` - Count fields
-- [ ] Implement structure array operations
-- [ ] Add anonymous structure support: `{field1: value1, field2: value2}`
-- [ ] Add tests
-
-### 6. Type Inquiry Functions
-**Status**: Partially implemented
-**Effort**: Medium
-**Files**: `xdl-stdlib/src/system.rs`
+### 5. Widget/GUI System Enhancement
+**Status**: Basic implementation exists
+**Effort**: Very High
+**Files**: `xdl-gui/`
 
 **Tasks**:
-- [ ] Enhance `SIZE(variable, [/DIMENSIONS, /N_DIMENSIONS, /N_ELEMENTS, /TNAME, /TYPE])`
-- [ ] Implement `N_ELEMENTS(variable)` - Count total elements
-- [ ] Implement `N_DIMS(variable)` - Get number of dimensions
-- [ ] Implement `TYPENAME(variable)` - Get type as string
-- [ ] Add tests
-
-### 7. Advanced Array Functions
-**Status**: Missing
-**Effort**: High
-**Files**: `xdl-stdlib/src/array.rs`
-
-**Tasks**:
-- [ ] Implement `CONGRID(array, dims, [/INTERP, /CUBIC])` - Smart resize
-- [ ] Implement `HISTOGRAM(array, [binsize=, min=, max=])` - Compute histogram
-- [ ] Implement `ARRAY_INDICES(array, indices, [/DIMENSIONS])` - Convert 1D to ND indices
-- [ ] Implement `ARRAY_EQUAL(a, b)` - Deep array comparison
-- [ ] Implement `UNIQ(array, [sort_indices])` - Find unique elements
+- [ ] Complete WIDGET_BASE with all options
+- [ ] Add WIDGET_BUTTON, WIDGET_SLIDER, WIDGET_TEXT
+- [ ] Implement WIDGET_CONTROL for runtime modification
+- [ ] Add event handling via XMANAGER
+- [ ] Add WIDGET_DRAW for graphics
 - [ ] Add tests
 
 ---
 
 ## 🟡 MEDIUM Priority
 
-### 8. String Processing
-**Status**: Basic functions exist
-**Effort**: Medium
+### 6. Map Projections
+**Status**: Not implemented
+**Effort**: High
+**Files**: Create `xdl-stdlib/src/map.rs`
+
+**Tasks**:
+- [ ] `MAP_SET` - Set up map projection
+- [ ] `MAP_CONTINENTS` - Draw continent outlines
+- [ ] `MAP_GRID` - Draw coordinate grid
+- [ ] Support common projections (Mercator, Lambert, etc.)
+- [ ] Add tests
+
+### 7. Advanced 3D Visualization
+**Status**: Basic 3D exists, advanced features missing
+**Effort**: High
+**Files**: `xdl-viz3d/`
+
+**Tasks**:
+- [ ] `ISOSURFACE` - Isosurface extraction
+- [ ] `SHADE_VOLUME` - Volume rendering
+- [ ] `PARTICLE_TRACE` - Particle tracing
+- [ ] `STREAMLINE` - Streamline visualization
+- [ ] Add tests
+
+### 8. Additional String Functions
+**Status**: Most implemented, some edge cases remain
+**Effort**: Low
 **Files**: `xdl-stdlib/src/string.rs`
 
 **Tasks**:
-- [ ] Implement `STRSPLIT(string, pattern, [/EXTRACT, /REGEX])` - Split string
-- [ ] Implement `STRJOIN(array, [delimiter])` - Join strings
-- [ ] Implement `STRMATCH(string, pattern, [/FOLD_CASE])` - Wildcard matching
-- [ ] Implement `STREGEX(string, regex, [/EXTRACT, /SUBEXPR])` - Regex matching
-- [ ] Implement `STRCOMPRESS(string, [/REMOVE_ALL])` - Remove whitespace
-- [ ] Implement `STRTRIM(string, [flag])` - Trim whitespace
-- [ ] Implement `STRCMP(str1, str2, [n], [/FOLD_CASE])` - Compare strings
-- [ ] Add tests
-
-### 9. Mathematical Functions
-**Status**: Many implemented
-**Effort**: Medium-High
-**Files**: `xdl-stdlib/src/math.rs`, `xdl-stdlib/src/signal.rs`
-
-**Tasks**:
-- [ ] Implement `INTERPOLATE(array, x, [y], [/GRID, /CUBIC])` - Multi-dim interpolation
-- [ ] Implement `CONVOL(array, kernel, [/EDGE_TRUNCATE, /EDGE_WRAP])` - Convolution
-- [ ] Implement `SMOOTH(array, width, [/EDGE_TRUNCATE])` - Smoothing filter
-- [ ] Implement `MEDIAN(array, width)` - Median filter
-- [ ] Implement `DERIV(x, y)` - Numerical derivative
-- [ ] Implement `INT_TABULATED(x, y, [/DOUBLE])` - Numerical integration
-- [ ] Add tests
-
-### 10. Logical Array Operations
-**Status**: Missing
-**Effort**: Low
-**Files**: `xdl-stdlib/src/array.rs`
-
-**Tasks**:
-- [ ] Implement `ALL(array, [dim])` - Test if all true
-- [ ] Implement `ANY(array, [dim])` - Test if any true
-- [ ] Implement `FINITE(value)` - Test for finite values
-- [ ] Add tests
-
-### 11. Conversion Functions
-**Status**: Basic conversions exist
-**Effort**: Medium
-**Files**: `xdl-stdlib/src/system.rs`
-
-**Tasks**:
-- [ ] Implement explicit type conversions:
-  - [ ] `BYTE(value)`, `FIX(value)`, `LONG(value)`
-  - [ ] `FLOAT(value)`, `DOUBLE(value)`
-  - [ ] `COMPLEX(real, [imag])`, `DCOMPLEX(real, [imag])`
-  - [ ] `UINT(value)`, `ULONG(value)`, `ULONG64(value)`, `LONG64(value)`
-- [ ] Implement `STRING(value, [FORMAT=])` with format support
+- [ ] Enhance STREGEX with all IDL options
+- [ ] Add READS (read from string)
+- [ ] Improve FORMAT string handling
 - [ ] Add tests
 
 ---
 
 ## 🟢 LOW Priority
 
-### 12. Hash Tables and Lists
+### 9. Dialog Functions
 **Status**: Not implemented
 **Effort**: Medium
-**Files**: Create `xdl-core/src/collections.rs`
+**Files**: Create `xdl-stdlib/src/dialog.rs`
 
 **Tasks**:
-- [ ] Implement `HASH()` - Create hash table
-- [ ] Implement `LIST()` - Create list
-- [ ] Implement indexing and operations
+- [ ] `DIALOG_MESSAGE` - Display message dialog
+- [ ] `DIALOG_PICKFILE` - File picker dialog
+- [ ] `DIALOG_PRINTERSETUP` - Printer setup
 - [ ] Add tests
 
-### 13. Regular Expression Support
-**Status**: Not implemented
+### 10. Advanced Scope Functions
+**Status**: Basic scope exists
 **Effort**: Medium
-**Files**: `xdl-stdlib/src/string.rs`
-
-**Tasks**:
-- [ ] Full `STREGEX` implementation with captures
-- [ ] `STRSPLIT` with regex support
-- [ ] Add regex compilation and caching
-- [ ] Add tests
-
-### 14. Widget System (GUI)
-**Status**: Partial implementation exists
-**Effort**: Very High
-**Files**: Multiple in `xdl-gui/`
-
-**Tasks**:
-- [ ] Widget creation functions
-- [ ] Event handling system
-- [ ] Layout management
-- [ ] This is a large subsystem - defer to later
-
-### 15. Execute and Compilation Functions
-**Status**: Partial
-**Effort**: High
 **Files**: `xdl-stdlib/src/system.rs`
 
 **Tasks**:
-- [ ] Enhance `EXECUTE(string)` - Execute string as code
-- [ ] Implement `CALL_FUNCTION(name, args)`
-- [ ] Implement `CALL_METHOD(obj, method, args)`
+- [ ] `SCOPE_VARNAME` - Variable names in scope
+- [ ] `SCOPE_LEVEL` - Current scope level
+- [ ] `SCOPE_TRACEBACK` - Call stack trace
+- [ ] Add tests
+
+### 11. Object System Enhancement
+**Status**: Basic OOP support exists
+**Effort**: High
+**Files**: `xdl-core/src/types.rs`, `xdl-interpreter/`
+
+**Tasks**:
+- [ ] Full class inheritance
+- [ ] Method overriding
+- [ ] Property getters/setters
+- [ ] Class methods vs instance methods
 - [ ] Add tests
 
 ---
 
-## Implementation Order Recommendation
+## Recently Completed ✅
 
-Based on impact and dependencies:
+The following features have been implemented and are no longer pending:
 
-1. **Week 1**: CASE/SWITCH statements (critical control flow)
-2. **Week 2**: Critical array functions (REFORM, TRANSPOSE, REPLICATE, REBIN)
-3. **Week 3**: Pointer operations (PTR_NEW, PTR_VALID, PTR_FREE)
-4. **Week 4**: Type inquiry functions (SIZE, N_ELEMENTS, TYPENAME)
-5. **Week 5**: Structure functions (CREATE_STRUCT, TAG_NAMES)
-6. **Week 6**: String processing (STRSPLIT, STRJOIN, STREGEX)
-7. **Week 7**: Advanced array functions (CONGRID, HISTOGRAM, etc.)
-8. **Week 8**: Mathematical functions (INTERPOLATE, CONVOL, SMOOTH)
-9. **Week 9**: File I/O improvements (FITS, binary structures)
-10. **Week 10+**: Lower priority features
+### Array Functions (All Complete)
+- ✅ REFORM, TRANSPOSE, REPLICATE, REBIN, REVERSE, SHIFT, ROTATE
+- ✅ ARRAY_INDICES, ARRAY_EQUAL, UNIQ, HISTOGRAM, WHERE
+- ✅ CONGRID, PERMUTE, INTERPOL, MESHGRID
+
+### String Functions (All Complete)
+- ✅ STRSPLIT, STRJOIN, STRMATCH, STREGEX
+- ✅ STRCOMPRESS, STRTRIM, STRCMP, STRREPLACE
+
+### Mathematical Functions (All Complete)
+- ✅ CONVOL, SMOOTH, MEDIAN filter
+- ✅ DERIV, INT_TABULATED
+- ✅ All special functions (GAMMA, ERF, BESSEL, etc.)
+
+### Pointer/Object Operations (All Complete)
+- ✅ PTR_NEW, PTR_VALID, PTR_FREE, PTR_DEREF
+- ✅ OBJ_NEW, OBJ_VALID, OBJ_DESTROY, OBJ_CLASS, OBJ_ISA
+
+### Data Structures (All Complete)
+- ✅ CREATE_STRUCT, TAG_NAMES, N_TAGS
+- ✅ HASH, LIST, ORDEREDHASH, DICTIONARY
+- ✅ HEAP_GC, HEAP_FREE
+
+### Type Functions (All Complete)
+- ✅ SIZE with all keywords
+- ✅ N_ELEMENTS, N_DIMS, TYPENAME
+- ✅ All type conversions (BYTE through ULONG64)
+
+### File I/O (All Complete)
+- ✅ All file operations (READ*, WRITE*, OPEN*, etc.)
+- ✅ All FILE_* utility functions
+
+### Signal Processing (All Complete)
+- ✅ FFT, FFT_2D
+- ✅ All window functions (HANNING, HAMMING, BLACKMAN)
+- ✅ All filters (BUTTERWORTH, SAVGOL, LEEFILT)
+- ✅ Wavelets (WV_HAAR, WV_DWT)
+
+### Image Processing (All Complete)
+- ✅ All edge detection (SOBEL, CANNY, etc.)
+- ✅ All morphological operations
+- ✅ HOUGH, RADON transforms
+- ✅ WATERSHED, LABEL_REGION
+
+### Linear Algebra (All Complete)
+- ✅ All decompositions (SVD, LU, QR, Cholesky)
+- ✅ All eigenvalue functions
+- ✅ Matrix operations (INVERT, DETERM, TRACE, etc.)
+
+### Statistics (All Complete)
+- ✅ All fitting functions (CURVEFIT, POLY_FIT, etc.)
+- ✅ All correlation functions
+- ✅ All distribution functions
+
+---
+
+## Implementation Recommendations
+
+### Phase 1: Critical Language Features
+1. User-defined procedures (PRO/ENDPRO) - **Highest priority**
+2. Complete CASE/SWITCH statements
+3. GOTO statements (if needed for legacy code)
+
+### Phase 2: Scientific Data Formats
+4. FITS file support
+5. HDF5 file support
+6. NetCDF file support
+
+### Phase 3: Advanced Visualization
+7. Map projections
+8. Isosurface rendering
+9. Volume visualization
+
+### Phase 4: GUI and Dialogs
+10. Widget system enhancements
+11. Dialog functions
+12. Advanced scope functions
 
 ---
 
@@ -272,7 +289,8 @@ For each feature:
 
 ## Notes
 
-- Some features may require new XdlValue variants or core type changes
-- Performance-critical functions should use vectorized operations
-- Consider SIMD optimizations for array operations
+- PRO/ENDPRO is the most critical missing feature for real-world IDL code compatibility
+- Scientific data formats (FITS, HDF5, NetCDF) are important for astronomy/science users
+- Widget system is extensive - prioritize based on user needs
+- Consider SIMD optimizations for any new array operations
 - Maintain IDL/GDL compatibility as primary goal
