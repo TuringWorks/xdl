@@ -6,6 +6,8 @@ use std::fmt::Debug;
 /// Supported GPU/ML acceleration backends
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GpuBackend {
+    /// Apple MLX - High-performance ML framework for Apple Silicon (macOS)
+    MLX,
     /// Apple Metal - Low-level GPU (macOS, iOS)
     Metal,
     /// Metal Performance Shaders - Optimized operations (macOS, iOS)

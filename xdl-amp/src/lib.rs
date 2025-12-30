@@ -13,6 +13,7 @@
 //! - **Multi-Backend Support**: Multiple GPU backends per platform
 //!
 //! ## Apple Platforms (macOS, iOS)
+//! - **MLX** - High-performance ML framework for Apple Silicon (recommended)
 //! - **Metal** - Low-level GPU compute
 //! - **Metal Performance Shaders (MPS)** - Optimized operations
 //! - **CoreML** - Neural Engine acceleration
@@ -58,6 +59,9 @@ pub mod simd_ops;
 pub mod stats;
 
 // Apple backends
+#[cfg(all(target_os = "macos", feature = "mlx"))]
+pub mod mlx;
+
 #[cfg(target_os = "macos")]
 pub mod metal;
 
@@ -122,6 +126,15 @@ impl GpuContext {
 
         match backend {
             // Apple backends
+            #[cfg(all(target_os = "macos", feature = "mlx"))]
+            GpuBackend::MLX => {
+                let device = mlx::MLXDevice::new()?;
+                Ok(Self {
+                    device: Arc::new(device),
+                    backend_name: "Apple MLX".to_string(),
+                })
+            }
+
             #[cfg(target_os = "macos")]
             GpuBackend::Metal => {
                 let device = metal::MetalDevice::new()?;
@@ -234,12 +247,18 @@ impl GpuContext {
 
     /// Get the default backend for the current platform
     /// Priority order:
-    /// - macOS: MPS > Metal > CoreML
+    /// - macOS: MLX > MPS > Metal > CoreML
     /// - Windows: cuDNN > CUDA > DirectML > DirectX12
     /// - Linux: cuDNN > CUDA > ROCm > OpenCL
     #[cfg(target_os = "macos")]
     fn default_backend() -> GpuBackend {
-        // Prefer MPS for optimized operations on Apple Silicon
+        // Prefer MLX for unified memory and comprehensive operations on Apple Silicon
+        #[cfg(feature = "mlx")]
+        if mlx::MLXDevice::is_available() {
+            return GpuBackend::MLX;
+        }
+
+        // MPS for optimized operations on Apple Silicon
         #[cfg(feature = "mps")]
         if mps::MPSDevice::is_available() {
             return GpuBackend::MetalPerformanceShaders;

@@ -23,6 +23,7 @@ metal = "0.29"
 objc = "0.2"
 core-foundation = "0.9"
 core-graphics = "0.23"
+mlx-rs = { version = "0.25", optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [
@@ -42,6 +43,9 @@ ocl = { version = "0.19", optional = true }
 [features]
 default = ["mps"]
 # Platform-specific features
+# MLX requires full Xcode installation (not just Command Line Tools)
+# Install via: xcode-select -s /Applications/Xcode.app/Contents/Developer
+mlx = ["mlx-rs"]  # Apple MLX framework (macOS Apple Silicon) - requires Xcode
 mps = []  # Metal Performance Shaders (macOS)
 coreml = []  # CoreML/ANE (macOS/iOS)
 directml = ["windows"]  # DirectML (Windows)
@@ -54,9 +58,9 @@ onnx = ["ort"]  # ONNX Runtime
 # Combined features
 all-nvidia = ["cuda", "cudnn"]
 all-amd = ["rocm", "opencl"]
-all-apple = ["mps", "coreml"]
+all-apple = ["mlx", "mps", "coreml"]
 all-windows = ["directml", "cuda"]
-all-backends = ["mps", "coreml", "directml", "cuda", "cudnn", "rocm", "opencl", "vulkan", "onnx"]
+all-backends = ["mlx", "mps", "coreml", "directml", "cuda", "cudnn", "rocm", "opencl", "vulkan", "onnx"]
 # CUDA version-specific features (use if auto-detection fails)
 cuda-12 = ["cudarc/cuda-12060"]
 cuda-11 = ["cudarc/cuda-11080"]
