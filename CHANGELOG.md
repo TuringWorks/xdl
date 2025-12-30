@@ -39,6 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - NetCDF format: NCDF_OPEN, NCDF_CLOSE, NCDF_VARGET, NCDF_INQUIRE
   - File signature validation for format detection
   - Full parsing requires native libraries (cfitsio, hdf5, netcdf)
+- **Map Projection System**
+  - MAP_SET - Initialize map projection with keywords
+  - MAP_CONTINENTS - Draw continental outlines
+  - MAP_GRID - Draw latitude/longitude grid
+  - CONVERT_COORD - Convert geographic to map coordinates
+  - MAP_STRUCT - Get current projection info
+  - 10+ projections: Cylindrical, Mercator, Orthographic, Stereographic,
+    Gnomonic, Sinusoidal, Mollweide, Hammer, Satellite, Lambert Conic, etc.
 
 ### Fixed
 - BEGIN/END blocks now work correctly in CASE/SWITCH statements

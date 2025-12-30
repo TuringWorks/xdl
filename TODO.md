@@ -147,17 +147,31 @@ Full parsing requires native libraries (cfitsio, hdf5, netcdf).
 
 ## 🟡 MEDIUM Priority
 
-### 6. Map Projections
-**Status**: Not implemented
+### 6. Map Projections ✅
+**Status**: IMPLEMENTED (2025-12-30)
 **Effort**: High
-**Files**: Create `xdl-stdlib/src/map.rs`
+**Files**: `xdl-stdlib/src/map.rs`
 
-**Tasks**:
-- [ ] `MAP_SET` - Set up map projection
-- [ ] `MAP_CONTINENTS` - Draw continent outlines
-- [ ] `MAP_GRID` - Draw coordinate grid
-- [ ] Support common projections (Mercator, Lambert, etc.)
-- [ ] Add tests
+**Completed**:
+- [x] `MAP_SET` - Set up map projection with keywords
+- [x] `MAP_CONTINENTS` - Draw continent outlines (placeholder data)
+- [x] `MAP_GRID` - Draw coordinate grid
+- [x] `CONVERT_COORD` - Convert geographic to map coordinates
+- [x] `MAP_STRUCT` - Get current projection info
+- [x] Support common projections:
+  - Cylindrical (Plate Carrée)
+  - Mercator
+  - Lambert Conic
+  - Orthographic
+  - Stereographic
+  - Gnomonic
+  - Sinusoidal
+  - Mollweide
+  - Hammer-Aitoff
+  - Satellite
+- [x] Tests in examples/tests/map_projection_test.xdl
+
+**Note**: Full continent data requires external datasets (Natural Earth, GSHHG)
 
 ### 7. Advanced 3D Visualization
 **Status**: Basic 3D exists, advanced features missing

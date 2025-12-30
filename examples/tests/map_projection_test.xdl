@@ -1,0 +1,138 @@
+; Test file for map projection functions
+; Demonstrates various map projections and coordinate conversion
+
+print, "=== Map Projection Functions Test ==="
+print, ""
+
+; ============================================================================
+; Test MAP_SET with different projections
+; ============================================================================
+print, "--- MAP_SET Tests ---"
+
+; Default cylindrical projection
+print, "Setting up Cylindrical projection..."
+MAP_SET, 0, 0
+
+; Mercator projection centered on Prime Meridian
+print, ""
+print, "Setting up Mercator projection..."
+MAP_SET, 0, 0, /MERCATOR
+
+; Orthographic projection (view from space)
+print, ""
+print, "Setting up Orthographic projection centered on USA..."
+MAP_SET, 40, -100, /ORTHOGRAPHIC
+
+; Hammer projection (equal area)
+print, ""
+print, "Setting up Hammer projection..."
+MAP_SET, 0, 0, /HAMMER
+
+; Satellite projection
+print, ""
+print, "Setting up Satellite projection..."
+MAP_SET, 45, -90, /SATELLITE
+
+print, ""
+
+; ============================================================================
+; Test MAP_GRID
+; ============================================================================
+print, "--- MAP_GRID Tests ---"
+
+; First set up a projection
+MAP_SET, 0, 0, /ORTHOGRAPHIC
+print, ""
+print, "Drawing grid with default spacing (30 degrees)..."
+MAP_GRID
+
+print, ""
+print, "Drawing grid with 15 degree spacing..."
+MAP_GRID, LATDEL=15, LONDEL=15
+
+print, ""
+
+; ============================================================================
+; Test MAP_CONTINENTS
+; ============================================================================
+print, "--- MAP_CONTINENTS Tests ---"
+
+MAP_SET, 0, 0, /ORTHOGRAPHIC
+print, ""
+print, "Drawing continents..."
+MAP_CONTINENTS
+
+print, ""
+print, "Drawing continents with coastlines..."
+MAP_CONTINENTS, /COASTS
+
+print, ""
+print, "Drawing continents with country borders..."
+MAP_CONTINENTS, /COUNTRIES
+
+print, ""
+
+; ============================================================================
+; Test CONVERT_COORD
+; ============================================================================
+print, "--- CONVERT_COORD Tests ---"
+
+MAP_SET, 0, 0, /CYLINDRICAL
+print, ""
+print, "Converting coordinates with Cylindrical projection..."
+
+coords = CONVERT_COORD(0, 0)
+print, "Center (0, 0) -> ", coords
+
+coords = CONVERT_COORD(45, 90)
+print, "45N, 90E -> ", coords
+
+coords = CONVERT_COORD(-45, -90)
+print, "45S, 90W -> ", coords
+
+print, ""
+
+; Orthographic - back side should return NaN
+MAP_SET, 0, 0, /ORTHOGRAPHIC
+print, "Testing Orthographic projection (back-side visibility)..."
+
+coords = CONVERT_COORD(0, 180)
+print, "Opposite side (0, 180) -> ", coords, " (should be NaN)"
+
+coords = CONVERT_COORD(0, 0)
+print, "Front side (0, 0) -> ", coords
+
+print, ""
+
+; ============================================================================
+; Test MAP_STRUCT
+; ============================================================================
+print, "--- MAP_STRUCT Tests ---"
+
+MAP_SET, 35, -118, /MERCATOR
+print, ""
+print, "Getting projection structure..."
+info = MAP_STRUCT()
+print, "Projection info: ", info
+
+print, ""
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, "=== Test Summary ==="
+print, "Procedures: MAP_SET, MAP_GRID, MAP_CONTINENTS"
+print, "Functions: CONVERT_COORD, MAP_STRUCT"
+print, ""
+print, "Supported projections:"
+print, "  - Cylindrical (Plate Carree)"
+print, "  - Mercator"
+print, "  - Orthographic"
+print, "  - Stereographic"
+print, "  - Gnomonic"
+print, "  - Sinusoidal"
+print, "  - Mollweide"
+print, "  - Hammer-Aitoff"
+print, "  - Satellite"
+print, ""
+print, "=== Map Projection Test Complete ==="

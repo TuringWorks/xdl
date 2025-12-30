@@ -15,6 +15,7 @@ pub mod image; // Image processing
 pub mod image_io; // Image file I/O (PNG, JPEG, TIFF, etc.)
 pub mod io;
 pub mod linalg; // Linear algebra
+pub mod map; // Map projections
 pub mod math;
 pub mod matlab_compat; // MATLAB compatibility functions
 pub mod ml;
@@ -125,9 +126,9 @@ impl StandardLibrary {
             "VELOVECT" => graphics_procs::velovect(args),
 
             // Graphics procedures - Map projections
-            "MAP_SET" => graphics_procs::map_set(args),
-            "MAP_CONTINENTS" => graphics_procs::map_continents(args),
-            "MAP_GRID" => graphics_procs::map_grid(args),
+            "MAP_SET" => map::map_set(args, keywords),
+            "MAP_CONTINENTS" => map::map_continents(args, keywords),
+            "MAP_GRID" => map::map_grid(args, keywords),
 
             // Graphics procedures - Advanced visualization
             "RENDER_COLORMAP" => graphics_procs::render_colormap(args),
@@ -543,6 +544,10 @@ impl StandardLibrary {
             "DIALOG_PICKFILE" => dialog::dialog_pickfile(args, keywords),
             "DIALOG_PRINTERSETUP" => dialog::dialog_printersetup(args, keywords),
             "DIALOG_READ_TEXT" => dialog::dialog_read_text(args, keywords),
+
+            // Map projection functions
+            "CONVERT_COORD" => map::convert_coord(args, keywords),
+            "MAP_STRUCT" => map::map_struct(args),
 
             // Scientific data format functions (FITS, HDF5, NetCDF)
             "READFITS" => scientific_io::readfits(args, keywords),
