@@ -6,10 +6,12 @@ pub mod amp; // Accelerated Math Processing (SIMD/GPU)
 pub mod array;
 mod charting_procs; // ECharts charting procedures
 pub mod complex;
+pub mod data_structures; // Pointers, objects, lists, hashes
 pub mod gpu_array; // GPU-accelerated array operations
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
 pub mod image; // Image processing
+pub mod image_io; // Image file I/O (PNG, JPEG, TIFF, etc.)
 pub mod io;
 pub mod linalg; // Linear algebra
 pub mod math;
@@ -193,6 +195,28 @@ impl StandardLibrary {
             "MESSAGE" => system::message(args),
             "ON_ERROR" => system::on_error(args),
             "EXECUTE" => system::execute(args),
+
+            // Pointer and Object Management (Phase 15)
+            "PTR_NEW" => data_structures::ptr_new(args),
+            "PTR_VALID" => data_structures::ptr_valid(args),
+            "PTR_FREE" => data_structures::ptr_free(args),
+            "PTR_DEREF" => data_structures::ptr_deref(args),
+            "OBJ_NEW" => data_structures::obj_new(args),
+            "OBJ_VALID" => data_structures::obj_valid(args),
+            "OBJ_DESTROY" => data_structures::obj_destroy(args),
+            "OBJ_CLASS" => data_structures::obj_class(args),
+            "OBJ_ISA" => data_structures::obj_isa(args),
+
+            // Data Structures (Phase 16)
+            "LIST" => data_structures::list(args),
+            "LIST_ADD" => data_structures::list_add(args),
+            "LIST_COUNT" => data_structures::list_count(args),
+            "ORDEREDHASH" => data_structures::orderedhash(args),
+            "DICTIONARY" => data_structures::dictionary(args),
+            "CREATE_STRUCT" => data_structures::create_struct(args),
+            "STRUCT_ASSIGN" => data_structures::struct_assign(args),
+            "HEAP_GC" => data_structures::heap_gc(args),
+            "HEAP_FREE" => data_structures::heap_free(args),
 
             // Signal processing procedures
             "A_CORRELATE" => signal::a_correlate(args),
@@ -466,6 +490,20 @@ impl StandardLibrary {
             "READU" => io::readu(args),
             "WRITEU" => io::writeu(args),
             "ASSOC" => io::assoc(args),
+
+            // Image I/O functions (Phase 10)
+            "READ_PNG" => image_io::read_png(args),
+            "WRITE_PNG" => image_io::write_png(args),
+            "WRITE_JPEG" => image_io::write_jpeg(args),
+            "READ_TIFF" => image_io::read_tiff(args),
+            "WRITE_TIFF" => image_io::write_tiff(args),
+            "READ_BMP" => image_io::read_bmp(args),
+            "WRITE_BMP" => image_io::write_bmp(args),
+            "READ_GIF" => image_io::read_gif(args),
+            "WRITE_GIF" => image_io::write_gif(args),
+            "READ_IMAGE" => image_io::read_image(args),
+            "WRITE_IMAGE" => image_io::write_image(args),
+            "QUERY_IMAGE" => image_io::query_image(args),
 
             // Time functions
             "SYSTIME" => system::systime(args),

@@ -71,6 +71,9 @@ hdf5 = { version = "0.8", optional = true }
 # 3D Rendering
 three-d = "0.17"
 
+# Image I/O
+image = { version = "0.25", optional = true }
+
 # GSL = { workspace = true }  # TODO: Install GSL system dependency
 
 [features]
@@ -100,9 +103,12 @@ gis = ["geo", "geo-types", "geojson", "proj", "wkt"]
 # Scientific I/O
 scientific-io = ["netcdf", "hdf5"]
 
-# GPU acceleration (currently stubbed)nvulkan = []n# GPU acceleration (currently stubbed)ncuda = []nvulkan = []nn# GPU acceleration (currently stubbed)
+# Image I/O
+image-io = ["image"]
+
+# GPU acceleration (currently stubbed)
 cuda = []
 vulkan = []
 
 # All features
-all-features = ["gis", "scientific-io", "python", "rustpython", "datascience"]
+all-features = ["gis", "scientific-io", "image-io", "python", "rustpython", "datascience"]
