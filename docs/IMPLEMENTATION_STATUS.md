@@ -36,10 +36,25 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - **Syntax Conversion**: 1-based → 0-based indexing, element-wise operators
 
 ### GPU Acceleration ✅ NEW
-- **xdl-amp Backend**: Multi-backend GPU support (Metal, CUDA, Vulkan, etc.)
+- **xdl-amp Backend**: Multi-backend GPU support
 - **Accelerated Functions**: MIN, MAX, MEAN, TOTAL, MEDIAN, VARIANCE, STDDEV
 - **Performance**: 10-50x speedup for large arrays (>10K elements)
 - **Smart Dispatch**: Automatic CPU/GPU selection based on array size
+
+### xdl-amp GPU Backends
+
+| Platform | Backends | Priority |
+|----------|----------|----------|
+| **macOS** | MLX ✅, Metal, MPS, CoreML | MLX > MPS > Metal > CoreML |
+| **Windows** | DirectX 12, DirectML, CUDA, cuDNN, Vulkan | cuDNN > CUDA > DirectML > DirectX12 |
+| **Linux** | CUDA, cuDNN, ROCm, OpenCL, Vulkan | cuDNN > CUDA > ROCm > OpenCL |
+
+**Apple MLX Backend** ✅ NEW (v0.1.5)
+- Unified memory architecture (no CPU/GPU transfers)
+- Lazy evaluation with JIT compilation
+- Optimized for Apple Silicon (M1/M2/M3/M4)
+- Complete FFT and linear algebra support
+- Requires full Xcode installation
 
 ### Function Keyword Arguments ✅ NEW
 - **Parser Support**: `NAME=value` and `/FLAG` syntax in function calls
@@ -517,6 +532,12 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - `num-complex` - Complex number support
 - `rand` - Random number generation
 
+### GPU Acceleration (xdl-amp)
+- `mlx-rs` - Apple MLX bindings (macOS, optional, requires Xcode)
+- `metal` - Apple Metal GPU (macOS)
+- `cudarc` - NVIDIA CUDA (optional)
+- `ash` - Vulkan (optional)
+
 ### Development Dependencies
 - `cargo-test` - Unit testing
 - `criterion` - Benchmarking (future)
@@ -590,6 +611,18 @@ When adding new functions:
 - Phase 16 Data Structures: LIST, LIST_ADD, LIST_COUNT, ORDEREDHASH, DICTIONARY, CREATE_STRUCT, STRUCT_ASSIGN, HEAP_GC, HEAP_FREE
 - Added comprehensive unit test suite (29 tests covering all new functions)
 
+- **v0.1.5** (2025-12) - Apple MLX backend for xdl-amp
+- Added Apple MLX backend with unified memory architecture
+- MLX base operations: add, sub, mul, div, pow, matmul, sin, cos, exp, log, sqrt
+- MLX reductions: sum, max, min, median, variance, stddev
+- MLX extended operations (new capabilities):
+  - FFT: fft_1d, ifft_1d, fft_2d, rfft_1d
+  - Linear algebra: qr, svd, cholesky, inv, solve, eigh, norm
+  - Convolutions: conv1d, conv2d
+  - Activations: sigmoid, softmax, tanh, erf
+- Updated backend priority on macOS: MLX > MPS > Metal > CoreML
+- Requires full Xcode installation (not Command Line Tools)
+
 ---
 
 ## References
@@ -597,3 +630,5 @@ When adding new functions:
 - IDL Documentation: https://www.l3harrisgeospatial.com/docs/routines.html
 - GDL Project: https://github.com/gnudatalanguage/gdl
 - nalgebra: https://nalgebra.org/
+- Apple MLX: https://github.com/ml-explore/mlx
+- mlx-rs (Rust bindings): https://github.com/oxideai/mlx-rs
