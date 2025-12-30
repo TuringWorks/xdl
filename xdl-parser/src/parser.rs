@@ -87,6 +87,11 @@ impl<'a> Parser<'a> {
             // GDL/IDL allows both 'end' and specific terminators (endif, endfor, endwhile)
             // to close a begin block. E.g., "for i=1,3 do begin ... endfor" is valid.
             while !self.is_at_end() {
+                // Skip newlines before checking for END or terminators
+                while matches!(self.peek(), Token::Newline) {
+                    self.advance();
+                }
+
                 // Check if we hit 'end' or any of the terminators
                 if self.check(&Token::End) {
                     self.advance(); // consume 'end'
@@ -110,6 +115,11 @@ impl<'a> Parser<'a> {
             // The key insight: parse_statement() handles nested constructs recursively
             let mut statements = Vec::new();
             while !self.is_at_end() {
+                // Skip newlines before checking terminators
+                while matches!(self.peek(), Token::Newline) {
+                    self.advance();
+                }
+
                 let is_terminator = terminators.iter().any(|term| {
                     std::mem::discriminant(self.peek()) == std::mem::discriminant(term)
                 });
@@ -211,7 +221,11 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse if statement
-    /// Supports both single-line (IF x THEN y) and multi-line (IF x THEN BEGIN...ENDIF) forms
+    /// Supports:
+    /// - Single-line: IF x THEN statement (no ENDIF needed)
+    /// - Single-line with else: IF x THEN statement ELSE statement
+    /// - Multi-line: IF x THEN\n statement(s) ENDIF
+    /// - Block form: IF x THEN BEGIN ... END
     fn parse_if_statement(&mut self) -> XdlResult<Statement> {
         self.consume(Token::If, "Expected 'if'")?;
         let condition = self.parse_expression()?;
@@ -220,11 +234,21 @@ impl<'a> Parser<'a> {
         // Check if this is a block (BEGIN) or single-line form
         let is_block = self.check(&Token::Begin);
 
+        // Check for single-line IF: if no newline after THEN, parse only one statement
+        // Single-line: IF x THEN statement (no ENDIF needed)
+        // Multi-line: IF x THEN\n statements... ENDIF
+        let is_single_line = !is_block && !matches!(self.peek(), Token::Newline);
+
         let then_block = if is_block {
             // Multi-line form: IF x THEN BEGIN ... END/ENDIF
             self.parse_block_or_statement(&[Token::Else, Token::Endif])?
+        } else if is_single_line {
+            // Single-line form: IF x THEN statement (no ENDIF)
+            // Parse just ONE statement
+            let stmt = self.parse_statement()?;
+            vec![stmt]
         } else {
-            // Non-block form: IF x THEN statement(s) ENDIF
+            // Non-block multi-line form: IF x THEN\n statement(s) ENDIF
             // Parse statements until we hit ELSE or ENDIF
             let mut stmts = Vec::new();
             loop {
@@ -240,40 +264,54 @@ impl<'a> Parser<'a> {
             stmts
         };
 
-        // Skip newlines before ELSE check
-        while matches!(self.peek(), Token::Newline) {
-            self.advance();
-        }
-
-        let else_block = if self.check(&Token::Else) {
-            self.advance(); // consume 'else'
-            if is_block || self.check(&Token::Begin) {
-                // Multi-line else block
-                Some(self.parse_block_or_statement(&[Token::Endif])?)
+        // For single-line IF, check for optional ELSE on the same line
+        let else_block = if is_single_line {
+            if self.check(&Token::Else) {
+                self.advance(); // consume 'else'
+                // Single-line ELSE: parse one statement
+                let stmt = self.parse_statement()?;
+                Some(vec![stmt])
             } else {
-                // Non-block else: parse until ENDIF
-                let mut stmts = Vec::new();
-                loop {
-                    while matches!(self.peek(), Token::Newline) {
-                        self.advance();
-                    }
-                    if matches!(self.peek(), Token::Endif | Token::EOF) {
-                        break;
-                    }
-                    stmts.push(self.parse_statement()?);
-                }
-                Some(stmts)
+                None
             }
         } else {
-            None
+            // Skip newlines before ELSE check
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
+
+            if self.check(&Token::Else) {
+                self.advance(); // consume 'else'
+                if is_block || self.check(&Token::Begin) {
+                    // Multi-line else block
+                    Some(self.parse_block_or_statement(&[Token::Endif])?)
+                } else {
+                    // Non-block else: parse until ENDIF
+                    let mut stmts = Vec::new();
+                    loop {
+                        while matches!(self.peek(), Token::Newline) {
+                            self.advance();
+                        }
+                        if matches!(self.peek(), Token::Endif | Token::EOF) {
+                            break;
+                        }
+                        stmts.push(self.parse_statement()?);
+                    }
+                    Some(stmts)
+                }
+            } else {
+                None
+            }
         };
 
-        // Skip newlines before ENDIF check
-        while matches!(self.peek(), Token::Newline) {
-            self.advance();
+        // Skip newlines before ENDIF check (only for multi-line forms)
+        if !is_single_line {
+            while matches!(self.peek(), Token::Newline) {
+                self.advance();
+            }
         }
 
-        // Consume ENDIF if present
+        // Consume ENDIF if present (not required for single-line form)
         if self.check(&Token::Endif) {
             self.advance(); // consume 'endif'
         }
@@ -550,8 +588,14 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse GOTO statement
+    /// IDL syntax: GOTO, label (comma is optional)
     fn parse_goto_statement(&mut self) -> XdlResult<Statement> {
         self.consume(Token::Goto, "Expected 'goto'")?;
+
+        // Skip optional comma after GOTO
+        if self.check(&Token::Comma) {
+            self.advance();
+        }
 
         // Get the label name
         let label = if let Token::Identifier(name) = self.peek() {

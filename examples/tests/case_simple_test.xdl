@@ -1,0 +1,11 @@
+; Simple CASE test
+print, "Testing CASE"
+
+x = 2
+case x of
+  1: print, "x is one"
+  2: print, "x is two"
+  3: print, "x is three"
+endcase
+
+print, "Done"

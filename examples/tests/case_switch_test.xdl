@@ -1,0 +1,76 @@
+; Test CASE/SWITCH statement functionality
+
+print, "=== Testing CASE Statement ==="
+
+; Test 1: Simple CASE
+print, ""
+print, "Test 1: Simple CASE"
+x = 2
+case x of
+  1: print, "x is one"
+  2: print, "x is two"
+  3: print, "x is three"
+endcase
+; Expected: "x is two"
+
+; Test 2: CASE with ELSE
+print, ""
+print, "Test 2: CASE with ELSE"
+y = 99
+case y of
+  1: print, "y is one"
+  2: print, "y is two"
+  else: print, "y is something else:", y
+endcase
+; Expected: "y is something else: 99"
+
+; Test 3: CASE with BEGIN/END block
+print, ""
+print, "Test 3: CASE with BEGIN/END block"
+z = 1
+case z of
+  1: begin
+    print, "z is one"
+    print, "  doing something for one"
+  end
+  2: print, "z is two"
+endcase
+; Expected: multi-line output for z = 1
+
+; Test 4: CASE with multiple values
+print, ""
+print, "Test 4: CASE with multiple values"
+a = 5
+case a of
+  1, 2, 3: print, "a is 1, 2, or 3"
+  4, 5, 6: print, "a is 4, 5, or 6"
+  else: print, "a is something else"
+endcase
+; Expected: "a is 4, 5, or 6"
+
+print, ""
+print, "=== Testing SWITCH Statement ==="
+
+; Test 5: Simple SWITCH
+print, ""
+print, "Test 5: Simple SWITCH"
+b = 3
+switch b of
+  1: print, "b is one"
+  2: print, "b is two"
+  3: print, "b is three"
+endswitch
+; Expected: "b is three"
+
+; Test 6: SWITCH with ELSE
+print, ""
+print, "Test 6: SWITCH with ELSE"
+c = 42
+switch c of
+  1: print, "c is one"
+  else: print, "c is not one, it's:", c
+endswitch
+; Expected: "c is not one, it's: 42"
+
+print, ""
+print, "=== All CASE/SWITCH Tests Complete ==="

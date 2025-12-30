@@ -82,6 +82,9 @@ pub enum XdlError {
     #[error("Return")]
     Return(crate::XdlValue),
 
+    #[error("Goto: {0}")]
+    Goto(String),
+
     #[error("Invalid assignment target")]
     InvalidAssignmentTarget,
 

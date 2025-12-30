@@ -1,0 +1,13 @@
+; CASE with BEGIN/END test
+print, "Testing CASE with BEGIN/END"
+
+z = 1
+case z of
+  1: begin
+    print, "z is one"
+    print, "  doing something for one"
+  end
+  2: print, "z is two"
+endcase
+
+print, "Done"

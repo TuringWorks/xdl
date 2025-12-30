@@ -1,0 +1,8 @@
+; Test GOTO in IF-THEN
+counter = 0
+loop_start:
+counter = counter + 1
+print, "counter =", counter
+if counter lt 3 then goto loop_start
+print, "Loop finished"
+print, "Done with test"

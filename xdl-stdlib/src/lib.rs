@@ -190,6 +190,9 @@ impl StandardLibrary {
             "MEMORY" => system::memory(args),
             "ROUTINE_INFO" => system::routine_info(args),
             "N_PARAMS" => system::n_params(args),
+            "SCOPE_VARNAME" => system::scope_varname(args),
+            "SCOPE_LEVEL" => system::scope_level(args),
+            "SCOPE_TRACEBACK" => system::scope_traceback(args),
             "EXIT" => system::exit_session(args),
             "RETALL" => system::retall(args),
             "MESSAGE" => system::message(args),
@@ -529,6 +532,9 @@ impl StandardLibrary {
             "MEMORY" => system::memory(args),
             "ROUTINE_INFO" => system::routine_info(args),
             "N_PARAMS" => system::n_params(args),
+            "SCOPE_VARNAME" => system::scope_varname(args),
+            "SCOPE_LEVEL" => system::scope_level(args),
+            "SCOPE_TRACEBACK" => system::scope_traceback(args),
 
             // Data structure functions
             "HASH" => create_hash(args),
@@ -547,6 +553,8 @@ impl StandardLibrary {
             "STRCMP" => string::strcmp(args),
             "STREGEX" => string::stregex(args),
             "STRREPLACE" => string::strreplace(args),
+            "READS" => string::reads(args),
+            "READS_STRING" => string::reads_string(args),
 
             // Complex number functions
             "COMPLEX" => complex::complex(args),

@@ -608,3 +608,70 @@ pub fn strreplace(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::String(result))
 }
+
+/// READS - Read values from a string
+/// IDL syntax: READS, string_expression, variable [, variable, ...]
+/// This function parses whitespace-separated values from a string
+pub fn reads(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "READS: Expected at least 1 argument (string to parse)".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Split on whitespace and parse values
+    let parts: Vec<&str> = input.split_whitespace().collect();
+
+    // If there are additional arguments, they indicate the expected types
+    // For now, return an array of parsed values
+    let mut values: Vec<f64> = Vec::new();
+    for part in parts {
+        if let Ok(val) = part.parse::<f64>() {
+            values.push(val);
+        } else if let Ok(val) = part.parse::<i64>() {
+            values.push(val as f64);
+        }
+        // Skip non-numeric parts for now
+    }
+
+    // Return as array
+    Ok(XdlValue::Array(values))
+}
+
+/// READS_STRING - Read a single value from a string as a string
+/// Returns parsed parts as an array of strings
+pub fn reads_string(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "READS_STRING: Expected at least 1 argument".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Split on whitespace
+    let parts: Vec<XdlValue> = input
+        .split_whitespace()
+        .map(|s| XdlValue::String(s.to_string()))
+        .collect();
+
+    Ok(XdlValue::NestedArray(parts))
+}

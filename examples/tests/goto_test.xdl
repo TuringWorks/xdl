@@ -1,0 +1,46 @@
+; Test GOTO statement functionality
+
+; Test 1: Simple GOTO - skip some code
+print, "Test 1: Simple GOTO"
+i = 1
+goto, skip_section
+print, "This should be skipped"
+i = 999
+skip_section:
+print, "After skip_section, i =", i
+; Expected: i = 1
+
+; Test 2: GOTO without comma (also valid)
+print, ""
+print, "Test 2: GOTO without comma"
+j = 10
+goto next_label
+j = 0
+next_label:
+print, "j =", j
+; Expected: j = 10
+
+; Test 3: GOTO in a simple control flow
+print, ""
+print, "Test 3: Counted loop with GOTO"
+counter = 0
+loop_start:
+counter = counter + 1
+print, "counter =", counter
+if counter lt 3 then goto loop_start
+print, "Loop finished, counter =", counter
+; Expected: counts 1, 2, 3
+
+; Test 4: Forward jump
+print, ""
+print, "Test 4: Forward jump"
+x = 5
+if x gt 0 then goto positive_handler
+goto end_test
+positive_handler:
+print, "x is positive:", x
+end_test:
+print, "End of test 4"
+
+print, ""
+print, "All GOTO tests complete!"

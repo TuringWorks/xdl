@@ -1,0 +1,11 @@
+; CASE with ELSE test
+print, "Testing CASE with ELSE"
+
+y = 99
+case y of
+  1: print, "y is one"
+  2: print, "y is two"
+  else: print, "y is something else:", y
+endcase
+
+print, "Done"

@@ -1,0 +1,14 @@
+; Test READS function
+print, "Testing READS function"
+
+; Test 1: Parse numbers from string
+str = "1.5 2.5 3.5 4.5"
+values = reads(str)
+print, "Parsed values:", values
+
+; Test 2: Parse integers
+str2 = "10 20 30"
+nums = reads(str2)
+print, "Parsed integers:", nums
+
+print, "READS test complete"

@@ -64,10 +64,10 @@ END
 
 ## 🔴 CRITICAL Priority
 
-### 3. GOTO Statements
-**Status**: Not implemented
+### 3. GOTO Statements ✅
+**Status**: IMPLEMENTED (2025-12-30)
 **Effort**: Medium
-**Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
+**Files**: `xdl-parser/src/lexer.rs`, `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
 
 IDL syntax:
 ```idl
@@ -78,24 +78,25 @@ label2:
   ; more code
 ```
 
-**Tasks**:
-- [ ] Add label parsing
-- [ ] Add GOTO statement parsing
-- [ ] Implement label resolution in evaluator
-- [ ] Handle forward references
-- [ ] Add tests
+**Completed**:
+- [x] Add label parsing in lexer
+- [x] Add GOTO statement parsing
+- [x] Implement label resolution in evaluator with label map
+- [x] Handle forward references
+- [x] Add tests in examples/tests/goto_test.xdl
 
-### 4. CASE/SWITCH Statements (Enhancement)
-**Status**: Tokens exist, limited implementation
+### 4. CASE/SWITCH Statements ✅
+**Status**: FULLY IMPLEMENTED (2025-12-30)
 **Effort**: Medium
 **Files**: `xdl-parser/src/parser.rs`, `xdl-interpreter/src/lib.rs`
 
-**Tasks**:
-- [ ] Complete CASE parser (no fallthrough)
-- [ ] Complete SWITCH parser (with fallthrough)
-- [ ] Implement ELSE clause handling
-- [ ] Support BEGIN/END blocks in cases
-- [ ] Add tests
+**Completed**:
+- [x] Complete CASE parser (no fallthrough)
+- [x] Complete SWITCH parser
+- [x] Implement ELSE clause handling
+- [x] Support BEGIN/END blocks in cases
+- [x] Support multiple values per case (comma-separated)
+- [x] Add tests in examples/tests/case_switch_test.xdl
 
 ---
 

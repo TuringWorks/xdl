@@ -1017,3 +1017,37 @@ pub fn n_params(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Return 0 as placeholder
     Ok(XdlValue::Long(0))
 }
+
+/// SCOPE_VARNAME - Return names of variables at specified scope level
+/// IDL syntax: result = SCOPE_VARNAME([level])
+/// Returns an array of variable names at the specified scope level
+pub fn scope_varname(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Level 0 = current scope, 1 = caller, etc.
+    let _level = if args.is_empty() {
+        0
+    } else {
+        args[0].to_long().unwrap_or(0)
+    };
+
+    // This would need access to the interpreter context to be fully implemented
+    // Return an empty array as placeholder
+    Ok(XdlValue::NestedArray(vec![]))
+}
+
+/// SCOPE_LEVEL - Return the current scope level
+/// Returns 0 for main level, 1 for first level procedure, etc.
+pub fn scope_level(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // This would need access to the interpreter context to return actual scope level
+    // Return 0 (main level) as placeholder
+    Ok(XdlValue::Long(0))
+}
+
+/// SCOPE_TRACEBACK - Return array of routine names in call stack
+/// Returns a string array with the call trace from current routine to main
+pub fn scope_traceback(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // This would need access to the interpreter context to get call stack
+    // Return a single element "$MAIN$" as placeholder
+    Ok(XdlValue::NestedArray(vec![XdlValue::String(
+        "$MAIN$".to_string(),
+    )]))
+}

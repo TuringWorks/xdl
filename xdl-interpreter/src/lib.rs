@@ -43,10 +43,43 @@ impl Interpreter {
     }
 
     pub fn execute_program(&mut self, program: &Program) -> XdlResult<()> {
-        for statement in &program.statements {
-            self.execute_statement(statement)?;
+        // Pre-scan statements to build label map for GOTO support
+        let label_map = self.build_label_map(&program.statements);
+
+        // Execute statements with index-based control for GOTO
+        let mut index = 0;
+        while index < program.statements.len() {
+            let statement = &program.statements[index];
+            match self.execute_statement(statement) {
+                Ok(()) => {
+                    index += 1;
+                }
+                Err(XdlError::Goto(label)) => {
+                    // Jump to the label
+                    if let Some(&target_index) = label_map.get(&label.to_uppercase()) {
+                        index = target_index;
+                    } else {
+                        return Err(XdlError::RuntimeError(format!(
+                            "Label not found: {}",
+                            label
+                        )));
+                    }
+                }
+                Err(e) => return Err(e),
+            }
         }
         Ok(())
+    }
+
+    /// Build a map of label names to statement indices for GOTO support
+    fn build_label_map(&self, statements: &[Statement]) -> HashMap<String, usize> {
+        let mut label_map = HashMap::new();
+        for (index, stmt) in statements.iter().enumerate() {
+            if let Statement::Label { name, .. } = stmt {
+                label_map.insert(name.to_uppercase(), index);
+            }
+        }
+        label_map
     }
 
     pub fn evaluate_expression(&mut self, expr: &Expression) -> XdlResult<XdlValue> {
@@ -384,12 +417,20 @@ impl Interpreter {
                 Err(XdlError::Return(return_val))
             }
 
-            Statement::Common { .. } | Statement::CompileOpt { .. } | Statement::Label { .. } => {
+            Statement::Common { .. } | Statement::CompileOpt { .. } => {
                 // These statements are mostly compile-time directives, ignore for now
                 Ok(())
             }
 
-            Statement::Goto { .. } => Err(XdlError::NotImplemented("GOTO statements".to_string())),
+            Statement::Label { .. } => {
+                // Labels are markers for GOTO - no execution action needed
+                Ok(())
+            }
+
+            Statement::Goto { label, .. } => {
+                // Signal a jump to the specified label
+                Err(XdlError::Goto(label.clone()))
+            }
 
             Statement::Case {
                 expr,

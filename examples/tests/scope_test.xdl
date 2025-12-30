@@ -1,0 +1,16 @@
+; Test scope functions
+print, "Testing SCOPE functions"
+
+; Test SCOPE_LEVEL - should return 0 at main level
+level = scope_level()
+print, "Current scope level:", level
+
+; Test SCOPE_TRACEBACK - should return ["$MAIN$"] at main level
+trace = scope_traceback()
+print, "Call traceback:", trace
+
+; Test SCOPE_VARNAME - returns variable names at current scope
+vars = scope_varname()
+print, "Variables at scope 0:", vars
+
+print, "Scope functions test complete"

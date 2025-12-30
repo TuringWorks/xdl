@@ -173,6 +173,46 @@ fn parse_string(input: &str) -> ParseResult<'_, Token> {
     ))(input)
 }
 
+// Parse labels (identifier followed by colon, but not :: and not keywords)
+fn parse_label(input: &str) -> ParseResult<'_, Token> {
+    let (remaining, name) = recognize(pair(
+        take_while1(is_identifier_start),
+        take_while(is_identifier_char),
+    ))(input)?;
+
+    // Check for colon after identifier (but not ::)
+    if remaining.starts_with(':') && !remaining.starts_with("::") {
+        // Check if this is a keyword - keywords should not be treated as labels
+        let is_keyword = matches!(
+            name.to_uppercase().as_str(),
+            "IF" | "THEN" | "ELSE" | "ENDIF" | "FOR" | "ENDFOR" | "FOREACH" | "WHILE"
+                | "ENDWHILE" | "REPEAT" | "UNTIL" | "BREAK" | "CONTINUE" | "FUNCTION"
+                | "ENDFUNCTION" | "PROCEDURE" | "PRO" | "ENDPRO" | "RETURN" | "GOTO"
+                | "COMMON" | "COMPILE_OPT" | "BEGIN" | "END" | "CASE" | "OF" | "ENDCASE"
+                | "SWITCH" | "ENDSWITCH" | "MOD" | "EQ" | "NE" | "LT" | "GT" | "LE"
+                | "GE" | "AND" | "OR" | "NOT" | "XOR"
+        );
+
+        if is_keyword {
+            // Not a label, it's a keyword followed by colon
+            Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Tag,
+            )))
+        } else {
+            // Skip the colon
+            let remaining = &remaining[1..];
+            Ok((remaining, Token::Label(name.to_string())))
+        }
+    } else {
+        // Not a label
+        Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )))
+    }
+}
+
 // Parse identifiers and keywords
 fn parse_identifier_or_keyword(input: &str) -> ParseResult<'_, Token> {
     let (input, name) = recognize(pair(
@@ -300,6 +340,7 @@ fn parse_token(input: &str) -> ParseResult<'_, Token> {
             parse_string,
             parse_number,
             parse_system_variable,
+            parse_label, // Try label before identifier (label: vs identifier)
             parse_identifier_or_keyword,
             parse_operator,
             parse_delimiter,

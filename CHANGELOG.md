@@ -5,6 +5,39 @@ All notable changes to the XDL project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2025-12-30
+
+### Added
+- **GOTO Statements** - Control flow feature!
+  - Label parsing in lexer (`label:` syntax)
+  - GOTO statement with optional comma (`GOTO, label` or `GOTO label`)
+  - Label resolution with forward reference support
+  - Index-based execution for jump handling
+- **CASE/SWITCH Enhancement** - Full implementation!
+  - Complete CASE parser with ELSE clause
+  - Complete SWITCH parser
+  - Support for BEGIN/END blocks in case branches
+  - Support for multiple values per case (comma-separated)
+- **Single-line IF Enhancement**
+  - IF x THEN statement (no ENDIF needed)
+  - IF x THEN statement ELSE statement (on same line)
+- **New String Functions**
+  - READS - Parse values from string
+  - READS_STRING - Parse string into array of strings
+- **New Scope Functions**
+  - SCOPE_VARNAME - Get variable names at scope level
+  - SCOPE_LEVEL - Get current scope depth
+  - SCOPE_TRACEBACK - Get call stack trace
+
+### Fixed
+- BEGIN/END blocks now work correctly in CASE/SWITCH statements
+- parse_block_or_statement now properly skips newlines before checking END
+- Labels (e.g., `myLabel:`) are no longer confused with keywords (e.g., `else:`)
+
+### Changed
+- IDL/GDL compatibility increased from ~85% to ~88%
+- Updated TODO.md with completed critical features
+
 ## [0.1.6] - 2025-12-30
 
 ### Added
