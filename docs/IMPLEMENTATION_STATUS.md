@@ -1,6 +1,6 @@
 # XDL Standard Library Implementation Status
 
-**Last Updated:** 2025-12-29
+**Last Updated:** 2025-12-30
 
 ## Overview
 This document tracks the implementation progress of the XDL (eXtensible Data Language) standard library, a Rust-based implementation of IDL/GDL functionality.
@@ -55,6 +55,29 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - Optimized for Apple Silicon (M1/M2/M3/M4)
 - Complete FFT and linear algebra support
 - Requires full Xcode installation
+
+### MLX Performance Benchmarks (Apple Silicon)
+
+**Matrix Multiplication Performance** (vs CPU baseline):
+
+| Matrix Size | CPU | Metal | MLX | MLX vs Metal |
+|-------------|-----|-------|-----|--------------|
+| 100×100 | 0.94ms | 0.44ms (2.2x) | 0.55ms (1.7x) | Metal faster |
+| 316×316 | 28.8ms | 1.5ms (19x) | 0.65ms (**44x**) | **MLX 2.4x faster** |
+| 1000×1000 | 995ms | 7.4ms (135x) | 2.6ms (**388x**) | **MLX 2.9x faster** |
+| 3162×3162 | 58.4s | 171ms (341x) | 38.5ms (**1517x**) | **MLX 4.4x faster** |
+
+**Key Findings:**
+- **MLX excels at matrix multiplication** - Up to 4.4x faster than Metal for large matrices
+- **GPU overhead for small arrays** - CPU faster for arrays <100K elements
+- **MLX unified memory advantage** - No explicit CPU↔GPU transfers required
+
+**Recommended Usage:**
+- Use **MLX** for matrix-heavy computations (linear algebra, ML inference)
+- Use **Metal** for thread-safe operations requiring parallel access
+- Use **CPU** for small arrays (<10K elements) to avoid GPU dispatch overhead
+
+Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --release`
 
 ### Function Keyword Arguments ✅ NEW
 - **Parser Support**: `NAME=value` and `/FLAG` syntax in function calls
@@ -618,10 +641,10 @@ When adding new functions:
 - MLX extended operations (new capabilities):
   - FFT: fft_1d, ifft_1d, fft_2d, rfft_1d
   - Linear algebra: qr, svd, cholesky, inv, solve, eigh, norm
-  - Convolutions: conv1d, conv2d
   - Activations: sigmoid, softmax, tanh, erf
 - Updated backend priority on macOS: MLX > MPS > Metal > CoreML
 - Requires full Xcode installation (not Command Line Tools)
+- **Performance benchmark**: MLX up to 1517x faster than CPU, 4.4x faster than Metal for large matrix multiplication
 
 ---
 
