@@ -8,10 +8,11 @@ This document tracks remaining IDL/GDL features that need to be implemented in X
 
 | Category | Status | Coverage |
 |----------|--------|----------|
-| Core Functions | 250+ implemented | ~83% |
+| Core Functions | 270+ implemented | ~85% |
 | ML Functions | 60+ implemented | ~86% |
 | Graphics | 50+ implemented | ~71% |
-| **Total** | **360+ functions** | **~82%** |
+| Scientific I/O | 11 implemented | Placeholder |
+| **Total** | **380+ functions** | **~84%** |
 
 ## Priority Legend
 - 🔴 **CRITICAL** - Fundamental language features required for basic programs
@@ -102,23 +103,32 @@ label2:
 
 ## 🟠 HIGH Priority
 
-### 4. Scientific Data Formats
-**Status**: Modules exist in xdl-ffi but not integrated
+### 4. Scientific Data Formats ✅ (Placeholder)
+**Status**: PLACEHOLDER IMPLEMENTATION (2025-12-30)
 **Effort**: High
-**Files**: `xdl-ffi/src/fits.rs`, `xdl-ffi/src/hdf5.rs`, `xdl-ffi/src/netcdf.rs`
+**Files**: `xdl-stdlib/src/scientific_io.rs`
 
-**Tasks**:
-- [ ] FITS support
-  - [ ] `READFITS(filename)` - Read FITS file
-  - [ ] `WRITEFITS, filename, data, [header]` - Write FITS file
-  - [ ] `HEADFITS(filename)` - Read FITS header
-  - [ ] `SXPAR(header, keyword)` - Extract header keyword
-- [ ] HDF5 support
-  - [ ] `H5F_OPEN/H5F_CREATE` - Open/create HDF5 file
-  - [ ] `H5D_READ/H5D_WRITE` - Read/write datasets
-- [ ] NetCDF support
-  - [ ] `NCDF_OPEN/NCDF_CREATE` - Open/create files
-  - [ ] `NCDF_VARGET/NCDF_VARPUT` - Read/write variables
+**Note**: These functions provide API compatibility and file format validation.
+Full parsing requires native libraries (cfitsio, hdf5, netcdf).
+
+**Completed**:
+- [x] FITS support (placeholder)
+  - [x] `READFITS(filename)` - Validates FITS signature
+  - [x] `WRITEFITS, filename, data, [header]` - Placeholder
+  - [x] `HEADFITS(filename)` - Reads FITS header block (2880 bytes)
+  - [x] `SXPAR(header, keyword)` - Extracts header keyword values
+- [x] HDF5 support (placeholder)
+  - [x] `H5F_OPEN` - Validates HDF5 signature
+  - [x] `H5F_CLOSE` - Close file handle
+  - [x] `H5D_READ` - Placeholder
+- [x] NetCDF support (placeholder)
+  - [x] `NCDF_OPEN` - Validates NetCDF-3/NetCDF-4 signature
+  - [x] `NCDF_CLOSE` - Close file handle
+  - [x] `NCDF_VARGET` - Placeholder
+  - [x] `NCDF_INQUIRE` - Returns placeholder structure
+- [x] Tests in examples/tests/scientific_io_test.xdl
+
+**For full support**: Compile with `--features fits,hdf5,netcdf`
 
 ### 5. Widget/GUI System Enhancement
 **Status**: Basic implementation exists
@@ -176,27 +186,28 @@ label2:
 
 ## 🟢 LOW Priority
 
-### 9. Dialog Functions
-**Status**: Not implemented
+### 9. Dialog Functions ✅
+**Status**: IMPLEMENTED (2025-12-30)
 **Effort**: Medium
-**Files**: Create `xdl-stdlib/src/dialog.rs`
+**Files**: `xdl-stdlib/src/dialog.rs`
 
-**Tasks**:
-- [ ] `DIALOG_MESSAGE` - Display message dialog
-- [ ] `DIALOG_PICKFILE` - File picker dialog
-- [ ] `DIALOG_PRINTERSETUP` - Printer setup
-- [ ] Add tests
+**Completed**:
+- [x] `DIALOG_MESSAGE` - Display message dialog (CLI fallback)
+- [x] `DIALOG_PICKFILE` - File picker dialog (CLI prompt)
+- [x] `DIALOG_PRINTERSETUP` - Printer setup (placeholder)
+- [x] `DIALOG_READ_TEXT` - Text input dialog (CLI prompt)
+- Note: CLI-based prompts; GUI integration pending
 
-### 10. Advanced Scope Functions
-**Status**: Basic scope exists
+### 10. Advanced Scope Functions ✅
+**Status**: IMPLEMENTED (2025-12-30)
 **Effort**: Medium
 **Files**: `xdl-stdlib/src/system.rs`
 
-**Tasks**:
-- [ ] `SCOPE_VARNAME` - Variable names in scope
-- [ ] `SCOPE_LEVEL` - Current scope level
-- [ ] `SCOPE_TRACEBACK` - Call stack trace
-- [ ] Add tests
+**Completed**:
+- [x] `SCOPE_VARNAME` - Variable names in scope (placeholder)
+- [x] `SCOPE_LEVEL` - Current scope level
+- [x] `SCOPE_TRACEBACK` - Call stack trace
+- [x] Tests in examples/tests/scope_test.xdl
 
 ### 11. Object System Enhancement
 **Status**: Basic OOP support exists

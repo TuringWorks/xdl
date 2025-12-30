@@ -7,6 +7,7 @@ pub mod array;
 mod charting_procs; // ECharts charting procedures
 pub mod complex;
 pub mod data_structures; // Pointers, objects, lists, hashes
+pub mod dialog; // Dialog functions for user interaction
 pub mod gpu_array; // GPU-accelerated array operations
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
@@ -19,6 +20,7 @@ pub mod matlab_compat; // MATLAB compatibility functions
 pub mod ml;
 #[cfg(feature = "python")]
 pub mod python;
+pub mod scientific_io; // Scientific data formats (FITS, HDF5, NetCDF)
 pub mod signal; // Signal processing
 pub mod statistics;
 pub mod string;
@@ -535,6 +537,25 @@ impl StandardLibrary {
             "SCOPE_VARNAME" => system::scope_varname(args),
             "SCOPE_LEVEL" => system::scope_level(args),
             "SCOPE_TRACEBACK" => system::scope_traceback(args),
+
+            // Dialog functions
+            "DIALOG_MESSAGE" => dialog::dialog_message(args, keywords),
+            "DIALOG_PICKFILE" => dialog::dialog_pickfile(args, keywords),
+            "DIALOG_PRINTERSETUP" => dialog::dialog_printersetup(args, keywords),
+            "DIALOG_READ_TEXT" => dialog::dialog_read_text(args, keywords),
+
+            // Scientific data format functions (FITS, HDF5, NetCDF)
+            "READFITS" => scientific_io::readfits(args, keywords),
+            "WRITEFITS" => scientific_io::writefits(args, keywords),
+            "HEADFITS" => scientific_io::headfits(args),
+            "SXPAR" => scientific_io::sxpar(args),
+            "H5F_OPEN" => scientific_io::h5f_open(args),
+            "H5F_CLOSE" => scientific_io::h5f_close(args),
+            "H5D_READ" => scientific_io::h5d_read(args),
+            "NCDF_OPEN" => scientific_io::ncdf_open(args),
+            "NCDF_CLOSE" => scientific_io::ncdf_close(args),
+            "NCDF_VARGET" => scientific_io::ncdf_varget(args),
+            "NCDF_INQUIRE" => scientific_io::ncdf_inquire(args),
 
             // Data structure functions
             "HASH" => create_hash(args),

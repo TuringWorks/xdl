@@ -28,6 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SCOPE_VARNAME - Get variable names at scope level
   - SCOPE_LEVEL - Get current scope depth
   - SCOPE_TRACEBACK - Get call stack trace
+- **New Dialog Functions**
+  - DIALOG_MESSAGE - Display message dialog (CLI fallback)
+  - DIALOG_PICKFILE - File picker dialog (CLI prompt)
+  - DIALOG_PRINTERSETUP - Printer setup (placeholder)
+  - DIALOG_READ_TEXT - Text input dialog (CLI prompt)
+- **Scientific Data Formats (Placeholder)**
+  - FITS format: READFITS, WRITEFITS, HEADFITS, SXPAR
+  - HDF5 format: H5F_OPEN, H5F_CLOSE, H5D_READ
+  - NetCDF format: NCDF_OPEN, NCDF_CLOSE, NCDF_VARGET, NCDF_INQUIRE
+  - File signature validation for format detection
+  - Full parsing requires native libraries (cfitsio, hdf5, netcdf)
 
 ### Fixed
 - BEGIN/END blocks now work correctly in CASE/SWITCH statements
