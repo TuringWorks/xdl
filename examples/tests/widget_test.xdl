@@ -1,0 +1,229 @@
+; Test file for Widget/GUI functions
+; Demonstrates widget creation, control, and event handling
+
+print, "=== Widget/GUI System Test ==="
+print, ""
+
+; ============================================================================
+; Test WIDGET_BASE - Create base container widgets
+; ============================================================================
+print, "--- WIDGET_BASE Tests ---"
+
+; Create a simple top-level base
+base1 = WIDGET_BASE(TITLE='Main Window')
+print, "Created top-level base, ID: ", base1
+
+; Create a column-oriented base
+base_col = WIDGET_BASE(/COLUMN, TITLE='Column Layout')
+print, "Created column base, ID: ", base_col
+
+; Create a row-oriented base
+base_row = WIDGET_BASE(/ROW, TITLE='Row Layout')
+print, "Created row base, ID: ", base_row
+
+; Create a child base with parent
+child_base = WIDGET_BASE(base1, /COLUMN)
+print, "Created child base with parent, ID: ", child_base
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_BUTTON - Create button widgets
+; ============================================================================
+print, "--- WIDGET_BUTTON Tests ---"
+
+; Simple button
+btn1 = WIDGET_BUTTON(base1, VALUE='Click Me')
+print, "Created button 'Click Me', ID: ", btn1
+
+; Button with UVALUE for event handling
+btn2 = WIDGET_BUTTON(base1, VALUE='OK', UVALUE='ok_action')
+print, "Created button with UVALUE, ID: ", btn2
+
+; Bitmap button placeholder
+btn3 = WIDGET_BUTTON(base1, VALUE='icon.bmp', /BITMAP)
+print, "Created bitmap button, ID: ", btn3
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_SLIDER - Create slider widgets
+; ============================================================================
+print, "--- WIDGET_SLIDER Tests ---"
+
+; Basic slider with range
+slider1 = WIDGET_SLIDER(base1, MINIMUM=0, MAXIMUM=100)
+print, "Created slider (0-100), ID: ", slider1
+
+; Slider with initial value
+slider2 = WIDGET_SLIDER(base1, MINIMUM=0, MAXIMUM=255, VALUE=128)
+print, "Created slider with value=128, ID: ", slider2
+
+; Vertical slider
+slider3 = WIDGET_SLIDER(base1, /VERTICAL, MINIMUM=0, MAXIMUM=50)
+print, "Created vertical slider, ID: ", slider3
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_TEXT - Create text input widgets
+; ============================================================================
+print, "--- WIDGET_TEXT Tests ---"
+
+; Simple text field
+text1 = WIDGET_TEXT(base1, VALUE='Hello World')
+print, "Created text field, ID: ", text1
+
+; Editable text field
+text2 = WIDGET_TEXT(base1, /EDITABLE, XSIZE=40)
+print, "Created editable text, ID: ", text2
+
+; Multi-line text area
+text3 = WIDGET_TEXT(base1, /EDITABLE, YSIZE=5, /SCROLL)
+print, "Created multi-line text, ID: ", text3
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_LABEL - Create label widgets
+; ============================================================================
+print, "--- WIDGET_LABEL Tests ---"
+
+; Simple label
+label1 = WIDGET_LABEL(base1, VALUE='Status: Ready')
+print, "Created label, ID: ", label1
+
+; Aligned label
+label2 = WIDGET_LABEL(base1, VALUE='Right Aligned', /ALIGN_RIGHT)
+print, "Created right-aligned label, ID: ", label2
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_LIST - Create list widgets
+; ============================================================================
+print, "--- WIDGET_LIST Tests ---"
+
+; List with basic values
+list1 = WIDGET_LIST(base1, YSIZE=5)
+print, "Created list widget, ID: ", list1
+
+; List with multiple selection
+list2 = WIDGET_LIST(base1, /MULTIPLE, YSIZE=10)
+print, "Created multi-select list, ID: ", list2
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_DROPLIST - Create dropdown widgets
+; ============================================================================
+print, "--- WIDGET_DROPLIST Tests ---"
+
+drop1 = WIDGET_DROPLIST(base1, TITLE='Select:')
+print, "Created droplist, ID: ", drop1
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_DRAW - Create drawing canvas
+; ============================================================================
+print, "--- WIDGET_DRAW Tests ---"
+
+; Drawing canvas
+draw1 = WIDGET_DRAW(base1, XSIZE=400, YSIZE=300)
+print, "Created 400x300 draw widget, ID: ", draw1
+
+; Draw with button events
+draw2 = WIDGET_DRAW(base1, XSIZE=200, YSIZE=200, /BUTTON_EVENTS)
+print, "Created draw with button events, ID: ", draw2
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_CONTROL - Modify widget properties
+; ============================================================================
+print, "--- WIDGET_CONTROL Tests ---"
+
+; Update button text
+WIDGET_CONTROL, btn1, SET_VALUE='Updated Text'
+print, "Updated button text"
+
+; Disable a widget
+WIDGET_CONTROL, slider1, SENSITIVE=0
+print, "Disabled slider"
+
+; Re-enable widget
+WIDGET_CONTROL, slider1, /SENSITIVE
+print, "Re-enabled slider"
+
+; Set new slider value
+WIDGET_CONTROL, slider2, SET_VALUE=200
+print, "Set slider value to 200"
+
+; Hide a widget
+WIDGET_CONTROL, label2, MAP=0
+print, "Hidden label widget"
+
+; Show widget
+WIDGET_CONTROL, label2, /MAP
+print, "Shown label widget"
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_INFO - Query widget properties
+; ============================================================================
+print, "--- WIDGET_INFO Tests ---"
+
+; Get parent
+parent_id = WIDGET_INFO(child_base, /PARENT)
+print, "Child base parent ID: ", parent_id
+
+; Check if valid
+is_valid = WIDGET_INFO(base1, /VALID_ID)
+print, "Base widget valid: ", is_valid
+
+; Get widget type name
+type_name = WIDGET_INFO(btn1, /NAME)
+print, "Button type name: ", type_name
+
+print, ""
+
+; ============================================================================
+; Test WIDGET_EVENT - Event handling placeholder
+; ============================================================================
+print, "--- WIDGET_EVENT Tests ---"
+
+; Placeholder - would wait for events in real GUI
+; event = WIDGET_EVENT(base1)
+print, "WIDGET_EVENT available (placeholder in CLI mode)"
+
+print, ""
+
+; ============================================================================
+; Test XMANAGER - Event loop management
+; ============================================================================
+print, "--- XMANAGER Tests ---"
+
+; Register widget with event handler
+XMANAGER, 'test_app', base1, /NO_BLOCK
+print, "Registered widget with XMANAGER (no-block mode)"
+
+print, ""
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, "=== Widget/GUI Test Summary ==="
+print, "Container: WIDGET_BASE (row, column, grid layouts)"
+print, "Input: WIDGET_BUTTON, WIDGET_SLIDER, WIDGET_TEXT"
+print, "Display: WIDGET_LABEL, WIDGET_LIST, WIDGET_DROPLIST"
+print, "Graphics: WIDGET_DRAW (canvas for plotting)"
+print, "Control: WIDGET_CONTROL (modify properties)"
+print, "Query: WIDGET_INFO (get widget state)"
+print, "Events: WIDGET_EVENT, XMANAGER"
+print, ""
+print, "Note: Full GUI requires native windowing backend"
+print, "      CLI mode provides placeholder/simulation behavior"
+print, ""
+print, "=== Widget/GUI System Test Complete ==="

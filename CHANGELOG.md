@@ -54,6 +54,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - STREAMLINE - Streamline visualization with adaptive step size
   - VOXEL_PROJ - Volume projection (maximum/average modes)
   - POLYSHADE - Mesh shading with vertex normal computation
+- **Widget/GUI System** (Placeholder)
+  - WIDGET_BASE - Container widget with row/column/grid layouts
+  - WIDGET_BUTTON - Button with text, bitmap, menu options
+  - WIDGET_SLIDER - Slider with min/max/value controls
+  - WIDGET_TEXT - Text input with editable/multiline options
+  - WIDGET_LABEL - Text labels with alignment
+  - WIDGET_LIST - List selection (single/multiple)
+  - WIDGET_DROPLIST - Dropdown selection
+  - WIDGET_DRAW - Drawing canvas for graphics
+  - WIDGET_CONTROL - Runtime property modification
+  - WIDGET_INFO - Query widget properties
+  - WIDGET_EVENT - Event polling
+  - XMANAGER - Event loop management
+  - CLI-based placeholder; full GUI requires xdl-gui backend
 
 ### Fixed
 - BEGIN/END blocks now work correctly in CASE/SWITCH statements

@@ -28,6 +28,7 @@ pub mod string;
 pub mod system;
 pub mod viz3d; // 3D volume visualization
 pub mod viz3d_advanced; // Advanced 3D visualization (isosurface, streamlines)
+pub mod widget; // Widget/GUI functions
 
 // Data Science modules (feature-gated)
 #[cfg(feature = "dataframes")]
@@ -265,6 +266,10 @@ impl StandardLibrary {
             "CLOSE" => io::close_file(args),
             "WRITEF" => io::writef(args),
             "PRINTF" => io::printf(args),
+
+            // Widget/GUI procedures
+            "WIDGET_CONTROL" => widget::widget_control(args, keywords),
+            "XMANAGER" => widget::xmanager(args, keywords),
 
             _ => Err(xdl_core::XdlError::RuntimeError(format!(
                 "Unknown procedure: {}",
@@ -557,6 +562,20 @@ impl StandardLibrary {
             "STREAMLINE" => viz3d_advanced::streamline(args, keywords),
             "VOXEL_PROJ" => viz3d_advanced::voxel_proj(args, keywords),
             "POLYSHADE" => viz3d_advanced::polyshade(args, keywords),
+
+            // Widget/GUI functions
+            "WIDGET_BASE" => widget::widget_base(args, keywords),
+            "WIDGET_BUTTON" => widget::widget_button(args, keywords),
+            "WIDGET_SLIDER" => widget::widget_slider(args, keywords),
+            "WIDGET_TEXT" => widget::widget_text(args, keywords),
+            "WIDGET_LABEL" => widget::widget_label(args, keywords),
+            "WIDGET_DRAW" => widget::widget_draw(args, keywords),
+            "WIDGET_LIST" => widget::widget_list(args, keywords),
+            "WIDGET_DROPLIST" => widget::widget_droplist(args, keywords),
+            "WIDGET_CONTROL" => widget::widget_control(args, keywords),
+            "WIDGET_INFO" => widget::widget_info(args, keywords),
+            "WIDGET_EVENT" => widget::widget_event(args, keywords),
+            "XMANAGER" => widget::xmanager(args, keywords),
 
             // Scientific data format functions (FITS, HDF5, NetCDF)
             "READFITS" => scientific_io::readfits(args, keywords),

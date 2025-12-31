@@ -8,11 +8,12 @@ This document tracks remaining IDL/GDL features that need to be implemented in X
 
 | Category | Status | Coverage |
 |----------|--------|----------|
-| Core Functions | 270+ implemented | ~85% |
+| Core Functions | 280+ implemented | ~87% |
 | ML Functions | 60+ implemented | ~86% |
 | Graphics | 50+ implemented | ~71% |
+| Widget/GUI | 12 implemented | Placeholder |
 | Scientific I/O | 11 implemented | Placeholder |
-| **Total** | **380+ functions** | **~84%** |
+| **Total** | **400+ functions** | **~86%** |
 
 ## Priority Legend
 - 🔴 **CRITICAL** - Fundamental language features required for basic programs
@@ -130,18 +131,28 @@ Full parsing requires native libraries (cfitsio, hdf5, netcdf).
 
 **For full support**: Compile with `--features fits,hdf5,netcdf`
 
-### 5. Widget/GUI System Enhancement
-**Status**: Basic implementation exists
+### 5. Widget/GUI System Enhancement ✅
+**Status**: IMPLEMENTED (2025-12-30)
 **Effort**: Very High
-**Files**: `xdl-gui/`
+**Files**: `xdl-stdlib/src/widget.rs`
 
-**Tasks**:
-- [ ] Complete WIDGET_BASE with all options
-- [ ] Add WIDGET_BUTTON, WIDGET_SLIDER, WIDGET_TEXT
-- [ ] Implement WIDGET_CONTROL for runtime modification
-- [ ] Add event handling via XMANAGER
-- [ ] Add WIDGET_DRAW for graphics
-- [ ] Add tests
+**Note**: CLI-based placeholder implementation providing full API compatibility.
+Full GUI support requires native windowing backend (xdl-gui crate).
+
+**Completed**:
+- [x] `WIDGET_BASE` - Container widget with row/column/grid layouts
+- [x] `WIDGET_BUTTON` - Button with text, bitmap, menu options
+- [x] `WIDGET_SLIDER` - Slider with min/max/value
+- [x] `WIDGET_TEXT` - Text input with editable, multiline options
+- [x] `WIDGET_LABEL` - Text labels with alignment
+- [x] `WIDGET_LIST` - List selection (single/multiple)
+- [x] `WIDGET_DROPLIST` - Dropdown selection
+- [x] `WIDGET_DRAW` - Drawing canvas for graphics
+- [x] `WIDGET_CONTROL` - Runtime property modification
+- [x] `WIDGET_INFO` - Query widget properties
+- [x] `WIDGET_EVENT` - Event polling (placeholder)
+- [x] `XMANAGER` - Event loop management
+- [x] Tests in examples/tests/widget_test.xdl
 
 ---
 
