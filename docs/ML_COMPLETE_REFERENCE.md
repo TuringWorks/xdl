@@ -1,7 +1,7 @@
 # XDL Machine Learning Complete Reference
 
-**Version**: 1.0
-**Date**: January 22, 2025
+**Version**: 1.1
+**Date**: December 31, 2025
 **Status**: 100% Complete ✅
 
 ---
@@ -72,7 +72,7 @@ shuffled_data = data[indices]
 
 #### `XDLML_UnitNormalizer(data)`
 
-**Formula**: data / ||data||₂
+**Formula**: data / ‖data‖₂
 **Use**: L2 normalization (unit vector)
 
 ---
@@ -231,7 +231,7 @@ All kernels accept two vectors (x, y) and return a scalar.
 
 #### `XDLML_SVMRadialKernel(x, y, gamma)`
 
-**Formula**: exp(-gamma * ||x-y||²)
+**Formula**: exp(-gamma * ‖x-y‖²)
 **Use**: RBF, most popular for non-linear problems
 
 #### `XDLML_SVMSigmoidKernel(x, y, gamma, coef0)`
@@ -501,12 +501,12 @@ model = XDLML_KMEANS(data, k, max_iter, 42)  ; seed=42
 
 ### Kernel Type Codes
 
-```text
-0 = Linear
-1 = Polynomial
-2 = RBF (Radial Basis Function)
-3 = Sigmoid
-```
+| Code | Kernel Type |
+|------|-------------|
+| 0 | Linear |
+| 1 | Polynomial |
+| 2 | RBF (Radial Basis Function) |
+| 3 | Sigmoid |
 
 ---
 
