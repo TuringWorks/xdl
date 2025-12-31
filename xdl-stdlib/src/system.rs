@@ -781,7 +781,7 @@ pub fn bin_date(args: &[XdlValue]) -> XdlResult<XdlValue> {
 }
 
 /// TIMESTAMP - Generate ISO 8601 timestamp string
-pub fn timestamp(args: &[XdlValue]) -> XdlResult<XdlValue> {
+pub fn timestamp(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     let duration = SystemTime::now()

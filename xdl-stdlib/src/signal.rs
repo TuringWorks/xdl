@@ -606,7 +606,6 @@ pub fn butterworth(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Calculate poles in s-plane
     let mut a_coeffs = vec![1.0];
-    let mut b_coeffs = vec![1.0];
 
     for k in 0..order {
         let angle = pi * (2 * k + order + 1) as f64 / (2 * order) as f64;
@@ -626,7 +625,7 @@ pub fn butterworth(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Normalize gain
     let gain: f64 = wc.powi(order as i32);
-    b_coeffs = vec![gain];
+    let b_coeffs = vec![gain];
 
     Ok(XdlValue::NestedArray(vec![
         XdlValue::Array(a_coeffs),

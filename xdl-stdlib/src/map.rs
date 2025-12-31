@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use std::f64::consts::PI;
+use std::sync::RwLock;
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
 /// Helper to extract f64 from XdlValue
@@ -24,7 +25,7 @@ fn value_to_f64(v: &XdlValue) -> Option<f64> {
 }
 
 /// Map projection state (global for simplicity, like IDL)
-static mut MAP_PROJECTION: Option<MapProjection> = None;
+static MAP_PROJECTION: RwLock<Option<MapProjection>> = RwLock::new(None);
 
 /// Supported map projections
 #[derive(Debug, Clone)]
@@ -290,9 +291,7 @@ pub fn map_set(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
     }
 
     // Store global projection state
-    unsafe {
-        MAP_PROJECTION = Some(proj.clone());
-    }
+    *MAP_PROJECTION.write().unwrap() = Some(proj.clone());
 
     println!(
         "MAP_SET: Initialized {:?} projection centered at ({}, {})",
@@ -308,11 +307,10 @@ pub fn map_continents(
     _args: &[XdlValue],
     keywords: &HashMap<String, XdlValue>,
 ) -> XdlResult<XdlValue> {
-    let proj = unsafe {
-        MAP_PROJECTION
-            .as_ref()
-            .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?
-    };
+    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj = proj_guard
+        .as_ref()
+        .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?;
 
     let draw_coasts = keywords.contains_key("COASTS");
     let draw_countries = keywords.contains_key("COUNTRIES");
@@ -375,11 +373,10 @@ pub fn map_grid(
     _args: &[XdlValue],
     keywords: &HashMap<String, XdlValue>,
 ) -> XdlResult<XdlValue> {
-    let proj = unsafe {
-        MAP_PROJECTION
-            .as_ref()
-            .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?
-    };
+    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj = proj_guard
+        .as_ref()
+        .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?;
 
     // Parse grid spacing
     let lat_del = keywords
@@ -465,11 +462,10 @@ pub fn convert_coord(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) ->
         ));
     }
 
-    let proj = unsafe {
-        MAP_PROJECTION
-            .as_ref()
-            .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?
-    };
+    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj = proj_guard
+        .as_ref()
+        .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?;
 
     let lat = value_to_f64(&args[0]).ok_or_else(|| {
         XdlError::TypeMismatch {
@@ -499,7 +495,8 @@ pub fn convert_coord(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) ->
 /// Get current map structure
 /// IDL syntax: map_struct = MAP_STRUCT()
 pub fn map_struct(_args: &[XdlValue]) -> XdlResult<XdlValue> {
-    let proj = unsafe { MAP_PROJECTION.as_ref() };
+    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj = proj_guard.as_ref();
 
     if let Some(p) = proj {
         // Return projection info as a structure-like array

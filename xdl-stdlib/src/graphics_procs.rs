@@ -759,18 +759,21 @@ pub fn isosurface(args: &[XdlValue]) -> XdlResult<XdlValue> {
 }
 
 /// MAP_SET procedure - initializes map projection
+#[allow(dead_code)]
 pub fn map_set(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("MAP_SET: Map projection initialization not yet implemented");
     Ok(XdlValue::Undefined)
 }
 
 /// MAP_CONTINENTS procedure - draws continental outlines
+#[allow(dead_code)]
 pub fn map_continents(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("MAP_CONTINENTS: Continental outline drawing not yet implemented");
     Ok(XdlValue::Undefined)
 }
 
 /// MAP_GRID procedure - draws map grid lines
+#[allow(dead_code)]
 pub fn map_grid(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("MAP_GRID: Map grid drawing not yet implemented");
     Ok(XdlValue::Undefined)

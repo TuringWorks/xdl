@@ -976,7 +976,7 @@ pub fn file_expand_path(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let path = Path::new(path_str);
+    let _path = Path::new(path_str);
 
     // Handle home directory expansion
     let expanded = if path_str.starts_with('~') {
