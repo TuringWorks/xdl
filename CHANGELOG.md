@@ -68,6 +68,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - WIDGET_EVENT - Event polling
   - XMANAGER - Event loop management
   - CLI-based placeholder; full GUI requires xdl-gui backend
+- **Object System Enhancement**
+  - Full class inheritance support (parent class reference)
+  - Method resolution chain (follows inheritance hierarchy)
+  - Property definitions with getter/setter support
+  - Class (static) methods vs instance methods
+  - resolve_method() - finds methods in class hierarchy
+  - class_isa() - checks inheritance chain
+  - get_class_hierarchy() - returns inheritance chain
+  - Dynamic class creation for OBJ_NEW (no pre-definition needed)
+  - New functions: OBJ_HASMETHOD, OBJ_PARENT, CALL_METHOD, SETPROPERTY, GETPROPERTY
 
 ### Fixed
 - BEGIN/END blocks now work correctly in CASE/SWITCH statements

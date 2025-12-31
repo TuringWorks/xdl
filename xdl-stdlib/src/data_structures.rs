@@ -260,12 +260,177 @@ pub fn obj_isa(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
             if let Some(XdlValue::Struct(data)) = heap.get(id) {
                 if let Some(XdlValue::String(obj_class)) = data.get("__class__") {
-                    return Ok(XdlValue::Int(if obj_class.to_uppercase() == class_name { 1 } else { 0 }));
+                    // Check direct class match
+                    if obj_class.to_uppercase() == class_name {
+                        return Ok(XdlValue::Int(1));
+                    }
+                    // Check inheritance chain via __inherits__
+                    if let Some(XdlValue::String(inherits)) = data.get("__inherits__") {
+                        // __inherits__ contains comma-separated parent class names
+                        for parent in inherits.split(',') {
+                            if parent.trim().to_uppercase() == class_name {
+                                return Ok(XdlValue::Int(1));
+                            }
+                        }
+                    }
                 }
             }
             Ok(XdlValue::Int(0))
         }
         _ => Ok(XdlValue::Int(0)),
+    }
+}
+
+/// OBJ_HASMETHOD - Check if object has a method
+/// Usage: result = OBJ_HASMETHOD(obj, method_name)
+pub fn obj_hasmethod(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::RuntimeError("OBJ_HASMETHOD requires object and method name".to_string()));
+    }
+
+    let method_name = match &args[1] {
+        XdlValue::String(s) => s.to_uppercase(),
+        _ => return Err(XdlError::RuntimeError("Method name must be a string".to_string())),
+    };
+
+    match &args[0] {
+        XdlValue::Object(id) | XdlValue::ObjRef(id) => {
+            if *id == 0 {
+                return Ok(XdlValue::Int(0));
+            }
+            let heap = OBJECT_HEAP.read()
+                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            if let Some(XdlValue::Struct(data)) = heap.get(id) {
+                // Check if method exists in __methods__ field
+                if let Some(XdlValue::String(methods)) = data.get("__methods__") {
+                    for m in methods.split(',') {
+                        if m.trim().to_uppercase() == method_name {
+                            return Ok(XdlValue::Int(1));
+                        }
+                    }
+                }
+            }
+            // For now, return 0 - full implementation needs interpreter context
+            Ok(XdlValue::Int(0))
+        }
+        _ => Ok(XdlValue::Int(0)),
+    }
+}
+
+/// OBJ_PARENT - Get parent class name(s)
+/// Usage: parent = OBJ_PARENT(obj)
+pub fn obj_parent(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::RuntimeError("OBJ_PARENT requires an object".to_string()));
+    }
+
+    match &args[0] {
+        XdlValue::Object(id) | XdlValue::ObjRef(id) => {
+            if *id == 0 {
+                return Ok(XdlValue::String(String::new()));
+            }
+            let heap = OBJECT_HEAP.read()
+                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            if let Some(XdlValue::Struct(data)) = heap.get(id) {
+                if let Some(XdlValue::String(inherits)) = data.get("__inherits__") {
+                    // Return first parent
+                    if let Some(parent) = inherits.split(',').next() {
+                        return Ok(XdlValue::String(parent.trim().to_string()));
+                    }
+                }
+            }
+            Ok(XdlValue::String(String::new()))
+        }
+        _ => Ok(XdlValue::String(String::new())),
+    }
+}
+
+/// CALL_METHOD - Call a method on an object by name
+/// Usage: result = CALL_METHOD(obj, method_name, [args...])
+/// Note: This is a placeholder - full implementation requires interpreter context
+pub fn call_method(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::RuntimeError("CALL_METHOD requires object and method name".to_string()));
+    }
+
+    let method_name = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => return Err(XdlError::RuntimeError("Method name must be a string".to_string())),
+    };
+
+    match &args[0] {
+        XdlValue::Object(id) | XdlValue::ObjRef(id) => {
+            if *id == 0 {
+                return Err(XdlError::RuntimeError("Cannot call method on NULL object".to_string()));
+            }
+            // Placeholder - actual method dispatch requires interpreter context
+            println!("CALL_METHOD: Would call '{}' on object {}", method_name, id);
+            println!("  Note: Full method dispatch requires interpreter integration");
+            Ok(XdlValue::Int(1))
+        }
+        _ => Err(XdlError::RuntimeError("First argument must be an object".to_string())),
+    }
+}
+
+/// SETPROPERTY - Set a property on an object
+/// Usage: SETPROPERTY, obj, property_name, value
+pub fn setproperty(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::RuntimeError("SETPROPERTY requires object, property name, and value".to_string()));
+    }
+
+    let prop_name = match &args[1] {
+        XdlValue::String(s) => s.to_uppercase(),
+        _ => return Err(XdlError::RuntimeError("Property name must be a string".to_string())),
+    };
+
+    match &args[0] {
+        XdlValue::Object(id) | XdlValue::ObjRef(id) => {
+            if *id == 0 {
+                return Err(XdlError::RuntimeError("Cannot set property on NULL object".to_string()));
+            }
+            let mut heap = OBJECT_HEAP.write()
+                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            if let Some(XdlValue::Struct(data)) = heap.get_mut(id) {
+                data.insert(prop_name.clone(), args[2].clone());
+                println!("SETPROPERTY: Set '{}' on object {}", prop_name, id);
+                return Ok(XdlValue::Int(1));
+            }
+            Err(XdlError::RuntimeError(format!("Object {} not found", id)))
+        }
+        _ => Err(XdlError::RuntimeError("First argument must be an object".to_string())),
+    }
+}
+
+/// GETPROPERTY - Get a property from an object
+/// Usage: value = GETPROPERTY(obj, property_name)
+pub fn getproperty(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::RuntimeError("GETPROPERTY requires object and property name".to_string()));
+    }
+
+    let prop_name = match &args[1] {
+        XdlValue::String(s) => s.to_uppercase(),
+        _ => return Err(XdlError::RuntimeError("Property name must be a string".to_string())),
+    };
+
+    match &args[0] {
+        XdlValue::Object(id) | XdlValue::ObjRef(id) => {
+            if *id == 0 {
+                return Err(XdlError::RuntimeError("Cannot get property from NULL object".to_string()));
+            }
+            let heap = OBJECT_HEAP.read()
+                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            if let Some(XdlValue::Struct(data)) = heap.get(id) {
+                if let Some(value) = data.get(&prop_name) {
+                    return Ok(value.clone());
+                }
+                // Property not found - return undefined/empty
+                return Ok(XdlValue::Int(0));
+            }
+            Err(XdlError::RuntimeError(format!("Object {} not found", id)))
+        }
+        _ => Err(XdlError::RuntimeError("First argument must be an object".to_string())),
     }
 }
 

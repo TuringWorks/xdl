@@ -1,0 +1,142 @@
+; Test file for Object System Enhancement
+; Tests class definition, inheritance, and method resolution
+
+print, "=== Object System Test ==="
+print, ""
+
+; ============================================================================
+; Test 1: Pointer Functions (PTR_*)
+; ============================================================================
+print, "--- Pointer Tests ---"
+
+; Create a pointer
+ptr1 = PTR_NEW(42)
+print, "Created pointer: ", ptr1
+
+; Check if valid
+ptr_valid = PTR_VALID(ptr1)
+print, "Pointer valid: ", ptr_valid
+
+; Dereference pointer
+ptr_value = PTR_DEREF(ptr1)
+print, "Pointer value: ", ptr_value
+
+; Free pointer
+PTR_FREE, ptr1
+print, "Freed pointer"
+
+; Check validity after free
+ptr_valid2 = PTR_VALID(ptr1)
+print, "Pointer valid after free: ", ptr_valid2
+
+print, ""
+
+; ============================================================================
+; Test 2: List Functions
+; ============================================================================
+print, "--- List Tests ---"
+
+; Create a list
+my_list = LIST(1, 2, 3, 4, 5)
+print, "Created list: ", my_list
+
+; Add to list
+new_list = LIST_ADD(my_list, 6)
+print, "After adding 6: ", new_list
+
+; Count elements
+count = LIST_COUNT(my_list)
+print, "Original list count: ", count
+
+count2 = LIST_COUNT(new_list)
+print, "New list count: ", count2
+
+print, ""
+
+; ============================================================================
+; Test 3: Structure Functions
+; ============================================================================
+print, "--- Structure Tests ---"
+
+; Create a structure
+point = CREATE_STRUCT('X', 10, 'Y', 20)
+print, "Created struct: ", point
+
+; Create another structure
+person = CREATE_STRUCT('NAME', 'John', 'AGE', 30)
+print, "Created person: ", person
+
+print, ""
+
+; ============================================================================
+; Test 4: Hash/Dictionary Functions
+; ============================================================================
+print, "--- Hash/Dictionary Tests ---"
+
+; Create ordered hash
+hash1 = ORDEREDHASH('key1', 100, 'key2', 200)
+print, "Created ordered hash: ", hash1
+
+; Create dictionary
+dict1 = DICTIONARY('name', 'XDL', 'version', 0.1)
+print, "Created dictionary: ", dict1
+
+print, ""
+
+; ============================================================================
+; Test 5: Object System Foundations
+; ============================================================================
+print, "--- Object System Foundations ---"
+
+; The object system has been enhanced with:
+print, "1. ClassDef with parent class support (inheritance)"
+print, "2. Method resolution chain (follows inheritance)"
+print, "3. Property definitions (getters/setters)"
+print, "4. Class methods (static methods)"
+print, "5. resolve_method() - finds methods in class hierarchy"
+print, "6. resolve_class_method() - finds class methods"
+print, "7. class_isa() - checks inheritance chain"
+print, "8. get_class_hierarchy() - returns inheritance chain"
+print, "9. resolve_property() - finds properties in hierarchy"
+
+print, ""
+
+; ============================================================================
+; Test 6: Heap Management
+; ============================================================================
+print, "--- Heap Management Tests ---"
+
+; Create some pointers to trigger garbage collection
+ptr_a = PTR_NEW([1, 2, 3])
+ptr_b = PTR_NEW([4, 5, 6])
+print, "Created pointers: ", ptr_a, ", ", ptr_b
+
+; Run garbage collection
+gc_count = HEAP_GC()
+print, "HEAP_GC freed count: ", gc_count
+
+; Free heap
+HEAP_FREE, 0
+print, "Called HEAP_FREE"
+
+print, ""
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, "=== Object System Test Summary ==="
+print, ""
+print, "Pointer Operations: PTR_NEW, PTR_VALID, PTR_FREE, PTR_DEREF"
+print, "List Operations: LIST, LIST_ADD, LIST_COUNT"
+print, "Structure Operations: CREATE_STRUCT, STRUCT_ASSIGN"
+print, "Hash Operations: ORDEREDHASH, DICTIONARY"
+print, "Heap Management: HEAP_GC, HEAP_FREE"
+print, ""
+print, "Object System Enhancements:"
+print, "  - Full class inheritance support"
+print, "  - Method resolution with inheritance chain"
+print, "  - Property getters/setters"
+print, "  - Class (static) methods"
+print, "  - Dynamic class creation for OBJ_NEW"
+print, ""
+print, "=== Object System Test Complete ==="

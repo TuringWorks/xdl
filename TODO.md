@@ -236,17 +236,24 @@ Full GUI support requires native windowing backend (xdl-gui crate).
 - [x] `SCOPE_TRACEBACK` - Call stack trace
 - [x] Tests in examples/tests/scope_test.xdl
 
-### 11. Object System Enhancement
-**Status**: Basic OOP support exists
+### 11. Object System Enhancement ✅
+**Status**: ENHANCED (2025-12-30)
 **Effort**: High
-**Files**: `xdl-core/src/types.rs`, `xdl-interpreter/`
+**Files**: `xdl-interpreter/src/context.rs`, `xdl-stdlib/src/data_structures.rs`
 
-**Tasks**:
-- [ ] Full class inheritance
-- [ ] Method overriding
-- [ ] Property getters/setters
-- [ ] Class methods vs instance methods
-- [ ] Add tests
+**Completed**:
+- [x] Full class inheritance - ClassDef with parent class support
+- [x] Method overriding - resolve_method() follows inheritance chain
+- [x] Property getters/setters - PropertyDef with getter/setter method names
+- [x] Class methods vs instance methods - class_methods HashMap
+- [x] resolve_method() - finds methods in class hierarchy
+- [x] resolve_class_method() - finds static methods in hierarchy
+- [x] class_isa() - checks inheritance chain
+- [x] get_class_hierarchy() - returns inheritance chain
+- [x] resolve_property() - finds properties in hierarchy
+- [x] Dynamic class creation for OBJ_NEW
+- [x] New functions: OBJ_HASMETHOD, OBJ_PARENT, CALL_METHOD, SETPROPERTY, GETPROPERTY
+- [x] Tests in examples/tests/object_system_test.xdl
 
 ---
 

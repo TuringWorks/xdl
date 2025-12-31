@@ -273,9 +273,18 @@ impl Evaluator {
                 }
 
                 // Get the class definition and clone the fields
+                // If class doesn't exist, create an empty dynamic class
                 let (default_fields, has_init) = {
-                    let class = context.get_class(class_name)?;
-                    (class.fields.clone(), class.get_method("INIT").is_some())
+                    match context.get_class(class_name) {
+                        Ok(class) => (class.fields.clone(), class.get_method("INIT").is_some()),
+                        Err(_) => {
+                            // Create a dynamic class on-the-fly for IDL compatibility
+                            use crate::context::ClassDef;
+                            let new_class = ClassDef::new(class_name.clone());
+                            context.define_class(class_name.clone(), new_class);
+                            (std::collections::HashMap::new(), false)
+                        }
+                    }
                 };
 
                 // Create a new object instance with default fields

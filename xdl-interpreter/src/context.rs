@@ -29,20 +29,47 @@ pub struct MethodDef {
     pub body: Vec<xdl_parser::Statement>,
 }
 
+/// Property definition for getter/setter support
+#[derive(Debug, Clone)]
+pub struct PropertyDef {
+    pub name: String,
+    pub getter: Option<String>,  // Method name for GET
+    pub setter: Option<String>,  // Method name for SET
+    pub init_value: Option<XdlValue>,
+}
+
 /// Class definition stored in context
 #[derive(Debug, Clone)]
 pub struct ClassDef {
     pub name: String,
+    pub parent: Option<String>,  // Parent class name for inheritance
     pub fields: HashMap<String, XdlValue>, // Default field values from __define
     pub methods: HashMap<String, MethodDef>, // Method name -> definition (case-insensitive)
+    pub class_methods: HashMap<String, MethodDef>, // Static/class methods
+    pub properties: HashMap<String, PropertyDef>, // Property definitions with getters/setters
 }
 
 impl ClassDef {
     pub fn new(name: String) -> Self {
         Self {
             name,
+            parent: None,
             fields: HashMap::new(),
             methods: HashMap::new(),
+            class_methods: HashMap::new(),
+            properties: HashMap::new(),
+        }
+    }
+
+    /// Create a class with a parent (for inheritance)
+    pub fn with_parent(name: String, parent: String) -> Self {
+        Self {
+            name,
+            parent: Some(parent),
+            fields: HashMap::new(),
+            methods: HashMap::new(),
+            class_methods: HashMap::new(),
+            properties: HashMap::new(),
         }
     }
 
@@ -51,14 +78,49 @@ impl ClassDef {
         self.methods.insert(name.to_uppercase(), method);
     }
 
-    /// Get a method by name (case-insensitive)
+    /// Add a class (static) method
+    pub fn add_class_method(&mut self, name: String, method: MethodDef) {
+        self.class_methods.insert(name.to_uppercase(), method);
+    }
+
+    /// Get a method by name (case-insensitive) - only this class, no inheritance
     pub fn get_method(&self, name: &str) -> Option<&MethodDef> {
         self.methods.get(&name.to_uppercase())
+    }
+
+    /// Get a class (static) method by name
+    pub fn get_class_method(&self, name: &str) -> Option<&MethodDef> {
+        self.class_methods.get(&name.to_uppercase())
     }
 
     /// Set default field values from structure definition
     pub fn set_fields(&mut self, fields: HashMap<String, XdlValue>) {
         self.fields = fields;
+    }
+
+    /// Set parent class (for inheritance)
+    pub fn set_parent(&mut self, parent: String) {
+        self.parent = Some(parent);
+    }
+
+    /// Add a property definition
+    pub fn add_property(&mut self, prop: PropertyDef) {
+        self.properties.insert(prop.name.to_uppercase(), prop);
+    }
+
+    /// Get a property definition
+    pub fn get_property(&self, name: &str) -> Option<&PropertyDef> {
+        self.properties.get(&name.to_uppercase())
+    }
+
+    /// Check if this class has a parent
+    pub fn has_parent(&self) -> bool {
+        self.parent.is_some()
+    }
+
+    /// Get the parent class name
+    pub fn parent_name(&self) -> Option<&str> {
+        self.parent.as_deref()
     }
 }
 
@@ -395,6 +457,178 @@ impl Context {
     /// Get the current SELF object ID (for internal use)
     pub fn get_self_id(&self) -> Option<usize> {
         self.current_self
+    }
+
+    /// Resolve a method on a class, following the inheritance chain
+    /// Returns (class_name, method_def) for the class that defines the method
+    pub fn resolve_method(&self, class_name: &str, method_name: &str) -> XdlResult<(String, MethodDef)> {
+        let mut current_class = class_name.to_uppercase();
+        let mut visited = std::collections::HashSet::new();
+
+        loop {
+            // Prevent infinite loops from circular inheritance
+            if visited.contains(&current_class) {
+                return Err(XdlError::RuntimeError(format!(
+                    "Circular inheritance detected while looking for method '{}' in class '{}'",
+                    method_name, class_name
+                )));
+            }
+            visited.insert(current_class.clone());
+
+            // Get the class definition
+            let class = self.classes.get(&current_class)
+                .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", current_class)))?;
+
+            // Check if this class has the method
+            if let Some(method) = class.get_method(method_name) {
+                return Ok((current_class, method.clone()));
+            }
+
+            // Check parent class if exists
+            match &class.parent {
+                Some(parent) => {
+                    current_class = parent.to_uppercase();
+                }
+                None => {
+                    // No parent and method not found
+                    return Err(XdlError::RuntimeError(format!(
+                        "Method '{}' not found in class '{}' or its parent classes",
+                        method_name, class_name
+                    )));
+                }
+            }
+        }
+    }
+
+    /// Resolve a class method (static method), following the inheritance chain
+    pub fn resolve_class_method(&self, class_name: &str, method_name: &str) -> XdlResult<(String, MethodDef)> {
+        let mut current_class = class_name.to_uppercase();
+        let mut visited = std::collections::HashSet::new();
+
+        loop {
+            if visited.contains(&current_class) {
+                return Err(XdlError::RuntimeError(format!(
+                    "Circular inheritance detected while looking for class method '{}' in class '{}'",
+                    method_name, class_name
+                )));
+            }
+            visited.insert(current_class.clone());
+
+            let class = self.classes.get(&current_class)
+                .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", current_class)))?;
+
+            if let Some(method) = class.get_class_method(method_name) {
+                return Ok((current_class, method.clone()));
+            }
+
+            match &class.parent {
+                Some(parent) => {
+                    current_class = parent.to_uppercase();
+                }
+                None => {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Class method '{}' not found in class '{}' or its parent classes",
+                        method_name, class_name
+                    )));
+                }
+            }
+        }
+    }
+
+    /// Check if a class inherits from another class (directly or indirectly)
+    pub fn class_isa(&self, class_name: &str, target_class: &str) -> XdlResult<bool> {
+        let mut current_class = class_name.to_uppercase();
+        let target = target_class.to_uppercase();
+        let mut visited = std::collections::HashSet::new();
+
+        loop {
+            if current_class == target {
+                return Ok(true);
+            }
+
+            if visited.contains(&current_class) {
+                return Ok(false); // Circular, target not in chain
+            }
+            visited.insert(current_class.clone());
+
+            let class = match self.classes.get(&current_class) {
+                Some(c) => c,
+                None => return Ok(false),
+            };
+
+            match &class.parent {
+                Some(parent) => {
+                    current_class = parent.to_uppercase();
+                }
+                None => {
+                    return Ok(false);
+                }
+            }
+        }
+    }
+
+    /// Get the inheritance chain for a class (from most derived to base)
+    pub fn get_class_hierarchy(&self, class_name: &str) -> XdlResult<Vec<String>> {
+        let mut chain = Vec::new();
+        let mut current_class = class_name.to_uppercase();
+        let mut visited = std::collections::HashSet::new();
+
+        loop {
+            if visited.contains(&current_class) {
+                break; // Prevent infinite loop
+            }
+            visited.insert(current_class.clone());
+            chain.push(current_class.clone());
+
+            let class = match self.classes.get(&current_class) {
+                Some(c) => c,
+                None => break,
+            };
+
+            match &class.parent {
+                Some(parent) => {
+                    current_class = parent.to_uppercase();
+                }
+                None => break,
+            }
+        }
+
+        Ok(chain)
+    }
+
+    /// Resolve a property definition, following the inheritance chain
+    pub fn resolve_property(&self, class_name: &str, prop_name: &str) -> XdlResult<(String, PropertyDef)> {
+        let mut current_class = class_name.to_uppercase();
+        let mut visited = std::collections::HashSet::new();
+
+        loop {
+            if visited.contains(&current_class) {
+                return Err(XdlError::RuntimeError(format!(
+                    "Circular inheritance detected while looking for property '{}' in class '{}'",
+                    prop_name, class_name
+                )));
+            }
+            visited.insert(current_class.clone());
+
+            let class = self.classes.get(&current_class)
+                .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", current_class)))?;
+
+            if let Some(prop) = class.get_property(prop_name) {
+                return Ok((current_class, prop.clone()));
+            }
+
+            match &class.parent {
+                Some(parent) => {
+                    current_class = parent.to_uppercase();
+                }
+                None => {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Property '{}' not found in class '{}' or its parent classes",
+                        prop_name, class_name
+                    )));
+                }
+            }
+        }
     }
 }
 

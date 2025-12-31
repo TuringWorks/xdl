@@ -214,6 +214,11 @@ impl StandardLibrary {
             "OBJ_DESTROY" => data_structures::obj_destroy(args),
             "OBJ_CLASS" => data_structures::obj_class(args),
             "OBJ_ISA" => data_structures::obj_isa(args),
+            "OBJ_HASMETHOD" => data_structures::obj_hasmethod(args),
+            "OBJ_PARENT" => data_structures::obj_parent(args),
+            "CALL_METHOD" => data_structures::call_method(args),
+            "SETPROPERTY" => data_structures::setproperty(args),
+            "GETPROPERTY" => data_structures::getproperty(args),
 
             // Data Structures (Phase 16)
             "LIST" => data_structures::list(args),
@@ -934,6 +939,34 @@ impl StandardLibrary {
             // GPU operations
             "AMP_GPU_ADD" => amp::amp_gpu_add(args),
             "AMP_GPU_MATMUL" => amp::amp_gpu_matmul(args),
+
+            // =========================================================================
+            // Object System Functions
+            // =========================================================================
+            "OBJ_NEW" => data_structures::obj_new(args),
+            "OBJ_VALID" => data_structures::obj_valid(args),
+            "OBJ_DESTROY" => data_structures::obj_destroy(args),
+            "OBJ_CLASS" => data_structures::obj_class(args),
+            "OBJ_ISA" => data_structures::obj_isa(args),
+            "OBJ_HASMETHOD" => data_structures::obj_hasmethod(args),
+            "OBJ_PARENT" => data_structures::obj_parent(args),
+            "CALL_METHOD" => data_structures::call_method(args),
+            "SETPROPERTY" => data_structures::setproperty(args),
+            "GETPROPERTY" => data_structures::getproperty(args),
+            "PTR_NEW" => data_structures::ptr_new(args),
+            "PTR_VALID" => data_structures::ptr_valid(args),
+            "PTR_FREE" => data_structures::ptr_free(args),
+            "PTR_DEREF" => data_structures::ptr_deref(args),
+            // Data structure functions
+            "LIST" => data_structures::list(args),
+            "LIST_ADD" => data_structures::list_add(args),
+            "LIST_COUNT" => data_structures::list_count(args),
+            "ORDEREDHASH" => data_structures::orderedhash(args),
+            "DICTIONARY" => data_structures::dictionary(args),
+            "CREATE_STRUCT" => data_structures::create_struct(args),
+            "STRUCT_ASSIGN" => data_structures::struct_assign(args),
+            "HEAP_GC" => data_structures::heap_gc(args),
+            "HEAP_FREE" => data_structures::heap_free(args),
 
             _ => Err(xdl_core::XdlError::FunctionNotFound(name.to_string())),
         }
