@@ -159,22 +159,24 @@ cargo build --release --features cuda
 
 ## Supported Operations
 
-| Operation | Metal | CUDA | Vulkan | OpenCL | DirectX 12 |
-|-----------|-------|------|--------|--------|------------|
-| add_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| mul_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| sub_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| div_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| sin_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| cos_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| exp_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| log_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| sqrt_f32  | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| pow_f32   | ✅    | ⏳   | ✅     | ⏳     | ⏳         |
-| matmul    | ⏳    | ⏳   | ⏳     | ⏳     | ⏳         |
-| sum       | ⏳    | ⏳   | ⏳     | ⏳     | ⏳         |
+| Operation | Metal | CUDA* | Vulkan | OpenCL | DirectX 12 |
+|-----------|-------|-------|--------|--------|------------|
+| add_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| mul_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| sub_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| div_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| sin_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| cos_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| exp_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| log_f32   | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| sqrt_f32  | ✅    | ✅    | ✅     | ⏳     | ⏳         |
+| pow_f32   | ⏳    | ✅    | ✅     | ⏳     | ⏳         |
+| matmul    | ✅    | ✅    | ⏳     | ⏳     | ⏳         |
+| sum       | ⏳    | ✅    | ⏳     | ⏳     | ⏳         |
 
 Legend: ✅ Implemented, ⏳ Planned, ❌ Not supported
+
+*CUDA requires `--features cuda` and CUDA toolkit installed
 
 ## Performance
 

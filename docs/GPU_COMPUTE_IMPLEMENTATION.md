@@ -108,14 +108,14 @@ pub trait GpuBuffer: Send + Sync + Debug {
 - `exp_f32` - Exponential function
 - `log_f32` - Natural logarithm
 - `sqrt_f32` - Square root
+- `matmul_f32` - Matrix multiplication (tiled 16x16)
 
 ⏳ **Planned:**
 
-- `matmul_f32` - Matrix multiplication
+- `pow_f32` - Power function (shader exists, Rust binding pending)
 - `sum_f32` - Reduction sum
 - `max_f32` - Reduction max
 - `min_f32` - Reduction min
-- `pow_f32` - Power function
 
 #### Metal Shaders (`shaders/metal_kernels.metal`)
 
@@ -132,15 +132,16 @@ kernel void add_f32(
 }
 ```
 
-### 3. CUDA Backend (`cuda.rs`) - Stub
+### 3. CUDA Backend (`cuda.rs`) - Fully Implemented
 
-Prepared for NVIDIA GPU support:
+Full NVIDIA GPU support with PTX kernels:
 
-- Uses `cudarc` crate
-- Placeholder for CUDA kernel compilation
+- Uses `cudarc` crate for CUDA runtime
+- Complete kernel implementations for all operations
 - Device detection via `CudaDevice::is_available()`
+- Requires `--features cuda` and CUDA toolkit
 
-**Status**: Structure in place, needs kernel implementation
+**Status**: ✅ Fully implemented (feature-gated)
 
 ### 4. OpenCL Backend (`opencl.rs`) - Stub
 
