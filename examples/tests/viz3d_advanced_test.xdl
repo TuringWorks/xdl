@@ -1,0 +1,135 @@
+; Test file for advanced 3D visualization functions
+; Demonstrates isosurface extraction, volume rendering, and flow visualization
+
+print, "=== Advanced 3D Visualization Test ==="
+print, ""
+
+; ============================================================================
+; Create sample 3D volume data
+; ============================================================================
+print, "--- Creating Sample Volume Data ---"
+
+; Create a simple 10x10x10 volume with a sphere
+n = 10
+volume = FLTARR(n, n, n)
+
+; Use random data for testing
+seed = 12345
+volume = RANDOMU(seed, n * n * n)
+print, "Created ", n, "x", n, "x", n, " volume"
+
+print, ""
+
+; ============================================================================
+; Test SHADE_VOLUME (Maximum Intensity Projection)
+; ============================================================================
+print, "--- SHADE_VOLUME Tests ---"
+
+projection = SHADE_VOLUME(volume)
+print, "Generated MIP projection"
+
+; With opacity
+projection = SHADE_VOLUME(volume, OPACITY=0.5)
+print, "Generated MIP with opacity=0.5"
+
+; Low mode (invert)
+projection = SHADE_VOLUME(volume, /LOW)
+print, "Generated MIP with /LOW mode"
+
+print, ""
+
+; ============================================================================
+; Test VOXEL_PROJ (Alternative Volume Projection)
+; ============================================================================
+print, "--- VOXEL_PROJ Tests ---"
+
+; Maximum projection
+proj = VOXEL_PROJ(volume, /MAXIMUM)
+print, "Generated maximum projection"
+
+; Average projection
+proj = VOXEL_PROJ(volume, /AVERAGE)
+print, "Generated average projection"
+
+; Custom size
+proj = VOXEL_PROJ(volume, XSIZE=20, YSIZE=20)
+print, "Generated 20x20 projection"
+
+print, ""
+
+; ============================================================================
+; Test ISOSURFACE
+; ============================================================================
+print, "--- ISOSURFACE Tests ---"
+
+result = ISOSURFACE(volume, 0.5, /VERBOSE)
+print, "Extracted isosurface at value 0.5"
+
+print, ""
+
+; ============================================================================
+; Create sample vector field for flow visualization
+; ============================================================================
+print, "--- Creating Sample Vector Field ---"
+
+; Simple rotating field - use random values for testing
+vx = RANDOMU(seed, n * n * n)
+vy = RANDOMU(seed, n * n * n)
+vz = RANDOMU(seed, n * n * n)
+print, "Created vector field for flow visualization"
+
+print, ""
+
+; ============================================================================
+; Test PARTICLE_TRACE
+; ============================================================================
+print, "--- PARTICLE_TRACE Tests ---"
+
+; Create seed points
+seeds = [5.0, 5.0, 5.0, 3.0, 3.0, 3.0]
+
+traces = PARTICLE_TRACE(vx, vy, vz, seeds, STEPS=50, DT=0.1)
+print, "Generated particle traces"
+
+print, ""
+
+; ============================================================================
+; Test STREAMLINE
+; ============================================================================
+print, "--- STREAMLINE Tests ---"
+
+lines = STREAMLINE(vx, vy, vz, seeds, STEPS=100)
+print, "Generated streamlines (forward)"
+
+lines = STREAMLINE(vx, vy, vz, seeds, STEPS=100, /BACKWARD)
+print, "Generated streamlines (backward)"
+
+print, ""
+
+; ============================================================================
+; Test POLYSHADE
+; ============================================================================
+print, "--- POLYSHADE Tests ---"
+
+; Simple triangle mesh
+verts = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.5, 1.0, 0.0]
+polys = [3.0, 0.0, 1.0, 2.0]
+
+shades = POLYSHADE(verts, polys)
+print, "Computed shading for mesh"
+
+shades = POLYSHADE(verts, polys, /GOURAUD)
+print, "Computed Gouraud shading"
+
+print, ""
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, "=== Test Summary ==="
+print, "Volume Rendering: SHADE_VOLUME, VOXEL_PROJ"
+print, "Isosurface Extraction: ISOSURFACE (marching cubes)"
+print, "Flow Visualization: PARTICLE_TRACE, STREAMLINE"
+print, "Mesh Shading: POLYSHADE"
+print, ""
+print, "=== Advanced 3D Visualization Test Complete ==="

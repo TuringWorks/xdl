@@ -173,17 +173,19 @@ Full parsing requires native libraries (cfitsio, hdf5, netcdf).
 
 **Note**: Full continent data requires external datasets (Natural Earth, GSHHG)
 
-### 7. Advanced 3D Visualization
-**Status**: Basic 3D exists, advanced features missing
+### 7. Advanced 3D Visualization ✅
+**Status**: IMPLEMENTED (2025-12-30)
 **Effort**: High
-**Files**: `xdl-viz3d/`
+**Files**: `xdl-stdlib/src/viz3d_advanced.rs`
 
-**Tasks**:
-- [ ] `ISOSURFACE` - Isosurface extraction
-- [ ] `SHADE_VOLUME` - Volume rendering
-- [ ] `PARTICLE_TRACE` - Particle tracing
-- [ ] `STREAMLINE` - Streamline visualization
-- [ ] Add tests
+**Completed**:
+- [x] `ISOSURFACE` - Isosurface extraction using marching cubes
+- [x] `SHADE_VOLUME` - Maximum intensity projection volume rendering
+- [x] `PARTICLE_TRACE` - Particle tracing with RK4 integration
+- [x] `STREAMLINE` - Streamline visualization with adaptive step size
+- [x] `VOXEL_PROJ` - Volume projection (maximum/average)
+- [x] `POLYSHADE` - Mesh shading with vertex normals
+- [x] Tests in examples/tests/viz3d_advanced_test.xdl
 
 ### 8. Additional String Functions
 **Status**: Most implemented, some edge cases remain

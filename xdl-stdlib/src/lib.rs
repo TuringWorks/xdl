@@ -27,6 +27,7 @@ pub mod statistics;
 pub mod string;
 pub mod system;
 pub mod viz3d; // 3D volume visualization
+pub mod viz3d_advanced; // Advanced 3D visualization (isosurface, streamlines)
 
 // Data Science modules (feature-gated)
 #[cfg(feature = "dataframes")]
@@ -548,6 +549,14 @@ impl StandardLibrary {
             // Map projection functions
             "CONVERT_COORD" => map::convert_coord(args, keywords),
             "MAP_STRUCT" => map::map_struct(args),
+
+            // Advanced 3D visualization functions
+            "ISOSURFACE" => viz3d_advanced::isosurface(args, keywords),
+            "SHADE_VOLUME" => viz3d_advanced::shade_volume(args, keywords),
+            "PARTICLE_TRACE" => viz3d_advanced::particle_trace(args, keywords),
+            "STREAMLINE" => viz3d_advanced::streamline(args, keywords),
+            "VOXEL_PROJ" => viz3d_advanced::voxel_proj(args, keywords),
+            "POLYSHADE" => viz3d_advanced::polyshade(args, keywords),
 
             // Scientific data format functions (FITS, HDF5, NetCDF)
             "READFITS" => scientific_io::readfits(args, keywords),

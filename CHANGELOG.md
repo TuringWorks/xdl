@@ -47,6 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - MAP_STRUCT - Get current projection info
   - 10+ projections: Cylindrical, Mercator, Orthographic, Stereographic,
     Gnomonic, Sinusoidal, Mollweide, Hammer, Satellite, Lambert Conic, etc.
+- **Advanced 3D Visualization**
+  - ISOSURFACE - Isosurface extraction using marching cubes algorithm
+  - SHADE_VOLUME - Maximum intensity projection volume rendering
+  - PARTICLE_TRACE - Particle tracing with RK4 integration
+  - STREAMLINE - Streamline visualization with adaptive step size
+  - VOXEL_PROJ - Volume projection (maximum/average modes)
+  - POLYSHADE - Mesh shading with vertex normal computation
 
 ### Fixed
 - BEGIN/END blocks now work correctly in CASE/SWITCH statements
