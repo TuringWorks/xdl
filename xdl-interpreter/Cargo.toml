@@ -10,10 +10,10 @@ repository.workspace = true
 documentation.workspace = true
 
 [dependencies]
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
-xdl-parser = { version = "0.1.0", path = "../xdl-parser" }
-xdl-stdlib = { version = "0.1.0", path = "../xdl-stdlib" }
-xdl-dataframe = { version = "0.1.0", path = "../xdl-dataframe" }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
+xdl-parser = { version = "0.1.1", path = "../xdl-parser" }
+xdl-stdlib = { version = "0.1.1", path = "../xdl-stdlib" }
+xdl-dataframe = { version = "0.1.1", path = "../xdl-dataframe" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

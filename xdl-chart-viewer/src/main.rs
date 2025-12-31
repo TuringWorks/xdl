@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use tauri::{State, WebviewUrl, WebviewWindowBuilder};
@@ -10,6 +10,7 @@ use tauri::{State, WebviewUrl, WebviewWindowBuilder};
 #[derive(Parser, Debug)]
 #[command(name = "xdl-chart-viewer")]
 #[command(about = "XDL Chart Viewer - Display charts in native windows")]
+#[command(version)]
 struct Args {
     /// HTML file to display
     #[arg(short = 'f', long)]
@@ -30,6 +31,10 @@ struct Args {
     /// Window height
     #[arg(short = 'H', long, default_value_t = 768)]
     height: u32,
+
+    /// Print help and exit (without launching GUI)
+    #[arg(long = "help-only", hide = true)]
+    help_only: bool,
 }
 
 /// Application state
@@ -86,7 +91,22 @@ async fn create_chart_window(
 }
 
 fn main() {
-    let args = Args::parse();
+    // Handle --help and --version early, before Tauri initialization
+    // This allows tests to run without launching a GUI
+    let args = match Args::try_parse() {
+        Ok(args) => args,
+        Err(e) => {
+            // This handles --help and --version, printing and exiting
+            e.exit();
+        }
+    };
+
+    // Handle --help-only flag for testing purposes
+    if args.help_only {
+        Args::command().print_help().unwrap();
+        println!();
+        return;
+    }
 
     // Prepare initial window data if provided
     let initial_html = if let Some(html_file) = &args.html_file {

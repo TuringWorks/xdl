@@ -69,7 +69,11 @@
       "Bash(chmod:*)",
       "Bash(do)",
       "Bash(if ! grep -q \"documentation.workspace\" \"$crate/Cargo.toml\")",
-      "Bash(then)"
+      "Bash(then)",
+      "Bash(find:*)",
+      "Bash(git -C /Users/ravindraboddipalli/sources/git/xdl log --oneline -20)",
+      "Bash(do [ ! -f \"$ref.md\" ])",
+      "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && grep \"\"\"\"description\"\"\"\" {}')"
     ],
     "deny": [],
     "ask": []

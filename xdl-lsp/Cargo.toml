@@ -14,8 +14,8 @@ name = "xdl-lsp"
 path = "src/main.rs"
 
 [dependencies]
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
-xdl-parser = { version = "0.1.0", path = "../xdl-parser" }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
+xdl-parser = { version = "0.1.1", path = "../xdl-parser" }
 
 # LSP framework
 tower-lsp = "0.20"

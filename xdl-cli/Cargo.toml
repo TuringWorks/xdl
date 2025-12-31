@@ -14,11 +14,11 @@ name = "xdl"
 path = "src/main.rs"
 
 [dependencies]
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
-xdl-parser = { version = "0.1.0", path = "../xdl-parser" }
-xdl-interpreter = { version = "0.1.0", path = "../xdl-interpreter" }
-xdl-stdlib = { version = "0.1.0", path = "../xdl-stdlib" }
-xdl-matlab = { version = "0.1.0", path = "../xdl-matlab" }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
+xdl-parser = { version = "0.1.1", path = "../xdl-parser" }
+xdl-interpreter = { version = "0.1.1", path = "../xdl-interpreter" }
+xdl-stdlib = { version = "0.1.1", path = "../xdl-stdlib" }
+xdl-matlab = { version = "0.1.1", path = "../xdl-matlab" }
 
 clap = { workspace = true }
 anyhow = { workspace = true }

@@ -14,12 +14,12 @@ name = "xdl-gui"
 path = "src/main.rs"
 
 [dependencies]
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
-xdl-parser = { version = "0.1.0", path = "../xdl-parser" }
-xdl-runtime = { version = "0.1.0", path = "../xdl-runtime" }
-xdl-interpreter = { version = "0.1.0", path = "../xdl-interpreter" }
-xdl-stdlib = { version = "0.1.0", path = "../xdl-stdlib" }
-xdl-matlab = { version = "0.1.0", path = "../xdl-matlab" }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
+xdl-parser = { version = "0.1.1", path = "../xdl-parser" }
+xdl-runtime = { version = "0.1.1", path = "../xdl-runtime" }
+xdl-interpreter = { version = "0.1.1", path = "../xdl-interpreter" }
+xdl-stdlib = { version = "0.1.1", path = "../xdl-stdlib" }
+xdl-matlab = { version = "0.1.1", path = "../xdl-matlab" }
 fltk = { workspace = true }
 plotters = { workspace = true }
 anyhow = { workspace = true }

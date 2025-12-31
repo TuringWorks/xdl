@@ -11,8 +11,8 @@ documentation.workspace = true
 
 [dependencies]
 # Core XDL dependencies
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
-xdl-database = { version = "0.1.0", path = "../xdl-database", optional = true }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
+xdl-database = { version = "0.1.1", path = "../xdl-database", optional = true }
 
 # Error handling
 thiserror.workspace = true

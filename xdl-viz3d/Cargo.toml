@@ -10,7 +10,7 @@ repository.workspace = true
 documentation.workspace = true
 
 [dependencies]
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
 wgpu = { workspace = true }
 winit = { workspace = true }
 bytemuck = { version = "1.14", features = ["derive"] }

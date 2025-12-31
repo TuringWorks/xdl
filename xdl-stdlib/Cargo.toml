@@ -10,12 +10,12 @@ repository.workspace = true
 documentation.workspace = true
 
 [dependencies]
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
-xdl-viz3d = { version = "0.1.0", path = "../xdl-viz3d" }
-xdl-viz3d-web = { version = "0.1.0", path = "../xdl-viz3d-web" }
-xdl-viz3d-threejs = { version = "0.1.0", path = "../xdl-viz3d-threejs" }
-xdl-charts = { version = "0.1.0", path = "../xdl-charts" }
-xdl-amp = { version = "0.1.0", path = "../xdl-amp" }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
+xdl-viz3d = { version = "0.1.1", path = "../xdl-viz3d" }
+xdl-viz3d-web = { version = "0.1.1", path = "../xdl-viz3d-web" }
+xdl-viz3d-threejs = { version = "0.1.1", path = "../xdl-viz3d-threejs" }
+xdl-charts = { version = "0.1.1", path = "../xdl-charts" }
+xdl-amp = { version = "0.1.1", path = "../xdl-amp" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

@@ -10,7 +10,7 @@ repository.workspace = true
 documentation.workspace = true
 
 [dependencies]
-xdl-core = { version = "0.1.0", path = "../xdl-core" }
+xdl-core = { version = "0.1.1", path = "../xdl-core" }
 nom = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
