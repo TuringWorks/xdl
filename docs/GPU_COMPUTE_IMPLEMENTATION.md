@@ -143,25 +143,33 @@ Full NVIDIA GPU support with PTX kernels:
 
 **Status**: ✅ Fully implemented (feature-gated)
 
-### 4. OpenCL Backend (`opencl.rs`) - Stub
+### 4. OpenCL Backend (`opencl.rs`) - Fully Implemented
 
-Cross-platform fallback:
+Cross-platform GPU compute:
 
 - Uses `ocl` crate for OpenCL 1.2+ support
 - Kernel source in `shaders/opencl_kernels.cl`
 - Compatible with AMD, Intel, and NVIDIA GPUs
+- Requires `--features opencl`
 
-**Status**: Structure in place, needs kernel execution logic
+**Supported Operations:**
+- Element-wise: add, mul, sub, div
+- Transcendental: sin, cos, exp, log, sqrt, pow
+- Matrix: matmul (2D dispatch)
+- Reductions: sum, max, min (work-group parallel reduction)
 
-### 5. DirectX 12 Backend (`directx.rs`) - Stub
+**Status**: ✅ Fully implemented (feature-gated)
 
-Windows native support:
+### 5. DirectX 12 Backend (`directx.rs`) - Implemented via DirectML
 
-- Will use HLSL compute shaders
-- DirectX 12 compute pipeline
+Windows native support with DirectML delegation:
+
+- Delegates all operations to DirectML for GPU acceleration
 - Compatible with all DirectX 12 capable GPUs
+- Requires `--features directml` on Windows
+- Falls back to SIMD CPU ops when DirectML not available
 
-**Status**: Placeholder only
+**Status**: ✅ Implemented (via DirectML delegation)
 
 ### 6. High-Level Operations (`ops.rs`)
 
