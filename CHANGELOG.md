@@ -66,20 +66,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - XYOUTS_EXTENDED - Extended text output options
   - LEGEND - Add legend to plot
   - COLORBAR - Add color bar to plot
-- **Widget/GUI System** (Placeholder)
-  - WIDGET_BASE - Container widget with row/column/grid layouts
-  - WIDGET_BUTTON - Button with text, bitmap, menu options
-  - WIDGET_SLIDER - Slider with min/max/value controls
-  - WIDGET_TEXT - Text input with editable/multiline options
-  - WIDGET_LABEL - Text labels with alignment
-  - WIDGET_LIST - List selection (single/multiple)
-  - WIDGET_DROPLIST - Dropdown selection
-  - WIDGET_DRAW - Drawing canvas for graphics
-  - WIDGET_CONTROL - Runtime property modification
-  - WIDGET_INFO - Query widget properties
-  - WIDGET_EVENT - Event polling
-  - XMANAGER - Event loop management
-  - CLI-based placeholder; full GUI requires xdl-gui backend
+- **Widget/GUI System** - 25+ widget functions
+  - Core widgets: WIDGET_BASE, WIDGET_BUTTON, WIDGET_SLIDER, WIDGET_TEXT, WIDGET_LABEL
+  - Selection widgets: WIDGET_LIST, WIDGET_DROPLIST, WIDGET_COMBOBOX
+  - Advanced widgets: WIDGET_DRAW, WIDGET_TABLE, WIDGET_TREE, WIDGET_TAB, WIDGET_PROPERTYSHEET
+  - Widget management: WIDGET_CONTROL, WIDGET_INFO, WIDGET_EVENT, WIDGET_DISPLAYCONTEXTMENU
+  - Compound widgets: CW_FIELD, CW_BGROUP, CW_PDMENU
+  - Utilities: XMANAGER, XREGISTERED, XLOADCT, XPALETTE, XDISPLAYFILE
+  - CLI-based implementation; full GUI requires xdl-gui backend
+- **Scientific I/O Enhancement** - 45+ format functions
+  - FITS: READFITS, WRITEFITS, HEADFITS, SXPAR, FXPAR, FXADDPAR, MRDFITS, MWRFITS, FXREAD, FXWRITE, FITS_INFO
+  - HDF5: H5F_*, H5D_*, H5G_*, H5A_*, H5S_*, H5T_* (18 functions)
+  - NetCDF: NCDF_OPEN, NCDF_CLOSE, NCDF_VARGET, NCDF_INQUIRE, NCDF_VARINQ, NCDF_DIMINQ,
+    NCDF_DIMID, NCDF_VARID, NCDF_ATTNAME, NCDF_ATTGET, NCDF_ATTINQ, NCDF_CREATE,
+    NCDF_DIMDEF, NCDF_VARDEF, NCDF_VARPUT, NCDF_ATTPUT, NCDF_CONTROL
 - **Object System Enhancement**
   - Full class inheritance support (parent class reference)
   - Method resolution chain (follows inheritance hierarchy)

@@ -733,6 +733,551 @@ pub fn widget_event(
     Ok(XdlValue::Struct(event))
 }
 
+/// WIDGET_TABLE - Create a table widget for displaying 2D data
+/// IDL syntax: id = WIDGET_TABLE(parent [, VALUE=data] [, COLUMN_LABELS=labels] [, ROW_LABELS=labels])
+pub fn widget_table(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WIDGET_TABLE: Expected parent widget ID".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let (rows, cols) = match keywords.get("VALUE") {
+        Some(XdlValue::MultiDimArray { data: _, shape }) => {
+            if shape.len() >= 2 {
+                (shape[0], shape[1])
+            } else {
+                (shape[0], 1)
+            }
+        }
+        Some(XdlValue::Array(arr)) => (arr.len(), 1),
+        _ => (10, 5), // Default size
+    };
+
+    let editable = keywords.contains_key("EDITABLE");
+    let resizable = !keywords.contains_key("NO_COLUMN_RESIZE");
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::Table,
+        parent_id: Some(parent_id),
+        title: format!("Table {}x{}", rows, cols),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "WIDGET_TABLE: Created table {} in parent {} ({}x{}, editable={}, resizable={})",
+        id, parent_id, rows, cols, editable, resizable
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// WIDGET_TREE - Create a tree widget for hierarchical data
+/// IDL syntax: id = WIDGET_TREE(parent [, VALUE=label] [, /FOLDER] [, /EXPANDED])
+pub fn widget_tree(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WIDGET_TREE: Expected parent widget ID".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let label = keywords
+        .get("VALUE")
+        .and_then(|v| match v {
+            XdlValue::String(s) => Some(s.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| "Tree Item".to_string());
+
+    let is_folder = keywords.contains_key("FOLDER");
+    let expanded = keywords.contains_key("EXPANDED");
+    let draggable = keywords.contains_key("DRAGGABLE");
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::Tree,
+        parent_id: Some(parent_id),
+        title: label.clone(),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "WIDGET_TREE: Created tree node {} in parent {} ('{}', folder={}, expanded={}, draggable={})",
+        id, parent_id, label, is_folder, expanded, draggable
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// WIDGET_TAB - Create a tab widget for organizing content
+/// IDL syntax: id = WIDGET_TAB(parent [, /MULTILINE] [, LOCATION=loc])
+pub fn widget_tab(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WIDGET_TAB: Expected parent widget ID".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let multiline = keywords.contains_key("MULTILINE");
+    let location = keywords
+        .get("LOCATION")
+        .and_then(|v| match v {
+            XdlValue::Int(i) => Some(*i),
+            _ => None,
+        })
+        .unwrap_or(0); // 0=top, 1=bottom, 2=left, 3=right
+
+    let location_str = match location {
+        0 => "TOP",
+        1 => "BOTTOM",
+        2 => "LEFT",
+        3 => "RIGHT",
+        _ => "TOP",
+    };
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::Tab,
+        parent_id: Some(parent_id),
+        title: "Tab Widget".to_string(),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "WIDGET_TAB: Created tab {} in parent {} (location={}, multiline={})",
+        id, parent_id, location_str, multiline
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// WIDGET_COMBOBOX - Create a combobox widget (editable dropdown)
+/// IDL syntax: id = WIDGET_COMBOBOX(parent [, VALUE=items] [, /EDITABLE])
+pub fn widget_combobox(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WIDGET_COMBOBOX: Expected parent widget ID".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let num_items = match keywords.get("VALUE") {
+        Some(XdlValue::NestedArray(arr)) => arr.len(),
+        Some(XdlValue::Array(arr)) => arr.len(),
+        _ => 0,
+    };
+
+    let editable = keywords.contains_key("EDITABLE");
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::Combobox,
+        parent_id: Some(parent_id),
+        title: format!("Combobox ({} items)", num_items),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "WIDGET_COMBOBOX: Created combobox {} in parent {} ({} items, editable={})",
+        id, parent_id, num_items, editable
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// WIDGET_PROPERTYSHEET - Create a property sheet widget
+/// IDL syntax: id = WIDGET_PROPERTYSHEET(parent [, VALUE=properties])
+pub fn widget_propertysheet(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WIDGET_PROPERTYSHEET: Expected parent widget ID".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let num_props = match keywords.get("VALUE") {
+        Some(XdlValue::Struct(s)) => s.len(),
+        _ => 0,
+    };
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::PropertySheet,
+        parent_id: Some(parent_id),
+        title: format!("PropertySheet ({} props)", num_props),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "WIDGET_PROPERTYSHEET: Created property sheet {} in parent {} ({} properties)",
+        id, parent_id, num_props
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// WIDGET_DISPLAYCONTEXTMENU - Display context menu at cursor position
+/// IDL syntax: WIDGET_DISPLAYCONTEXTMENU, parent, x, y, menu_id
+pub fn widget_displaycontextmenu(
+    args: &[XdlValue],
+    _keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.len() < 4 {
+        return Err(XdlError::InvalidArgument(
+            "WIDGET_DISPLAYCONTEXTMENU: Expected parent, x, y, menu_id".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).unwrap_or(0);
+    let x = value_to_usize(&args[1]).unwrap_or(0);
+    let y = value_to_usize(&args[2]).unwrap_or(0);
+    let menu_id = value_to_usize(&args[3]).unwrap_or(0);
+
+    println!(
+        "WIDGET_DISPLAYCONTEXTMENU: Displaying menu {} at ({}, {}) in widget {}",
+        menu_id, x, y, parent_id
+    );
+
+    Ok(XdlValue::Undefined)
+}
+
+/// CW_FIELD - Compound widget for labeled field input
+/// IDL syntax: id = CW_FIELD(parent [, TITLE=title] [, VALUE=value] [, /STRING] [, /FLOAT] [, /INTEGER])
+pub fn cw_field(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "CW_FIELD: Expected parent widget ID".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let title = keywords
+        .get("TITLE")
+        .and_then(|v| match v {
+            XdlValue::String(s) => Some(s.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| "Field:".to_string());
+
+    let field_type = if keywords.contains_key("INTEGER") {
+        "INTEGER"
+    } else if keywords.contains_key("FLOAT") {
+        "FLOAT"
+    } else if keywords.contains_key("LONG") {
+        "LONG"
+    } else {
+        "STRING"
+    };
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::Text,
+        parent_id: Some(parent_id),
+        title: title.clone(),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "CW_FIELD: Created field {} in parent {} ('{}', type={})",
+        id, parent_id, title, field_type
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// CW_BGROUP - Compound widget for button group
+/// IDL syntax: id = CW_BGROUP(parent, labels [, /EXCLUSIVE] [, /NONEXCLUSIVE] [, /ROW] [, /COLUMN])
+pub fn cw_bgroup(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "CW_BGROUP: Expected parent and labels".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let num_buttons = match &args[1] {
+        XdlValue::NestedArray(arr) => arr.len(),
+        XdlValue::Array(arr) => arr.len(),
+        _ => 1,
+    };
+
+    let group_type = if keywords.contains_key("EXCLUSIVE") {
+        "EXCLUSIVE (radio)"
+    } else if keywords.contains_key("NONEXCLUSIVE") {
+        "NONEXCLUSIVE (checkbox)"
+    } else {
+        "NORMAL"
+    };
+
+    let layout = if keywords.contains_key("ROW") {
+        "ROW"
+    } else if keywords.contains_key("COLUMN") {
+        "COLUMN"
+    } else {
+        "ROW"
+    };
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::Base,
+        parent_id: Some(parent_id),
+        title: format!("Button Group ({} buttons)", num_buttons),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "CW_BGROUP: Created button group {} in parent {} ({} buttons, {}, layout={})",
+        id, parent_id, num_buttons, group_type, layout
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// CW_PDMENU - Compound widget for pulldown menu
+/// IDL syntax: id = CW_PDMENU(parent, menu_desc [, /MBAR])
+pub fn cw_pdmenu(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "CW_PDMENU: Expected parent and menu description".to_string(),
+        ));
+    }
+
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
+        XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[0]),
+        }
+    })?;
+
+    let is_mbar = keywords.contains_key("MBAR");
+
+    let id = get_next_widget_id();
+
+    let info = WidgetInfo {
+        id,
+        widget_type: WidgetType::Button,
+        parent_id: Some(parent_id),
+        title: "Pulldown Menu".to_string(),
+        uvalue: keywords.get("UVALUE").cloned(),
+        sensitive: true,
+        visible: true,
+        realized: false,
+    };
+
+    store_widget(info);
+
+    println!(
+        "CW_PDMENU: Created pulldown menu {} in parent {} (mbar={})",
+        id, parent_id, is_mbar
+    );
+
+    Ok(XdlValue::Long(id as i32))
+}
+
+/// XREGISTERED - Check if a widget application is registered
+/// IDL syntax: result = XREGISTERED(name)
+pub fn xregistered(args: &[XdlValue], _keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+    let name = if !args.is_empty() {
+        match &args[0] {
+            XdlValue::String(s) => s.clone(),
+            _ => "unknown".to_string(),
+        }
+    } else {
+        "unknown".to_string()
+    };
+
+    println!("XREGISTERED: Checking if '{}' is registered", name);
+    // In CLI mode, nothing is registered
+    Ok(XdlValue::Long(0))
+}
+
+/// XLOADCT - Load and optionally modify color tables interactively
+/// IDL syntax: XLOADCT [, /BLOCK] [, /MODAL]
+pub fn xloadct(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+    let _ = args; // Unused
+    let block = keywords.contains_key("BLOCK");
+    let modal = keywords.contains_key("MODAL");
+
+    println!("XLOADCT: Color table selection dialog (block={}, modal={})", block, modal);
+    println!("  Note: Interactive dialogs require xdl-gui.");
+    println!("  Available color tables: 0-40 (use LOADCT, n to load)");
+
+    Ok(XdlValue::Undefined)
+}
+
+/// XPALETTE - Edit color palette interactively
+/// IDL syntax: XPALETTE [, /BLOCK]
+pub fn xpalette(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+    let _ = args;
+    let block = keywords.contains_key("BLOCK");
+
+    println!("XPALETTE: Color palette editor (block={})", block);
+    println!("  Note: Interactive palette editing requires xdl-gui.");
+
+    Ok(XdlValue::Undefined)
+}
+
+/// XDISPLAYFILE - Display a text file in a widget
+/// IDL syntax: XDISPLAYFILE, filename [, TITLE=title] [, /BLOCK]
+pub fn xdisplayfile(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "XDISPLAYFILE: Expected filename".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "string".to_string(),
+            actual: format!("{:?}", args[0]),
+        }),
+    };
+
+    let title = keywords
+        .get("TITLE")
+        .and_then(|v| match v {
+            XdlValue::String(s) => Some(s.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| filename.clone());
+
+    // Try to read and display file content
+    if let Ok(content) = std::fs::read_to_string(&filename) {
+        let lines: Vec<&str> = content.lines().take(20).collect();
+        println!("XDISPLAYFILE: '{}' (showing first {} lines)", title, lines.len());
+        for line in lines {
+            println!("  {}", line);
+        }
+        if content.lines().count() > 20 {
+            println!("  ... ({} more lines)", content.lines().count() - 20);
+        }
+    } else {
+        println!("XDISPLAYFILE: Could not read '{}'", filename);
+    }
+
+    Ok(XdlValue::Undefined)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

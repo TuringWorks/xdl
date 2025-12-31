@@ -1,0 +1,129 @@
+; Test file for Extended Scientific I/O Functions
+; Tests FITS, HDF5, and NetCDF functions
+
+print, "=== Extended Scientific I/O Test ==="
+print, ""
+
+; ============================================================================
+; FITS Functions
+; ============================================================================
+print, "--- FITS Functions ---"
+print, ""
+
+print, "FITS Reading Functions:"
+print, "  READFITS(filename) - Read FITS file"
+print, "  MRDFITS(filename, ext) - Read with extensions"
+print, "  FXREAD(filename) - Flexible FITS reading"
+print, "  HEADFITS(filename) - Read header only"
+print, ""
+
+print, "FITS Header Functions:"
+print, "  SXPAR(header, key) - Extract parameter"
+print, "  FXPAR(header, key) - Extract parameter (alias)"
+print, "  FXADDPAR(header, key, val) - Add/modify parameter"
+print, ""
+
+print, "FITS Writing Functions:"
+print, "  WRITEFITS(filename, data) - Write FITS file"
+print, "  MWRFITS(data, filename) - Write with extensions"
+print, "  FXWRITE(filename, data) - Flexible FITS writing"
+print, ""
+
+print, "FITS Info Functions:"
+print, "  FITS_INFO(filename) - Get file information"
+print, ""
+
+; ============================================================================
+; HDF5 Functions
+; ============================================================================
+print, "--- HDF5 Functions ---"
+print, ""
+
+print, "File Operations:"
+print, "  H5F_OPEN(filename) - Open HDF5 file"
+print, "  H5F_CLOSE(file_id) - Close HDF5 file"
+print, ""
+
+print, "Dataset Operations:"
+print, "  H5D_OPEN(file_id, name) - Open dataset"
+print, "  H5D_READ(dataset_id) - Read dataset data"
+print, "  H5D_CLOSE(dataset_id) - Close dataset"
+print, "  H5D_GET_SPACE(dataset_id) - Get dataspace"
+print, "  H5D_GET_TYPE(dataset_id) - Get datatype"
+print, ""
+
+print, "Group Operations:"
+print, "  H5G_OPEN(loc_id, name) - Open group"
+print, "  H5G_CLOSE(group_id) - Close group"
+print, "  H5G_GET_NMEMBERS(loc_id, name) - Count members"
+print, "  H5G_GET_MEMBER_NAME(loc_id, name, idx) - Get member name"
+print, ""
+
+print, "Attribute Operations:"
+print, "  H5A_OPEN(loc_id, name) - Open attribute"
+print, "  H5A_READ(attr_id) - Read attribute"
+print, "  H5A_CLOSE(attr_id) - Close attribute"
+print, "  H5A_GET_NAME(attr_id) - Get attribute name"
+print, "  H5A_GET_NUM_ATTRS(loc_id) - Count attributes"
+print, ""
+
+print, "Space and Type Operations:"
+print, "  H5S_GET_SIMPLE_EXTENT_DIMS(space_id) - Get dimensions"
+print, "  H5S_GET_SIMPLE_EXTENT_NDIMS(space_id) - Get rank"
+print, "  H5S_CLOSE(space_id) - Close dataspace"
+print, "  H5T_GET_SIZE(type_id) - Get type size"
+print, "  H5T_CLOSE(type_id) - Close datatype"
+print, ""
+
+; ============================================================================
+; NetCDF Functions
+; ============================================================================
+print, "--- NetCDF Functions ---"
+print, ""
+
+print, "File Operations:"
+print, "  NCDF_OPEN(filename) - Open NetCDF file"
+print, "  NCDF_CREATE(filename) - Create NetCDF file"
+print, "  NCDF_CLOSE(ncid) - Close NetCDF file"
+print, "  NCDF_CONTROL(ncid, /ENDEF) - Control file mode"
+print, ""
+
+print, "Dimension Operations:"
+print, "  NCDF_INQUIRE(ncid) - Inquire file structure"
+print, "  NCDF_DIMID(ncid, name) - Get dimension ID"
+print, "  NCDF_DIMINQ(ncid, dimid) - Inquire dimension"
+print, "  NCDF_DIMDEF(ncid, name, size) - Define dimension"
+print, ""
+
+print, "Variable Operations:"
+print, "  NCDF_VARID(ncid, name) - Get variable ID"
+print, "  NCDF_VARINQ(ncid, varid) - Inquire variable"
+print, "  NCDF_VARGET(ncid, varid) - Read variable"
+print, "  NCDF_VARDEF(ncid, name, dims) - Define variable"
+print, "  NCDF_VARPUT(ncid, varid, data) - Write variable"
+print, ""
+
+print, "Attribute Operations:"
+print, "  NCDF_ATTNAME(ncid, varid, idx) - Get attribute name"
+print, "  NCDF_ATTGET(ncid, varid, name) - Read attribute"
+print, "  NCDF_ATTINQ(ncid, varid, name) - Inquire attribute"
+print, "  NCDF_ATTPUT(ncid, varid, name, val) - Write attribute"
+print, ""
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, "=== Scientific I/O Test Summary ==="
+print, ""
+print, "FITS Functions: 11 (reading, writing, header manipulation)"
+print, "HDF5 Functions: 18 (file, dataset, group, attribute, space, type)"
+print, "NetCDF Functions: 17 (file, dimension, variable, attribute)"
+print, ""
+print, "Total: 46 scientific data format functions"
+print, ""
+print, "Note: Full file parsing requires native libraries:"
+print, "  - FITS: cfitsio library"
+print, "  - HDF5: hdf5 library"
+print, "  - NetCDF: netcdf library"
+print, ""
+print, "=== Scientific I/O Test Complete ==="

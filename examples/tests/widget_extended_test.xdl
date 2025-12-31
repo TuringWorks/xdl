@@ -1,0 +1,123 @@
+; Test file for Extended Widget Functions
+; Tests additional widget types and compound widgets
+
+print, "=== Extended Widget Test ==="
+print, ""
+
+; ============================================================================
+; Test 1: Basic Widget Hierarchy
+; ============================================================================
+print, "--- Basic Widget Hierarchy ---"
+
+; Create base widget
+base = WIDGET_BASE(TITLE='Extended Widget Demo', /COLUMN)
+print, "Created base widget: ", base
+
+; Add standard widgets
+btn = WIDGET_BUTTON(base, VALUE='Click Me')
+print, "Created button: ", btn
+
+slider = WIDGET_SLIDER(base, MINIMUM=0, MAXIMUM=100, VALUE=50)
+print, "Created slider: ", slider
+
+text = WIDGET_TEXT(base, VALUE='Sample text', /EDITABLE, XSIZE=40)
+print, "Created text widget: ", text
+
+label = WIDGET_LABEL(base, VALUE='Status: Ready')
+print, "Created label: ", label
+
+print, ""
+
+; ============================================================================
+; Test 2: Advanced Widget Types
+; ============================================================================
+print, "--- Advanced Widget Types ---"
+
+; Table widget
+table = WIDGET_TABLE(base, XSIZE=5, YSIZE=10)
+print, "Created table widget: ", table
+
+; Tree widget
+tree = WIDGET_TREE(base, VALUE='Root', /FOLDER, /EXPANDED)
+print, "Created tree widget: ", tree
+
+; Tab widget
+tab = WIDGET_TAB(base, LOCATION=0)
+print, "Created tab widget: ", tab
+
+; Combobox
+combo = WIDGET_COMBOBOX(base)
+print, "Created combobox: ", combo
+
+; Property sheet
+props = WIDGET_PROPERTYSHEET(base)
+print, "Created property sheet: ", props
+
+print, ""
+
+; ============================================================================
+; Test 3: Compound Widgets
+; ============================================================================
+print, "--- Compound Widgets ---"
+
+; CW_FIELD - labeled input field
+field = CW_FIELD(base, TITLE='Value:', /FLOAT)
+print, "Created CW_FIELD: ", field
+
+print, "Compound widget types available:"
+print, "  CW_BGROUP(parent, labels) - Button group (radio/checkbox)"
+print, "  CW_PDMENU(parent, menu_desc) - Pulldown menu"
+print, "  CW_FIELD(parent, TITLE=str) - Labeled input field"
+
+print, ""
+
+; ============================================================================
+; Test 4: Widget Utilities
+; ============================================================================
+print, "--- Widget Utilities ---"
+
+; Check if registered
+registered = XREGISTERED('myapp')
+print, "XREGISTERED result: ", registered
+
+; Display file (would show file content)
+; XDISPLAYFILE, 'README.md', TITLE='Readme'
+
+print, ""
+
+; ============================================================================
+; Test 5: Widget Info and Control
+; ============================================================================
+print, "--- Widget Info and Control ---"
+
+; Get widget info
+valid = WIDGET_INFO(base, /VALID_ID)
+print, "Widget valid: ", valid
+
+parent = WIDGET_INFO(btn, /PARENT)
+print, "Button parent: ", parent
+
+type_str = WIDGET_INFO(btn, /TYPE)
+print, "Button type: ", type_str
+
+; Control widgets
+WIDGET_CONTROL, base, /REALIZE
+print, "Widget realized"
+
+WIDGET_CONTROL, btn, SENSITIVE=1
+print, "Button sensitivity set"
+
+print, ""
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, "=== Extended Widget Test Summary ==="
+print, ""
+print, "Core Widgets: WIDGET_BASE, WIDGET_BUTTON, WIDGET_SLIDER, WIDGET_TEXT, WIDGET_LABEL"
+print, "Selection Widgets: WIDGET_LIST, WIDGET_DROPLIST, WIDGET_COMBOBOX"
+print, "Advanced Widgets: WIDGET_TABLE, WIDGET_TREE, WIDGET_TAB, WIDGET_PROPERTYSHEET"
+print, "Compound Widgets: CW_FIELD, CW_BGROUP, CW_PDMENU"
+print, "Utilities: XMANAGER, XREGISTERED, XLOADCT, XPALETTE, XDISPLAYFILE"
+print, ""
+print, "=== Extended Widget Test Complete ==="
