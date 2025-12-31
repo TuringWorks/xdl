@@ -7,6 +7,7 @@ license.workspace = true
 description = "Extended Data Language (XDL) command-line interface"
 homepage.workspace = true
 repository.workspace = true
+documentation.workspace = true
 
 [[bin]]
 name = "xdl"

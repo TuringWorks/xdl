@@ -7,6 +7,7 @@ license.workspace = true
 description = "GUI application for XDL with integrated CLI and plotting"
 homepage.workspace = true
 repository.workspace = true
+documentation.workspace = true
 
 [[bin]]
 name = "xdl-gui"

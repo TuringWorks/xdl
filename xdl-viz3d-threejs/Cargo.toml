@@ -7,6 +7,7 @@ license.workspace = true
 description = "Three.js-based volume rendering for XDL"
 homepage.workspace = true
 repository.workspace = true
+documentation.workspace = true
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

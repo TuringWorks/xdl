@@ -26,8 +26,9 @@ edition = "2021"
 authors = ["XDL Rust Team"]
 license = "GPL-2.0"
 description = "Extended Data Language (XDL) - Rust implementation"
-homepage = "https://github.com/gnudatalanguage/gdl"
-repository = "https://github.com/gnudatalanguage/gdl"
+homepage = "https://turingworks.github.io/xdl"
+repository = "https://github.com/turingworks/xdl"
+documentation = "https://turingworks.github.io/xdl"
 
 [workspace.dependencies]
 # Core dependencies

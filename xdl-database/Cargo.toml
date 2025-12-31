@@ -7,6 +7,7 @@ license.workspace = true
 description = "Database connectivity module for XDL - supports PostgreSQL, MySQL, DuckDB, SQLite, ODBC, Redis, and more"
 homepage.workspace = true
 repository.workspace = true
+documentation.workspace = true
 
 [dependencies]
 # Core XDL dependencies
