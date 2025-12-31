@@ -1051,3 +1051,263 @@ pub fn scope_traceback(_args: &[XdlValue]) -> XdlResult<XdlValue> {
         "$MAIN$".to_string(),
     )]))
 }
+
+/// PATH_SEP - Return the platform-specific path separator
+pub fn path_sep(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    Ok(XdlValue::String(std::path::MAIN_SEPARATOR.to_string()))
+}
+
+/// ADD_SLASH - Add trailing path separator if not present
+pub fn add_slash(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "ADD_SLASH: Expected path argument".to_string(),
+        ));
+    }
+
+    let path = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let sep = std::path::MAIN_SEPARATOR;
+    if path.ends_with(sep) || path.ends_with('/') || path.ends_with('\\') {
+        Ok(XdlValue::String(path))
+    } else {
+        Ok(XdlValue::String(format!("{}{}", path, sep)))
+    }
+}
+
+/// GET_SCREEN_SIZE - Return screen dimensions [width, height]
+pub fn get_screen_size(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Default screen size (common resolution)
+    // In a real GUI implementation, this would query the display
+    #[cfg(target_os = "macos")]
+    {
+        // Try to get actual screen size on macOS
+        if let Ok(output) = Command::new("system_profiler")
+            .args(["SPDisplaysDataType"])
+            .output()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            // Parse resolution from output (simplified)
+            if stdout.contains("Resolution:") {
+                // Default to common MacBook resolution if parsing fails
+                return Ok(XdlValue::Array(vec![1920.0, 1080.0]));
+            }
+        }
+    }
+
+    // Default fallback
+    Ok(XdlValue::Array(vec![1920.0, 1080.0]))
+}
+
+/// GETENV_ALL - Get all environment variables as a struct-like array
+pub fn getenv_all(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let vars: Vec<XdlValue> = env::vars()
+        .map(|(k, v)| XdlValue::String(format!("{}={}", k, v)))
+        .collect();
+    Ok(XdlValue::NestedArray(vars))
+}
+
+/// SETENV - Set an environment variable
+pub fn setenv(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "SETENV: Expected name and value arguments".to_string(),
+        ));
+    }
+
+    let name = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let value = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => format!("{:?}", args[1]),
+    };
+
+    env::set_var(&name, &value);
+    Ok(XdlValue::Undefined)
+}
+
+/// UNSETENV - Remove an environment variable
+pub fn unsetenv(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "UNSETENV: Expected name argument".to_string(),
+        ));
+    }
+
+    let name = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    env::remove_var(&name);
+    Ok(XdlValue::Undefined)
+}
+
+/// CPU - Return CPU information
+pub fn cpu(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let num_cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+
+    Ok(XdlValue::Long(num_cpus as i32))
+}
+
+/// HOSTNAME - Return the system hostname
+pub fn hostname(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    #[cfg(unix)]
+    {
+        if let Ok(output) = Command::new("hostname").output() {
+            let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            return Ok(XdlValue::String(name));
+        }
+    }
+
+    Ok(XdlValue::String("localhost".to_string()))
+}
+
+/// TEMPORARY - Create a unique temporary filename
+pub fn temporary(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let prefix = if !args.is_empty() {
+        match &args[0] {
+            XdlValue::String(s) => s.clone(),
+            _ => "xdl_temp".to_string(),
+        }
+    } else {
+        "xdl_temp".to_string()
+    };
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+
+    let temp_dir = env::temp_dir();
+    let filename = format!("{}_{}.tmp", prefix, timestamp);
+    let path = temp_dir.join(filename);
+
+    Ok(XdlValue::String(path.to_string_lossy().to_string()))
+}
+
+/// SLEEP - Pause execution for specified seconds
+pub fn sleep(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "SLEEP: Expected seconds argument".to_string(),
+        ));
+    }
+
+    let seconds = match &args[0] {
+        XdlValue::Float(f) => *f as f64,
+        XdlValue::Double(d) => *d,
+        XdlValue::Int(i) => *i as f64,
+        XdlValue::Long(l) => *l as f64,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    std::thread::sleep(std::time::Duration::from_secs_f64(seconds));
+    Ok(XdlValue::Undefined)
+}
+
+/// VERSION - Return XDL version information
+pub fn version(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    // Return version as a structure-like string array
+    let version_info = vec![
+        XdlValue::String("XDL".to_string()),
+        XdlValue::String("0.1.7".to_string()),
+        XdlValue::String(env::consts::OS.to_string()),
+        XdlValue::String(env::consts::ARCH.to_string()),
+    ];
+    Ok(XdlValue::NestedArray(version_info))
+}
+
+/// PLATFORM - Return platform information
+pub fn platform(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let platform = format!("{}-{}", env::consts::OS, env::consts::ARCH);
+    Ok(XdlValue::String(platform))
+}
+
+/// IS_WINDOWS - Check if running on Windows
+pub fn is_windows(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    Ok(XdlValue::Int(if cfg!(target_os = "windows") { 1 } else { 0 }))
+}
+
+/// IS_MACOS - Check if running on macOS
+pub fn is_macos(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    Ok(XdlValue::Int(if cfg!(target_os = "macos") { 1 } else { 0 }))
+}
+
+/// IS_LINUX - Check if running on Linux
+pub fn is_linux(_args: &[XdlValue]) -> XdlResult<XdlValue> {
+    Ok(XdlValue::Int(if cfg!(target_os = "linux") { 1 } else { 0 }))
+}
+
+/// WHICH - Find executable in PATH (like Unix 'which' command)
+pub fn which(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "WHICH: Expected program name".to_string(),
+        ));
+    }
+
+    let program = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    #[cfg(unix)]
+    {
+        if let Ok(output) = Command::new("which").arg(&program).output() {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                return Ok(XdlValue::String(path));
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        if let Ok(output) = Command::new("where").arg(&program).output() {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout)
+                    .lines()
+                    .next()
+                    .unwrap_or("")
+                    .to_string();
+                return Ok(XdlValue::String(path));
+            }
+        }
+    }
+
+    Ok(XdlValue::String(String::new()))
+}

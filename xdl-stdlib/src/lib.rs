@@ -599,6 +599,23 @@ impl StandardLibrary {
             "SCOPE_LEVEL" => system::scope_level(args),
             "SCOPE_TRACEBACK" => system::scope_traceback(args),
 
+            // Path and system utilities
+            "PATH_SEP" => system::path_sep(args),
+            "ADD_SLASH" => system::add_slash(args),
+            "GET_SCREEN_SIZE" => system::get_screen_size(args),
+            "GETENV_ALL" => system::getenv_all(args),
+            "UNSETENV" => system::unsetenv(args),
+            "CPU" => system::cpu(args),
+            "HOSTNAME" => system::hostname(args),
+            "TEMPORARY" => system::temporary(args),
+            "SLEEP" => system::sleep(args),
+            "VERSION" => system::version(args),
+            "PLATFORM" => system::platform(args),
+            "IS_WINDOWS" => system::is_windows(args),
+            "IS_MACOS" => system::is_macos(args),
+            "IS_LINUX" => system::is_linux(args),
+            "WHICH" => system::which(args),
+
             // Dialog functions
             "DIALOG_MESSAGE" => dialog::dialog_message(args, keywords),
             "DIALOG_PICKFILE" => dialog::dialog_pickfile(args, keywords),
@@ -666,6 +683,14 @@ impl StandardLibrary {
             "FXREAD" => scientific_io::fxread(args, keywords),
             "FXWRITE" => scientific_io::fxwrite(args, keywords),
             "FITS_INFO" => scientific_io::fits_info(args, keywords),
+            // File format query functions
+            "QUERY_FITS" => scientific_io::query_fits(args),
+            "QUERY_HDF5" => scientific_io::query_hdf5(args),
+            "QUERY_NETCDF" => scientific_io::query_netcdf(args),
+            "QUERY_ASCII" => scientific_io::query_ascii(args),
+            "QUERY_CSV" => scientific_io::query_csv(args),
+            "QUERY_JSON" => scientific_io::query_json(args),
+            "QUERY_XML" => scientific_io::query_xml(args),
             // HDF5 functions
             "H5F_OPEN" => scientific_io::h5f_open(args),
             "H5F_CLOSE" => scientific_io::h5f_close(args),
@@ -727,6 +752,15 @@ impl StandardLibrary {
             "READS" => string::reads(args),
             "READS_STRING" => string::reads_string(args),
             "SPRINTF" => string::sprintf(args),
+            "STRTOK" => string::strtok(args, keywords),
+            "STRPUT" => string::strput(args),
+            "STRMID_BYTES" => string::strmid_bytes(args),
+            "STR_TO_BYTE" => string::str_to_byte(args),
+            "STRING_FROM_BYTES" => string::string_from_bytes(args),
+            "STRPOS_ALL" => string::strpos_all(args),
+            "STRCOUNT" => string::strcount(args),
+            "STRPAD" => string::strpad(args, keywords),
+            "STRREVERSE" => string::strreverse(args),
 
             // Complex number functions
             "COMPLEX" => complex::complex(args),

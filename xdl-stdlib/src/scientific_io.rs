@@ -983,3 +983,310 @@ pub fn fxaddpar(args: &[XdlValue]) -> XdlResult<XdlValue> {
 pub fn fxpar(args: &[XdlValue]) -> XdlResult<XdlValue> {
     sxpar(args)
 }
+
+// ============================================================================
+// File Query Functions
+// ============================================================================
+
+/// QUERY_FITS - Query FITS file properties without reading data
+pub fn query_fits(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QUERY_FITS: Expected filename argument".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(&filename);
+    if !path.exists() {
+        // Return 0 (false) if file doesn't exist
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Check FITS signature
+    let mut file = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return Ok(XdlValue::Long(0)),
+    };
+
+    let mut header = vec![0u8; 80];
+    if file.read_exact(&mut header).is_err() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    let header_str = String::from_utf8_lossy(&header);
+    if header_str.starts_with("SIMPLE  =") {
+        // Valid FITS file
+        Ok(XdlValue::Long(1))
+    } else {
+        Ok(XdlValue::Long(0))
+    }
+}
+
+/// QUERY_HDF5 - Query HDF5 file properties without reading data
+pub fn query_hdf5(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QUERY_HDF5: Expected filename argument".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(&filename);
+    if !path.exists() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Check HDF5 signature (first 8 bytes: 0x89 0x48 0x44 0x46 0x0D 0x0A 0x1A 0x0A)
+    let mut file = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return Ok(XdlValue::Long(0)),
+    };
+
+    let mut signature = vec![0u8; 8];
+    if file.read_exact(&mut signature).is_err() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    let hdf5_signature = [0x89, 0x48, 0x44, 0x46, 0x0D, 0x0A, 0x1A, 0x0A];
+    if signature == hdf5_signature {
+        Ok(XdlValue::Long(1))
+    } else {
+        Ok(XdlValue::Long(0))
+    }
+}
+
+/// QUERY_NETCDF - Query NetCDF file properties without reading data
+pub fn query_netcdf(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QUERY_NETCDF: Expected filename argument".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(&filename);
+    if !path.exists() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    let mut file = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return Ok(XdlValue::Long(0)),
+    };
+
+    let mut signature = vec![0u8; 4];
+    if file.read_exact(&mut signature).is_err() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Check for NetCDF-3 (CDF) or NetCDF-4 (HDF5) signatures
+    let cdf_sig = [0x43, 0x44, 0x46, 0x01]; // CDF\x01 (NetCDF-3)
+    let cdf2_sig = [0x43, 0x44, 0x46, 0x02]; // CDF\x02 (NetCDF-3 64-bit)
+    let hdf5_sig = [0x89, 0x48, 0x44, 0x46]; // HDF5 (NetCDF-4)
+
+    if signature == cdf_sig || signature == cdf2_sig || signature == hdf5_sig {
+        Ok(XdlValue::Long(1))
+    } else {
+        Ok(XdlValue::Long(0))
+    }
+}
+
+/// QUERY_ASCII - Query if file is ASCII text
+pub fn query_ascii(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QUERY_ASCII: Expected filename argument".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(&filename);
+    if !path.exists() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    let mut file = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return Ok(XdlValue::Long(0)),
+    };
+
+    // Read first 512 bytes and check if they're printable ASCII
+    let mut buffer = vec![0u8; 512];
+    let bytes_read = file.read(&mut buffer).unwrap_or(0);
+
+    for &byte in &buffer[..bytes_read] {
+        // Check if byte is printable ASCII or whitespace
+        if byte != 0 && (byte < 32 || byte > 126) && byte != 9 && byte != 10 && byte != 13 {
+            return Ok(XdlValue::Long(0));
+        }
+    }
+
+    Ok(XdlValue::Long(1))
+}
+
+/// QUERY_CSV - Query if file is CSV format
+pub fn query_csv(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QUERY_CSV: Expected filename argument".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(&filename);
+    if !path.exists() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Check file extension
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if ext.eq_ignore_ascii_case("csv") {
+        return Ok(XdlValue::Long(1));
+    }
+
+    // Try to read first line and check for comma separation
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return Ok(XdlValue::Long(0)),
+    };
+
+    // Check if first few lines contain commas
+    let first_lines: Vec<&str> = content.lines().take(3).collect();
+    let has_commas = first_lines.iter().all(|line| line.contains(','));
+
+    Ok(XdlValue::Long(if has_commas { 1 } else { 0 }))
+}
+
+/// QUERY_JSON - Query if file is JSON format
+pub fn query_json(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QUERY_JSON: Expected filename argument".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(&filename);
+    if !path.exists() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Check file extension
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if ext.eq_ignore_ascii_case("json") {
+        return Ok(XdlValue::Long(1));
+    }
+
+    // Try to read and check for JSON structure
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return Ok(XdlValue::Long(0)),
+    };
+
+    let trimmed = content.trim();
+    if (trimmed.starts_with('{') && trimmed.ends_with('}'))
+        || (trimmed.starts_with('[') && trimmed.ends_with(']'))
+    {
+        Ok(XdlValue::Long(1))
+    } else {
+        Ok(XdlValue::Long(0))
+    }
+}
+
+/// QUERY_XML - Query if file is XML format
+pub fn query_xml(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "QUERY_XML: Expected filename argument".to_string(),
+        ));
+    }
+
+    let filename = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let path = Path::new(&filename);
+    if !path.exists() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    // Check file extension
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if ext.eq_ignore_ascii_case("xml") {
+        return Ok(XdlValue::Long(1));
+    }
+
+    // Try to read and check for XML declaration or tag
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return Ok(XdlValue::Long(0)),
+    };
+
+    let trimmed = content.trim();
+    if trimmed.starts_with("<?xml") || trimmed.starts_with('<') {
+        Ok(XdlValue::Long(1))
+    } else {
+        Ok(XdlValue::Long(0))
+    }
+}

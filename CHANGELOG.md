@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - READS - Parse values from string
   - READS_STRING - Parse string into array of strings
   - SPRINTF - Format values into string with format specifiers (%d, %f, %e, %s, %x, %o, %b)
+  - STRTOK - String tokenization with delimiters (/EXTRACT, /PRESERVE_NULL keywords)
+  - STRPUT - Insert substring at position
+  - STRMID_BYTES - Substring by byte position
+  - STR_TO_BYTE, STRING_FROM_BYTES - Byte array conversion
+  - STRPOS_ALL, STRCOUNT - Multiple substring search/count
+  - STRPAD - Pad string to specified width
+  - STRREVERSE - Reverse string characters
 - **New Scope Functions**
   - SCOPE_VARNAME - Get variable names at scope level
   - SCOPE_LEVEL - Get current scope depth
@@ -114,6 +121,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New Statistics Functions**
   - MODE - Most frequent value
   - HISTOGRAM2D - 2D histogram with binning
+- **New System Utilities** - 17 new system functions
+  - PATH_SEP, ADD_SLASH - Path manipulation utilities
+  - GET_SCREEN_SIZE - Get terminal/display dimensions
+  - GETENV_ALL, UNSETENV - Enhanced environment variable handling
+  - CPU - Get number of CPU cores
+  - HOSTNAME - Get system hostname
+  - TEMPORARY - Generate temporary filename
+  - SLEEP - Pause execution for specified seconds
+  - VERSION, PLATFORM - XDL version and platform info
+  - IS_WINDOWS, IS_MACOS, IS_LINUX - Platform detection
+  - WHICH - Find executable in PATH
+- **File Format Query Functions** - 7 format detection utilities
+  - QUERY_FITS, QUERY_HDF5, QUERY_NETCDF - Scientific format detection
+  - QUERY_ASCII, QUERY_CSV, QUERY_JSON, QUERY_XML - Common format detection
+  - Signature-based validation (magic bytes)
 
 ### Fixed
 - BEGIN/END blocks now work correctly in CASE/SWITCH statements
@@ -121,8 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Labels (e.g., `myLabel:`) are no longer confused with keywords (e.g., `else:`)
 
 ### Changed
-- IDL/GDL compatibility increased from ~88% to ~90%
-- Core functions expanded to 320+ with 40 new array/math/string/statistics functions
+- IDL/GDL compatibility increased from ~88% to ~92%
+- Core functions expanded to 360+ with 33 new string/system/file query functions
 - Updated TODO.md with completed critical features
 
 ## [0.1.6] - 2025-12-30

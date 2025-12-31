@@ -926,3 +926,369 @@ fn format_value(value: &XdlValue, fmt_char: char, width: &str, precision: &str) 
         }
     }
 }
+
+/// STRTOK - Tokenize a string using delimiters
+/// Syntax: STRTOK(string, delimiters, [/EXTRACT], [/PRESERVE_NULL])
+pub fn strtok(
+    args: &[XdlValue],
+    keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "STRTOK: Expected string argument".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    // Get delimiter (default is whitespace)
+    let delimiters = if args.len() > 1 {
+        match &args[1] {
+            XdlValue::String(s) => s.clone(),
+            _ => " \t\n".to_string(),
+        }
+    } else {
+        " \t\n".to_string()
+    };
+
+    let preserve_null = keywords.contains_key("PRESERVE_NULL");
+    let extract = keywords.contains_key("EXTRACT");
+
+    // Tokenize
+    let tokens: Vec<XdlValue> = if preserve_null {
+        // Keep empty tokens
+        input
+            .split(|c| delimiters.contains(c))
+            .map(|s| XdlValue::String(s.to_string()))
+            .collect()
+    } else {
+        // Skip empty tokens
+        input
+            .split(|c| delimiters.contains(c))
+            .filter(|s| !s.is_empty())
+            .map(|s| XdlValue::String(s.to_string()))
+            .collect()
+    };
+
+    if extract && !tokens.is_empty() {
+        // Return first token only
+        Ok(tokens.into_iter().next().unwrap_or(XdlValue::String(String::new())))
+    } else {
+        Ok(XdlValue::NestedArray(tokens))
+    }
+}
+
+/// STRPUT - Insert a substring into a string at a position
+/// Syntax: STRPUT, destination, source, position
+pub fn strput(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument(
+            "STRPUT: Expected destination, source, position".to_string(),
+        ));
+    }
+
+    let mut dest = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let source = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let position = match &args[2] {
+        XdlValue::Int(i) => *i as usize,
+        XdlValue::Long(l) => *l as usize,
+        XdlValue::Float(f) => *f as usize,
+        XdlValue::Double(d) => *d as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
+    };
+
+    // Replace characters at position
+    if position < dest.len() {
+        let end_pos = (position + source.len()).min(dest.len());
+        let new_str = format!(
+            "{}{}{}",
+            &dest[..position],
+            &source[..(end_pos - position).min(source.len())],
+            if end_pos < dest.len() { &dest[end_pos..] } else { "" }
+        );
+        dest = new_str;
+    }
+
+    Ok(XdlValue::String(dest))
+}
+
+/// STRMID_BYTES - Extract substring by byte position (for multi-byte strings)
+pub fn strmid_bytes(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRMID_BYTES: Expected string and position".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let start = match &args[1] {
+        XdlValue::Int(i) => *i as usize,
+        XdlValue::Long(l) => *l as usize,
+        _ => 0,
+    };
+
+    let length = if args.len() > 2 {
+        match &args[2] {
+            XdlValue::Int(i) => Some(*i as usize),
+            XdlValue::Long(l) => Some(*l as usize),
+            _ => None,
+        }
+    } else {
+        None
+    };
+
+    let bytes = input.as_bytes();
+    let end = match length {
+        Some(len) => (start + len).min(bytes.len()),
+        None => bytes.len(),
+    };
+
+    if start >= bytes.len() {
+        return Ok(XdlValue::String(String::new()));
+    }
+
+    let result = String::from_utf8_lossy(&bytes[start..end]).to_string();
+    Ok(XdlValue::String(result))
+}
+
+/// BYTE - Convert string to byte array or value to byte
+pub fn str_to_byte(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "BYTE: Expected argument".to_string(),
+        ));
+    }
+
+    match &args[0] {
+        XdlValue::String(s) => {
+            let bytes: Vec<f64> = s.bytes().map(|b| b as f64).collect();
+            Ok(XdlValue::Array(bytes))
+        }
+        XdlValue::Int(i) => Ok(XdlValue::Byte(*i as u8)),
+        XdlValue::Long(l) => Ok(XdlValue::Byte(*l as u8)),
+        XdlValue::Float(f) => Ok(XdlValue::Byte(*f as u8)),
+        XdlValue::Double(d) => Ok(XdlValue::Byte(*d as u8)),
+        XdlValue::Array(arr) => {
+            let bytes: Vec<f64> = arr.iter().map(|&v| (v as u8) as f64).collect();
+            Ok(XdlValue::Array(bytes))
+        }
+        _ => Err(XdlError::TypeMismatch {
+            expected: "string or numeric".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    }
+}
+
+/// STRING_FROM_BYTES - Convert byte array back to string
+pub fn string_from_bytes(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "STRING_FROM_BYTES: Expected byte array".to_string(),
+        ));
+    }
+
+    let bytes: Vec<u8> = match &args[0] {
+        XdlValue::Array(arr) => arr.iter().map(|&v| v as u8).collect(),
+        XdlValue::MultiDimArray { data, .. } => data.iter().map(|&v| v as u8).collect(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let result = String::from_utf8_lossy(&bytes).to_string();
+    Ok(XdlValue::String(result))
+}
+
+/// STRPOS_ALL - Find all occurrences of substring
+pub fn strpos_all(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRPOS_ALL: Expected string and substring".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let search = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if search.is_empty() {
+        return Ok(XdlValue::Array(vec![]));
+    }
+
+    let positions: Vec<f64> = input
+        .match_indices(&search)
+        .map(|(i, _)| i as f64)
+        .collect();
+
+    Ok(XdlValue::Array(positions))
+}
+
+/// STRCOUNT - Count occurrences of substring
+pub fn strcount(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRCOUNT: Expected string and substring".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let search = match &args[1] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if search.is_empty() {
+        return Ok(XdlValue::Long(0));
+    }
+
+    let count = input.matches(&search).count();
+    Ok(XdlValue::Long(count as i32))
+}
+
+/// STRPAD - Pad string to specified length
+pub fn strpad(
+    args: &[XdlValue],
+    keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "STRPAD: Expected string and length".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let length = match &args[1] {
+        XdlValue::Int(i) => *i as usize,
+        XdlValue::Long(l) => *l as usize,
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    let pad_char = keywords
+        .get("PAD")
+        .and_then(|v| match v {
+            XdlValue::String(s) => s.chars().next(),
+            _ => None,
+        })
+        .unwrap_or(' ');
+
+    let left = keywords.contains_key("LEFT");
+
+    let result = if input.len() >= length {
+        input[..length].to_string()
+    } else if left {
+        format!("{:>width$}", input, width = length).replace(' ', &pad_char.to_string())
+    } else {
+        format!("{:<width$}", input, width = length).replace(' ', &pad_char.to_string())
+    };
+
+    Ok(XdlValue::String(result))
+}
+
+/// STRREVERSE - Reverse a string
+pub fn strreverse(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "STRREVERSE: Expected string argument".to_string(),
+        ));
+    }
+
+    let input = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let reversed: String = input.chars().rev().collect();
+    Ok(XdlValue::String(reversed))
+}
