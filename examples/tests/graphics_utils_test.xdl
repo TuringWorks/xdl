@@ -1,0 +1,105 @@
+; Test file for Graphics Utilities
+; Tests new plotting and image manipulation functions
+
+print, "=== Graphics Utilities Test ==="
+print, ""
+
+; ============================================================================
+; Test 1: OCONTOUR - Overplot contours
+; ============================================================================
+print, "--- OCONTOUR Test ---"
+z = FINDGEN(100)  ; 10x10 flattened grid
+OCONTOUR, z
+print, ""
+
+; ============================================================================
+; Test 2: Image Warping Functions
+; ============================================================================
+print, "--- Image Warping Tests ---"
+
+; Control points for warping
+xo = [0.0, 100.0, 0.0, 100.0]
+yo = [0.0, 0.0, 100.0, 100.0]
+xi = [5.0, 95.0, 5.0, 95.0]
+yi = [5.0, 5.0, 95.0, 95.0]
+
+; Test image
+image = FINDGEN(100)
+
+; WARP_TRI - triangular warping
+warped = WARP_TRI(xo, yo, xi, yi, image)
+print, "WARP_TRI result size: ", N_ELEMENTS(warped)
+
+; POLYWARP - polynomial coefficients
+kx = POLYWARP(xi, yi, xo, yo, 2)
+print, "POLYWARP computed coefficients"
+
+; POLY_2D - apply polynomial transformation
+ky = [0.0, 1.0, 0.0]
+transformed = POLY_2D(image, kx, ky)
+print, "POLY_2D result size: ", N_ELEMENTS(transformed)
+print, ""
+
+; ============================================================================
+; Test 3: ANNOTATE
+; ============================================================================
+print, "--- ANNOTATE Test ---"
+ANNOTATE
+print, ""
+
+; ============================================================================
+; Test 4: RDPIX - Read pixel value
+; ============================================================================
+print, "--- RDPIX Test ---"
+image = FINDGEN(100)
+value = RDPIX(image, 5, 5)
+print, "Pixel value: ", value
+print, ""
+
+; ============================================================================
+; Test 5: PROFILES - Extract cross-section
+; ============================================================================
+print, "--- PROFILES Test ---"
+image = FINDGEN(100)
+profile = PROFILES(image)
+print, "Profile elements: ", N_ELEMENTS(profile)
+print, ""
+
+; ============================================================================
+; Test 6: TVLCT - Load color table
+; ============================================================================
+print, "--- TVLCT Test ---"
+r = FINDGEN(256)
+g = FINDGEN(256)
+b = FINDGEN(256)
+TVLCT, r, g, b
+print, ""
+
+; ============================================================================
+; Test 7: LEGEND
+; ============================================================================
+print, "--- LEGEND Test ---"
+LEGEND, 'Data Series 1'
+print, ""
+
+; ============================================================================
+; Test 8: COLORBAR
+; ============================================================================
+print, "--- COLORBAR Test ---"
+COLORBAR, 'Intensity'
+print, ""
+
+; ============================================================================
+; Summary
+; ============================================================================
+print, "=== Graphics Utilities Test Summary ==="
+print, ""
+print, "Contour Functions: OCONTOUR"
+print, "Warping Functions: WARP_TRI, POLYWARP, POLY_2D"
+print, "Annotation: ANNOTATE"
+print, "Pixel Reading: RDPIX"
+print, "Profile Extraction: PROFILES"
+print, "Color Table: TVLCT"
+print, "Plot Enhancement: LEGEND, COLORBAR"
+print, ""
+print, "=== Graphics Utilities Test Complete ==="

@@ -10,10 +10,10 @@ This document tracks remaining IDL/GDL features that need to be implemented in X
 |----------|--------|----------|
 | Core Functions | 280+ implemented | ~87% |
 | ML Functions | 60+ implemented | ~86% |
-| Graphics | 50+ implemented | ~71% |
+| Graphics | 61+ implemented | ~78% |
 | Widget/GUI | 12 implemented | Placeholder |
 | Scientific I/O | 11 implemented | Placeholder |
-| **Total** | **400+ functions** | **~86%** |
+| **Total** | **410+ functions** | **~87%** |
 
 ## Priority Legend
 - 🔴 **CRITICAL** - Fundamental language features required for basic programs

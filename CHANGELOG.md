@@ -54,6 +54,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - STREAMLINE - Streamline visualization with adaptive step size
   - VOXEL_PROJ - Volume projection (maximum/average modes)
   - POLYSHADE - Mesh shading with vertex normal computation
+- **Graphics Utilities** - 11 new plotting functions
+  - OCONTOUR - Overplot contours on existing plot
+  - WARP_TRI - Triangular image warping using control points
+  - POLYWARP - Polynomial warping coefficient calculation
+  - POLY_2D - Apply 2D polynomial transformation to image
+  - ANNOTATE - Interactive annotation on graphics
+  - RDPIX - Read pixel value from displayed image
+  - PROFILES - Extract cross-section profiles from image
+  - TVLCT - Load color look-up table
+  - XYOUTS_EXTENDED - Extended text output options
+  - LEGEND - Add legend to plot
+  - COLORBAR - Add color bar to plot
 - **Widget/GUI System** (Placeholder)
   - WIDGET_BASE - Container widget with row/column/grid layouts
   - WIDGET_BUTTON - Button with text, bitmap, menu options

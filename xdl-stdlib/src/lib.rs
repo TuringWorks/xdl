@@ -138,6 +138,19 @@ impl StandardLibrary {
             "HILLSHADE" => graphics_procs::hillshade_proc(args),
             "QUIVER" => graphics_procs::quiver_proc(args),
 
+            // Graphics procedures - Plotting utilities
+            "OCONTOUR" => graphics_procs::ocontour(args),
+            "WARP_TRI" => graphics_procs::warp_tri(args),
+            "POLYWARP" => graphics_procs::polywarp(args),
+            "POLY_2D" => graphics_procs::poly_2d(args),
+            "ANNOTATE" => graphics_procs::annotate(args),
+            "RDPIX" => graphics_procs::rdpix(args),
+            "PROFILES" => graphics_procs::profiles(args),
+            "TVLCT" => graphics_procs::tvlct(args),
+            "XYOUTS_EXTENDED" => graphics_procs::xyouts_extended(args),
+            "LEGEND" => graphics_procs::legend(args),
+            "COLORBAR" => graphics_procs::colorbar(args),
+
             // Charting procedures - ECharts integration (interactive HTML)
             "CHART_PLOT" => charting_procs::plot(args),
             "CHART_SCATTER" => charting_procs::scatter(args),
@@ -567,6 +580,13 @@ impl StandardLibrary {
             "STREAMLINE" => viz3d_advanced::streamline(args, keywords),
             "VOXEL_PROJ" => viz3d_advanced::voxel_proj(args, keywords),
             "POLYSHADE" => viz3d_advanced::polyshade(args, keywords),
+
+            // Graphics utility functions (also registered as procedures)
+            "WARP_TRI" => graphics_procs::warp_tri(args),
+            "POLYWARP" => graphics_procs::polywarp(args),
+            "POLY_2D" => graphics_procs::poly_2d(args),
+            "RDPIX" => graphics_procs::rdpix(args),
+            "PROFILES" => graphics_procs::profiles(args),
 
             // Widget/GUI functions
             "WIDGET_BASE" => widget::widget_base(args, keywords),
