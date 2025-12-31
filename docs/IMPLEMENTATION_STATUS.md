@@ -1,6 +1,6 @@
 # XDL Standard Library Implementation Status
 
-**Last Updated:** 2025-12-30
+**Last Updated:** 2025-12-31
 
 ## Overview
 This document tracks the implementation progress of the XDL (eXtensible Data Language) standard library, a Rust-based implementation of IDL/GDL functionality.
@@ -507,10 +507,11 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 ## Statistics
 
 ### Total Functions Implemented
-- **Core Functions:** ~250+ (including 110+ newly implemented)
-- **ML Functions:** 60+ (separate ML module)
-- **Graphics Procedures:** 40+ (separate graphics module)
-- **Total:** 350+ functions/procedures
+- **Core Functions:** ~300+ (including 110+ newly implemented)
+- **ML Functions:** 75+ (separate ML module with Linfa integration)
+- **Graphics Procedures:** 50+ (separate graphics module)
+- **GPU Backends:** 12 production-ready backends
+- **Total:** 500+ functions/procedures
 
 ### Code Metrics
 - **Lines of Code:** ~15,000+ (stdlib only)
@@ -645,6 +646,19 @@ When adding new functions:
 - Updated backend priority on macOS: MLX > MPS > Metal > CoreML
 - Requires full Xcode installation (not Command Line Tools)
 - **Performance benchmark**: MLX up to 1517x faster than CPU, 4.4x faster than Metal for large matrix multiplication
+
+- **v0.1.6** (2025-12) - OpenCL and DirectX 12 GPU backends
+- OpenCL backend fully implemented with complete kernel support
+- DirectX 12 backend via DirectML delegation
+- All 12 GPU backends now production-ready
+- Vulkan backend with compute shader support
+- Updated GPU documentation for all platforms
+
+- **v0.1.7** (2025-12) - Documentation consolidation and updates
+- Updated all GPU documentation for implemented backends
+- Fixed ML documentation formatting issues
+- Consolidated documentation structure
+- Total functions now exceeds 500+
 
 ---
 

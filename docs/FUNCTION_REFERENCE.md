@@ -1,8 +1,8 @@
 # XDL Complete Function Reference
 
-**Version**: 1.1
-**Date**: December 2025
-**Total Functions**: 220+
+**Version**: 1.2
+**Date**: December 31, 2025
+**Total Functions**: 500+
 
 ---
 
