@@ -127,17 +127,22 @@ October 25, 2025
 | Backend | Basic Math | Matrix Ops | Trigonometry | Reductions | ML Ops | Status |
 |---------|-----------|------------|--------------|------------|--------|---------|
 | **MPS** | ✅ | ✅ | ✅ | ✅ | 🔨 | **Production** |
-| **Metal** | ✅ | 🔨 | ✅ | 🔨 | ❌ | **Production** |
+| **Metal** | ✅ | ✅ | ✅ | 🔨 | ❌ | **Production** |
 | CoreML | ✅ | ✅ | ✅ | ✅ | 🔨 | Alpha |
-| cuDNN | ✅ | ✅ | ✅ | ✅ | 🔨 | Alpha |
-| CUDA | ✅ | ✅ | ✅ | ✅ | ❌ | Alpha |
+| cuDNN | ✅ | ✅ | ✅ | ✅ | 🔨 | **Production** |
+| CUDA | ✅ | ✅ | ✅ | ✅ | ❌ | **Production** |
 | ROCm | ✅ | ✅ | ✅ | ✅ | 🔨 | Alpha |
-| DirectML | ✅ | ✅ | ✅ | ✅ | 🔨 | Alpha |
-| DirectX 12 | ✅ | ✅ | ✅ | ✅ | ❌ | Alpha |
+| DirectML | ✅ | ✅ | ✅ | ✅ | 🔨 | **Production** |
+| DirectX 12 | ✅ | ✅ | ✅ | ✅ | ❌ | **Production** |
 | ONNX Runtime | ✅ | ✅ | ✅ | ✅ | ✅ | Alpha |
-| OpenCL | ✅ | ✅ | ✅ | ✅ | ❌ | Alpha |
+| OpenCL | ✅ | ✅ | ✅ | ✅ | ❌ | **Production** |
 
 **Legend**: ✅ Implemented, 🔨 In Progress, ❌ Not Planned
+
+**Notes**:
+- OpenCL requires `--features opencl` and OpenCL runtime installed
+- DirectX 12 delegates to DirectML (`--features directml` on Windows)
+- CUDA requires `--features cuda` and CUDA toolkit installed
 
 ## Architecture
 

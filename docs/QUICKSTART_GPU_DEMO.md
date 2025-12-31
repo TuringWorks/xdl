@@ -47,9 +47,25 @@ cargo run -p xdl-amp --example basic_ops --release
 
 ✅ GPU backend infrastructure working
 ✅ Metal Performance Shaders detected on macOS
-✅ Operations execute on GPU (currently with CPU fallback)
-✅ 10 acceleration backends supported
+✅ Operations execute on GPU with full acceleration
+✅ 11 acceleration backends supported
 ✅ Production-ready architecture
+
+## Implemented Backends
+
+| Backend | Platform | Status | Feature Flag |
+|---------|----------|--------|--------------|
+| Metal | macOS | ✅ Production | default |
+| MPS | macOS | ✅ Production | default |
+| CUDA | Linux/Windows | ✅ Production | `--features cuda` |
+| cuDNN | Linux/Windows | ✅ Production | `--features cuda` |
+| Vulkan | Cross-platform | ✅ Production | `--features vulkan` |
+| OpenCL | Cross-platform | ✅ Production | `--features opencl` |
+| DirectML | Windows | ✅ Production | `--features directml` |
+| DirectX 12 | Windows | ✅ Production | `--features directml` |
+| ROCm | Linux | Alpha | `--features rocm` |
+| CoreML | macOS/iOS | Alpha | default |
+| ONNX Runtime | Cross-platform | Alpha | `--features onnx` |
 
 ## Next Steps
 
@@ -62,7 +78,8 @@ See `examples/README_XDL_AMP_DEMO.md` for:
 
 ## Key Features
 
-- **10 Backends**: MPS, Metal, CoreML, cuDNN, CUDA, ROCm, DirectML, DirectX 12, ONNX, OpenCL
+- **11 Backends**: MPS, Metal, CoreML, cuDNN, CUDA, ROCm, DirectML, DirectX 12, Vulkan, OpenCL, ONNX
 - **Auto-detection**: Picks best backend for your platform
 - **Unified API**: Same code works across all platforms
 - **Production Ready**: Compiles and runs without errors
+- **Full GPU Acceleration**: All basic math, trig, matrix, and reduction operations

@@ -12,12 +12,28 @@ High-performance GPU computing features in XDL.
 
 ## Overview
 
-XDL's AMP (Accelerated Math Processing) module provides GPU acceleration with multiple backend support:
+XDL's AMP (Accelerated Math Processing) module provides GPU acceleration with **11 backend support**:
 
+### Apple Platforms (macOS/iOS)
+- **Metal** - Native Apple GPU compute (default on macOS)
+- **MPS** - Metal Performance Shaders (optimized operations)
+- **CoreML** - Apple Neural Engine acceleration
+
+### NVIDIA Platforms
 - **CUDA** - NVIDIA GPUs (best performance on NVIDIA hardware)
+- **cuDNN** - Deep learning acceleration
+
+### AMD Platforms
 - **ROCm** - AMD GPUs (optimized for AMD hardware)
-- **Vulkan** - Cross-platform GPU compute
-- **CPU** - Fallback for systems without GPU support
+
+### Windows
+- **DirectML** - ML acceleration on DirectX
+- **DirectX 12** - GPU compute via DirectML delegation
+
+### Cross-Platform
+- **Vulkan** - Modern cross-platform GPU compute
+- **OpenCL** - Universal GPU fallback (AMD, Intel, NVIDIA)
+- **CPU (SIMD)** - Fallback for systems without GPU support
 
 ## Key Features
 
@@ -85,10 +101,29 @@ GPU backend is selected automatically based on available hardware:
 xdl --features
 
 # Force specific backend
-XDL_GPU_BACKEND=cuda xdl script.xdl
-XDL_GPU_BACKEND=rocm xdl script.xdl
-XDL_GPU_BACKEND=vulkan xdl script.xdl
-XDL_GPU_BACKEND=cpu xdl script.xdl
+XDL_GPU_BACKEND=metal xdl script.xdl    # macOS
+XDL_GPU_BACKEND=cuda xdl script.xdl     # NVIDIA
+XDL_GPU_BACKEND=rocm xdl script.xdl     # AMD
+XDL_GPU_BACKEND=vulkan xdl script.xdl   # Cross-platform
+XDL_GPU_BACKEND=opencl xdl script.xdl   # Universal
+XDL_GPU_BACKEND=directml xdl script.xdl # Windows
+XDL_GPU_BACKEND=cpu xdl script.xdl      # CPU fallback
+```
+
+### Build with Specific Features
+
+```bash
+# OpenCL support
+cargo build --features opencl
+
+# CUDA support
+cargo build --features cuda
+
+# DirectML support (Windows)
+cargo build --features directml
+
+# All backends
+cargo build --features all-backends
 ```
 
 ## Profiling
