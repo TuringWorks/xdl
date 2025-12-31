@@ -5,9 +5,11 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "XDL/IDL language parser"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-xdl-core = { path = "../xdl-core" }
+xdl-core = { version = "0.1.0", path = "../xdl-core" }
 nom = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

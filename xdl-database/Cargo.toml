@@ -5,10 +5,12 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Database connectivity module for XDL - supports PostgreSQL, MySQL, DuckDB, SQLite, ODBC, Redis, and more"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 # Core XDL dependencies
-xdl-core = { path = "../xdl-core" }
+xdl-core = { version = "0.1.0", path = "../xdl-core" }
 
 # Error handling
 thiserror.workspace = true

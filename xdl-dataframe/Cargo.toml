@@ -5,11 +5,13 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "DataFrame module for XDL - pandas/Spark-style data manipulation with support for CSV, TSV, Parquet, Avro"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 # Core XDL dependencies
-xdl-core = { path = "../xdl-core" }
-xdl-database = { path = "../xdl-database", optional = true }
+xdl-core = { version = "0.1.0", path = "../xdl-core" }
+xdl-database = { version = "0.1.0", path = "../xdl-database", optional = true }
 
 # Error handling
 thiserror.workspace = true

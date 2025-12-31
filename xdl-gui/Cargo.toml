@@ -5,18 +5,20 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "GUI application for XDL with integrated CLI and plotting"
+homepage.workspace = true
+repository.workspace = true
 
 [[bin]]
 name = "xdl-gui"
 path = "src/main.rs"
 
 [dependencies]
-xdl-core = { path = "../xdl-core" }
-xdl-parser = { path = "../xdl-parser" }
-xdl-runtime = { path = "../xdl-runtime" }
-xdl-interpreter = { path = "../xdl-interpreter" }
-xdl-stdlib = { path = "../xdl-stdlib" }
-xdl-matlab = { path = "../xdl-matlab" }
+xdl-core = { version = "0.1.0", path = "../xdl-core" }
+xdl-parser = { version = "0.1.0", path = "../xdl-parser" }
+xdl-runtime = { version = "0.1.0", path = "../xdl-runtime" }
+xdl-interpreter = { version = "0.1.0", path = "../xdl-interpreter" }
+xdl-stdlib = { version = "0.1.0", path = "../xdl-stdlib" }
+xdl-matlab = { version = "0.1.0", path = "../xdl-matlab" }
 fltk = { workspace = true }
 plotters = { workspace = true }
 anyhow = { workspace = true }

@@ -5,6 +5,8 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Multi-backend GPU/ML acceleration for XDL"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 thiserror = { workspace = true }

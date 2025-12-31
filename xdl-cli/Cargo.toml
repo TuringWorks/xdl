@@ -5,17 +5,19 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Extended Data Language (XDL) command-line interface"
+homepage.workspace = true
+repository.workspace = true
 
 [[bin]]
 name = "xdl"
 path = "src/main.rs"
 
 [dependencies]
-xdl-core = { path = "../xdl-core" }
-xdl-parser = { path = "../xdl-parser" }
-xdl-interpreter = { path = "../xdl-interpreter" }
-xdl-stdlib = { path = "../xdl-stdlib" }
-xdl-matlab = { path = "../xdl-matlab" }
+xdl-core = { version = "0.1.0", path = "../xdl-core" }
+xdl-parser = { version = "0.1.0", path = "../xdl-parser" }
+xdl-interpreter = { version = "0.1.0", path = "../xdl-interpreter" }
+xdl-stdlib = { version = "0.1.0", path = "../xdl-stdlib" }
+xdl-matlab = { version = "0.1.0", path = "../xdl-matlab" }
 
 clap = { workspace = true }
 anyhow = { workspace = true }

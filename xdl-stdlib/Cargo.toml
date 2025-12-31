@@ -5,14 +5,16 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "XDL standard library functions"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-xdl-core = { path = "../xdl-core" }
-xdl-viz3d = { path = "../xdl-viz3d" }
-xdl-viz3d-web = { path = "../xdl-viz3d-web" }
-xdl-viz3d-threejs = { path = "../xdl-viz3d-threejs" }
-xdl-charts = { path = "../xdl-charts" }
-xdl-amp = { path = "../xdl-amp" }
+xdl-core = { version = "0.1.0", path = "../xdl-core" }
+xdl-viz3d = { version = "0.1.0", path = "../xdl-viz3d" }
+xdl-viz3d-web = { version = "0.1.0", path = "../xdl-viz3d-web" }
+xdl-viz3d-threejs = { version = "0.1.0", path = "../xdl-viz3d-threejs" }
+xdl-charts = { version = "0.1.0", path = "../xdl-charts" }
+xdl-amp = { version = "0.1.0", path = "../xdl-amp" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

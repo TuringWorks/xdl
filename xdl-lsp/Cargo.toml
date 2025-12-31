@@ -5,14 +5,16 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "XDL Language Server Protocol implementation"
+homepage.workspace = true
+repository.workspace = true
 
 [[bin]]
 name = "xdl-lsp"
 path = "src/main.rs"
 
 [dependencies]
-xdl-core = { path = "../xdl-core" }
-xdl-parser = { path = "../xdl-parser" }
+xdl-core = { version = "0.1.0", path = "../xdl-core" }
+xdl-parser = { version = "0.1.0", path = "../xdl-parser" }
 
 # LSP framework
 tower-lsp = "0.20"
