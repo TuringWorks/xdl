@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New String Functions**
   - READS - Parse values from string
   - READS_STRING - Parse string into array of strings
+  - SPRINTF - Format values into string with format specifiers (%d, %f, %e, %s, %x, %o, %b)
 - **New Scope Functions**
   - SCOPE_VARNAME - Get variable names at scope level
   - SCOPE_LEVEL - Get current scope depth
@@ -90,6 +91,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - get_class_hierarchy() - returns inheritance chain
   - Dynamic class creation for OBJ_NEW (no pre-definition needed)
   - New functions: OBJ_HASMETHOD, OBJ_PARENT, CALL_METHOD, SETPROPERTY, GETPROPERTY
+- **New Array Functions** - 17 essential array operations
+  - CUMSUM, CUMPROD - Cumulative sum and product
+  - ARGMIN, ARGMAX - Index of min/max value
+  - DIFF - Consecutive differences
+  - APPEND - Concatenate arrays
+  - ANY, ALL - Boolean array tests
+  - FLATTEN, NONZERO - Array transformations
+  - CLIP - Clamp values to range
+  - ARANGE - Create evenly spaced array
+  - SEARCHSORTED, DIGITIZE - Binary search utilities
+  - TILE - Repeat array elements
+- **New Math Functions** - 15 additional math utilities
+  - SIGN, SIGNUM - Sign of number
+  - HYPOT - Hypotenuse calculation
+  - ISNAN, ISINF - Special value checks
+  - NORMALIZE - Normalize array to range
+  - ROUND, TRUNC, FRAC - Rounding operations
+  - CBRT - Cube root
+  - COPYSIGN, FDIM, FMA - IEEE math operations
+  - REMAINDER, LDEXP, FREXP - Low-level math
+- **New Statistics Functions**
+  - MODE - Most frequent value
+  - HISTOGRAM2D - 2D histogram with binning
 
 ### Fixed
 - BEGIN/END blocks now work correctly in CASE/SWITCH statements
@@ -97,7 +121,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Labels (e.g., `myLabel:`) are no longer confused with keywords (e.g., `else:`)
 
 ### Changed
-- IDL/GDL compatibility increased from ~85% to ~88%
+- IDL/GDL compatibility increased from ~88% to ~90%
+- Core functions expanded to 320+ with 40 new array/math/string/statistics functions
 - Updated TODO.md with completed critical features
 
 ## [0.1.6] - 2025-12-30

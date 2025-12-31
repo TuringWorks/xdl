@@ -360,6 +360,22 @@ impl StandardLibrary {
             "CHECK_MATH" => math::check_math(args),
             "MACHAR" => math::machar(args),
 
+            // Additional math utilities
+            "SIGN" => math::sign(args),
+            "HYPOT" => math::hypot(args),
+            "ISNAN" => math::isnan_func(args),
+            "ISINF" => math::isinf_func(args),
+            "TRUNC" => math::trunc_func(args),
+            "FRAC" => math::frac_func(args),
+            "SIGNUM" => math::signum_func(args),
+            "CBRT" => math::cbrt_func(args),
+            "COPYSIGN" => math::copysign_func(args),
+            "FDIM" => math::fdim_func(args),
+            "FMA" => math::fma_func(args),
+            "REMAINDER" => math::remainder_func(args),
+            "LDEXP" => math::ldexp_func(args),
+            "FREXP" => math::frexp_func(args),
+
             // Exponential and logarithmic functions
             "EXP" => math::exp(args),
             "ALOG" | "LN" => math::log(args),
@@ -396,6 +412,7 @@ impl StandardLibrary {
             "UL64INDGEN" => math::ul64indgen_with_keywords(args, keywords),
             "ULINDGEN" => math::ulindgen_with_keywords(args, keywords),
             "MAKE_ARRAY" => math::make_array(args, keywords),
+            "NORMALIZE" => math::normalize_func(args, keywords),
             "RANDOMU" => math::randomu(args),
             "RANDOMN" => math::randomn(args),
             "MESHGRID" => math::meshgrid(args),
@@ -434,6 +451,23 @@ impl StandardLibrary {
             "HISTOGRAM" => array::histogram_func(args),
             "REBIN" => array::rebin_func(args),
             "CONGRID" => array::congrid_func(args),
+
+            // Additional array utility functions
+            "CUMSUM" => array::cumsum_func(args, keywords),
+            "CUMPROD" => array::cumprod_func(args, keywords),
+            "ARGMIN" => array::argmin_func(args, keywords),
+            "ARGMAX" => array::argmax_func(args, keywords),
+            "DIFF" => array::diff_func(args, keywords),
+            "APPEND" => array::append_func(args, keywords),
+            "ANY" => array::any_func(args, keywords),
+            "ALL" => array::all_func(args, keywords),
+            "FLATTEN" => array::flatten_func(args, keywords),
+            "NONZERO" => array::nonzero_func(args, keywords),
+            "CLIP" => array::clip_func(args, keywords),
+            "ARANGE" => array::arange_func(args, keywords),
+            "SEARCHSORTED" => array::searchsorted_func(args, keywords),
+            "DIGITIZE" => array::digitize_func(args, keywords),
+            "TILE" => array::tile_func(args, keywords),
 
             // Array statistics functions
             "MIN" => array::min_func(args),
@@ -480,6 +514,8 @@ impl StandardLibrary {
             "TRIMMED_MEAN" => statistics::trimmed_mean(args),
             "RESISTANT_MEAN" => statistics::resistant_mean(args),
             "RANDOM_POISSON" => statistics::random_poisson(args),
+            "MODE" => statistics::mode(args),
+            "HISTOGRAM2D" => statistics::histogram2d(args, keywords),
 
             // Interpolation functions
             "INTERPOL" => statistics::interpol(args),
@@ -690,6 +726,7 @@ impl StandardLibrary {
             "STRREPLACE" => string::strreplace(args),
             "READS" => string::reads(args),
             "READS_STRING" => string::reads_string(args),
+            "SPRINTF" => string::sprintf(args),
 
             // Complex number functions
             "COMPLEX" => complex::complex(args),

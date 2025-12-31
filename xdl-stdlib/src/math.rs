@@ -2718,3 +2718,344 @@ pub fn machar(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::Array(vec![eps, min_val, max_val, mantissa_bits]))
 }
+
+/// SIGN - Return the sign of the input (-1, 0, or 1)
+pub fn sign(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("SIGN requires an argument".to_string()));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| {
+            if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 }
+        }).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| {
+            if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 }
+        }).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let x = to_float(input)?;
+    let sign = if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 };
+    Ok(from_float(sign, input.gdl_type()))
+}
+
+/// HYPOT - Return sqrt(x^2 + y^2), the hypotenuse
+pub fn hypot(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("HYPOT requires two arguments".to_string()));
+    }
+
+    let x = to_float(&args[0])?;
+    let y = to_float(&args[1])?;
+    let result = (x * x + y * y).sqrt();
+
+    Ok(XdlValue::Double(result))
+}
+
+/// ISNAN - Check if value is NaN
+pub fn isnan_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ISNAN requires an argument".to_string()));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| if x.is_nan() { 1.0 } else { 0.0 }).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| if x.is_nan() { 1.0 } else { 0.0 }).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let x = to_float(input)?;
+    Ok(XdlValue::Int(if x.is_nan() { 1 } else { 0 }))
+}
+
+/// ISINF - Check if value is infinite
+pub fn isinf_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ISINF requires an argument".to_string()));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| if x.is_infinite() { 1.0 } else { 0.0 }).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| if x.is_infinite() { 1.0 } else { 0.0 }).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let x = to_float(input)?;
+    Ok(XdlValue::Int(if x.is_infinite() { 1 } else { 0 }))
+}
+
+/// NORMALIZE - Normalize array to range [0, 1] or specified range
+pub fn normalize_func(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("NORMALIZE requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    if data.is_empty() {
+        return Ok(XdlValue::Array(vec![]));
+    }
+
+    let min_val = data.iter().cloned().fold(f64::INFINITY, f64::min);
+    let max_val = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let range = max_val - min_val;
+
+    // Get output range from keywords
+    let out_min = keywords.get("MIN").map(|v| v.to_double().unwrap_or(0.0)).unwrap_or(0.0);
+    let out_max = keywords.get("MAX").map(|v| v.to_double().unwrap_or(1.0)).unwrap_or(1.0);
+    let out_range = out_max - out_min;
+
+    let result: Vec<f64> = if range == 0.0 {
+        // All values are the same
+        data.iter().map(|_| (out_min + out_max) / 2.0).collect()
+    } else {
+        data.iter().map(|&x| {
+            out_min + (x - min_val) / range * out_range
+        }).collect()
+    };
+
+    Ok(XdlValue::Array(result))
+}
+
+/// ROUND - Round to nearest integer
+pub fn round_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ROUND requires an argument".to_string()));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.round()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.round()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let x = to_float(input)?;
+    Ok(XdlValue::Long(x.round() as i32))
+}
+
+/// TRUNC - Truncate to integer (toward zero)
+pub fn trunc_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("TRUNC requires an argument".to_string()));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.trunc()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.trunc()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let x = to_float(input)?;
+    Ok(XdlValue::Long(x.trunc() as i32))
+}
+
+/// FRAC - Return fractional part of number
+pub fn frac_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("FRAC requires an argument".to_string()));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.fract()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.fract()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let x = to_float(input)?;
+    Ok(XdlValue::Double(x.fract()))
+}
+
+/// SIGNUM - Return -1, 0, or 1 based on sign (alias for SIGN)
+pub fn signum_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    sign(args)
+}
+
+/// CBRT - Cube root
+pub fn cbrt_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("CBRT requires an argument".to_string()));
+    }
+
+    let input = &args[0];
+
+    // Handle MultiDimArray
+    if let XdlValue::MultiDimArray { data, shape } = input {
+        let result: Vec<f64> = data.iter().map(|&x| x.cbrt()).collect();
+        return Ok(XdlValue::MultiDimArray {
+            data: result,
+            shape: shape.clone(),
+        });
+    }
+
+    // Handle arrays
+    if let XdlValue::Array(arr) = input {
+        let result: Vec<f64> = arr.iter().map(|&x| x.cbrt()).collect();
+        return Ok(XdlValue::Array(result));
+    }
+
+    // Handle scalar
+    let x = to_float(input)?;
+    Ok(XdlValue::Double(x.cbrt()))
+}
+
+/// COPYSIGN - Copy sign of second argument to first
+pub fn copysign_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("COPYSIGN requires two arguments".to_string()));
+    }
+
+    let x = to_float(&args[0])?;
+    let y = to_float(&args[1])?;
+    Ok(XdlValue::Double(x.copysign(y)))
+}
+
+/// FDIM - Positive difference (max(x-y, 0))
+pub fn fdim_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("FDIM requires two arguments".to_string()));
+    }
+
+    let x = to_float(&args[0])?;
+    let y = to_float(&args[1])?;
+    Ok(XdlValue::Double((x - y).max(0.0)))
+}
+
+/// FMA - Fused multiply-add (x*y + z)
+pub fn fma_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument("FMA requires three arguments".to_string()));
+    }
+
+    let x = to_float(&args[0])?;
+    let y = to_float(&args[1])?;
+    let z = to_float(&args[2])?;
+    Ok(XdlValue::Double(x.mul_add(y, z)))
+}
+
+/// REMAINDER - IEEE remainder
+pub fn remainder_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("REMAINDER requires two arguments".to_string()));
+    }
+
+    let x = to_float(&args[0])?;
+    let y = to_float(&args[1])?;
+
+    // IEEE remainder: x - y * round(x/y)
+    let n = (x / y).round();
+    Ok(XdlValue::Double(x - y * n))
+}
+
+/// LDEXP - Load exponent (x * 2^exp)
+pub fn ldexp_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("LDEXP requires two arguments".to_string()));
+    }
+
+    let x = to_float(&args[0])?;
+    let exp = to_float(&args[1])? as i32;
+    Ok(XdlValue::Double(x * 2.0_f64.powi(exp)))
+}
+
+/// FREXP - Extract mantissa and exponent
+pub fn frexp_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("FREXP requires an argument".to_string()));
+    }
+
+    let x = to_float(&args[0])?;
+
+    if x == 0.0 {
+        return Ok(XdlValue::Array(vec![0.0, 0.0]));
+    }
+
+    // Extract mantissa and exponent
+    let bits = x.to_bits();
+    let exp = ((bits >> 52) & 0x7ff) as i32 - 1022;
+    let mantissa = f64::from_bits((bits & 0x800fffffffffffff) | 0x3fe0000000000000);
+
+    Ok(XdlValue::Array(vec![mantissa, exp as f64]))
+}

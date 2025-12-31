@@ -675,3 +675,254 @@ pub fn reads_string(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     Ok(XdlValue::NestedArray(parts))
 }
+
+/// SPRINTF - Format values into a string using format specifiers
+/// Syntax: SPRINTF(format, value1, value2, ...)
+/// Supports: %d (integer), %f (float), %e (scientific), %s (string), %x (hex), %o (octal), %b (binary)
+pub fn sprintf(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "SPRINTF: Expected format string and values".to_string(),
+        ));
+    }
+
+    let format_str = match &args[0] {
+        XdlValue::String(s) => s.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let values = &args[1..];
+    let mut result = String::new();
+    let mut value_idx = 0;
+    let mut chars = format_str.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '%' {
+            if let Some(&next) = chars.peek() {
+                if next == '%' {
+                    // Escaped percent
+                    chars.next();
+                    result.push('%');
+                    continue;
+                }
+
+                // Parse format specifier
+                let mut width = String::new();
+                let mut precision = String::new();
+                let mut in_precision = false;
+
+                // Parse width and precision
+                while let Some(&ch) = chars.peek() {
+                    if ch.is_ascii_digit() || ch == '.' || ch == '-' || ch == '+' {
+                        chars.next();
+                        if ch == '.' {
+                            in_precision = true;
+                        } else if in_precision {
+                            precision.push(ch);
+                        } else {
+                            width.push(ch);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                // Get format character
+                if let Some(fmt_char) = chars.next() {
+                    if value_idx < values.len() {
+                        let formatted = format_value(&values[value_idx], fmt_char, &width, &precision);
+                        result.push_str(&formatted);
+                        value_idx += 1;
+                    } else {
+                        // Not enough values, output format specifier as-is
+                        result.push('%');
+                        result.push_str(&width);
+                        if in_precision {
+                            result.push('.');
+                            result.push_str(&precision);
+                        }
+                        result.push(fmt_char);
+                    }
+                }
+            } else {
+                result.push('%');
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    Ok(XdlValue::String(result))
+}
+
+/// Helper function to format a single value according to format specifier
+fn format_value(value: &XdlValue, fmt_char: char, width: &str, precision: &str) -> String {
+    let width_val: usize = width.replace('-', "").replace('+', "").parse().unwrap_or(0);
+    let precision_val: usize = precision.parse().unwrap_or(6);
+    let left_align = width.starts_with('-');
+
+    match fmt_char {
+        'd' | 'i' => {
+            // Integer
+            let int_val = match value {
+                XdlValue::Int(i) => *i as i64,
+                XdlValue::Long(l) => *l as i64,
+                XdlValue::Long64(l) => *l,
+                XdlValue::Float(f) => *f as i64,
+                XdlValue::Double(d) => *d as i64,
+                XdlValue::Byte(b) => *b as i64,
+                XdlValue::UInt(u) => *u as i64,
+                XdlValue::ULong(u) => *u as i64,
+                XdlValue::ULong64(u) => *u as i64,
+                _ => 0,
+            };
+            if width_val > 0 {
+                if left_align {
+                    format!("{:<width$}", int_val, width = width_val)
+                } else {
+                    format!("{:>width$}", int_val, width = width_val)
+                }
+            } else {
+                format!("{}", int_val)
+            }
+        }
+        'f' | 'F' => {
+            // Floating point
+            let float_val = match value {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                XdlValue::Long64(l) => *l as f64,
+                _ => 0.0,
+            };
+            if width_val > 0 {
+                if left_align {
+                    format!("{:<width$.prec$}", float_val, width = width_val, prec = precision_val)
+                } else {
+                    format!("{:>width$.prec$}", float_val, width = width_val, prec = precision_val)
+                }
+            } else {
+                format!("{:.prec$}", float_val, prec = precision_val)
+            }
+        }
+        'e' | 'E' => {
+            // Scientific notation
+            let float_val = match value {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => 0.0,
+            };
+            if fmt_char == 'E' {
+                format!("{:.prec$E}", float_val, prec = precision_val)
+            } else {
+                format!("{:.prec$e}", float_val, prec = precision_val)
+            }
+        }
+        'g' | 'G' => {
+            // Compact format (either f or e)
+            let float_val = match value {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => 0.0,
+            };
+            let abs_val = float_val.abs();
+            if abs_val < 1e-4 || abs_val >= 1e6 {
+                if fmt_char == 'G' {
+                    format!("{:.prec$E}", float_val, prec = precision_val)
+                } else {
+                    format!("{:.prec$e}", float_val, prec = precision_val)
+                }
+            } else {
+                format!("{:.prec$}", float_val, prec = precision_val)
+            }
+        }
+        's' => {
+            // String
+            let str_val = match value {
+                XdlValue::String(s) => s.clone(),
+                _ => format!("{:?}", value),
+            };
+            if width_val > 0 {
+                if left_align {
+                    format!("{:<width$}", str_val, width = width_val)
+                } else {
+                    format!("{:>width$}", str_val, width = width_val)
+                }
+            } else {
+                str_val
+            }
+        }
+        'x' => {
+            // Hexadecimal lowercase
+            let int_val = match value {
+                XdlValue::Int(i) => *i as u64,
+                XdlValue::Long(l) => *l as u64,
+                XdlValue::Long64(l) => *l as u64,
+                XdlValue::ULong64(u) => *u,
+                XdlValue::Byte(b) => *b as u64,
+                _ => 0,
+            };
+            format!("{:x}", int_val)
+        }
+        'X' => {
+            // Hexadecimal uppercase
+            let int_val = match value {
+                XdlValue::Int(i) => *i as u64,
+                XdlValue::Long(l) => *l as u64,
+                XdlValue::Long64(l) => *l as u64,
+                XdlValue::ULong64(u) => *u,
+                XdlValue::Byte(b) => *b as u64,
+                _ => 0,
+            };
+            format!("{:X}", int_val)
+        }
+        'o' => {
+            // Octal
+            let int_val = match value {
+                XdlValue::Int(i) => *i as u64,
+                XdlValue::Long(l) => *l as u64,
+                XdlValue::Long64(l) => *l as u64,
+                XdlValue::ULong64(u) => *u,
+                XdlValue::Byte(b) => *b as u64,
+                _ => 0,
+            };
+            format!("{:o}", int_val)
+        }
+        'b' => {
+            // Binary
+            let int_val = match value {
+                XdlValue::Int(i) => *i as u64,
+                XdlValue::Long(l) => *l as u64,
+                XdlValue::Long64(l) => *l as u64,
+                XdlValue::ULong64(u) => *u,
+                XdlValue::Byte(b) => *b as u64,
+                _ => 0,
+            };
+            format!("{:b}", int_val)
+        }
+        'c' => {
+            // Character
+            let char_val = match value {
+                XdlValue::Int(i) => char::from_u32(*i as u32).unwrap_or('?'),
+                XdlValue::Byte(b) => *b as char,
+                XdlValue::String(s) => s.chars().next().unwrap_or('?'),
+                _ => '?',
+            };
+            char_val.to_string()
+        }
+        _ => {
+            // Unknown format, just return the value as string
+            format!("{:?}", value)
+        }
+    }
+}

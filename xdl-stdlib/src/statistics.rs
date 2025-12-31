@@ -1418,6 +1418,156 @@ pub fn random_poisson(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
+/// MODE - Return the most frequently occurring value in the data
+/// If multiple values occur with the same frequency, returns the smallest one
+pub fn mode(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument(
+            "MODE: Expected at least one argument".to_string(),
+        ));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    if data.is_empty() {
+        return Err(XdlError::InvalidArgument("MODE: Empty array".to_string()));
+    }
+
+    // Count occurrences of each value (using integer representation for f64)
+    let mut counts: std::collections::HashMap<i64, usize> = std::collections::HashMap::new();
+    for &val in &data {
+        // Convert to integer bits for exact matching
+        let key = val.to_bits() as i64;
+        *counts.entry(key).or_insert(0) += 1;
+    }
+
+    // Find the value with highest count
+    let mut max_count = 0;
+    let mut mode_val = data[0];
+    for &val in &data {
+        let key = val.to_bits() as i64;
+        let count = counts.get(&key).copied().unwrap_or(0);
+        if count > max_count || (count == max_count && val < mode_val) {
+            max_count = count;
+            mode_val = val;
+        }
+    }
+
+    Ok(XdlValue::Double(mode_val))
+}
+
+/// HISTOGRAM2D - Compute 2D histogram of two arrays
+/// Returns a 2D array with bin counts
+pub fn histogram2d(
+    args: &[XdlValue],
+    keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument(
+            "HISTOGRAM2D: Expected two array arguments".to_string(),
+        ));
+    }
+
+    let data_x = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
+    };
+
+    let data_y = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
+    };
+
+    if data_x.len() != data_y.len() {
+        return Err(XdlError::InvalidArgument(
+            "HISTOGRAM2D: Arrays must have the same length".to_string(),
+        ));
+    }
+
+    // Get number of bins from keywords or use default
+    let nbins_x = keywords
+        .get("NBINS_X")
+        .or(keywords.get("NBINS"))
+        .map(|v| v.to_long().unwrap_or(10) as usize)
+        .unwrap_or(10);
+    let nbins_y = keywords
+        .get("NBINS_Y")
+        .or(keywords.get("NBINS"))
+        .map(|v| v.to_long().unwrap_or(10) as usize)
+        .unwrap_or(10);
+
+    // Compute ranges
+    let min_x = keywords
+        .get("MIN_X")
+        .map(|v| v.to_double().unwrap_or(f64::INFINITY))
+        .unwrap_or_else(|| data_x.iter().cloned().fold(f64::INFINITY, f64::min));
+    let max_x = keywords
+        .get("MAX_X")
+        .map(|v| v.to_double().unwrap_or(f64::NEG_INFINITY))
+        .unwrap_or_else(|| data_x.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+    let min_y = keywords
+        .get("MIN_Y")
+        .map(|v| v.to_double().unwrap_or(f64::INFINITY))
+        .unwrap_or_else(|| data_y.iter().cloned().fold(f64::INFINITY, f64::min));
+    let max_y = keywords
+        .get("MAX_Y")
+        .map(|v| v.to_double().unwrap_or(f64::NEG_INFINITY))
+        .unwrap_or_else(|| data_y.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+
+    let range_x = max_x - min_x;
+    let range_y = max_y - min_y;
+
+    if range_x == 0.0 || range_y == 0.0 {
+        return Err(XdlError::InvalidArgument(
+            "HISTOGRAM2D: Data has zero range".to_string(),
+        ));
+    }
+
+    // Create 2D histogram
+    let mut histogram = vec![0.0; nbins_x * nbins_y];
+
+    for i in 0..data_x.len() {
+        let x = data_x[i];
+        let y = data_y[i];
+
+        // Compute bin indices
+        let bin_x = ((x - min_x) / range_x * nbins_x as f64).floor() as usize;
+        let bin_y = ((y - min_y) / range_y * nbins_y as f64).floor() as usize;
+
+        // Clamp to valid range
+        let bin_x = bin_x.min(nbins_x - 1);
+        let bin_y = bin_y.min(nbins_y - 1);
+
+        histogram[bin_y * nbins_x + bin_x] += 1.0;
+    }
+
+    Ok(XdlValue::MultiDimArray {
+        data: histogram,
+        shape: vec![nbins_y, nbins_x],
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

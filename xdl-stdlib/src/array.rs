@@ -1717,3 +1717,656 @@ pub fn congrid_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         actual: format!("{:?}", args[0].gdl_type()),
     })
 }
+
+/// CUMSUM - Cumulative sum of array elements
+pub fn cumsum_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("CUMSUM requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let mut result = Vec::with_capacity(data.len());
+    let mut sum = 0.0;
+    for val in data {
+        sum += val;
+        result.push(sum);
+    }
+
+    Ok(XdlValue::Array(result))
+}
+
+/// CUMPROD - Cumulative product of array elements
+pub fn cumprod_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("CUMPROD requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let mut result = Vec::with_capacity(data.len());
+    let mut prod = 1.0;
+    for val in data {
+        prod *= val;
+        result.push(prod);
+    }
+
+    Ok(XdlValue::Array(result))
+}
+
+/// ARGMIN - Index of minimum value in array
+pub fn argmin_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ARGMIN requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    if data.is_empty() {
+        return Ok(XdlValue::Long(-1));
+    }
+
+    let mut min_idx = 0usize;
+    let mut min_val = data[0];
+    for (i, &val) in data.iter().enumerate() {
+        if val < min_val {
+            min_val = val;
+            min_idx = i;
+        }
+    }
+
+    Ok(XdlValue::Long(min_idx as i32))
+}
+
+/// ARGMAX - Index of maximum value in array
+pub fn argmax_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ARGMAX requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    if data.is_empty() {
+        return Ok(XdlValue::Long(-1));
+    }
+
+    let mut max_idx = 0usize;
+    let mut max_val = data[0];
+    for (i, &val) in data.iter().enumerate() {
+        if val > max_val {
+            max_val = val;
+            max_idx = i;
+        }
+    }
+
+    Ok(XdlValue::Long(max_idx as i32))
+}
+
+/// DIFF - Differences between consecutive elements
+pub fn diff_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("DIFF requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    if data.len() < 2 {
+        return Ok(XdlValue::Array(vec![]));
+    }
+
+    let mut result = Vec::with_capacity(data.len() - 1);
+    for i in 1..data.len() {
+        result.push(data[i] - data[i - 1]);
+    }
+
+    Ok(XdlValue::Array(result))
+}
+
+/// APPEND - Append arrays together
+pub fn append_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("APPEND requires at least two array arguments".to_string()));
+    }
+
+    let mut result = Vec::new();
+
+    for arg in args {
+        match arg {
+            XdlValue::Array(arr) => result.extend(arr.iter().cloned()),
+            XdlValue::MultiDimArray { data, shape: _ } => result.extend(data.iter().cloned()),
+            XdlValue::Float(f) => result.push(*f as f64),
+            XdlValue::Double(d) => result.push(*d),
+            XdlValue::Int(i) => result.push(*i as f64),
+            XdlValue::Long(l) => result.push(*l as f64),
+            _ => return Err(XdlError::TypeMismatch {
+                expected: "array or scalar".to_string(),
+                actual: format!("{:?}", arg.gdl_type()),
+            }),
+        }
+    }
+
+    Ok(XdlValue::Array(result))
+}
+
+/// ANY - Test if any element is non-zero (true)
+pub fn any_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ANY requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let any_true = data.iter().any(|&x| x != 0.0);
+    Ok(XdlValue::Int(if any_true { 1 } else { 0 }))
+}
+
+/// ALL - Test if all elements are non-zero (true)
+pub fn all_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ALL requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let all_true = data.iter().all(|&x| x != 0.0);
+    Ok(XdlValue::Int(if all_true { 1 } else { 0 }))
+}
+
+/// FLATTEN - Flatten multi-dimensional array to 1D
+pub fn flatten_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("FLATTEN requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    Ok(XdlValue::Array(data))
+}
+
+/// NONZERO - Return indices of non-zero elements
+pub fn nonzero_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("NONZERO requires an array argument".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let indices: Vec<f64> = data
+        .iter()
+        .enumerate()
+        .filter(|(_, &v)| v != 0.0)
+        .map(|(i, _)| i as f64)
+        .collect();
+
+    Ok(XdlValue::Array(indices))
+}
+
+/// CLIP - Clip array values to range [min, max]
+pub fn clip_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument("CLIP requires array, min, max arguments".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let min_val = match &args[1] {
+        XdlValue::Float(f) => *f as f64,
+        XdlValue::Double(d) => *d,
+        XdlValue::Int(i) => *i as f64,
+        XdlValue::Long(l) => *l as f64,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let max_val = match &args[2] {
+        XdlValue::Float(f) => *f as f64,
+        XdlValue::Double(d) => *d,
+        XdlValue::Int(i) => *i as f64,
+        XdlValue::Long(l) => *l as f64,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[2].gdl_type()),
+        }),
+    };
+
+    let result: Vec<f64> = data
+        .iter()
+        .map(|&x| x.max(min_val).min(max_val))
+        .collect();
+
+    Ok(XdlValue::Array(result))
+}
+
+/// LINSPACE - Create linearly spaced array
+pub fn linspace_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument("LINSPACE requires start, stop, num arguments".to_string()));
+    }
+
+    let start = match &args[0] {
+        XdlValue::Float(f) => *f as f64,
+        XdlValue::Double(d) => *d,
+        XdlValue::Int(i) => *i as f64,
+        XdlValue::Long(l) => *l as f64,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let stop = match &args[1] {
+        XdlValue::Float(f) => *f as f64,
+        XdlValue::Double(d) => *d,
+        XdlValue::Int(i) => *i as f64,
+        XdlValue::Long(l) => *l as f64,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let num = match &args[2] {
+        XdlValue::Int(i) => *i as usize,
+        XdlValue::Long(l) => *l as usize,
+        XdlValue::Float(f) => *f as usize,
+        XdlValue::Double(d) => *d as usize,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[2].gdl_type()),
+        }),
+    };
+
+    if num < 2 {
+        return Ok(XdlValue::Array(vec![start]));
+    }
+
+    let step = (stop - start) / (num - 1) as f64;
+    let result: Vec<f64> = (0..num).map(|i| start + step * i as f64).collect();
+
+    Ok(XdlValue::Array(result))
+}
+
+/// LOGSPACE - Create logarithmically spaced array
+pub fn logspace_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.len() < 3 {
+        return Err(XdlError::InvalidArgument("LOGSPACE requires start_exp, stop_exp, num arguments".to_string()));
+    }
+
+    let start_exp = match &args[0] {
+        XdlValue::Float(f) => *f as f64,
+        XdlValue::Double(d) => *d,
+        XdlValue::Int(i) => *i as f64,
+        XdlValue::Long(l) => *l as f64,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let stop_exp = match &args[1] {
+        XdlValue::Float(f) => *f as f64,
+        XdlValue::Double(d) => *d,
+        XdlValue::Int(i) => *i as f64,
+        XdlValue::Long(l) => *l as f64,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "numeric".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let num = match &args[2] {
+        XdlValue::Int(i) => *i as usize,
+        XdlValue::Long(l) => *l as usize,
+        XdlValue::Float(f) => *f as usize,
+        XdlValue::Double(d) => *d as usize,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[2].gdl_type()),
+        }),
+    };
+
+    if num < 2 {
+        return Ok(XdlValue::Array(vec![10.0_f64.powf(start_exp)]));
+    }
+
+    let step = (stop_exp - start_exp) / (num - 1) as f64;
+    let result: Vec<f64> = (0..num)
+        .map(|i| 10.0_f64.powf(start_exp + step * i as f64))
+        .collect();
+
+    Ok(XdlValue::Array(result))
+}
+
+/// ARANGE - Create array with evenly spaced values (like Python numpy.arange)
+pub fn arange_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.is_empty() {
+        return Err(XdlError::InvalidArgument("ARANGE requires at least one argument".to_string()));
+    }
+
+    let (start, stop, step) = match args.len() {
+        1 => {
+            let stop = match &args[0] {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", args[0].gdl_type()),
+                }),
+            };
+            (0.0, stop, 1.0)
+        }
+        2 => {
+            let start = match &args[0] {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", args[0].gdl_type()),
+                }),
+            };
+            let stop = match &args[1] {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                }),
+            };
+            (start, stop, 1.0)
+        }
+        _ => {
+            let start = match &args[0] {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", args[0].gdl_type()),
+                }),
+            };
+            let stop = match &args[1] {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", args[1].gdl_type()),
+                }),
+            };
+            let step = match &args[2] {
+                XdlValue::Float(f) => *f as f64,
+                XdlValue::Double(d) => *d,
+                XdlValue::Int(i) => *i as f64,
+                XdlValue::Long(l) => *l as f64,
+                _ => return Err(XdlError::TypeMismatch {
+                    expected: "numeric".to_string(),
+                    actual: format!("{:?}", args[2].gdl_type()),
+                }),
+            };
+            (start, stop, step)
+        }
+    };
+
+    if step == 0.0 {
+        return Err(XdlError::InvalidArgument("ARANGE step cannot be zero".to_string()));
+    }
+
+    let mut result = Vec::new();
+    let mut val = start;
+    if step > 0.0 {
+        while val < stop {
+            result.push(val);
+            val += step;
+        }
+    } else {
+        while val > stop {
+            result.push(val);
+            val += step;
+        }
+    }
+
+    Ok(XdlValue::Array(result))
+}
+
+/// SEARCHSORTED - Find indices where elements should be inserted to maintain order
+pub fn searchsorted_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("SEARCHSORTED requires sorted_array and values arguments".to_string()));
+    }
+
+    let sorted_arr = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let values = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        XdlValue::Float(f) => vec![*f as f64],
+        XdlValue::Double(d) => vec![*d],
+        XdlValue::Int(i) => vec![*i as f64],
+        XdlValue::Long(l) => vec![*l as f64],
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array or scalar".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let indices: Vec<f64> = values
+        .iter()
+        .map(|&val| {
+            match sorted_arr.binary_search_by(|x| x.partial_cmp(&val).unwrap_or(std::cmp::Ordering::Equal)) {
+                Ok(i) => i as f64,
+                Err(i) => i as f64,
+            }
+        })
+        .collect();
+
+    Ok(XdlValue::Array(indices))
+}
+
+/// DIGITIZE - Return indices of bins to which each value belongs
+pub fn digitize_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("DIGITIZE requires array and bins arguments".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let bins = match &args[1] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let indices: Vec<f64> = data
+        .iter()
+        .map(|&val| {
+            match bins.binary_search_by(|x| x.partial_cmp(&val).unwrap_or(std::cmp::Ordering::Equal)) {
+                Ok(i) => i as f64,
+                Err(i) => i as f64,
+            }
+        })
+        .collect();
+
+    Ok(XdlValue::Array(indices))
+}
+
+/// TILE - Repeat array along each dimension
+pub fn tile_func(
+    args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> Result<XdlValue, XdlError> {
+    if args.len() < 2 {
+        return Err(XdlError::InvalidArgument("TILE requires array and reps arguments".to_string()));
+    }
+
+    let data = match &args[0] {
+        XdlValue::Array(arr) => arr.clone(),
+        XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "array".to_string(),
+            actual: format!("{:?}", args[0].gdl_type()),
+        }),
+    };
+
+    let reps = match &args[1] {
+        XdlValue::Int(i) => *i as usize,
+        XdlValue::Long(l) => *l as usize,
+        XdlValue::Float(f) => *f as usize,
+        XdlValue::Double(d) => *d as usize,
+        _ => return Err(XdlError::TypeMismatch {
+            expected: "integer".to_string(),
+            actual: format!("{:?}", args[1].gdl_type()),
+        }),
+    };
+
+    let mut result = Vec::with_capacity(data.len() * reps);
+    for _ in 0..reps {
+        result.extend(data.iter().cloned());
+    }
+
+    Ok(XdlValue::Array(result))
+}
