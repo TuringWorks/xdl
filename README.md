@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A modern Rust implementation of Extended Data Language (XDL), providing IDL-compatible data analysis and visualization capabilities.
+A modern Rust implementation of GNU Data Language (GDL), providing IDL-compatible data analysis and visualization capabilities.
 
 ## Overview
 
