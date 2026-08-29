@@ -1,0 +1,89 @@
+name: Security
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    # Advisories land after a build is green; a weekly run is what catches them.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-audit
+      - name: Check dependencies for known advisories
+        run: cargo audit --deny warnings
+
+  deny:
+    name: cargo deny
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [advisories, bans, licenses, sources]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.check }}
+
+  # XDL executes user-supplied programs and reads user-supplied scientific data
+  # files. Two classes of bug matter more here than the advisory database:
+  # unbounded allocations sized from that input, and panics in library paths.
+  # See AGENTS.md -> Never size an allocation from unvalidated input.
+  input-safety:
+    name: Input-safety greps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Allocations sized from a non-literal (review, not a gate)
+        continue-on-error: true
+        run: |
+          echo "vec![_; n] / with_capacity(n) where n is not a literal:"
+          grep -rnE 'vec!\[[^]]+;\s*[a-z_][a-z0-9_.]*\s*\]|with_capacity\(\s*[a-z_][a-z0-9_.]*\s*\)' \
+            --include='*.rs' xdl-*/src | grep -v '#\[cfg(test)\]' | head -40 || true
+          echo
+          echo "Each of these must have a bound CHECKED BEFORE the allocation."
+
+      - name: Panic sites in library paths (ratchet)
+        run: |
+          # These counts are the current debt, recorded on 2026-08-27. They may go
+          # DOWN freely. Going up fails: a new panic in a library path kills the
+          # user's whole session. See AGENTS.md -> Rules for Agents.
+          declare -A max=( [xdl-core]=34 [xdl-parser]=20 [xdl-interpreter]=29 \
+                           [xdl-stdlib]=248 [xdl-amp]=131 [xdl-dataframe]=14 )
+          fail=0
+          for c in "${!max[@]}"; do
+            n=$(grep -rn '\.unwrap()\|\.expect(\|panic!(' "$c/src" --include='*.rs' 2>/dev/null | wc -l | tr -d ' ')
+            printf '%-18s %4s / %s allowed\n' "$c" "$n" "${max[$c]}"
+            if [ "$n" -gt "${max[$c]}" ]; then
+              echo "  FAIL — panic debt increased in $c"
+              fail=1
+            fi
+          done
+          exit $fail
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

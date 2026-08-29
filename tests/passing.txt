@@ -1,0 +1,25 @@
+# XDL language scripts that run to completion today.
+#
+# This is a RATCHET, not a wish list. CI runs exactly these and fails if one
+# stops passing. When you make a currently-failing script pass, add it here in
+# the same commit; `scripts/run-xdl-suite.sh --survey` shows the current state of
+# every tests/*.xdl.
+#
+# Deliberately excluded:
+#   tests/test_cancel.xdl, tests/test_fluid_partial.xdl  — never terminate
+#   the graphics/GUI scripts                             — no display in CI
+#
+# Last surveyed: 2026-08-27 (18 of 47 .xdl scripts passing, 2 hanging).
+
+tests/advanced_control_flow_tests.xdl
+tests/extended_features_test.xdl
+tests/simple_test.xdl
+tests/test_comment.xdl
+tests/test_coverage_report.xdl
+tests/test_line_continuation.xdl
+tests/test_meshgrid.xdl
+tests/test_minimal.xdl
+tests/test_ml_advanced.xdl
+tests/test_simple_for.xdl
+tests/test_transpile_debug.xdl
+tests/test_unicode.xdl

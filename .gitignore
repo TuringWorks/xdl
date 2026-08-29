@@ -17,5 +17,24 @@ Thumbs.db
 
 # Logs
 *.log
-/.claude
+
+# Claude Code harness.
+# .claude/settings.json, .claude/hooks/, and .claude/skills/ are SHARED — they
+# are the project's agent configuration and must be committed. Only the
+# per-developer local overrides are ignored.
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Tauri generated files (produced by `cargo tauri build` / `tauri codegen`).
+# The ACL manifests and other schemas under gen/ are build artifacts; keeping
+# them in git clutters history with single-line changes on every regeneration.
+xdl-chart-viewer/gen/
+
+# Figures written into the repo root by graphics tests. The real fix is to run
+# them in a temp dir (scripts/run-xdl-suite.sh does); this keeps a stray run
+# from being committed. See AGENTS.md -> Test Isolation.
+/xdl_plot.png
+/xdl_plot3d.png
+/xdl_surface.png
+/xdl_shade_surf.png
+/xdl_contour.png

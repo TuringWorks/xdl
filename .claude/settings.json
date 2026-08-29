@@ -1,0 +1,33 @@
+{
+  "env": {
+    "RUST_BACKTRACE": "1"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-check.sh",
+            "timeout": 180,
+            "statusMessage": "Checking the edited crate..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); case \"$f\" in */xdl-stdlib/src/lib.rs) echo 'AGENTS.md -> Change-Surface Cookbook: a new builtin needs 6 files (impl, this dispatch arm UPPERCASE, xdl-lsp/src/symbols.rs, vscode-xdl/syntaxes/xdl.tmLanguage.json, docs/, tests/*.xdl). Only this one is compiler-checked.' ;; */xdl-parser/src/ast.rs) echo 'AGENTS.md: AST variants are matched in xdl-interpreter AND in xdl-matlab. --workspace covers xdl-matlab lib but NOT its tests: run cargo test -p xdl-matlab.' ;; esac; exit 0",
+            "timeout": 5,
+            "statusMessage": "Cookbook check..."
+          }
+        ]
+      }
+    ]
+  }
+}

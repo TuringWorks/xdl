@@ -15,7 +15,7 @@
 5. [I/O Functions](#io-functions)
 6. [Graphics Procedures](#graphics-procedures)
 7. [Machine Learning Functions](#machine-learning-functions)
-8. [DataFrame Functions](#dataframe-functions)
+8. [DataFrame Functions](#dataframe-functions-polars)
 9. [Python Integration](#python-integration)
 10. [Linear Algebra](#linear-algebra)
 11. [Signal Processing](#signal-processing)

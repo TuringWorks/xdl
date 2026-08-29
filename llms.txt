@@ -1,0 +1,205 @@
+# XDL — Extended Data Language (Rust)
+
+> A Rust reimplementation of GNU Data Language (GDL) / IDL: lexer, parser,
+> tree-walking interpreter, 754-entry standard library, 2D/3D plotting, GPU
+> acceleration, a language server, and a VS Code extension. Cargo workspace of 18
+> crates (17 listed in `members`, plus `xdl-matlab` auto-included as a path dep),
+> and one crate outside it.
+> Docs: https://turingworks.github.io/xdl · Repo: https://github.com/turingworks/xdl
+
+## Running XDL
+
+```bash
+cargo build --release -p xdl-cli
+./target/release/xdl script.xdl            # run a file
+./target/release/xdl -e 'print, findgen(5)'  # one-liner
+./target/release/xdl -i                    # REPL
+./target/release/xdl parse script.xdl      # dump the AST
+./target/release/xdl test tests            # run the .xdl suite in a directory
+```
+
+Flags: `-e/--execute <CMD>`, `-i/--interactive`, `-v/--verbose`, `-q/--quiet`.
+
+## Language quick reference
+
+Comments start with `;`. Names are **case-insensitive**. Arrays are **0-based**.
+
+```idl
+; variables and arrays
+x = 42
+arr = [1, 2, 3]
+a = findgen(10)          ; 0.0 .. 9.0
+m = fltarr(3, 4)         ; 3x4 float array
+
+; procedures are statement-style, functions are call-style
+print, "value =", x
+y = sin(a)
+
+; keywords: named, optional, order-independent; /KEY sets it to 1
+plot, x, y, title="Demo", /ylog
+
+; conditionals
+if x gt 5 then begin
+  print, "big"
+end else begin
+  print, "small"
+end
+endif
+
+; loops
+for i = 0, 9 do begin
+  print, i
+endfor
+
+while count gt 0 do begin
+  count = count - 1
+end
+endwhile
+
+repeat begin
+  n = n + 1
+end until n ge 10
+
+foreach element, arr do begin
+  print, element
+endfor
+
+case value of
+  1: print, "one"
+  2: print, "two"
+  else: print, "other"
+endcase
+
+; user-defined routines
+pro my_proc, a, b
+  print, a + b
+end
+
+function my_func, a
+  return, a * 2
+end
+```
+
+Operators: `+ - * / ^ mod`, comparison `eq ne lt le gt ge`, logical
+`and or not xor`, `#` matrix multiply, `->` method call, `*` pointer
+dereference.
+
+System variables are `!`-prefixed: `!PI`, `!VALUES.F_NAN`, `!P`, `!X`, `!Y`, `!D`.
+
+## Built-in function categories (754 dispatch entries)
+
+| Category | Examples |
+|---|---|
+| Math | `SIN COS TAN EXP ALOG SQRT ABS FFT` |
+| Special math | `ERF ERFC GAMMA LNGAMMA FACTORIAL BESELJ BESELY BESELI BESELK` |
+| Type conversion | `BYTE INT UINT LONG ULONG LONG64 ULONG64 FLOAT DOUBLE FIX COMPLEX` |
+| Array creation | `FINDGEN INDGEN DINDGEN FLTARR DBLARR INTARR MAKE_ARRAY RANDOMU RANDOMN` |
+| Array ops | `TRANSPOSE REFORM REVERSE SORT WHERE SHIFT ROTATE REPLICATE UNIQ TOTAL N_ELEMENTS SIZE` |
+| Statistics | `MEAN VARIANCE STDDEV MEDIAN MOMENT KURTOSIS SKEWNESS LINFIT POLY_FIT CORRELATE` |
+| Interpolation | `INTERPOL SPLINE BILINEAR` |
+| Linear algebra | `INVERT DETERM SVDC LUDC LA_EIGENVAL CRAMER` |
+| Signal processing | `A_CORRELATE C_CORRELATE CONVOL DIGITAL_FILTER HILBERT SMOOTH` |
+| Image processing | `DILATE ERODE SOBEL ROBERTS GAUSSIAN_FILTER HISTOGRAM` |
+| Strings | `STRLEN STRPOS STRMID STRJOIN STRSPLIT STRCMP STRTRIM STRUPCASE STRLOWCASE` |
+| File I/O | `OPENR OPENW OPENU READF WRITEF READU WRITEU CLOSE FILE_TEST FILE_INFO FILE_SEARCH` |
+| Scientific I/O | FITS, HDF5, NetCDF readers/writers (`xdl-stdlib/src/scientific_io.rs`) |
+| Time | `SYSTIME JULDAY CALDAT TIC TOC` |
+| MATLAB compat | `LINSPACE LOGSPACE REPMAT SQUEEZE NDGRID INTERP1 MESHGRID` |
+| DataFrames (feature `dataframes`) | `DF_READ_CSV DF_FILTER DF_GROUPBY DF_JOIN DF_SORT` |
+| ML (feature `ml`) | `ML_KMEANS_* ML_LINEAR_* ML_PCA_* ML_ACCURACY ML_MSE ML_R2_SCORE` |
+| Python (feature `python`) | `PYTHON_IMPORT PYTHON_CALL PYTHON_CALL_KW` |
+
+Graphics **procedures** (statement-style, ~50): `PLOT OPLOT PLOTS XYOUTS AXIS
+CONTOUR SURFACE SHADE_SURF PLOT3D ISOSURFACE ISOCONTOUR TV TVSCL WINDOW WSET
+WDELETE LOADCT SET_PLOT_BACKEND`.
+
+Functions and procedures are **separate registries**
+(`call_function*` vs `call_procedure*` in `xdl-stdlib/src/lib.rs`).
+
+## Cargo features
+
+| Feature | Enables |
+|---|---|
+| `python` | PyO3 bridge to a system Python |
+| `rustpython` | embedded pure-Rust Python |
+| `dataframes` | Polars-backed `DF_*` functions (**default**) |
+| `ml` | Linfa-backed `ML_*` functions (**default**, via `datascience`) |
+
+Additional gates: `stats` (statrs), `gis` (proj/geo), `scientific-io` (netcdf +
+hdf5), `image-io`. `xdl-stdlib`'s default is `["dataframes", "datascience"]`, so
+`dataframes`, `stats`, and `ml` are **on by default**; `python`, `rustpython`,
+`gis`, and `scientific-io` are not, and the last three need system libraries —
+`--all-features` fails without them, for reasons unrelated to your change.
+
+A function behind a disabled feature must
+still be nameable and must return an error saying which feature is missing —
+never "unknown function".
+
+## Crate map
+
+```
+xdl-core         XdlValue, XdlArray, Dimension, XdlError/XdlResult
+xdl-parser       lexer.rs → ast.rs → parser.rs
+xdl-interpreter  evaluator.rs (tree-walk), context.rs, methods.rs
+xdl-runtime      memory + GC scaffolding
+xdl-stdlib       lib.rs = THE DISPATCH (754 arms) + 30 implementation modules
+xdl-cli          the `xdl` binary: file runner, REPL, parse, test
+xdl-ffi          C embedding surface + GSL / HDF5 / NetCDF wrappers
+xdl-gui          egui plot + image windows
+xdl-charts       ECharts HTML generation
+xdl-chart-viewer Tauri viewer app (own tauri.conf.json)
+xdl-viz3d        wgpu 3D engine   (+ -web HTTP server, + -threejs templates)
+xdl-amp          13 GPU/SIMD backends behind dispatch.rs
+xdl-dataframe    Polars integration
+xdl-database     SQL access from XDL
+xdl-lsp          language server: completion, hover, goto, symbols, diagnostics
+vscode-xdl       TextMate grammar + extension that launches xdl-lsp
+
+xdl-matlab       .m → XDL transpiler. Not in [workspace] members, but a path
+                 dependency of xdl-cli and xdl-gui, so Cargo auto-includes it and
+                 --workspace covers its lib (not its tests: cargo test -p xdl-matlab).
+
+Outside the workspace — nothing depends on it, nothing compiles it:
+xdl-desktop-viewer   Tauri; check with --manifest-path after a core-type change
+```
+
+## Adding a built-in — the six places
+
+1. `xdl-stdlib/src/<module>.rs` — `fn f(args: &[XdlValue]) -> XdlResult<XdlValue>`
+2. `xdl-stdlib/src/lib.rs` — `"NAME" => module::f(args),` **fully uppercase**
+   (dispatch runs `name.to_uppercase()`; a lowercase arm is dead code)
+3. `xdl-lsp/src/symbols.rs` — `builtin_functions` entry (name, doc, return, signature)
+4. `vscode-xdl/syntaxes/xdl.tmLanguage.json` — the builtin-name pattern
+5. `docs/` — reference entry
+6. `tests/*.xdl` — a script that calls it
+
+Only step 2 is checked by the compiler, and only for type errors.
+`scripts/check-builtin-parity.sh` compares steps 2 and 3.
+
+## Build, test, lint
+
+```bash
+cargo check --workspace                    # what the edit hook runs (18 crates)
+cargo check --manifest-path xdl-desktop-viewer/Cargo.toml  # not compiled by --workspace
+cargo test --workspace --no-fail-fast      # ALWAYS --no-fail-fast
+cargo test -p xdl-matlab                   # its tests are not in --workspace --all-targets
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all
+cargo bench                                # criterion
+scripts/check-builtin-parity.sh            # stdlib ↔ LSP name drift
+scripts/check-version-sync.sh              # Cargo.toml ↔ tauri.conf.json ↔ package.json
+scripts/check-docs-links.sh                # relative links in docs/
+```
+
+## Agent guidance
+
+- `CLAUDE.md` — entry point: answer style, quick reference, cross-cutting checklist
+- `AGENTS.md` — authoritative: product matrix, change-surface cookbook, functional
+  style, IDL semantics, performance, numerical honesty, verification, test isolation
+- `SOUL.md` — what XDL is for and why compatibility is not negotiable
+- `.claude/skills/add-builtin/SKILL.md` — the ordered walk-through for a new built-in
+
+## License
+
+MIT (`LICENSE`). Note: `Cargo.toml` currently declares `GPL-2.0` — that is a known
+inconsistency, not a second license.

@@ -27,11 +27,39 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Build the cargo API docs so they are deployed alongside the Jekyll site.
+      # This is the publishing path the CI `docs` job gates on but does not
+      # deploy — keeping a single deployer avoids Pages flapping between
+      # branches.
+      # Only public APIs are published (--no-deps, no --document-private-items)
+      # to avoid leaking internal paths or implementation details to the public
+      # site. If a crate with sensitive internals is added, scope the build
+      # with an explicit --package list.
+      # `RUSTDOCFLAGS: -D warnings` is NOT set here: rustdoc warnings have never
+      # been enforced, so turning it on would ship a deploy that is red on
+      # arrival. Enable it once the backlog is clear — same trigger as the CI
+      # `docs` job.
+      - name: Build API documentation
+        run: cargo doc --workspace --no-deps
+
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./docs
           destination: ./_site
+
+      - name: Add API docs to site
+        # Let cp fail naturally if target/doc is missing — a silent deploy of
+        # an incomplete site is worse than a visible build failure.
+        run: |
+          mkdir -p ./_site/api
+          cp -r target/doc/. ./_site/api/
+          echo "API docs copied to ./_site/api/"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

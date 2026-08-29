@@ -1,0 +1,19 @@
+# Built-in names the LSP advertises that the interpreter cannot dispatch.
+#
+# This file is a RATCHET, not a permission slip. Every name here is a real
+# defect: a user gets completion and hover for a function that does not exist,
+# and finds out only when their script fails. check-builtin-parity.sh fails on
+# any phantom NOT listed here, so the set can shrink but cannot silently grow.
+#
+# Remove a line by either implementing the function (add the dispatch arm in
+# xdl-stdlib/src/lib.rs — see .claude/skills/add-builtin/SKILL.md) or deleting
+# its entry from xdl-lsp/src/symbols.rs. Do not remove a line any other way.
+#
+# Recorded 2026-08-27.
+
+# IDL file-reading functions the LSP documents but xdl-stdlib never implemented.
+# READF and READU exist; these three do not. DF_READ_CSV (feature: dataframes)
+# is a different function with a different signature.
+READ_ASCII
+READ_BINARY
+READ_CSV

@@ -2,7 +2,7 @@
   "name": "xdl-language",
   "displayName": "XDL Language Support",
   "description": "Language support for XDL (Extended Data Language) - IDL/GDL compatible scientific programming",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "xdl-team",
   "license": "GPL-2.0",
   "repository": {

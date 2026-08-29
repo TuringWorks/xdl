@@ -2,106 +2,203 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master, main ]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  # Only cancel in-progress runs for pull requests. Pushes to protected
+  # branches (master/main) should finish so a broken intermediate state
+  # does not leave the branch without a completed CI run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
-    name: Test
+  # Fast, no-build checks for the contracts nothing in the compiler enforces.
+  # See AGENTS.md -> Traps a Build Cannot Catch.
+  consistency:
+    name: Consistency
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Invoked via `bash` so the scripts do not depend on the executable bit
+      # being set in the repository — a permission that is easy to lose on a
+      # fresh clone or a CI image that does not preserve mode bits.
+      - name: Built-in name parity (stdlib dispatch <-> LSP <-> grammar)
+        run: bash scripts/check-builtin-parity.sh
+
+      - name: Version and license sync
+        run: bash scripts/check-version-sync.sh
+
+      - name: Docs relative links
+        run: bash scripts/check-docs-links.sh
+
+  test:
+    name: Test (${{ matrix.rust }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
+      fail-fast: false
       matrix:
         rust: [stable, beta, nightly]
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-        components: rustfmt, clippy
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
 
-    - uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Include both the workspace Cargo.lock and the xdl-desktop-viewer
+          # manifest hash so the cache is invalidated when either changes.
+          # xdl-desktop-viewer is outside the workspace, so the default
+          # Cargo.lock hash does not cover it; hashFiles ignores missing
+          # files rather than returning an empty key.
+          key: ${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock', 'xdl-desktop-viewer/Cargo.toml') }}
 
-    - name: Check formatting
-      run: cargo fmt --all -- --check
+      - name: Build
+        run: cargo build --workspace --verbose
 
-    - name: Run clippy
-      run: cargo clippy --workspace --all-targets -- -D warnings
+      # --no-fail-fast: cargo test stops at the first failing binary, so a suite
+      # can report "1 failure" while carrying a dozen behind it.
+      # See AGENTS.md -> Test Isolation.
+      - name: Test
+        run: cargo test --workspace --all-targets --no-fail-fast --verbose
 
-    - name: Build
-      run: cargo build --workspace --verbose
+      # xdl-matlab's lib is covered by --workspace (it is auto-included as a path
+      # dependency of xdl-cli and xdl-gui), but its own test target is not.
+      - name: Test xdl-matlab
+        run: cargo test -p xdl-matlab --all-targets --no-fail-fast --verbose
 
-    - name: Run tests
-      run: cargo test --workspace --verbose
+      # Nothing depends on xdl-desktop-viewer, so --workspace never compiles it.
+      # Checked on stable only: the crate targets stable Rust and has no
+      # nightly-specific features; running it on beta/nightly would catch
+      # compiler regressions but add no crate-specific coverage.
+      - name: Check xdl-desktop-viewer (outside the workspace)
+        if: matrix.rust == 'stable'
+        run: cargo check --manifest-path xdl-desktop-viewer/Cargo.toml
+
+  lint:
+    name: Format and clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # The .xdl suite is where the language is actually exercised; ~284 Rust #[test]
+  # functions do not cover a 37k-line standard library.
+  # See AGENTS.md -> Testing.
+  language-suite:
+    name: XDL language suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build the interpreter
+        run: cargo build --release -p xdl-cli
+
+      - name: Smoke-test the binary
+        run: ./target/release/xdl -e 'print, findgen(5)'
+
+      # Invoked via `bash` for the same reason as the `consistency` job: the
+      # executable bit is easy to lose and the CI image may not preserve it.
+      - name: Run the XDL language suite (allowlist ratchet)
+        run: bash scripts/run-xdl-suite.sh
+
+      # Informational: the full picture, including the scripts that do not pass
+      # yet. Never gates — see tests/passing.txt for why the gate is a ratchet.
+      - name: Survey every .xdl script
+        continue-on-error: true
+        run: bash scripts/run-xdl-suite.sh --survey
 
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: llvm-tools-preview
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
 
-    - uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: Swatinem/rust-cache@v2
 
-    - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
-    - name: Generate code coverage
-      run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      - name: Generate code coverage
+        run: cargo llvm-cov --workspace --all-targets --lcov --output-path lcov.info
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: lcov.info
-        fail_ci_if_error: true
+      # xdl-matlab is NOT a workspace member, so --workspace does not run its
+      # test target. A separate invocation is required; --all-targets is set
+      # on both for consistency with the `test` job.
+      - name: Generate xdl-matlab coverage
+        run: cargo llvm-cov -p xdl-matlab --all-targets --lcov --output-path lcov-matlab.info
+
+      - name: Upload coverage to Codecov
+        # Guarded on the token via an env var so a missing CODECOV_TOKEN secret
+        # surfaces as a visible "skipped" step instead of a silent upload
+        # failure. Referencing secrets.* directly in an `if` can leak the value
+        # in logs on a parse error; the env indirection avoids that.
+        # Forks without the secret will generate lcov files but skip the
+        # upload step — the build stays green, coverage just isn't reported.
+        # External monitoring of Codecov is required to catch upload failures,
+        # since fail_ci_if_error: false means CI stays green on upload errors.
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        with:
+          files: lcov.info,lcov-matlab.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # Coverage upload is informational; a Codecov outage must not turn the
+          # build red and teach people to ignore it.
+          fail_ci_if_error: false
 
   docs:
     name: Documentation
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
 
-    - uses: dtolnay/rust-toolchain@stable
-
-    - uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Build documentation
-      run: cargo doc --workspace --no-deps
-
-    - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./target/doc
+      # Build only (gate). Publishing is owned by pages.yml, which builds the
+      # cargo API docs and the Jekyll site and deploys both — two workflows
+      # deploying to GitHub Pages from different branches is how a site starts
+      # flapping.
+      # `RUSTDOCFLAGS: -D warnings` is NOT set: rustdoc warnings have never been
+      # enforced here, so turning it on in the same change that adds the job
+      # would ship a gate that is red on arrival. Enable it once the backlog is
+      # clear.
+      - name: Build documentation
+        run: cargo doc --workspace --no-deps

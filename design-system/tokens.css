@@ -1,0 +1,183 @@
+/*
+ * XDL design tokens — the single source of truth for every HTML surface:
+ * xdl-charts (ECharts), xdl-viz3d-web, xdl-viz3d-threejs, xdl-chart-viewer.
+ *
+ * Rules:
+ *   - Every colour used by a template comes from here. No hex literals in
+ *     templates, chart options, or shaders.
+ *   - Define the complete LIGHT palette on bare :root, then redefine only what
+ *     changes for dark. A token whose only definition lives inside a media
+ *     query has no value in the other theme.
+ *   - These are UI tokens. DATA colour comes from the colormap registry —
+ *     see design-system/foundations/color.md. Never encode a measurement in a
+ *     --text-* or --accent token.
+ *
+ * The plotters (PNG) and egui (native) backends cannot read CSS, so they mirror
+ * this palette as Rust constants. Change both together.
+ */
+
+:root {
+  /* ---- surfaces ---------------------------------------------------- */
+  --bg-page:        #ffffff;
+  --bg-figure:      #ffffff;   /* the plot area itself — kept separate from the
+                                  page so a figure can stay white on a tinted page */
+  --bg-surface:     #f6f7f9;   /* panels, cards, toolbars */
+  --bg-surface-alt: #eceef1;   /* zebra rows, pressed states */
+
+  /* ---- text -------------------------------------------------------- */
+  --text-primary:   #14181d;
+  --text-secondary: #4a5560;   /* axis labels, captions */
+  --text-muted:     #79838d;   /* disabled, placeholders, footnotes */
+  --text-inverse:   #ffffff;
+
+  /* ---- figure furniture -------------------------------------------- */
+  --axis-line:      #4a5560;
+  --grid-line:      #dfe3e8;
+  --border:         #d3d8de;
+  --border-strong:  #b3bac2;
+
+  /* ---- semantic ----------------------------------------------------- */
+  --accent:         #2563a8;
+  --accent-weak:    #e3edf8;
+  --success:        #1f7a44;
+  --warning:        #96650a;
+  --error:          #b3261e;
+
+  /* ---- categorical series ------------------------------------------
+     Eight lines, chosen to stay distinguishable under deuteranopia and
+     protanopia and to survive greyscale printing (their luminances differ).
+     Order matters: series 1 is the first colour. Do not reorder.
+     More than eight series is a chart problem, not a palette problem. */
+  --series-1: #4269d0;
+  --series-2: #efb118;
+  --series-3: #ff725c;
+  --series-4: #6cc5b0;
+  --series-5: #3ca951;
+  --series-6: #ff8ab7;
+  --series-7: #a463f2;
+  --series-8: #9c6b4e;
+
+  /* ---- type --------------------------------------------------------- */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-xs:   0.75rem;   /* 12px — tick labels, footnotes */
+  --text-sm:   0.875rem;  /* 14px — axis labels, legends, body */
+  --text-base: 1rem;      /* 16px — body */
+  --text-lg:   1.125rem;  /* 18px — figure title */
+  --text-xl:   1.375rem;  /* 22px — page title */
+
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-bold:    600;
+
+  --leading-tight: 1.25;
+  --leading-body:  1.55;
+
+  /* ---- spacing — 4px grid ------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.10);
+
+  --transition: 120ms ease;
+}
+
+/* Dark: redefine only what changes. Guarded with :not([data-theme="light"]) so
+   an explicit light choice still wins on a system set to dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-page:        #14181d;
+    --bg-figure:      #1b2027;
+    --bg-surface:     #1b2027;
+    --bg-surface-alt: #242b34;
+
+    --text-primary:   #e8ecf1;
+    --text-secondary: #a8b3bf;
+    --text-muted:     #79838d;
+    --text-inverse:   #14181d;
+
+    --axis-line:      #a8b3bf;
+    --grid-line:      #2c343e;
+    --border:         #2c343e;
+    --border-strong:  #3d4753;
+
+    --accent:         #6ba3e8;
+    --accent-weak:    #1d2b3d;
+    --success:        #4cc07a;
+    --warning:        #e0ab3a;
+    --error:          #f2685f;
+
+    /* Series colours are lightened for contrast against a dark ground; the hue
+       order is unchanged so a figure keeps its identity across themes. */
+    --series-1: #7aa0e8;
+    --series-2: #f0c65a;
+    --series-3: #ff9483;
+    --series-4: #8fd6c5;
+    --series-5: #63c377;
+    --series-6: #ffa8c8;
+    --series-7: #bb8cf5;
+    --series-8: #bb8f75;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Explicit dark selection wins in both directions. */
+:root[data-theme="dark"] {
+  --bg-page:        #14181d;
+  --bg-figure:      #1b2027;
+  --bg-surface:     #1b2027;
+  --bg-surface-alt: #242b34;
+
+  --text-primary:   #e8ecf1;
+  --text-secondary: #a8b3bf;
+  --text-muted:     #79838d;
+  --text-inverse:   #14181d;
+
+  --axis-line:      #a8b3bf;
+  --grid-line:      #2c343e;
+  --border:         #2c343e;
+  --border-strong:  #3d4753;
+
+  --accent:         #6ba3e8;
+  --accent-weak:    #1d2b3d;
+  --success:        #4cc07a;
+  --warning:        #e0ab3a;
+  --error:          #f2685f;
+
+  --series-1: #7aa0e8;
+  --series-2: #f0c65a;
+  --series-3: #ff9483;
+  --series-4: #8fd6c5;
+  --series-5: #63c377;
+  --series-6: #ffa8c8;
+  --series-7: #bb8cf5;
+  --series-8: #bb8f75;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* The viewer paints its own ground behind the page, so body must set an
+   explicit background — a transparent body borrows the host's theme. */
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+}

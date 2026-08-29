@@ -296,15 +296,62 @@ Contributions are welcome! Please:
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests and formatting: `cargo fmt --all && cargo test --workspace`
-5. Submit a pull request
+4. Run tests and formatting: `cargo fmt --all && cargo test --workspace --no-fail-fast`
+5. Run the consistency checks (below) — they catch what the compiler cannot
+6. Submit a pull request
+
+### Read this first
+
+XDL's built-in dispatch is a 754-arm `match` on a string, and the list of
+built-in names is maintained by hand in four places. **Most ways to break XDL
+produce no compile error.** Before your first change, read:
+
+| File | What it is |
+|---|---|
+| [AGENTS.md](./AGENTS.md) | The authoritative guide: product matrix, change-surface cookbook, functional style, IDL semantics, performance, verification, test isolation |
+| [CLAUDE.md](./CLAUDE.md) | The short entry point, including the cross-cutting change checklist |
+| [SOUL.md](./SOUL.md) | What XDL is for, and why the compatibility contract is not negotiable |
+| [design-system/](./design-system/README.md) | The shared visual contract across the four render backends |
+| [llms.txt](./llms.txt) | Machine-readable language and repo reference |
+
+These apply to human and AI contributors alike. If you use Claude Code, the
+project's hooks and the `add-builtin` skill live in `.claude/` and load
+automatically.
+
+### Consistency checks
+
+These enforce the contracts nothing in `cargo` checks. CI runs all of them.
+
+```bash
+scripts/check-builtin-parity.sh   # stdlib dispatch <-> LSP <-> editor grammar
+scripts/check-version-sync.sh     # Cargo.toml <-> tauri.conf.json <-> package.json
+scripts/check-docs-links.sh       # relative links AND heading anchors
+scripts/run-xdl-suite.sh          # the .xdl language suite (allowlist ratchet)
+scripts/run-xdl-suite.sh --survey # every .xdl script, pass/fail/hang
+```
+
+### Adding a built-in function
+
+Six files must agree, and only one of them is compiler-checked. The ordered
+walk-through is in
+[.claude/skills/add-builtin/SKILL.md](./.claude/skills/add-builtin/SKILL.md);
+the summary is in [CLAUDE.md](./CLAUDE.md).
 
 ### Code Style
 
-- Follow Rust naming conventions
-- Use `cargo fmt` for consistent formatting
-- Address `cargo clippy` warnings
-- Add tests for new functionality
+- Follow Rust naming conventions; `cargo fmt` for formatting
+- Address `cargo clippy` warnings (CI runs `-D warnings`)
+- **Write in a functional style** — pure functions over immutable data, effects
+  at the edges, total error handling. See
+  [AGENTS.md → Functional Style](./AGENTS.md#functional-style--safe-refactoring)
+- **No `.unwrap()` / `.expect()` / `panic!` in library, interpreter, or stdlib
+  paths.** A panic there kills the user's whole session and loses their loaded
+  data. Return `XdlResult` and propagate with `?`
+- **Never substitute a plausible default for missing or failed numeric data.**
+  This is a data-analysis language; a wrong-but-plausible number can survive peer
+  review, while an error gets fixed the same afternoon
+- Add tests for new functionality — in `.xdl`, at the boundary, the way a user
+  calls it — and **watch the test fail before you count it as done**
 - Document public APIs
 
 ## Roadmap
