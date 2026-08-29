@@ -794,7 +794,9 @@ impl AcceleratedOps {
     pub fn variance_1d(&self, a: &Array1<f32>) -> Result<f32> {
         let elements = a.len();
         let bytes = elements * std::mem::size_of::<f32>();
-        let target = self.dispatcher.dispatch_reduction(OpType::Variance, elements);
+        let target = self
+            .dispatcher
+            .dispatch_reduction(OpType::Variance, elements);
 
         let start = Instant::now();
         let result = match target {

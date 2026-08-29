@@ -440,6 +440,7 @@ fn min_f32_parallel(x: &[f32]) -> f32 {
 
 /// Median: returns the middle value of a sorted array
 /// For even-length arrays, returns the average of the two middle values
+#[allow(clippy::manual_is_multiple_of)]
 pub fn median_f32(x: &[f32]) -> f32 {
     if x.is_empty() {
         return f32::NAN;

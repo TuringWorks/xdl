@@ -10,8 +10,8 @@ use std::time::{Duration, Instant};
 #[cfg(all(target_os = "macos", feature = "mlx"))]
 use xdl_amp::MLXOps;
 
-use xdl_amp::metal::MetalDevice;
 use xdl_amp::backend::GpuDevice;
+use xdl_amp::metal::MetalDevice;
 
 fn main() {
     println!("========================================");
@@ -24,9 +24,11 @@ fn main() {
 
     for &size in &sizes {
         println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        println!("  Array Size: {} elements ({:.1} MB)",
-                 size,
-                 (size * 4) as f64 / 1_000_000.0);
+        println!(
+            "  Array Size: {} elements ({:.1} MB)",
+            size,
+            (size * 4) as f64 / 1_000_000.0
+        );
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         benchmark_operations(size);
@@ -54,17 +56,22 @@ fn benchmark_operations(size: usize) {
 
     // CPU baseline
     let cpu_time = benchmark_cpu_add(&a, &b, &mut c, iterations);
-    println!("  CPU:   {:>10.3} ms  (baseline)", cpu_time.as_secs_f64() * 1000.0);
+    println!(
+        "  CPU:   {:>10.3} ms  (baseline)",
+        cpu_time.as_secs_f64() * 1000.0
+    );
 
     // Metal
     match MetalDevice::new() {
         Ok(metal) => {
             let metal_time = benchmark_metal_add(&metal, &a, &b, &mut c, iterations);
             let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
-            println!("  Metal: {:>10.3} ms  ({:.2}x {})",
-                     metal_time.as_secs_f64() * 1000.0,
-                     speedup.abs(),
-                     if speedup > 1.0 { "faster" } else { "slower" });
+            println!(
+                "  Metal: {:>10.3} ms  ({:.2}x {})",
+                metal_time.as_secs_f64() * 1000.0,
+                speedup.abs(),
+                if speedup > 1.0 { "faster" } else { "slower" }
+            );
         }
         Err(e) => println!("  Metal: unavailable ({:?})", e),
     }
@@ -76,10 +83,12 @@ fn benchmark_operations(size: usize) {
             Ok(mlx) => {
                 let mlx_time = benchmark_mlx_add(&mlx, &a, &b, &mut c, iterations);
                 let speedup = cpu_time.as_secs_f64() / mlx_time.as_secs_f64();
-                println!("  MLX:   {:>10.3} ms  ({:.2}x {})",
-                         mlx_time.as_secs_f64() * 1000.0,
-                         speedup.abs(),
-                         if speedup > 1.0 { "faster" } else { "slower" });
+                println!(
+                    "  MLX:   {:>10.3} ms  ({:.2}x {})",
+                    mlx_time.as_secs_f64() * 1000.0,
+                    speedup.abs(),
+                    if speedup > 1.0 { "faster" } else { "slower" }
+                );
             }
             Err(e) => println!("  MLX:   unavailable ({:?})", e),
         }
@@ -96,22 +105,31 @@ fn benchmark_operations(size: usize) {
         let mat_b: Vec<f32> = (0..(k * n)).map(|i| (i as f32) * 0.001).collect();
         let mut mat_c = vec![0.0f32; m * n];
 
-        println!("\n  Operation: Matrix Multiplication ({}x{} @ {}x{})", m, k, k, n);
+        println!(
+            "\n  Operation: Matrix Multiplication ({}x{} @ {}x{})",
+            m, k, k, n
+        );
         println!("  ─────────────────────────────────────────────────");
 
         // CPU matmul
         let cpu_time = benchmark_cpu_matmul(&mat_a, &mat_b, &mut mat_c, m, n, k, 3);
-        println!("  CPU:   {:>10.3} ms  (baseline)", cpu_time.as_secs_f64() * 1000.0);
+        println!(
+            "  CPU:   {:>10.3} ms  (baseline)",
+            cpu_time.as_secs_f64() * 1000.0
+        );
 
         // Metal matmul
         match MetalDevice::new() {
             Ok(metal) => {
-                let metal_time = benchmark_metal_matmul(&metal, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
+                let metal_time =
+                    benchmark_metal_matmul(&metal, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
                 let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
-                println!("  Metal: {:>10.3} ms  ({:.2}x {})",
-                         metal_time.as_secs_f64() * 1000.0,
-                         speedup.abs(),
-                         if speedup > 1.0 { "faster" } else { "slower" });
+                println!(
+                    "  Metal: {:>10.3} ms  ({:.2}x {})",
+                    metal_time.as_secs_f64() * 1000.0,
+                    speedup.abs(),
+                    if speedup > 1.0 { "faster" } else { "slower" }
+                );
             }
             Err(_) => {}
         }
@@ -121,12 +139,15 @@ fn benchmark_operations(size: usize) {
         {
             match MLXOps::new() {
                 Ok(mlx) => {
-                    let mlx_time = benchmark_mlx_matmul(&mlx, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
+                    let mlx_time =
+                        benchmark_mlx_matmul(&mlx, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
                     let speedup = cpu_time.as_secs_f64() / mlx_time.as_secs_f64();
-                    println!("  MLX:   {:>10.3} ms  ({:.2}x {})",
-                             mlx_time.as_secs_f64() * 1000.0,
-                             speedup.abs(),
-                             if speedup > 1.0 { "faster" } else { "slower" });
+                    println!(
+                        "  MLX:   {:>10.3} ms  ({:.2}x {})",
+                        mlx_time.as_secs_f64() * 1000.0,
+                        speedup.abs(),
+                        if speedup > 1.0 { "faster" } else { "slower" }
+                    );
                 }
                 Err(_) => {}
             }
@@ -139,17 +160,22 @@ fn benchmark_operations(size: usize) {
 
     // CPU sin
     let cpu_time = benchmark_cpu_sin(&a, &mut c, iterations);
-    println!("  CPU:   {:>10.3} ms  (baseline)", cpu_time.as_secs_f64() * 1000.0);
+    println!(
+        "  CPU:   {:>10.3} ms  (baseline)",
+        cpu_time.as_secs_f64() * 1000.0
+    );
 
     // Metal sin
     match MetalDevice::new() {
         Ok(metal) => {
             let metal_time = benchmark_metal_sin(&metal, &a, &mut c, iterations);
             let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
-            println!("  Metal: {:>10.3} ms  ({:.2}x {})",
-                     metal_time.as_secs_f64() * 1000.0,
-                     speedup.abs(),
-                     if speedup > 1.0 { "faster" } else { "slower" });
+            println!(
+                "  Metal: {:>10.3} ms  ({:.2}x {})",
+                metal_time.as_secs_f64() * 1000.0,
+                speedup.abs(),
+                if speedup > 1.0 { "faster" } else { "slower" }
+            );
         }
         Err(_) => {}
     }
@@ -161,10 +187,12 @@ fn benchmark_operations(size: usize) {
             Ok(mlx) => {
                 let mlx_time = benchmark_mlx_sin(&mlx, &a, &mut c, iterations);
                 let speedup = cpu_time.as_secs_f64() / mlx_time.as_secs_f64();
-                println!("  MLX:   {:>10.3} ms  ({:.2}x {})",
-                         mlx_time.as_secs_f64() * 1000.0,
-                         speedup.abs(),
-                         if speedup > 1.0 { "faster" } else { "slower" });
+                println!(
+                    "  MLX:   {:>10.3} ms  ({:.2}x {})",
+                    mlx_time.as_secs_f64() * 1000.0,
+                    speedup.abs(),
+                    if speedup > 1.0 { "faster" } else { "slower" }
+                );
             }
             Err(_) => {}
         }
@@ -176,17 +204,22 @@ fn benchmark_operations(size: usize) {
 
     // CPU sum
     let cpu_time = benchmark_cpu_sum(&a, iterations);
-    println!("  CPU:   {:>10.3} ms  (baseline)", cpu_time.as_secs_f64() * 1000.0);
+    println!(
+        "  CPU:   {:>10.3} ms  (baseline)",
+        cpu_time.as_secs_f64() * 1000.0
+    );
 
     // Metal sum
     match MetalDevice::new() {
         Ok(metal) => {
             let metal_time = benchmark_metal_sum(&metal, &a, iterations);
             let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
-            println!("  Metal: {:>10.3} ms  ({:.2}x {})",
-                     metal_time.as_secs_f64() * 1000.0,
-                     speedup.abs(),
-                     if speedup > 1.0 { "faster" } else { "slower" });
+            println!(
+                "  Metal: {:>10.3} ms  ({:.2}x {})",
+                metal_time.as_secs_f64() * 1000.0,
+                speedup.abs(),
+                if speedup > 1.0 { "faster" } else { "slower" }
+            );
         }
         Err(_) => {}
     }
@@ -198,10 +231,12 @@ fn benchmark_operations(size: usize) {
             Ok(mlx) => {
                 let mlx_time = benchmark_mlx_sum(&mlx, &a, iterations);
                 let speedup = cpu_time.as_secs_f64() / mlx_time.as_secs_f64();
-                println!("  MLX:   {:>10.3} ms  ({:.2}x {})",
-                         mlx_time.as_secs_f64() * 1000.0,
-                         speedup.abs(),
-                         if speedup > 1.0 { "faster" } else { "slower" });
+                println!(
+                    "  MLX:   {:>10.3} ms  ({:.2}x {})",
+                    mlx_time.as_secs_f64() * 1000.0,
+                    speedup.abs(),
+                    if speedup > 1.0 { "faster" } else { "slower" }
+                );
             }
             Err(_) => {}
         }
@@ -223,7 +258,15 @@ fn benchmark_cpu_add(a: &[f32], b: &[f32], c: &mut [f32], iterations: usize) -> 
     start.elapsed() / iterations as u32
 }
 
-fn benchmark_cpu_matmul(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize, iterations: usize) -> Duration {
+fn benchmark_cpu_matmul(
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    iterations: usize,
+) -> Duration {
     let start = Instant::now();
     for _ in 0..iterations {
         for i in 0..m {
@@ -258,7 +301,13 @@ fn benchmark_cpu_sum(a: &[f32], iterations: usize) -> Duration {
 }
 
 // Metal implementations
-fn benchmark_metal_add(metal: &MetalDevice, a: &[f32], b: &[f32], c: &mut [f32], iterations: usize) -> Duration {
+fn benchmark_metal_add(
+    metal: &MetalDevice,
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    iterations: usize,
+) -> Duration {
     // Warm up
     let _ = metal.add_f32(a, b, c);
 
@@ -269,7 +318,16 @@ fn benchmark_metal_add(metal: &MetalDevice, a: &[f32], b: &[f32], c: &mut [f32],
     start.elapsed() / iterations as u32
 }
 
-fn benchmark_metal_matmul(metal: &MetalDevice, a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize, iterations: usize) -> Duration {
+fn benchmark_metal_matmul(
+    metal: &MetalDevice,
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    iterations: usize,
+) -> Duration {
     // Warm up
     let _ = metal.matmul_f32(a, b, c, m, n, k);
 
@@ -280,7 +338,12 @@ fn benchmark_metal_matmul(metal: &MetalDevice, a: &[f32], b: &[f32], c: &mut [f3
     start.elapsed() / iterations as u32
 }
 
-fn benchmark_metal_sin(metal: &MetalDevice, a: &[f32], c: &mut [f32], iterations: usize) -> Duration {
+fn benchmark_metal_sin(
+    metal: &MetalDevice,
+    a: &[f32],
+    c: &mut [f32],
+    iterations: usize,
+) -> Duration {
     // Warm up
     let _ = metal.sin_f32(a, c);
 
@@ -304,7 +367,13 @@ fn benchmark_metal_sum(metal: &MetalDevice, a: &[f32], iterations: usize) -> Dur
 
 // MLX implementations
 #[cfg(all(target_os = "macos", feature = "mlx"))]
-fn benchmark_mlx_add(mlx: &MLXOps, a: &[f32], b: &[f32], c: &mut [f32], iterations: usize) -> Duration {
+fn benchmark_mlx_add(
+    mlx: &MLXOps,
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    iterations: usize,
+) -> Duration {
     // Warm up
     let _ = mlx.add_f32(a, b, c);
 
@@ -316,7 +385,16 @@ fn benchmark_mlx_add(mlx: &MLXOps, a: &[f32], b: &[f32], c: &mut [f32], iteratio
 }
 
 #[cfg(all(target_os = "macos", feature = "mlx"))]
-fn benchmark_mlx_matmul(mlx: &MLXOps, a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize, iterations: usize) -> Duration {
+fn benchmark_mlx_matmul(
+    mlx: &MLXOps,
+    a: &[f32],
+    b: &[f32],
+    c: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+    iterations: usize,
+) -> Duration {
     // Warm up
     let _ = mlx.matmul_f32(a, b, c, m, n, k);
 
