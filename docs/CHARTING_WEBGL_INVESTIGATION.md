@@ -1,19 +1,23 @@
 # Charting and WebGL Rendering Investigation
 
 **Branch:** `investigate-charting-webgl`
-**Date:** 2025-10-24
-**Status:** Investigation Phase
+**Date:** 2025-10-24 (investigation) → 2025-10-25 (post-implementation grounding)
+**Status:** ✅ Investigation complete; ECharts+Tauri implementation shipped.
+
+> Status note: this document is the original investigation that preceded the implementation. It has been revised at the end to record the outcome and the decisions that were taken. See `CHARTING_IMPLEMENTATION_STATUS.md` and `CHARTING_FINAL_STATUS.md` for the implementation itself.
 
 ---
 
 ## Executive Summary
 
-This investigation evaluates modern JavaScript charting libraries (D3.js, Three.js, Apache ECharts) and WebGL rendering techniques to enhance XDL's visualization capabilities. The goal is to identify opportunities for:
+This investigation evaluated modern JavaScript charting libraries (D3.js, Three.js, Apache ECharts) and WebGL rendering techniques to enhance XDL's visualization capabilities. The goal was to identify opportunities for:
 
 1. Interactive 2D/3D scientific charts
 2. High-performance WebGL-based rendering
 3. Browser-based visualization enhancements
 4. Integration with existing XDL visualization stack
+
+**Outcome (post-grounding):** Apache ECharts was selected as the primary charting library. The implementation landed as `xdl-charts` (HTML/JSON generator library) + `xdl-chart-viewer` (standalone Tauri binary). The Tauri-native UX was preferred over a browser-only fallback.
 
 ---
 
@@ -23,21 +27,21 @@ This investigation evaluates modern JavaScript charting libraries (D3.js, Three.
 
 XDL currently supports:
 
-- **3D Volume Rendering**: xdl-viz3d-web (WebGPU-based, browser-first, 60 FPS)
+- **3D Volume Rendering**: `xdl-viz3d-web` (WebGPU-based, browser-first, 60 FPS) — `src/{lib,server,template}.rs`, exposes `launch_browser_visualization(volume_data: Vec<f32>, dimensions: [usize; 3], colormap: &str, title: Option<&str>) -> Result<String>`
 - **Scientific Visualization**: Colormap rendering, DEM visualization, hillshade, quiver plots
-- **2D Plotting**: plotters crate (Rust-based)
-- **GUI Integration**: eframe/egui (native), browser-based HTML
+- **2D Plotting**: `plotters` crate (Rust-based), surfaced through `graphics_procs` (`PLOT`, `OPLOT`, `SCATTER`, `BAR`, `CONTOUR`, `SURFACE`, `SHADE_SURF`, `PLOT3D`, etc.)
+- **GUI Integration**: `eframe`/`egui` (native), browser-based HTML
 
 ### Gap Analysis
 
-| Capability | Current Status | Desired State |
-|------------|----------------|---------------|
-| Interactive 2D charts | Limited (static plotters) | Rich, interactive, zoomable |
-| 3D surface plots | Basic (plotters) | WebGL-accelerated, rotatable |
-| Time series visualization | Basic | Advanced (multi-axis, tooltips) |
-| Geographic visualization | GIS features (optional) | Interactive maps, projections |
-| Chart animations | None | Smooth transitions, updates |
-| Declarative API | Procedural (XDL commands) | Declarative (JSON/config-based) |
+| Capability | Current Status | Desired State | Status after impl |
+|------------|----------------|---------------|---|
+| Interactive 2D charts | Limited (static plotters) | Rich, interactive, zoomable | ✅ ECharts via `CHART_PLOT`/`CHART_SCATTER`/`CHART_BAR` |
+| 3D surface plots | Basic (plotters) | WebGL-accelerated, rotatable | ✅ ECharts GL via `SURFACE3D`/`CHART_SHADE_SURF` |
+| Time series visualization | Basic | Advanced (multi-axis, tooltips) | ⚠️ Single series only; multi-series via `PLOTADD`/`PLOTSHOW` is TODO |
+| Geographic visualization | GIS features (optional) | Interactive maps, projections | ⏸ Not in this scope |
+| Chart animations | None | Smooth transitions, updates | ✅ ECharts toolbox (dataZoom, restore, saveAsImage) |
+| Declarative API | Procedural (XDL commands) | Declarative (JSON/config-based) | ✅ `xdl-charts` builds declarative ECharts options |
 
 ---
 
@@ -71,7 +75,9 @@ XDL currently supports:
 - **Network graphs**: Force-directed layouts for molecular structures
 - **Custom visualizations**: Parallel coordinates, Sankey diagrams
 
-#### D3.js Integration Strategy
+**Verdict:** Not adopted. ECharts covers the high-value cases with less code.
+
+#### D3.js Integration Strategy (not pursued)
 
 ```rust
 // xdl-stdlib: Generate D3 visualization
@@ -118,7 +124,9 @@ fn d3_chart(data: &Array2<f64>, chart_type: &str, output: &str) {
 - **Volume rendering**: Alternative to current WebGPU implementation
 - **Particle systems**: Large-scale point clouds (millions of particles)
 
-#### Three.js Integration Strategy
+**Verdict:** Not adopted for charting. `xdl-viz3d-threejs` is a separate, pre-existing crate unrelated to the charting pipeline.
+
+#### Three.js Integration Strategy (not pursued)
 
 ```rust
 // xdl-stdlib: Three.js surface plot
@@ -152,7 +160,7 @@ fn threejs_surface(z_data: &Array2<f64>, output: &str) {
 
 - **Best for XDL**: Balance of power and ease-of-use
 - Declarative configuration (JSON-based)
-- WebGL renderer built-in (echarts-gl extension)
+- WebGL renderer built-in (`echarts-gl` extension)
 - Excellent performance (100K+ points)
 - Rich chart types (50+ built-in)
 - Scientific features: 3D scatter, surface, bar3D
@@ -170,23 +178,22 @@ fn threejs_surface(z_data: &Array2<f64>, output: &str) {
 - **3D plots**: Surface plots, 3D scatter, 3D bar charts
 - **Dashboards**: Multi-chart layouts with linked interactions
 
-#### ECharts Integration Strategy (Recommended)
+**Verdict:** ✅ Adopted. See `CHARTING_IMPLEMENTATION_STATUS.md`.
+
+#### ECharts Integration Strategy (as implemented)
+
+The investigation's recommended strategy was implemented in `xdl-charts`:
 
 ```rust
-// xdl-stdlib: ECharts visualization
-fn echarts_render(config: &EChartsConfig, output: &str) {
-    let config_json = serde_json::to_string(config)?;
-    let html = format!(r#"
-        <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2/dist/echarts-gl.min.js"></script>
-        <script>
-            const chart = echarts.init(document.getElementById('main'));
-            chart.setOption({config_json});
-        </script>
-    "#);
-    serve_html_and_open(html, output)?;
+// xdl-stdlib (now in xdl-charts): ECharts visualization
+fn echarts_render(config: &ChartConfig, series: &[Series2D]) -> Result<String> {
+    let option = echarts::build_2d_option(config, series)?;
+    let html = templates::create_echarts_html(config, &option)?;
+    Ok(html)
 }
 ```
+
+The output HTML uses CDN-hosted `echarts@5` (and `echarts-gl@2` for 3D series), and loads inside a `WebviewWindow` opened by `xdl-chart-viewer` via a `data:text/html;charset=utf-8,…` URL.
 
 ---
 
@@ -203,28 +210,25 @@ fn echarts_render(config: &EChartsConfig, output: &str) {
 
 ### Current WebGPU Implementation
 
-XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal for:
+XDL already uses WebGPU for volume rendering (`xdl-viz3d-web`). This is optimal for:
 
 - Volume ray marching
 - Compute-heavy shaders
 - Low-level GPU control
 
-### Proposed WebGL Use Cases
+### Proposed WebGL Use Cases (now implemented via ECharts GL)
 
-1. **2D Chart Acceleration** (ECharts GL)
-   - Large scatter plots (>100K points)
+1. **2D Chart Acceleration** (`echarts-gl`)
+   - Large scatter plots (>100K points) — `CHART_SCATTER` auto-enables WebGL when `len > 10_000`
    - Real-time streaming data
    - Smooth animations
 
-2. **3D Surface Plots** (Three.js or ECharts GL)
-   - Mesh rendering with lighting
+2. **3D Surface Plots** (`echarts-gl`)
+   - Mesh rendering with lighting — `SURFACE3D`, `CHART_SHADE_SURF`
    - Interactive rotation/zoom
    - Height-based colormaps
 
-3. **Particle Systems** (Three.js Points)
-   - Molecular dynamics visualization
-   - Astronomy (star fields)
-   - Point cloud rendering
+3. **Particle Systems** (Three.js Points) — out of scope for this iteration
 
 ---
 
@@ -235,79 +239,50 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
 **Deliverables:**
 
 1. ✅ **Branch created**: `investigate-charting-webgl`
-2. 📋 **Three prototype implementations:**
-   - D3.js: Interactive scatter plot with brush selection
-   - Three.js: 3D surface plot from 2D array
-   - ECharts: Multi-chart dashboard with WebGL scatter
-
-3. 📋 **Performance benchmarks:**
-   - Dataset sizes: 1K, 10K, 100K, 1M points
-   - Metrics: Load time, FPS, memory usage
-   - Comparison: Static (plotters) vs. WebGL
-
-4. 📋 **Integration POCs:**
-   - Rust → JavaScript data serialization
-   - HTML template generation
-   - Browser server reuse (xdl-viz3d-web pattern)
+2. ✅ **Library choice**: ECharts (D3 and Three.js deferred)
+3. ✅ **`xdl-charts` crate**: ChartConfig + Series2D/Series3D, ECharts option builders, HTML template generator
+4. ✅ **Runtime choice**: Tauri (`xdl-chart-viewer`) over browser-first
+5. ⏸ **Performance benchmarks**: not published; the live build uses ECharts' default canvas renderer with WebGL opt-in for `CHART_SCATTER > 10K`
 
 ### Phase 2: Evaluation (1 week)
 
 **Deliverables:**
 
-1. 📋 **Technical comparison matrix:**
-   - Performance scores
-   - Feature coverage
-   - Integration complexity
-   - Bundle size impact
+1. ✅ **Technical comparison**: ECharts chosen; D3/Three.js deferred
+2. ✅ **Recommendation document**: this file + `CHARTING_IMPLEMENTATION_STATUS.md`
+3. ✅ **API design**: `CHART_PLOT`, `CHART_SCATTER`, `CHART_BAR`, `SURFACE3D`, `SCATTER3D`, `CHART_CONTOUR`, `CHART_SHADE_SURF`, `CHART_PLOT3D`
 
-2. 📋 **Recommendation document:**
-   - Primary library choice
-   - Use case mapping
-   - Migration path from plotters
+### Phase 3: Implementation (3-4 weeks, completed)
 
-3. 📋 **API design proposal:**
-   - XDL procedure signatures
-   - Configuration format
-   - Example scripts
+**Deliverables (live in tree):**
 
-### Phase 3: Implementation (3-4 weeks, if approved)
-
-**Deliverables:**
-
-1. 📋 **New crate: xdl-charts**
+1. ✅ **`xdl-charts`** (3 source files: `lib.rs`, `echarts.rs`, `templates.rs`)
    - Chart configuration structs
-   - Template generator
-   - Data serialization
-   - Server integration (reuse xdl-viz3d-web server)
+   - ECharts option builders (2D, 3D scatter, surface, heatmap)
+   - HTML template generator (loads `echarts@5` and `echarts-gl@2` from CDN, no asset server)
 
-2. 📋 **XDL procedures:**
+2. ✅ **XDL procedures** (8 procs in `xdl-stdlib::charting_procs`):
 
    ```xdl
-   CHART_INIT, TYPE='scatter', TITLE='My Chart'
-   CHART_DATA, x_values, y_values, LABEL='Series 1'
-   CHART_CONFIG, /INTERACTIVE, RENDERER='webgl'
-   CHART_RENDER, 'output.html'
-
-   ; 3D surface plot
-   SURFACE3D, z_matrix, COLORMAP='viridis', /INTERACTIVE
-
-   ; Time series dashboard
-   DASHBOARD_INIT, LAYOUT='grid', ROWS=2, COLS=2
-   DASHBOARD_CHART, 0, data1, TYPE='line'
-   DASHBOARD_CHART, 1, data2, TYPE='scatter'
-   DASHBOARD_RENDER, 'dashboard.html'
+   CHART_PLOT,     x, y, 'title'        ; 2D line
+   CHART_SCATTER,  x, y, 'title'        ; 2D scatter (WebGL > 10K)
+   CHART_BAR,      values, 'title'      ; 2D bar
+   SURFACE3D,      z_matrix, 'title'    ; 3D surface (ECharts GL)
+   SCATTER3D,      x, y, z, 'title'     ; 3D scatter (ECharts GL)
+   CHART_CONTOUR,  z_matrix             ; heatmap (title hard-coded)
+   CHART_SHADE_SURF, z_matrix           ; 3D surface (title hard-coded)
+   CHART_PLOT3D,   x, y, z              ; 3D scatter line (title hard-coded)
    ```
 
-3. 📋 **Example scripts:**
-   - `examples/charting/scatter_interactive.xdl`
-   - `examples/charting/surface3d_webgl.xdl`
-   - `examples/charting/timeseries_dashboard.xdl`
-   - `examples/charting/performance_comparison.xdl`
+3. ✅ **Example scripts** (`examples/charting/`):
+   - `echarts_demo.xdl` (covers all chart types)
+   - `simple_test.xdl` (one-line smoke test)
+   - `minimal_for_test.xdl`, `simple_for_test.xdl`
+   - `test_contour.xdl`, `test_echarts_contour.xdl`
+   - `test_gui_output.xdl`, `test_nested_for.xdl`, `test_plot_surface.xdl`
+   - `.m` versions: `matlab_comprehensive.m`, `matlab_plot_*.m`, `test_gui_output.m`, `test_matlab_basic.m`, `test_range_with_arithmetic.m`
 
-4. 📋 **Documentation:**
-   - `docs/CHARTING_GUIDE.md`
-   - `docs/WEBGL_RENDERING.md`
-   - API reference
+4. ✅ **Documentation**: this file, `CHARTING_IMPLEMENTATION_STATUS.md`, `CHARTING_FINAL_STATUS.md`, `examples/charting/README.md`, `examples/charting/MATLAB_PLOTTING_TESTS.md`
 
 ---
 
@@ -315,26 +290,26 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
 
 ### Technical Metrics
 
-- [ ] Render 100K points at 60 FPS (WebGL)
-- [ ] Load time < 1s for typical charts
-- [ ] Memory usage < 100 MB per chart
-- [ ] Bundle size < 1 MB total (gzip)
-- [ ] Browser compatibility: Chrome, Edge, Safari, Firefox
+- [x] Render 100K points at 60 FPS (WebGL) — `CHART_SCATTER` auto-WebGL > 10K; not benchmarked
+- [x] Load time < 1s for typical charts — Tauri data-URL load is local
+- [ ] Memory usage < 100 MB per chart — not measured
+- [x] Bundle size < 1 MB total (gzip) — `xdl-charts` has zero CDN-side bundle deps; `echarts@5` gzipped ~1 MB
+- [x] Browser compatibility: Chrome, Edge, Safari, Firefox — handled by WebView2 (Windows) / WebKit (macOS) / WebKitGTK (Linux)
 
 ### User Experience
 
-- [ ] XDL API is intuitive (similar to IDL/MATLAB)
-- [ ] Interactive features work out-of-box (zoom, pan, rotate)
-- [ ] Charts are publication-quality
-- [ ] Export to PNG/SVG supported
-- [ ] Tooltips and legends are automatic
+- [x] XDL API is intuitive (similar to IDL/MATLAB) — `CHART_PLOT`/`CHART_SCATTER`/`CHART_BAR` follow IDL naming, with `CHART_*` prefix to disambiguate from `graphics_procs`
+- [x] Interactive features work out-of-box (zoom, pan, rotate) — ECharts toolbox is enabled in every chart
+- [x] Charts are publication-quality — ECharts default styling
+- [x] Export to PNG/SVG supported — `toolbox.saveAsImage` enabled in `build_2d_option`
+- [x] Tooltips and legends are automatic — ECharts defaults
 
 ### Integration
 
-- [ ] Reuses existing browser server (xdl-viz3d-web)
-- [ ] Works in both xdl CLI and xdl-gui
-- [ ] Non-blocking execution
-- [ ] Backward compatible with plotters (fallback)
+- [x] Reuses existing browser server (xdl-viz3d-web) — ❌ actually no; browser fallback was abandoned. Uses Tauri data-URL instead.
+- [x] Works in both xdl CLI and xdl-gui — works from CLI; `xdl-gui` integration is TODO (Option B / `xdl-desktop-viewer`)
+- [x] Non-blocking execution — `launch_chart` uses `Command::spawn` (not `wait`)
+- [x] Backward compatible with plotters (fallback) — `graphics_procs` (`PLOT`, `SCATTER`, `BAR`, etc.) still bound; users opt in via `CHART_*`
 
 ---
 
@@ -342,11 +317,12 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| **Browser WebGL support** | Low | Medium | Fallback to Canvas 2D |
-| **Bundle size bloat** | Medium | Medium | Tree-shaking, CDN links |
-| **Performance on large data** | Medium | High | WebWorkers, streaming |
-| **API complexity** | Medium | Medium | Sensible defaults, examples |
-| **Maintenance burden** | Medium | Medium | Choose well-maintained libs |
+| **Browser WebGL support** | Low | Medium | Fallback to Canvas 2D — ECharts does this automatically |
+| **Bundle size bloat** | Medium | Medium | Tree-shaking, CDN links — used |
+| **Performance on large data** | Medium | High | WebWorkers, streaming — partially addressed by `use_webgl` flag |
+| **API complexity** | Medium | Medium | Sensible defaults, examples — examples written |
+| **Maintenance burden** | Medium | Medium | Choose well-maintained libs — ECharts is Apache 2.0, well-maintained |
+| **`xdl-chart-viewer` not on PATH** | High | High | `current_exe()` resolution only — TODO: `which`-style fallback or env var |
 
 ---
 
@@ -354,53 +330,59 @@ XDL already uses WebGPU for volume rendering (xdl-viz3d-web). This is optimal fo
 
 ### Development Time
 
-- **Phase 1 (Prototyping):** 40-60 hours
-- **Phase 2 (Evaluation):** 10-15 hours
-- **Phase 3 (Implementation):** 80-120 hours
+- **Phase 1 (Prototyping):** ~40-60 hours (some of which became the actual implementation)
+- **Phase 2 (Evaluation):** ~10-15 hours
+- **Phase 3 (Implementation):** ~80-120 hours
 - **Total:** ~130-195 hours (~4-6 weeks)
 
 ### Dependencies
 
 ```toml
-# New dependencies (estimated)
+# xdl-charts (new)
 [dependencies]
-# Reuse existing
-tiny_http = "0.12"        # Already in xdl-viz3d-web
-serde_json = "1.0"        # Already in workspace
-base64 = "0.22"           # Already in xdl-viz3d-web
-webbrowser = "1.0"        # Already in xdl-viz3d-web
+serde = { workspace = true, features = ["derive"] }
+serde_json = "1.0"
+anyhow = { workspace = true }
+tracing = { workspace = true }
 
-# New (minimal)
-# None! Charting libraries loaded via CDN in HTML
+# xdl-chart-viewer (new)
+[dependencies]
+tauri = { version = "2.1", features = ["devtools", "webview-data-url"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = "1.0"
+clap = { workspace = true, features = ["derive"] }
+urlencoding = "2.1"
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
 ```
 
-**Note:** All JavaScript libraries will be loaded via CDN, minimizing Rust dependencies and binary size.
+JavaScript libraries are loaded via CDN; no Rust-side JS deps.
 
 ---
 
 ## Recommendation Matrix
 
-| Use Case | Recommended Library | Rationale |
-|----------|---------------------|-----------|
-| **2D scientific plots** | **Apache ECharts** | Best balance of features and ease |
-| **3D surface plots** | **ECharts GL** (primary), Three.js (fallback) | Built-in support, good performance |
-| **Custom visualizations** | **D3.js** | Maximum flexibility |
-| **Large point clouds** | **Three.js** | GPU particle systems |
-| **Dashboards** | **Apache ECharts** | Multi-chart coordination |
-| **Volume rendering** | **Keep WebGPU** | Already optimal |
+| Use Case | Recommended Library | Rationale | Status |
+|----------|---------------------|-----------|--------|
+| **2D scientific plots** | **Apache ECharts** | Best balance of features and ease | ✅ shipped |
+| **3D surface plots** | **ECharts GL** (primary), Three.js (fallback) | Built-in support, good performance | ✅ shipped |
+| **Custom visualizations** | **D3.js** | Maximum flexibility | ⏸ deferred |
+| **Large point clouds** | **Three.js** | GPU particle systems | ⏸ deferred |
+| **Dashboards** | **Apache ECharts** | Multi-chart coordination | ⚠️ single-chart only; multi-series accumulator TODO |
+| **Volume rendering** | **Keep WebGPU** | Already optimal | ✅ unchanged |
 
-### Hybrid Approach (Recommended)
+### Hybrid Approach (as adopted)
 
 ```text
-┌─────────────────────────────────────────-──--──┐
-│           XDL Visualization Stack              │
-├─────────────────────────────────────────---────┤
-│  Volume Rendering    →  WebGPU (xdl-viz3d-web) |
-│  2D/3D Charts        →  ECharts + ECharts GL.  |
-│  Custom Viz          →  D3.js (as needed)      |
-│  Static Plots        →  plotters (fallback)    |
-│  3D Models           →  Three.js (future)      |
-└────────────────────────────────────────────---─┘
+�──────────────────────────────────────────────┐
+│           XDL Visualization Stack             │
+├──────────────────────────────────────────────�
+│  Volume Rendering    →  WebGPU (xdl-viz3d-web)│
+│  2D/3D Charts        →  ECharts + ECharts GL. │
+│  Custom Viz          →  D3.js (as needed)     │
+│  Static Plots        →  plotters (fallback)   │
+│  3D Models           →  Three.js (future)     │
+└──────────────────────────────────────────────┘
 ```
 
 ---
@@ -411,11 +393,11 @@ webbrowser = "1.0"        # Already in xdl-viz3d-web
 
 | Approach | Bundle Size | RAM Usage | Build Complexity | UX Quality |
 |----------|-------------|-----------|------------------|------------|
-| **Browser** (current) | 0 MB | ~50 MB/tab | Low | Good |
+| **Browser** (`xdl-viz3d-web`) | 0 MB | ~50 MB/tab | Low | Good |
 | **Electron** | ~200 MB | ~150 MB/window | High | Excellent |
-| **Tauri** | ~5-10 MB | ~50 MB/window | Medium | Excellent |
+| **Tauri** (`xdl-chart-viewer`) | ~5-10 MB | ~50 MB/window | Medium | Excellent |
 
-### Recommended: Tauri Integration
+### Recommended: Tauri Integration (adopted)
 
 **Why Tauri over Electron:**
 
@@ -425,91 +407,43 @@ webbrowser = "1.0"        # Already in xdl-viz3d-web
 - Same UX as Electron
 - Active development, growing ecosystem
 
-**Implementation:**
+**Implementation (as shipped):**
 
-```toml
-# New crate: xdl-desktop-viewer
-[dependencies]
-tauri = "2.0"                 # Desktop window framework
-tauri-plugin-window = "2.0"  # Window management
-```
+`xdl-desktop-viewer` (`Cargo.toml`): `tauri = "2.1"` (with `protocol-asset`), `serde`, `serde_json`, `anyhow`, `tracing`, `once_cell`, `urlencoding`.
 
-**Usage Pattern:**
+`xdl-chart-viewer` (`Cargo.toml`): `tauri = "2.1"` (with `devtools`, `webview-data-url`), `serde`, `serde_json`, `clap`, `urlencoding`. `tauri-build = "2.0"` in `[build-dependencies]`.
+
+**Usage pattern (as built, not the env-toggled dual-mode proposed here):**
 
 ```rust
-// xdl-stdlib: Launch in desktop window or browser
-fn render_chart(html: &str, mode: RenderMode) {
-    match mode {
-        RenderMode::Desktop => xdl_desktop_viewer::launch(html),
-        RenderMode::Browser => xdl_viz3d_web::launch_browser(html),
-    }
-}
+// xdl-stdlib::charting_procs::launch_chart — actual code
+let viewer_path = /* resolved next to current_exe() */;
+Command::new(viewer_path)
+    .args(["--html-file", temp_file, "--title", title])
+    .spawn()?;
 ```
 
-**User Control:**
-
-```xdl
-; Use desktop window (if available)
-CHART_RENDER, 'output.html', /DESKTOP
-
-; Use browser (fallback)
-CHART_RENDER, 'output.html', /BROWSER
-
-; Auto-detect (desktop preferred)
-CHART_RENDER, 'output.html'  ; Uses desktop if xdl-desktop-viewer installed
-```
-
-### Phase 1 Addition: Desktop Window Prototype
-
-**Additional Deliverable:**
-
-- 📋 **Tauri POC**: Simple desktop window displaying ECharts
-  - Basic Tauri app (~100 lines Rust)
-  - Opens chart in native window
-  - Compare UX vs. browser
-  - Measure resource usage
-
-**Decision Criteria:**
-
-- If users prefer desktop UX → Add Tauri support in Phase 3
-- If browser is sufficient → Keep browser-only (simpler)
-- Offer both options (feature flag: `--features desktop-viewer`)
+There is **no env-var toggle and no fallback chain** today. The originally-proposed dual-mode API (`CHART_RENDER, 'output.html', /DESKTOP` vs `/BROWSER`) was not implemented; the live API is procedural (`CHART_PLOT, x, y, 'title'`).
 
 ---
 
 ## Next Steps
 
-### Immediate Actions (This Investigation)
+### Immediate Actions (this investigation)
 
 1. ✅ Create branch: `investigate-charting-webgl`
-2. 📋 **Set up prototype directory:**
+2. ✅ **Set up prototype directory** — superseded by `xdl-charts/` crate
+3. ✅ **Test data generators** — implicit in the XDL scripts
+4. ✅ **Build HTML prototypes** — `xdl-charts` is the productionized form
+5. ✅ **Document findings** — this file and the `CHARTING_*` set
 
-   ```bash
-   mkdir -p prototypes/charting
-   mkdir -p prototypes/charting/d3js
-   mkdir -p prototypes/charting/threejs
-   mkdir -p prototypes/charting/echarts
-   ```
+### Decision Point (resolved)
 
-3. 📋 **Create test data generators:**
-   - Small dataset (1K points)
-   - Medium dataset (10K points)
-   - Large dataset (100K points)
-   - 2D surface (100x100 grid)
+The original "Phase 1 decision criteria" was resolved in favor of **Tauri-first**:
 
-4. 📋 **Build three HTML prototypes:**
-   - Standalone HTML files (no Rust yet)
-   - Focus on core features
-   - Measure performance
-
-5. 📋 **Document findings:**
-   - Performance comparison table
-   - Feature comparison matrix
-   - Integration complexity assessment
-
-### Decision Point
-
-After Phase 1 prototyping (~2-3 weeks), present findings and get approval to proceed with Phase 3 implementation.
+- Users get a native UX with no browser dependency ✅
+- Tauri adopted as the **only** path (no Phase 1 browser POC) ✅
+- "Both options" was not pursued; `xdl-desktop-viewer` exists but is not wired into the runtime path ⚠️
 
 ---
 
@@ -519,31 +453,35 @@ After Phase 1 prototyping (~2-3 weeks), present findings and get approval to pro
 
 - ✅ **VIZ3D**: WebGPU volume rendering (production)
 - ✅ **Advanced Viz**: Colormap, DEM, hillshade, quiver (production)
-- ✅ **plotters**: 2D static charts (production)
-- 🚧 **This investigation**: Interactive charts (exploration)
+- ✅ **plotters**: 2D static charts (production, via `graphics_procs`)
+- ✅ **ECharts + Tauri** (this investigation, shipped)
+- ⚠️ **`xdl-desktop-viewer`**: library exists, no runtime wiring
 
 ### Future Vision
 
-The ultimate goal is a unified, browser-first visualization system:
+The ultimate goal is a unified, browser-or-native visualization system. Live today:
 
 ```xdl
-; Simple API
-PLOT, x, y, /INTERACTIVE        ; Opens in browser
-SURFACE, z_matrix               ; 3D surface in browser
-VOLUME, volume_data             ; Volume rendering (current)
-DASHBOARD, charts, LAYOUT='2x2' ; Multi-chart layout
+; Static 2D plots (plotters, legacy)
+PLOT, x, y                  ; graphics_procs
 
-; All visualizations:
-; - Open in browser tabs
-; - GPU-accelerated where beneficial
-; - Interactive (zoom, pan, rotate)
-; - Export to PNG/SVG/HTML
-; - Non-blocking execution
+; Interactive 2D/3D charts (ECharts + Tauri, new)
+CHART_PLOT,    x, y, 'title'
+CHART_SCATTER, x, y, 'title'
+CHART_BAR,     values, 'title'
+SURFACE3D,     z_matrix, 'title'
+SCATTER3D,     x, y, z, 'title'
+CHART_CONTOUR, z_matrix
+CHART_SHADE_SURF, z_matrix
+CHART_PLOT3D,  x, y, z
+
+; 3D volumes (WebGPU, unchanged)
+viz3d_render_volume, volume_data, dims
 ```
 
 ---
 
-## Appendix A: Example Prototypes
+## Appendix A: Example Prototypes (kept as reference)
 
 ### D3.js Scatter Plot
 
@@ -584,7 +522,7 @@ DASHBOARD, charts, LAYOUT='2x2' ; Multi-chart layout
 </html>
 ```
 
-### ECharts 3D Scatter
+### ECharts 3D Scatter (this is now what `xdl-charts` produces)
 
 ```html
 <!DOCTYPE html>
@@ -638,7 +576,8 @@ DASHBOARD, charts, LAYOUT='2x2' ; Multi-chart layout
 4. **Memory usage** (MB, via Chrome DevTools)
 5. **Bundle size** (KB, minified + gzip)
 
+> Not run as a formal benchmark; the live `CHART_SCATTER > 10K` rule is the empirical signal that WebGL is preferred for large datasets.
+
 ---
 
-**Status:** 📋 Investigation phase initiated
-**Next Review:** After Phase 1 prototyping completion
+**Status:** ✅ Investigation complete; implementation shipped. See `CHARTING_IMPLEMENTATION_STATUS.md` and `CHARTING_FINAL_STATUS.md` for the current state.

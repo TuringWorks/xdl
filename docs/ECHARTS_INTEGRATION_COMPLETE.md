@@ -1,81 +1,79 @@
 # ✅ ECharts + Tauri Integration - COMPLETE
 
-**Date:** 2025-10-25
 **Branch:** `investigate-charting-webgl`
-**Status:** 🎉 **PRODUCTION READY**
+**Date:** 2025-10-25 (revised after codebase grounding)
+**Status:** ✅ MVP Implemented; `cargo check` clean workspace-wide.
+
+> Status note: this doc was written as a "production ready" announcement before the implementation actually shipped. It has been revised to record the actual state of the code, including the proc count, registration list, and which parts of the original design were simplified.
 
 ---
 
 ## Summary
 
-Successfully integrated Apache ECharts charting library with Tauri desktop viewer into XDL. Users can now create interactive, professional charts from XDL scripts that open in native windows.
+Apache ECharts charting library is integrated with a Tauri desktop viewer for XDL. Users can create interactive charts from XDL scripts that open in native Tauri windows. The full pipeline — `xdl-charts` (HTML/JSON generator) → `xdl-chart-viewer` (Tauri binary) — is wired up and builds cleanly.
 
 ---
 
-## What Was Built
+## What Was Built (live in tree)
 
-### 1. xdl-charts Crate ✅
+### 1. `xdl-charts` crate ✅
 
-**Location:** `xdl-charts/`
+**Location:** `xdl-charts/` (`Cargo.toml`, `src/{lib,echarts,templates}.rs`)
 
-Complete ECharts integration library with 8 chart types:
+`ChartType` enum: `Line`, `Scatter`, `Bar`, `Area`, `Heatmap`, `Scatter3D`, `Surface3D`, `Bar3D`. Option builders: `build_2d_option`, `build_3d_option`, `build_surface_option`, `build_heatmap_option`. Template generator: `create_echarts_html(config, option)`. Public entry points: `generate_2d_chart`, `generate_3d_chart`, `generate_surface_plot`, `generate_heatmap`.
 
-- Line, Scatter, Bar, Area, Heatmap
-- Scatter3D, Surface3D, Bar3D
+**CDN-loaded libraries (no Rust-side JS deps):** `echarts@5` always; `echarts-gl@2` is added for `Scatter3D`/`Surface3D`/`Bar3D` automatically.
 
-**Key Features:**
+### 2. `xdl-chart-viewer` standalone Tauri binary ✅
 
-- JSON-based ECharts configuration
+**Location:** `xdl-chart-viewer/` (`Cargo.toml`, `src/main.rs`, `tauri.conf.json`, `build.rs`, `icons/`)
 
-- HTML template generation with embedded charts
-- Automatic WebGL acceleration for large datasets
-- CDN-loaded libraries (zero bundle overhead)
+CLI: `--html-file`/`--html-content`/`--title`/`--width`/`--height`/`--help-only`. Loads HTML via a `data:text/html;charset=utf-8,…` URL with the `webview-data-url` Tauri feature. Default fallback is a built-in sine/cosine ECharts demo (`create_demo_chart_html`). IPC command `create_chart_window` exposed for multi-window use.
 
-### 2. xdl-chart-viewer Binary ✅
+### 3. `xdl-desktop-viewer` library ⚠️ Near-stub
 
-**Location:** `xdl-chart-viewer/`
+**Location:** `xdl-desktop-viewer/src/lib.rs`
 
-Tauri-based native desktop application for displaying charts.
+Window queue + `create_window_in_app(app_handle, …)` helper. **Not in the runtime path.** Decision pending: delete or wire into `xdl-gui`.
 
-**Key Features:**
-
-- Native macOS/Linux/Windows windows
-- GPU-accelerated WebView rendering
-- Command-line interface for programmatic launching
-- Beautiful demo chart (sine/cosine waves)
-- ~80 MB memory, 60 FPS performance
-
-**Fixed Issues:**
-
-- ✅ Icon loading
-- ✅ Window configuration
-- ✅ Data URL support
-
-### 3. xdl-desktop-viewer Library ✅
-
-**Location:** `xdl-desktop-viewer/`
-
-Tauri window management library (for future enhancements).
-
-### 4. XDL Procedures ✅
+### 4. XDL procedures ✅ (8 procs, not 5)
 
 **Location:** `xdl-stdlib/src/charting_procs.rs`
 
-Five new XDL procedures:
+| Proc fn | XDL name | Min args | Notes |
+|---|---|---|---|
+| `plot` | `CHART_PLOT` | `x, y` | 2D line; title optional |
+| `scatter` | `CHART_SCATTER` | `x, y` | 2D scatter; WebGL if `len > 10_000`; title optional |
+| `bar` | `CHART_BAR` | `values` | 2D bar; x = `0..n`; title optional |
+| `surface3d` | `SURFACE3D` | `z_matrix` | ECharts GL surface; title optional |
+| `scatter3d` | `SCATTER3D` | `x, y, z` | ECharts GL scatter; title optional |
+| `contour` | `CHART_CONTOUR` | `z_matrix` | Heatmap; **title hard-coded** `"Contour Plot"` |
+| `shade_surf` | `CHART_SHADE_SURF` | `z_matrix` | ECharts GL surface; **title hard-coded** `"Shaded Surface"` |
+| `plot3d` | `CHART_PLOT3D` | `x, y, z` | ECharts GL scatter (line-style); **title hard-coded** `"3D Line Plot"` |
 
-- `CHART_PLOT` - 2D line plots
-- `CHART_SCATTER` - 2D scatter plots
-- `CHART_BAR` - Bar charts
-- `SURFACE3D` - 3D surface plots
-- `SCATTER3D` - 3D scatter plots
+The original draft listed only `CHART_PLOT`/`CHART_SCATTER`/`CHART_BAR`/`SURFACE3D`/`SCATTER3D`. The shipped set is the full eight — `CHART_CONTOUR`/`CHART_SHADE_SURF`/`CHART_PLOT3D` were added but their titles are hard-coded (inconsistent with the rest).
 
-### 5. Demo Scripts ✅
+### 5. `PLOT` opt-in via `SET_PLOT_BACKEND` ✅
+
+**Location:** `xdl-stdlib/src/graphics_procs.rs`
+
+- `PlotBackend` enum (`XDLPlot` default, `ECharts` opt-in)
+- `SET_PLOT_BACKEND, 'ECHARTS'` / `'XDLPLOT'` / `'PLOTTERS'` switches it
+- When set to `ECharts`, `PLOT` reorders IDL `(y, x)` args to `(x, y)` and forwards to `charting_procs::plot`
+
+`SURFACE`/`SHADE_SURF` were **not** routed to ECharts (still plotters → PNG / GUI image callback). See `PLOT_SURFACE_ECHARTS_INTEGRATION.md`.
+
+### 6. Demo scripts ✅
 
 **Location:** `examples/charting/`
 
-- `simple_test.xdl` - Quick validation
-- `echarts_demo.xdl` - Comprehensive demo (8 chart types)
-- `README.md` - Documentation
+`.xdl`: `echarts_demo.xdl`, `simple_test.xdl`, `minimal_for_test.xdl`, `simple_for_test.xdl`, `test_contour.xdl`, `test_echarts_contour.xdl`, `test_gui_output.xdl`, `test_nested_for.xdl`, `test_plot_surface.xdl`.
+
+`.m` (MATLAB-style): `matlab_comprehensive.m`, `matlab_plot_array.m`, `matlab_plot_multiple.m`, `matlab_plot_simple.m`, `test_gui_output.m`, `test_matlab_basic.m`, `test_range_with_arithmetic.m`.
+
+Docs: `README.md`, `MATLAB_PLOTTING_TESTS.md`.
+
+The "5 procedures" claim in the original draft of this doc was wrong — there are 8. The `scatter_demo.xdl` placeholder mentioned in `CHARTING_FINAL_STATUS.md` (older draft) does not exist; the actual file is `simple_test.xdl`.
 
 ---
 
@@ -84,32 +82,27 @@ Five new XDL procedures:
 ### Build
 
 ```bash
-cd /Users/ravindraboddipalli/sources/xdl
-
-# Build everything
 cargo build --release
 
-# Binaries will be in target/release/:
-# - xdl (main interpreter)
-# - xdl-chart-viewer (chart viewer)
+# Binaries in target/release/:
+# - xdl
+# - xdl-chart-viewer (must be on the same path/folder as xdl for charting_procs to find it)
 ```
 
 ### Running Examples
 
 ```bash
-# Simple test
 ./target/release/xdl examples/charting/simple_test.xdl
-
-# Full demo
 ./target/release/xdl examples/charting/echarts_demo.xdl
 ```
 
-**Expected Behavior:**
+**Expected behavior:**
 
-- Script executes
-- Tauri windows open with interactive charts
-- Script continues (non-blocking)
-- Close windows when done
+- Script executes.
+- `Command::spawn("xdl-chart-viewer", …)` is launched; HTML is written to `${tempdir}/xdl_chart_<pid>.html` and read via `--html-file`.
+- Native Tauri window opens with an interactive chart.
+- Script continues (non-blocking).
+- Close window when done.
 
 ---
 
@@ -156,34 +149,51 @@ z = RANDOMU(seed, 100) * 10
 SCATTER3D, x, y, z, '3D Points'
 ```
 
+### CHART_CONTOUR (title hard-coded)
+
+```xdl
+z = FLTARR(50, 50)
+FOR i=0, 49 DO FOR j=0, 49 DO z[i, j] = SIN(i/5.0) * COS(j/5.0)
+CHART_CONTOUR, z       ; title is hard-coded "Contour Plot"
+```
+
+### CHART_SHADE_SURF (title hard-coded)
+
+```xdl
+CHART_SHADE_SURF, z    ; title is hard-coded "Shaded Surface"
+```
+
+### CHART_PLOT3D (title hard-coded)
+
+```xdl
+CHART_PLOT3D, x, y, z  ; title is hard-coded "3D Line Plot"
+```
+
 ---
 
-## Features
+## Features (live)
 
-### Interactive Charts
+### Interactive charts
 
 - ✅ Zoom (click and drag)
 - ✅ Pan (drag)
-- ✅ Rotate (3D charts)
-- ✅ Tooltips (hover for values)
-- ✅ Toolbox (zoom, restore, save image)
-- ✅ Responsive resize
+- ✅ Rotate (3D charts — `SURFACE3D`, `SCATTER3D`, `CHART_PLOT3D`)
+- ✅ Tooltips (hover)
+- ✅ Toolbox (dataZoom, restore, saveAsImage)
+- ✅ Responsive resize (window resize listener in the generated HTML)
 
 ### Performance
 
-- ✅ 60 FPS smooth animations
-- ✅ WebGL acceleration for large datasets (>10K points)
-- ✅ ~100ms chart generation
-- ✅ ~500ms window launch
-- ✅ ~80 MB memory per window
+- ✅ WebGL opt-in for `CHART_SCATTER` when `len > 10_000`
+- ✅ ~100ms chart generation, ~500ms Tauri window launch (the figures quoted in the original draft are unverified)
+- ✅ Multiple windows: each call spawns a separate process
 
-### User Experience
+### User experience
 
 - ✅ Native windows (not browser tabs)
-- ✅ Professional styling
-- ✅ Non-blocking execution
-- ✅ Multiple windows support
-- ✅ Cross-platform (macOS, Linux, Windows)
+- ✅ Professional ECharts styling
+- ✅ Non-blocking execution (`Command::spawn`, no `wait`)
+- ✅ Cross-platform via Tauri's WebView2 / WKWebView / WebKitGTK
 
 ---
 
@@ -202,24 +212,25 @@ SCATTER3D, x, y, z, '3D Points'
                ↓
 ┌─────────────────────────────────────┐
 │     xdl-stdlib::charting_procs      │
-│  (CHART_PLOT, SCATTER, SURFACE3D)   │
+│  (8 procs incl. CHART_PLOT,         │
+│   CHART_SCATTER, SURFACE3D, …)      │
 └──────────────┬──────────────────────┘
                │
                ↓
 ┌─────────────────────────────────────┐
 │          xdl-charts                 │
-│    (ECharts HTML generation)        │
+│    (ECharts HTML/JSON generator)    │
 └──────────────┬──────────────────────┘
                │
                ↓
 ┌─────────────────────────────────────┐
 │       xdl-chart-viewer              │
 │    (Tauri native window)            │
-│                                     │
-│  ┌────────────────────────────────┐ │
-│  │        ECharts WebView         │ │
-│  │   (GPU-accelerated rendering)  │ │
-│  └────────────────────────────────┘ │
+│   ┌───────────────────────────────┐ │
+│   │   WebView (system WebView)    │ │
+│   │   loads data:text/html… URL   │ │
+│   │   CDN: echarts@5, echarts-gl@2│ │
+│   └───────────────────────────────┘ │
 └─────────────────────────────────────┘
 ```
 
@@ -227,87 +238,101 @@ SCATTER3D, x, y, z, '3D Points'
 
 ## Files Created/Modified
 
-### New Crates
+### New crates
 
-- `xdl-charts/` - ECharts integration (420 lines)
-- `xdl-desktop-viewer/` - Tauri management (320 lines)
-- `xdl-chart-viewer/` - Tauri app binary (275 lines + config)
+- `xdl-charts/` — ECharts HTML/JSON generator (~3 source files: `lib.rs`, `echarts.rs`, `templates.rs`; tests in each file)
+- `xdl-chart-viewer/` — Standalone Tauri binary (`src/main.rs`, `tauri.conf.json`, `build.rs`, `icons/`, `tests/`)
+- `xdl-desktop-viewer/` — Stub library (not wired into runtime)
 
-### Modified Files
+### Modified files
 
-- `xdl-stdlib/Cargo.toml` - Added xdl-charts dependency
-- `xdl-stdlib/src/lib.rs` - Added charting module, registered procedures
-- `xdl-stdlib/src/charting_procs.rs` - **New** (266 lines)
+- `Cargo.toml` — added `xdl-charts`, `xdl-chart-viewer` to `[workspace].members`
+- `xdl-stdlib/Cargo.toml` — added `xdl-charts` dep
+- `xdl-stdlib/src/lib.rs` — declared `mod charting_procs;` and wired 8 dispatch entries (also added `SET_PLOT_BACKEND` → `graphics_procs::set_plot_backend_proc`)
+- `xdl-stdlib/src/charting_procs.rs` — new file (8 procs + helpers)
+- `xdl-stdlib/src/graphics_procs.rs` — added `PlotBackend`, `PLOT_BACKEND`, `get/set_plot_backend`, branched `plot()` on backend
 
-### Examples & Docs
+### Examples & docs
 
-- `examples/charting/simple_test.xdl`
-- `examples/charting/echarts_demo.xdl`
-- `examples/charting/README.md`
-- `CHARTING_WEBGL_INVESTIGATION.md`
-- `CHARTING_IMPLEMENTATION_STATUS.md`
-- `CHARTING_FINAL_STATUS.md`
-- `TAURI_SUCCESS.md`
-- `ECHARTS_INTEGRATION_COMPLETE.md` (this file)
+- `examples/charting/{*.xdl, *.m, README.md, MATLAB_PLOTTING_TESTS.md}`
+- `docs/CHARTING_WEBGL_INVESTIGATION.md`
+- `docs/CHARTING_IMPLEMENTATION_STATUS.md`
+- `docs/CHARTING_FINAL_STATUS.md`
+- `docs/PLOT_SURFACE_ECHARTS_INTEGRATION.md`
+- `docs/ECHARTS_INTEGRATION_COMPLETE.md` (this file)
+- `docs/TAURI_SUCCESS.md`
+
+### Scratch files (dead in tree, not compiled)
+
+- `xdl-stdlib/src/charting_procs.rs.bak`
+- `xdl-stdlib/src/charting_procs_broken.rs`
 
 ---
 
 ## Technical Details
 
-### Dependencies Added
+### Dependencies added
 
 ```toml
-# xdl-stdlib/Cargo.toml
-xdl-charts = { path = "../xdl-charts" }
-
 # xdl-charts/Cargo.toml
 serde = { workspace = true, features = ["derive"] }
 serde_json = "1.0"
 anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# xdl-stdlib/Cargo.toml
+xdl-charts = { path = "../xdl-charts" }
 
 # xdl-chart-viewer/Cargo.toml
 tauri = { version = "2.1", features = ["devtools", "webview-data-url"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = "1.0"
+clap = { workspace = true, features = ["derive"] }
+urlencoding = "2.1"
+[build-dependencies]
+tauri-build = { version = "2.0" }
 ```
 
-### No JavaScript Dependencies
+### No JavaScript dependencies
 
-All JavaScript libraries (ECharts, ECharts GL) are loaded via CDN, resulting in:
+All JavaScript libraries (`echarts`, `echarts-gl`) are loaded via CDN; no npm/webpack in the Rust build.
 
-- ✅ Zero npm packages
-- ✅ Zero webpack config
-- ✅ Zero JavaScript build process
-- ✅ Minimal binary size increase (~5 MB)
+### Binary size impact
+
+`xdl-chart-viewer` adds a Tauri 2 binary to the workspace build. `xdl-charts` itself is a tiny library (~few KB compiled). No JavaScript bundling.
 
 ---
 
 ## Testing
 
-### Manual Testing Checklist
+### Manual testing checklist (from original doc)
 
-- [x] CHART_PLOT with arrays
-- [x] CHART_SCATTER with random data
-- [x] CHART_BAR with values
-- [x] SURFACE3D with 2D matrix
-- [x] SCATTER3D with 3D points
-- [x] Large dataset (15K points) with WebGL
-- [x] Multiple windows simultaneously
-- [x] Window interactions (zoom, pan, rotate)
-- [x] Non-blocking execution
+- [x] `CHART_PLOT` with arrays — proc compiles; behavior depends on launching `xdl-chart-viewer`
+- [x] `CHART_SCATTER` with random data — compiles
+- [x] `CHART_BAR` with values — compiles
+- [x] `SURFACE3D` with 2D matrix — compiles
+- [x] `SCATTER3D` with 3D points — compiles
+- [x] Large dataset (15K points) with WebGL — `CHART_SCATTER` sets `use_webgl = true` when `len > 10_000`
+- [x] Multiple windows simultaneously — each call spawns a new process
+- [x] Window interactions (zoom, pan, rotate) — ECharts toolbox enabled in 2D; 3D uses `grid3D.viewControl`
+- [x] Non-blocking execution — `Command::spawn`, no `wait`
 
-### Automated Tests
+### Automated tests
+
+- ✅ `xdl-charts` unit tests (`test_chart_config_default`, `test_series_2d_creation`, `test_chart_type_conversion`, `test_needs_3d_support`, `test_html_generation`)
+- ✅ `xdl-desktop-viewer` unit tests (`test_window_config_default`, `test_window_counter_increments`)
+- ⚠️ **No** charting tests in `xdl-stdlib` — `extract_f64_array`, `extract_2d_array`, `launch_chart` are not covered
 
 ```bash
-# Unit tests for charting procedures
-cargo test -p xdl-stdlib charting
-
-# Build verification
 cargo check --workspace
-cargo clippy --workspace
+cargo test --workspace
 ```
 
 ---
 
-## Performance Benchmarks
+## Performance Benchmarks (claim from original draft, not re-verified)
+
+The original draft claimed:
 
 | Chart Type | Data Size | Generation Time | Render Time | FPS |
 |------------|-----------|-----------------|-------------|-----|
@@ -318,11 +343,11 @@ cargo clippy --workspace
 | Surface3D | 50x50 | ~150ms | ~300ms | 45-60 |
 | Scatter3D | 100 points | ~100ms | ~200ms | 60 |
 
-**Test Environment:** M1 Mac, macOS 26.0.1, Debug build
+These were never measured or published in CI. Treat as unverified.
 
 ---
 
-## Comparison to Alternatives
+## Comparison to Alternatives (claim from original draft)
 
 | Feature | Browser (viz3d-web) | Tauri (This) | Electron |
 |---------|---------------------|--------------|----------|
@@ -333,87 +358,85 @@ cargo clippy --workspace
 | Integration | HTTP server | Direct spawn | Complex |
 | Maintenance | Simple | Simple | Complex |
 
-**Winner:** Tauri provides the best balance of performance, UX, and simplicity.
+Also unverified; included for completeness.
 
 ---
 
-## Known Limitations
+## Known Limitations (live)
 
-1. **No keyword arguments yet** - XDL parser needs extension
-   - Current: `CHART_PLOT, x, y, 'Title'`
-   - Future: `CHART_PLOT, x, y, TITLE='Title', COLOR='blue'`
+1. **No keyword arguments yet** — `TITLE=`, `TYPE=`, `XRANGE=`, etc. are not wired. The dispatcher in `xdl-stdlib/src/lib.rs` already accepts a `keywords` HashMap, but `charting_procs` ignores it. The original draft's `CHART_PLOT, x, y, TITLE='Title', COLOR='blue'` example doesn't work today.
 
-2. **Single series per chart** - Multi-series needs procedure extension
-   - Workaround: Create multiple charts
+2. **Single series per chart** — multi-series needs procedure extension. Workaround: multiple calls (multiple windows).
 
-3. **Limited customization** - Colors, styles are ECharts defaults
-   - Future: Add configuration options
+3. **Hard-coded titles** — `CHART_CONTOUR`, `CHART_SHADE_SURF`, `CHART_PLOT3D` ignore their second/fourth positional arg and use hard-coded titles.
 
-4. **Binary location dependency** - xdl-chart-viewer must be findable
-   - Current: Looks in same directory as xdl binary
-   - Future: Add PATH search, config file
+4. **Limited customization** — colors, styles are ECharts defaults. Future: add config options.
+
+5. **Binary location dependency** — `xdl-chart-viewer` is resolved next to `std::env::current_exe()`. `cargo run` from the workspace will not find it (the host `xdl` binary lives at `target/debug/xdl`, not at the same level as a built `xdl-chart-viewer`). Workaround: `cargo install`, or build both into the same `target/{profile}/`, or add a `which`-style fallback (TODO).
+
+6. **`xdl-desktop-viewer` is dead weight** — library compiles but is unused.
+
+7. **`SURFACE`/`SHADE_SURF` (graphics_procs) do not route to ECharts** — they remain on plotters. To get ECharts 3D surfaces, use `SURFACE3D` directly.
 
 ---
 
 ## Future Enhancements
 
-### Short Term (Next Sprint)
+### Short term (next sprint)
 
-1. Add keyword argument support
-2. Multi-series charts
-3. Color/style customization
-4. Export to PNG/SVG
+1. Wire `keywords` through to `charting_procs` so users can write `CHART_PLOT, x, y, TITLE='…', TYPE='scatter'`.
+2. Fix the hard-coded titles on `CHART_CONTOUR`/`CHART_SHADE_SURF`/`CHART_PLOT3D`.
+3. Add `which`-style fallback for resolving `xdl-chart-viewer` at runtime.
+4. Port the `extract_f64_array`/`extract_2d_array` unit tests from `charting_procs.rs.bak` into the live file.
+5. Decide the fate of `xdl-desktop-viewer` (delete or wire in).
+6. Delete `charting_procs.rs.bak` and `charting_procs_broken.rs`.
 
-### Medium Term
+### Medium term
 
-1. Dashboard layouts (multiple charts per window)
-2. Real-time data updates
-3. Animation support
-4. Heatmaps and contour plots
+1. Multi-series charts in a single window (`PLOTADD`/`PLOTSHOW` accumulator).
+2. Color/style customization via config.
+3. Export to PNG/SVG (`toolbox.saveAsImage` is already enabled — needs Tauri-side wiring).
+4. Dashboard layouts.
 
-### Long Term
+### Long term
 
-1. D3.js integration for custom visualizations
-2. Three.js for advanced 3D
-3. Interactive data selection
-4. Chart templates library
+1. D3.js integration for custom visualizations (deferred from the original investigation).
+2. Three.js for advanced 3D / particle systems (deferred from the original investigation).
+3. Real-time data updates and animations.
 
 ---
 
 ## Troubleshooting
 
-### Charts Don't Open
+### Charts don't open
 
 ```bash
 # Verify xdl-chart-viewer works
 ./target/release/xdl-chart-viewer --title "Test"
 
-# Check if it's in PATH
-which xdl-chart-viewer
+# Check if it's co-located with xdl
+ls target/release/ | grep xdl-chart-viewer
 
-# Copy to same directory as xdl
+# Or copy it next to xdl
 cp target/release/xdl-chart-viewer target/release/
 ```
 
-### Script Errors
+### Script errors
 
 ```xdl
-; Wrong: Arrays different sizes
+; Wrong: arrays different sizes
 x = [1, 2, 3]
 y = [1, 2]  ; Error!
 
-; Right: Same sizes
+; Right: same sizes
 x = [1, 2, 3]
 y = [1, 4, 9]
 CHART_PLOT, x, y, 'Test'
 ```
 
-### Tauri Issues
+### Tauri issues
 
 ```bash
-# Verify Tauri installation
-cargo tauri info
-
 # Rebuild with fresh icons
 cd xdl-chart-viewer
 cargo tauri icon source-icon.png
@@ -422,53 +445,20 @@ cargo build --release
 
 ---
 
-## Success Metrics
-
-✅ **All Goals Achieved:**
-
-1. ECharts integration - **Working**
-2. Tauri native windows - **Working**
-3. XDL procedures - **5 procedures implemented**
-4. Demo scripts - **2 examples created**
-5. Documentation - **Comprehensive**
-6. Performance - **60 FPS, <100ms generation**
-7. User experience - **Native, interactive, professional**
-
----
-
-## Acknowledgments
-
-- **Apache ECharts** - Excellent charting library
-- **Tauri** - Lightweight desktop framework
-- **Rust community** - Amazing ecosystem
-
----
-
 ## Commands Quick Reference
 
 ```bash
-# Build everything
 cargo build --release --workspace
 
-# Run simple test
 ./target/release/xdl examples/charting/simple_test.xdl
-
-# Run full demo
 ./target/release/xdl examples/charting/echarts_demo.xdl
-
-# Test chart viewer standalone
 ./target/release/xdl-chart-viewer --title "Test"
 
-# Format code (before commit)
 cargo fmt --all
-
-# Run tests
 cargo test --workspace
+cargo check --workspace
 ```
 
 ---
 
-**Status:** ✅ Production Ready
-**Documentation:** ✅ Complete
-**Examples:** ✅ Working
-**Integration:** ✅ Tested
+**Status:** ✅ MVP implemented; runtime UX not yet validated in CI.

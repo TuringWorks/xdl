@@ -1,23 +1,34 @@
 # ✅ Tauri Integration - SUCCESS
 
-**Date:** 2025-10-25
-**Status:** 🎉 **WORKING**
+**Branch:** `investigate-charting-webgl`
+**Date:** 2025-10-25 (revised after codebase grounding)
+**Status:** ✅ `xdl-chart-viewer` builds clean; runtime UX not validated in CI.
+
+> Status note: this doc was originally written as an exception report ("here's what fixed the icon error"). It has been folded into the larger ECharts+Tauri story and revised against the actual code.
 
 ---
 
-## Problem Solved
+## What Shipped
 
-The Tauri chart viewer is now fully functional! The issues were:
+The Tauri chart viewer is fully implemented and `cargo check`s clean. The CLI works as described, the runtime UX (window actually appearing) has not been verified in CI — that requires a manual GUI run.
 
-1. **Missing icon configuration** in `tauri.conf.json`
-2. **Duplicate window definition** (config + code)
-3. **Missing `webview-data-url` feature** flag
+### Final state (verified against source)
 
----
+**`xdl-chart-viewer/Cargo.toml`:**
 
-## Fixes Applied
+```toml
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
 
-### 1. Added Icon Configuration
+[dependencies]
+tauri = { version = "2.1", features = ["devtools", "webview-data-url"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = "1.0"
+clap = { workspace = true, features = ["derive"] }
+urlencoding = "2.1"
+```
+
+**`xdl-chart-viewer/tauri.conf.json`** (`productName="XDL Chart Viewer"`, `identifier="com.xdl.chart-viewer"`):
 
 ```json
 "bundle": {
@@ -30,58 +41,47 @@ The Tauri chart viewer is now fully functional! The issues were:
     "icons/icon.png",
     "icons/icon.icns",
     "icons/icon.ico"
-  ]
+  ],
+  "targets": "all"
 }
 ```
 
-### 2. Removed Duplicate Window
-
-Removed pre-configured window from `tauri.conf.json` (let code create it)
-
-### 3. Enabled Data URL Feature
-
-```toml
-[dependencies]
-tauri = { version = "2.1", features = ["devtools", "webview-data-url"] }
-```
+There is no pre-configured window in the conf — the code creates it. `withGlobalTauri=true` and `csp=null`. `frontendDist=""` (empty — HTML is supplied at runtime).
 
 ---
 
-## Current Status
+## CLI Reference (live)
 
-### ✅ What Works
+| Flag | Type | Default | Purpose |
+|---|---|---|---|
+| `--html-file <path>` / `-f` | `Option<String>` | — | Read HTML from file |
+| `--html-content <string>` / `-c` | `Option<String>` | — | HTML string (no base64) |
+| `--title <s>` / `-t` | `String` | `"XDL Chart"` | Window title |
+| `--width <u32>` / `-w` | `u32` | `1024` | Window width |
+| `--height <u32>` / `-H` | `u32` | `768` | Window height |
+| `--help-only` | bool | `false` | Print help and exit (used in CI tests) |
+
+### Invocation examples (verified working as code paths)
 
 ```bash
-# Launch with default demo (sine/cosine chart)
+# Default demo (sine/cosine chart)
 ./target/debug/xdl-chart-viewer --title "My Chart"
 
-# Launch with HTML file
+# From HTML file
 ./target/debug/xdl-chart-viewer -f chart.html --title "Custom Chart"
 
-# Launch with custom size
+# Custom size
 ./target/debug/xdl-chart-viewer --title "Big Chart" -w 1400 -H 900
 ```
 
-**Output:**
+Output (from `src/main.rs` setup):
 
 ```text
 XDL Chart Viewer started
 Window ID: main
 ```
 
-A beautiful native macOS window opens with:
-
-- Interactive ECharts visualization
-- Smooth animations
-- Zoom/pan/restore tools
-- Professional gradient background
-- Responsive resizing
-
----
-
-## Demo: End-to-End Test
-
-### Generate Chart HTML
+### End-to-end test
 
 ```rust
 use xdl_charts::{ChartConfig, ChartType, Series2D, generate_2d_chart};
@@ -104,173 +104,115 @@ let html = generate_2d_chart(&config, &series)?;
 std::fs::write("my_chart.html", html)?;
 ```
 
-### Display in Tauri Window
-
 ```bash
 ./target/debug/xdl-chart-viewer -f my_chart.html --title "My Chart"
 ```
 
 ---
 
-## Architecture
+## Architecture (live)
 
 ```text
 ┌─────────────────────────────────────────┐
-│          XDL Script (.xdl)              │
+│          XDL Script (.xdl or .m)        │
 └────────────────┬────────────────────────┘
                  │
                  ↓
 ┌─────────────────────────────────────────┐
 │      xdl-stdlib charting procedures     │
-│   (PLOT, SCATTER, SURFACE3D, etc.)      │
+│   (CHART_PLOT, CHART_SCATTER,           │
+│    CHART_BAR, SURFACE3D, SCATTER3D,     │
+│    CHART_CONTOUR, CHART_SHADE_SURF,     │
+│    CHART_PLOT3D)                        │
+│   + PLOT (when SET_PLOT_BACKEND is      │
+│     'ECHARTS')                          │
 └────────────────┬────────────────────────┘
                  │
                  ↓
 ┌─────────────────────────────────────────┐
 │            xdl-charts                   │
-│    (Generate ECharts HTML/JSON)         │
+│   generate_2d_chart / generate_3d_chart │
+│   generate_surface_plot / generate_     │
+│   heatmap → HTML string                 │
 └────────────────┬────────────────────────┘
                  │
                  ↓
          ┌───────┴────────┐
          │                │
          ↓                ↓
-┌─────────────┐  ┌──────────────────┐
-│   Browser   │  │ xdl-chart-viewer │
-│   (viz3d)   │  │     (Tauri)      │
-└─────────────┘  └──────────────────┘
+┌────────────────┐  ┌──────────────────┐
+│  launch_chart  │  │  standalone test │
+│  (in charting_ │  │  (chart viewer   │
+│   procs.rs)    │  │   launched       │
+│                │  │   directly)      │
+└────────┬───────┘  └──────────────────┘
+         │
+         ▼
+  Command::spawn("xdl-chart-viewer",
+      ["--html-file", tmpfile, "--title", title])
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│   xdl-chart-viewer (Tauri)             │
+│   reads HTML, encodes as data: URL,     │
+│   opens WebviewWindow via Tauri's      │
+│   system WebView (data-URL feature)    │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-## Features Demonstrated
+## Features Shipped (verified)
 
-### Interactive Demo Chart
+- ✅ Native desktop window via Tauri 2
+- ✅ WebView rendering (system WebView, not bundled Chromium)
+- ✅ Data URL support (`webview-data-url` feature in `tauri = "2.1"`)
+- ✅ Command-line interface (`clap` derive; 6 flags incl. `--help-only`)
+- ✅ Built-in demo chart (`create_demo_chart_html` fallback when no HTML provided)
+- ✅ IPC command `create_chart_window(app, data, state)` for multi-window use from a host process
+- ✅ Cross-platform via Tauri (macOS WKWebView, Windows WebView2, Linux WebKitGTK)
 
-The default demo shows:
+## Features Not Yet Validated
 
-- ✅ Dual series (sine/cosine)
-- ✅ Smooth line rendering
-- ✅ Color-coded legends
-- ✅ Axis labels with units
-- ✅ Interactive tooltips (hover)
-- ✅ Zoom tool (drag to zoom)
-- ✅ Restore view button
-- ✅ Save as image button
-- ✅ Responsive resize
-- ✅ Professional styling
-
-### Technical Features
-
-- ✅ Native macOS window
-- ✅ GPU-accelerated rendering (WebView)
-- ✅ Data URL support (no temp files)
-- ✅ Multiple windows support
-- ✅ Command-line interface
-- ✅ Custom window sizes
-- ✅ HTML file or content input
+- ⏸ Whether the WebView actually renders correctly at runtime (no GUI run in CI)
+- ⏸ Whether Tauri's icon load works on all platforms (no runtime test)
+- ⏸ Performance numbers in the original doc (startup, memory, FPS) are unverified
 
 ---
 
-## Next Steps
+## Build / Run Commands
 
-### Immediate: Integrate with XDL
-
-1. **Add charting procedures** to `xdl-stdlib`:
-
-```rust
-// xdl-stdlib/src/charting_procs.rs
-pub fn plot(args: &[Value]) -> Result<Value> {
-    let x_data = extract_array(&args[0])?;
-    let y_data = extract_array(&args[1])?;
-
-    let html = generate_2d_chart(&config, &series)?;
-
-    // Launch in Tauri window
-    std::process::Command::new("xdl-chart-viewer")
-        .args(&["-c", &html, "--title", "XDL Plot"])
-        .spawn()?;
-
-    Ok(Value::None)
-}
-```
-
-2. **Register procedures**:
-
-```rust
-"PLOT" => charting_procs::plot(args),
-"SCATTER" => charting_procs::scatter(args),
-"SURFACE3D" => charting_procs::surface3d(args),
-```
-
-3. **Test from XDL**:
-
-```xdl
-x = FINDGEN(100)
-y = SIN(x / 10.0)
-PLOT, x, y, TITLE='Sine Wave'
-; Opens Tauri window with chart!
-```
-
----
-
-## Command Reference
-
-### Basic Usage
+### Basic
 
 ```bash
-# Default demo
-./target/debug/xdl-chart-viewer
-
-# With custom title
-./target/debug/xdl-chart-viewer --title "My Title"
-
-# From HTML file
-./target/debug/xdl-chart-viewer -f chart.html
-
-# Custom size
-./target/debug/xdl-chart-viewer -w 1200 -H 800
-```
-
-### Build Commands
-
-```bash
-# Debug build
 cargo build -p xdl-chart-viewer
-
-# Release build (optimized)
 cargo build -p xdl-chart-viewer --release
-
-# Run directly
 cargo run -p xdl-chart-viewer -- --title "Test"
 ```
 
 ### Development
 
 ```bash
-# Watch for changes and rebuild
 cargo watch -x 'build -p xdl-chart-viewer'
-
-# Check without building
 cargo check -p xdl-chart-viewer
-
-# Run tests
 cargo test -p xdl-chart-viewer
 ```
 
 ---
 
-## Performance
+## Performance (claim from original doc, unverified)
 
-### Metrics (M1 Mac, Debug Build)
+The original draft cited:
 
-- **Startup time:** ~500ms
-- **Chart render:** < 100ms
-- **Memory usage:** ~80 MB (includes WebView)
-- **CPU:** < 5% idle, < 20% during interaction
-- **FPS:** 60 (smooth animations)
+- Startup ~500ms
+- Chart render < 100ms
+- Memory ~80 MB (incl. WebView)
+- CPU < 5% idle, < 20% during interaction
+- FPS 60 (smooth animations)
 
-### Comparison to Browser
+These were never measured in CI. Treat as unverified.
+
+### Browser comparison (also unverified)
 
 | Metric | Browser Tab | Tauri Window |
 |--------|-------------|--------------|
@@ -283,39 +225,34 @@ cargo test -p xdl-chart-viewer
 
 ## Troubleshooting
 
-### If Window Doesn't Appear
+### Window doesn't appear
 
 ```bash
-# Check if app is running
+# Check if the process is running
 ps aux | grep xdl-chart-viewer
 
-# Check for errors
+# Run with stderr to surface any errors
 ./target/debug/xdl-chart-viewer --title "Test" 2>&1 | head -20
 
-# Try default demo
+# Or try the demo (no HTML file needed)
 ./target/debug/xdl-chart-viewer
 ```
 
-### If Icons Are Missing
+### Icons missing / mis-built
 
 ```bash
-# Regenerate icons
 cd xdl-chart-viewer
-cargo tauri icon source-icon.png
-
-# Verify icons exist
-ls -lh icons/*.png
+ls -lh icons/
+cargo tauri icon source-icon.png  # regenerates
+cargo build
 ```
 
-### If Build Fails
+### Build errors
 
 ```bash
-# Clean and rebuild
 cargo clean -p xdl-chart-viewer
 cargo build -p xdl-chart-viewer
-
-# Check Tauri installation
-cargo tauri info
+cargo tauri info   # tauri-cli debug
 ```
 
 ---
@@ -324,73 +261,46 @@ cargo tauri info
 
 ### Configuration
 
-- `xdl-chart-viewer/Cargo.toml` - Added `webview-data-url` feature
-- `xdl-chart-viewer/tauri.conf.json` - Added icon config, removed window
+- `xdl-chart-viewer/Cargo.toml` — added `webview-data-url` to Tauri feature list
+- `xdl-chart-viewer/tauri.conf.json` — icon set listed under `bundle.icon`, no pre-configured window
 
-### No Code Changes Needed
+### Code
 
-The Rust code in `src/main.rs` was already correct.
-
----
-
-## Success Checklist
-
-- [x] Icon loading issue resolved
-- [x] Window creation working
-- [x] Data URL support enabled
-- [x] Default demo chart displays
-- [x] Interactive features work (zoom, pan, tooltips)
-- [x] Command-line arguments parsed correctly
-- [x] Multiple chart types supported (via xdl-charts)
-- [x] Ready for XDL stdlib integration
+- `xdl-chart-viewer/src/main.rs` — unchanged from earlier draft: clap args, `Args::try_parse()` for early `--help`/`--version` exit, demo fallback, `WebviewWindowBuilder::new(...)` for the main window, `create_chart_window` IPC command
 
 ---
 
-## Screenshots (Visual Confirmation)
+## What Was Originally Reported vs. What Shipped
 
-When you run the app, you should see:
+| Original "fix" claim | Actual code state |
+|---|---|
+| "Added icon configuration in `bundle.icon`" | ✅ Done — icons listed |
+| "Removed duplicate window from conf" | ✅ Done — conf has no window block |
+| "Enabled `webview-data-url` feature" | ✅ Done — in `tauri = { version = "2.1", features = ["devtools", "webview-data-url"] }` |
+| "Runtime icon loading fix" | ⚠️ Not validated — `cargo check` passes but no GUI run |
 
-**Window:**
-
-- Native macOS title bar with "XDL Demo" title
-- Resize handles and close button
-- Purple gradient background
-
-**Chart:**
-
-- White chart area (900x600px)
-- Title: "Demo: Trigonometric Functions"
-- Legend: sin(x) [blue], cos(x) [green]
-- X-axis: 0 to 10
-- Y-axis: -1 to 1
-- Smooth curves with vibrant colors
-- Toolbar: zoom, restore, save buttons
-
-**Behavior:**
-
-- Hover shows tooltips with exact values
-- Click-drag creates zoom rectangle
-- Restore button resets view
-- Window resizes chart responsively
+The reported "duplicated window between conf and code" was a real cleanup — `tauri.conf.json` does not declare any window, and `src/main.rs` creates `"main"` directly via `WebviewWindowBuilder`.
 
 ---
 
-## Conclusion
+## Success Checklist (live)
 
-🎉 **The Tauri integration is COMPLETE and WORKING!**
+- [x] Icon set configured in `tauri.conf.json`
+- [x] Window created in code (no duplicate declaration)
+- [x] `webview-data-url` feature enabled (data-URL HTML loading)
+- [x] `cargo check` clean
+- [x] Default demo chart implemented (`create_demo_chart_html`)
+- [x] Interactive features enabled in generated HTML (ECharts toolbox)
+- [x] Command-line arguments parsed (`clap` derive)
+- [x] Multiple chart types supported (via `xdl-charts`)
+- [x] Ready for XDL stdlib integration (`charting_procs` wires `Command::spawn` here)
 
-You can now:
+## Open Questions
 
-1. ✅ Generate charts with `xdl-charts`
-2. ✅ Display them in native Tauri windows
-3. ✅ Integrate with XDL procedures
-4. ✅ Ship to users (no browser dependency)
-
-**Next:** Wire up PLOT/SCATTER/SURFACE3D procedures in xdl-stdlib!
+- [ ] Does the WebView render correctly at runtime? (Needs manual test on macOS/Linux/Windows.)
+- [ ] Do the bundled icons load correctly? (Needs manual test.)
+- [ ] Where does the host `xdl` binary resolve `xdl-chart-viewer` from in `cargo run` / `cargo install` layouts? (Today: `current_exe().parent()` only; likely broken for `cargo run`.)
 
 ---
 
-**Status:** ✅ Production Ready
-**Build:** Passing
-**Tests:** Manual verification successful
-**Platform:** macOS (native window)
+**Status:** ✅ Builds clean; runtime UX pending manual validation.

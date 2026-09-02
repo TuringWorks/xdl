@@ -38,3 +38,4 @@ xdl-chart-viewer/gen/
 /xdl_surface.png
 /xdl_shade_surf.png
 /xdl_contour.png
+*.db
