@@ -39,3 +39,5 @@ xdl-chart-viewer/gen/
 /xdl_shade_surf.png
 /xdl_contour.png
 *.db
+*.tsx
+*.drawio
