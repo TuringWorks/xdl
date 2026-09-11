@@ -28,13 +28,22 @@ jobs:
         run: ./scripts/check-version-sync.sh
 
       - name: Tag matches the workspace version
+        env:
+          # The tag is untrusted input: a workflow_dispatch user controls it
+          # directly, and even pushed tag names may carry shell metacharacters.
+          # It travels via env (never interpolated into this script) and is
+          # gated on a strict release format before anything consumes it.
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          tag="${{ github.event.inputs.tag || github.ref_name }}"
-          want="${tag#v}"
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+(\.[0-9]+){2}$'; then
+            echo "FAIL — '$TAG' is not a release tag (expected vMAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+          want="${TAG#v}"
           got=$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && $1=="version"{gsub(/[",]/,"",$3); print $3; exit}' Cargo.toml)
-          echo "tag=$tag  Cargo.toml=$got"
+          echo "tag=$TAG  Cargo.toml=$got"
           if [ "$want" != "$got" ]; then
-            echo "FAIL — tag $tag does not match [workspace.package] version $got"
+            echo "FAIL — tag $TAG does not match [workspace.package] version $got"
             exit 1
           fi
 
@@ -88,8 +97,17 @@ jobs:
 
       - name: Package
         shell: bash
+        env:
+          # Same trust boundary as the verify job: TAG may come from a dispatch
+          # input, so validate the strict format here too before the value is
+          # used in mkdir/cp/archive names (shell injection + path traversal).
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          name="xdl-${{ github.event.inputs.tag || github.ref_name }}-${{ matrix.target }}"
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+(\.[0-9]+){2}$'; then
+            echo "FAIL — '$TAG' is not a release tag (expected vMAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+          name="xdl-$TAG-${{ matrix.target }}"
           mkdir -p "dist/$name"
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             cp target/${{ matrix.target }}/release/xdl.exe "dist/$name/"

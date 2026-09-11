@@ -54,11 +54,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      # Third-party actions are pinned to immutable commit SHAs. A mutable ref
+      # (@stable, @v2) executes whatever that ref points to when it moves, so a
+      # moved or compromised tag runs arbitrary code in CI — with this repo's
+      # token in the coverage job. Bump the SHA deliberately, after reviewing
+      # the upstream diff:
+      #   git ls-remote https://github.com/dtolnay/rust-toolchain refs/heads/stable
+      #   git ls-remote https://github.com/Swatinem/rust-cache v2
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
         with:
           toolchain: ${{ matrix.rust }}
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
         with:
           # Include both the workspace Cargo.lock and the xdl-desktop-viewer
           # manifest hash so the cache is invalidated when either changes.
@@ -96,11 +103,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
         with:
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -117,8 +124,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
 
       - name: Build the interpreter
         run: cargo build --release -p xdl-cli
@@ -146,11 +153,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
         with:
           components: llvm-tools-preview
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
 
       - uses: taiki-e/install-action@v2
         with:
@@ -189,8 +196,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
 
       # Build only (gate). Publishing is owned by pages.yml, which builds the
       # cargo API docs and the Jekyll site and deploys both — two workflows

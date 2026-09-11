@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell:*)",
       "WebFetch(domain:crates.io)",
       "Bash(cargo metadata:*)",
       "Bash(cargo build:*)",
@@ -16,7 +15,6 @@
       "Bash(git checkout:*)",
       "Bash(for n in 50 100 150 200 210 220)",
       "Bash(do echo '=== Testing $n lines ===')",
-      "Bash(head:*)",
       "Bash(done)",
       "Bash(for n in 30 35 40 50 60 70 80 90 100)",
       "Bash(do echo '=== Lines 1-$n ===')",
@@ -27,21 +25,17 @@
       "Bash(PYO3_PYTHON=/c/Python312/python.exe cargo build:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push)",
       "Bash(for img in examples_images/03_plotting_basics_xdl_plot.png examples_images/04_trigonometry_xdl_plot.png examples_images/06_sine_cosine_plot_xdl_plot.png examples_images/math_demo_xdl_plot.png examples_images/math2_xdl_plot.png examples_images/sample_script_xdl_plot.png examples_images/05_bezier_surface_xdl_surface.png examples_images/mandelbrot_demo_xdl_surface.png examples_images/test_plot_surface_xdl_surface.png examples_images/test_contour_xdl_contour.png examples_images/plot3d_demo_xdl_contour.png examples_images/plot3d_demo_xdl_surface.png examples_images/plot3d_demo_xdl_shade_surf.png examples_images/plot3d_demo_xdl_plot3d.png examples_images/plot_demo_xdl_plot.png examples_images/plot_working_demo_xdl_plot.png examples_images/simple_plot_test_xdl_plot.png)",
       "Bash(do if [ ! -f \"$img\" ])",
       "Bash(then echo \"MISSING: $img\")",
       "Bash(fi)",
       "Bash(for img in examples_images/colormap_demo.png examples_images/elevation_map.png examples_images/hillshade_demo.png examples_images/vector_field.png examples_images/fluid_instability.png examples_images/rayleigh_taylor_t0.png examples_images/xdl_plot.png examples_images/xdl_contour.png examples_images/xdl_surface.png examples_images/xdl_plot3d.png examples_images/xdl_shade_surf.png)",
       "Bash(else echo \"OK: $img\")",
-      "Bash(for:*)",
       "Bash(do if [ -f \"$f\" ])",
       "Bash(then echo \"OK: $f\")",
       "Bash(else echo \"MISSING: $f\")",
       "Bash(echo:*)",
       "Bash(do echo \"=== Running $test ===\" cargo run --bin xdl -- \"$test\")",
-      "Bash(ls:*)",
-      "Bash(grep:*)",
       "WebFetch(domain:turingworks.github.io)",
       "Bash(do [ ! -f \"/Users/ravindraboddipalli/sources/git/xdl/docs/examples_images/$f.png\" ])",
       "Bash(xargs -I{} sh -c 'grep -l \"\"\"\"\\\\\\\\.md\\)\"\"\"\" \"\"\"\"{}\"\"\"\" 2>/dev/null && echo \"\"\"\"{}\"\"\"\"')",
@@ -55,27 +49,24 @@
       "Bash(xcode-select:*)",
       "Bash(test:*)",
       "Bash(rustfmt:*)",
-      "Bash(sudo xcode-select:*)",
       "Bash(xcodebuild:*)",
       "Bash(wc:*)",
-      "Bash(cat:*)",
       "Bash(./target/debug/xdl:*)",
-      "Bash(cargo login:*)",
-      "Bash(cargo owner:*)",
       "Bash(cargo search:*)",
       "Bash(cargo info:*)",
       "Bash(cargo check:*)",
-      "Bash(cargo publish:*)",
-      "Bash(chmod:*)",
       "Bash(do)",
       "Bash(if ! grep -q \"documentation.workspace\" \"$crate/Cargo.toml\")",
       "Bash(then)",
-      "Bash(find:*)",
       "Bash(git -C /Users/ravindraboddipalli/sources/git/xdl log --oneline -20)",
       "Bash(do [ ! -f \"$ref.md\" ])",
       "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && grep \"\"\"\"description\"\"\"\" {}')"
     ],
     "deny": [],
-    "ask": []
+    "ask": [
+      "Bash(git push)",
+      "Bash(cargo owner:*)",
+      "Bash(cargo publish:*)"
+    ]
   }
 }
