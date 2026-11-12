@@ -213,15 +213,15 @@ fn test_ptr_lifecycle() {
     assert!(matches!(ptr, XdlValue::Pointer(_)));
 
     // Check validity
-    let valid = data_structures::ptr_valid(&[ptr.clone()]).unwrap();
+    let valid = data_structures::ptr_valid(std::slice::from_ref(&ptr)).unwrap();
     assert_eq!(valid, XdlValue::Int(1));
 
     // Dereference
-    let value = data_structures::ptr_deref(&[ptr.clone()]).unwrap();
+    let value = data_structures::ptr_deref(std::slice::from_ref(&ptr)).unwrap();
     assert_eq!(value, XdlValue::Long(42));
 
     // Free pointer
-    data_structures::ptr_free(&[ptr.clone()]).unwrap();
+    data_structures::ptr_free(std::slice::from_ref(&ptr)).unwrap();
 
     // Check no longer valid
     let valid_after = data_structures::ptr_valid(&[ptr]).unwrap();
@@ -248,7 +248,7 @@ fn test_list_operations() {
         data_structures::list(&[XdlValue::Long(1), XdlValue::Long(2), XdlValue::Long(3)]).unwrap();
 
     // Check count
-    let count = data_structures::list_count(&[list.clone()]).unwrap();
+    let count = data_structures::list_count(std::slice::from_ref(&list)).unwrap();
     assert_eq!(count, XdlValue::Long(3));
 
     // Add item
@@ -302,15 +302,15 @@ fn test_object_lifecycle() {
     assert!(matches!(obj, XdlValue::Object(_)));
 
     // Check validity
-    let valid = data_structures::obj_valid(&[obj.clone()]).unwrap();
+    let valid = data_structures::obj_valid(std::slice::from_ref(&obj)).unwrap();
     assert_eq!(valid, XdlValue::Int(1));
 
     // Get class
-    let class = data_structures::obj_class(&[obj.clone()]).unwrap();
+    let class = data_structures::obj_class(std::slice::from_ref(&obj)).unwrap();
     assert_eq!(class, XdlValue::String("TestClass".to_string()));
 
     // Destroy
-    data_structures::obj_destroy(&[obj.clone()]).unwrap();
+    data_structures::obj_destroy(std::slice::from_ref(&obj)).unwrap();
     let valid_after = data_structures::obj_valid(&[obj]).unwrap();
     assert_eq!(valid_after, XdlValue::Int(0));
 }
@@ -331,8 +331,8 @@ fn test_complex_operations() {
     let c = complex::complex(&[XdlValue::Double(3.0), XdlValue::Double(4.0)]).unwrap();
 
     // Get real and imaginary parts
-    let re = complex::real_part(&[c.clone()]).unwrap();
-    let im = complex::imaginary_part(&[c.clone()]).unwrap();
+    let re = complex::real_part(std::slice::from_ref(&c)).unwrap();
+    let im = complex::imaginary_part(std::slice::from_ref(&c)).unwrap();
 
     match re {
         XdlValue::Double(v) => assert!((v - 3.0).abs() < 0.001),

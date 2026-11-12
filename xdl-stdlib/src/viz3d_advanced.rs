@@ -111,7 +111,7 @@ pub fn shade_volume(
     // Get opacity scale
     let opacity = keywords
         .get("OPACITY")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(1.0);
 
     // LOW keyword inverts the rendering (low values are opaque)
@@ -205,11 +205,11 @@ pub fn particle_trace(
     // Get parameters
     let num_steps = keywords
         .get("STEPS")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(100.0) as usize;
     let dt = keywords
         .get("DT")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(0.1);
 
     let num_particles = seeds.len() / 3;
@@ -328,11 +328,11 @@ pub fn streamline(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xd
 
     let num_steps = keywords
         .get("STEPS")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(200.0) as usize;
     let dt = keywords
         .get("DT")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(0.05);
 
     let num_seeds = seeds.len() / 3;
@@ -403,11 +403,11 @@ pub fn voxel_proj(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xd
 
     let xsize = keywords
         .get("XSIZE")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(dims[0] as f64) as usize;
     let ysize = keywords
         .get("YSIZE")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(dims[1] as f64) as usize;
 
     let use_max = keywords.contains_key("MAXIMUM");
@@ -517,7 +517,7 @@ pub fn polyshade(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xdl
                 }
             }
         }
-        i += n as usize + 1;
+        i += n + 1;
     }
 
     // Normalize

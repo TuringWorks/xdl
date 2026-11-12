@@ -242,7 +242,7 @@ pub fn map_set(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
     }
 
     // Parse projection keyword flags
-    for (key, _) in keywords.iter() {
+    for key in keywords.keys() {
         if let Some(proj_type) = ProjectionType::from_name(key) {
             proj.projection = proj_type;
             break;
@@ -384,11 +384,11 @@ pub fn map_grid(_args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xdl
     // Parse grid spacing
     let lat_del = keywords
         .get("LATDEL")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(30.0);
     let lon_del = keywords
         .get("LONDEL")
-        .and_then(|v| value_to_f64(v))
+        .and_then(value_to_f64)
         .unwrap_or(30.0);
     let label = keywords.contains_key("LABEL");
 

@@ -692,9 +692,9 @@ pub fn weekday(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let julian_day = if args.len() >= 3 {
         // Year, month, day provided
-        let year = args[0].to_long()? as i32;
-        let month = args[1].to_long()? as i32;
-        let day = args[2].to_long()? as i32;
+        let year = args[0].to_long()?;
+        let month = args[1].to_long()?;
+        let day = args[2].to_long()?;
 
         // Calculate Julian day
         let a = (14 - month) / 12;
@@ -702,7 +702,7 @@ pub fn weekday(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let m = month + 12 * a - 3;
         day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045
     } else {
-        args[0].to_long()? as i32
+        args[0].to_long()?
     };
 
     // Day of week from Julian day (0 = Sunday)
@@ -891,9 +891,9 @@ pub fn dayofyear(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
-    let year = args[0].to_long()? as i32;
-    let month = args[1].to_long()? as i32;
-    let day = args[2].to_long()? as i32;
+    let year = args[0].to_long()?;
+    let month = args[1].to_long()?;
+    let day = args[2].to_long()?;
 
     let is_leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
     let days_before_month = if is_leap {
@@ -902,7 +902,7 @@ pub fn dayofyear(args: &[XdlValue]) -> XdlResult<XdlValue> {
         [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
     };
 
-    let doy = if month >= 1 && month <= 12 {
+    let doy = if (1..=12).contains(&month) {
         days_before_month[(month - 1) as usize] + day
     } else {
         day
@@ -946,7 +946,7 @@ pub fn memory(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// EXIT - Exit the XDL session
 pub fn exit_session(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let code = if !args.is_empty() {
-        args[0].to_long()? as i32
+        args[0].to_long()?
     } else {
         0
     };

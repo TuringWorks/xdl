@@ -598,7 +598,7 @@ pub fn create_struct(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let mut map = HashMap::new();
-    let start_idx;
+    
 
     // Check if first arg is structure name or first tag
     // If it's a string that looks like a name (no value following), treat as name
@@ -617,15 +617,15 @@ pub fn create_struct(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => false,
     };
 
-    if first_is_name && args.len() > 1 {
+    let start_idx = if first_is_name && args.len() > 1 {
         // First arg is structure name, skip it
         if let XdlValue::String(name) = &args[0] {
             map.insert("__name__".to_string(), XdlValue::String(name.clone()));
         }
-        start_idx = 1;
+        1
     } else {
-        start_idx = 0;
-    }
+        0
+    };
 
     // Process pairs of tag-value arguments
     let mut i = start_idx;
@@ -733,10 +733,10 @@ mod tests {
         let ptr = ptr_new(&[XdlValue::Long(42)]).unwrap();
         assert!(matches!(ptr, XdlValue::Pointer(_)));
 
-        let valid = ptr_valid(&[ptr.clone()]).unwrap();
+        let valid = ptr_valid(std::slice::from_ref(&ptr)).unwrap();
         assert_eq!(valid, XdlValue::Int(1));
 
-        ptr_free(&[ptr.clone()]).unwrap();
+        ptr_free(std::slice::from_ref(&ptr)).unwrap();
         let valid_after = ptr_valid(&[ptr]).unwrap();
         assert_eq!(valid_after, XdlValue::Int(0));
     }

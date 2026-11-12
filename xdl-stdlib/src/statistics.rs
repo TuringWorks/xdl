@@ -457,7 +457,7 @@ pub fn poly_fit(args: &[XdlValue]) -> XdlResult<XdlValue> {
 // Helper: Gaussian elimination to solve Ax = b
 fn solve_linear_system(a: &[Vec<f64>], b: &[f64]) -> XdlResult<Vec<f64>> {
     let n = b.len();
-    let mut aug: Vec<Vec<f64>> = a.iter().cloned().collect();
+    let mut aug: Vec<Vec<f64>> = a.to_vec();
 
     // Augment with b
     for (i, row) in aug.iter_mut().enumerate() {
@@ -1411,7 +1411,7 @@ pub fn random_poisson(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let u1: f64 = lcg(&mut seed);
             let u2: f64 = lcg(&mut seed);
             let z = ((-2.0f64 * u1.ln()).sqrt()) * (2.0 * std::f64::consts::PI * u2).cos();
-            (lambda + (lambda as f64).sqrt() * z).round().max(0.0)
+            (lambda + lambda.sqrt() * z).round().max(0.0)
         };
         result.push(value);
     }

@@ -46,7 +46,7 @@ fn benchmark_operations(size: usize) {
     let mut c = vec![0.0f32; size];
 
     // Warm up
-    let _ = cpu_add(&a, &b, &mut c);
+    cpu_add(&a, &b, &mut c);
 
     // Benchmark each backend
     let iterations = if size >= 1_000_000 { 5 } else { 20 };
@@ -119,19 +119,16 @@ fn benchmark_operations(size: usize) {
         );
 
         // Metal matmul
-        match MetalDevice::new() {
-            Ok(metal) => {
-                let metal_time =
-                    benchmark_metal_matmul(&metal, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
-                let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
-                println!(
-                    "  Metal: {:>10.3} ms  ({:.2}x {})",
-                    metal_time.as_secs_f64() * 1000.0,
-                    speedup.abs(),
-                    if speedup > 1.0 { "faster" } else { "slower" }
-                );
-            }
-            Err(_) => {}
+        if let Ok(metal) = MetalDevice::new() {
+            let metal_time =
+                benchmark_metal_matmul(&metal, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
+            let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
+            println!(
+                "  Metal: {:>10.3} ms  ({:.2}x {})",
+                metal_time.as_secs_f64() * 1000.0,
+                speedup.abs(),
+                if speedup > 1.0 { "faster" } else { "slower" }
+            );
         }
 
         // MLX matmul
@@ -166,18 +163,15 @@ fn benchmark_operations(size: usize) {
     );
 
     // Metal sin
-    match MetalDevice::new() {
-        Ok(metal) => {
-            let metal_time = benchmark_metal_sin(&metal, &a, &mut c, iterations);
-            let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
-            println!(
-                "  Metal: {:>10.3} ms  ({:.2}x {})",
-                metal_time.as_secs_f64() * 1000.0,
-                speedup.abs(),
-                if speedup > 1.0 { "faster" } else { "slower" }
-            );
-        }
-        Err(_) => {}
+    if let Ok(metal) = MetalDevice::new() {
+        let metal_time = benchmark_metal_sin(&metal, &a, &mut c, iterations);
+        let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
+        println!(
+            "  Metal: {:>10.3} ms  ({:.2}x {})",
+            metal_time.as_secs_f64() * 1000.0,
+            speedup.abs(),
+            if speedup > 1.0 { "faster" } else { "slower" }
+        );
     }
 
     // MLX sin
@@ -210,18 +204,15 @@ fn benchmark_operations(size: usize) {
     );
 
     // Metal sum
-    match MetalDevice::new() {
-        Ok(metal) => {
-            let metal_time = benchmark_metal_sum(&metal, &a, iterations);
-            let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
-            println!(
-                "  Metal: {:>10.3} ms  ({:.2}x {})",
-                metal_time.as_secs_f64() * 1000.0,
-                speedup.abs(),
-                if speedup > 1.0 { "faster" } else { "slower" }
-            );
-        }
-        Err(_) => {}
+    if let Ok(metal) = MetalDevice::new() {
+        let metal_time = benchmark_metal_sum(&metal, &a, iterations);
+        let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
+        println!(
+            "  Metal: {:>10.3} ms  ({:.2}x {})",
+            metal_time.as_secs_f64() * 1000.0,
+            speedup.abs(),
+            if speedup > 1.0 { "faster" } else { "slower" }
+        );
     }
 
     // MLX sum

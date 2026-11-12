@@ -997,8 +997,8 @@ pub fn wv_dwt(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let h2 = (3.0 - 3.0_f64.sqrt()) / (4.0 * 2.0_f64.sqrt());
     let h3 = (1.0 - 3.0_f64.sqrt()) / (4.0 * 2.0_f64.sqrt());
 
-    let lowpass = vec![h0, h1, h2, h3];
-    let highpass = vec![h3, -h2, h1, -h0];
+    let lowpass = [h0, h1, h2, h3];
+    let highpass = [h3, -h2, h1, -h0];
 
     let mut signal = data;
     let mut all_details = Vec::new();

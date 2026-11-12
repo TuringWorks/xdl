@@ -1110,7 +1110,7 @@ pub fn rotate_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let direction = match &args[1] {
-        XdlValue::Long(n) => (*n % 8) as i32,
+        XdlValue::Long(n) => *n % 8,
         XdlValue::Int(n) => (*n % 8) as i32,
         XdlValue::Double(n) => (*n as i32) % 8,
         XdlValue::Float(n) => (*n as i32) % 8,
@@ -1214,7 +1214,7 @@ pub fn rotate_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
                         shape: vec![ncols, nrows],
                     })
                 }
-                5 | 6 | 7 => {
+                5..=7 => {
                     // Transpose + rotation: first transpose, then rotate
                     let transposed = transpose_2d(data, nrows, ncols)?;
                     let rot_dir = direction - 4;

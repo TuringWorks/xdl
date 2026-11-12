@@ -113,7 +113,7 @@ fn value_to_usize(v: &XdlValue) -> Option<usize> {
 /// WIDGET_BASE - Create a base widget (container)
 /// IDL syntax: id = WIDGET_BASE([parent] [, /COLUMN] [, /ROW] [, TITLE=title])
 pub fn widget_base(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
-    let parent_id = args.first().and_then(|v| value_to_usize(v));
+    let parent_id = args.first().and_then(value_to_usize);
 
     let title = keywords
         .get("TITLE")
@@ -304,11 +304,11 @@ pub fn widget_text(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
     let editable = keywords.contains_key("EDITABLE");
     let xsize = keywords
         .get("XSIZE")
-        .and_then(|v| value_to_usize(v))
+        .and_then(value_to_usize)
         .unwrap_or(40);
     let ysize = keywords
         .get("YSIZE")
-        .and_then(|v| value_to_usize(v))
+        .and_then(value_to_usize)
         .unwrap_or(1);
 
     let id = get_next_widget_id();
@@ -398,11 +398,11 @@ pub fn widget_draw(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
 
     let xsize = keywords
         .get("XSIZE")
-        .and_then(|v| value_to_usize(v))
+        .and_then(value_to_usize)
         .unwrap_or(640);
     let ysize = keywords
         .get("YSIZE")
-        .and_then(|v| value_to_usize(v))
+        .and_then(value_to_usize)
         .unwrap_or(480);
 
     let id = get_next_widget_id();
@@ -450,7 +450,7 @@ pub fn widget_list(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
 
     let ysize = keywords
         .get("YSIZE")
-        .and_then(|v| value_to_usize(v))
+        .and_then(value_to_usize)
         .unwrap_or(5);
 
     let id = get_next_widget_id();

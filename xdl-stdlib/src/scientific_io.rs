@@ -1218,7 +1218,7 @@ pub fn query_ascii(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     for &byte in &buffer[..bytes_read] {
         // Check if byte is printable ASCII or whitespace
-        if byte != 0 && (byte < 32 || byte > 126) && byte != 9 && byte != 10 && byte != 13 {
+        if byte != 0 && !(32..=126).contains(&byte) && byte != 9 && byte != 10 && byte != 13 {
             return Ok(XdlValue::Long(0));
         }
     }

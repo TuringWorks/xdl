@@ -763,7 +763,7 @@ pub fn sprintf(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// Helper function to format a single value according to format specifier
 fn format_value(value: &XdlValue, fmt_char: char, width: &str, precision: &str) -> String {
-    let width_val: usize = width.replace('-', "").replace('+', "").parse().unwrap_or(0);
+    let width_val: usize = width.replace(['-', '+'], "").parse().unwrap_or(0);
     let precision_val: usize = precision.parse().unwrap_or(6);
     let left_align = width.starts_with('-');
 
