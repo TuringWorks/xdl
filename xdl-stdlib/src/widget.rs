@@ -302,14 +302,8 @@ pub fn widget_text(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
         .unwrap_or_default();
 
     let editable = keywords.contains_key("EDITABLE");
-    let xsize = keywords
-        .get("XSIZE")
-        .and_then(value_to_usize)
-        .unwrap_or(40);
-    let ysize = keywords
-        .get("YSIZE")
-        .and_then(value_to_usize)
-        .unwrap_or(1);
+    let xsize = keywords.get("XSIZE").and_then(value_to_usize).unwrap_or(40);
+    let ysize = keywords.get("YSIZE").and_then(value_to_usize).unwrap_or(1);
 
     let id = get_next_widget_id();
 
@@ -448,10 +442,7 @@ pub fn widget_list(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
         _ => 0,
     };
 
-    let ysize = keywords
-        .get("YSIZE")
-        .and_then(value_to_usize)
-        .unwrap_or(5);
+    let ysize = keywords.get("YSIZE").and_then(value_to_usize).unwrap_or(5);
 
     let id = get_next_widget_id();
 

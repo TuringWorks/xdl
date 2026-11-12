@@ -598,7 +598,6 @@ pub fn create_struct(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let mut map = HashMap::new();
-    
 
     // Check if first arg is structure name or first tag
     // If it's a string that looks like a name (no value following), treat as name
