@@ -5,13 +5,13 @@
 use xdl_core::XdlValue;
 
 // Import the stdlib modules
-use xdl_stdlib::math;
-use xdl_stdlib::statistics;
-use xdl_stdlib::signal;
 use xdl_stdlib::complex;
-use xdl_stdlib::system;
 use xdl_stdlib::data_structures;
 use xdl_stdlib::image_io;
+use xdl_stdlib::math;
+use xdl_stdlib::signal;
+use xdl_stdlib::statistics;
+use xdl_stdlib::system;
 
 // ============================================================================
 // Phase 6: Mathematics Tests
@@ -190,11 +190,7 @@ fn test_blackman() {
 #[test]
 fn test_weekday() {
     // Just check it returns a valid result
-    let jd = system::julday(&[
-        XdlValue::Long(1),
-        XdlValue::Long(1),
-        XdlValue::Long(2024),
-    ]).unwrap();
+    let jd = system::julday(&[XdlValue::Long(1), XdlValue::Long(1), XdlValue::Long(2024)]).unwrap();
 
     let result = system::weekday(&[jd]);
     assert!(result.is_ok());
@@ -248,11 +244,8 @@ fn test_null_pointer() {
 #[test]
 fn test_list_operations() {
     // Create list
-    let list = data_structures::list(&[
-        XdlValue::Long(1),
-        XdlValue::Long(2),
-        XdlValue::Long(3),
-    ]).unwrap();
+    let list =
+        data_structures::list(&[XdlValue::Long(1), XdlValue::Long(2), XdlValue::Long(3)]).unwrap();
 
     // Check count
     let count = data_structures::list_count(&[list.clone()]).unwrap();
@@ -271,7 +264,8 @@ fn test_dictionary() {
         XdlValue::String("Test".to_string()),
         XdlValue::String("value".to_string()),
         XdlValue::Long(42),
-    ]).unwrap();
+    ])
+    .unwrap();
 
     match dict {
         XdlValue::Struct(map) => {
@@ -289,7 +283,8 @@ fn test_create_struct() {
         XdlValue::Double(1.5),
         XdlValue::String("y".to_string()),
         XdlValue::Double(2.5),
-    ]).unwrap();
+    ])
+    .unwrap();
 
     match s {
         XdlValue::Struct(map) => {

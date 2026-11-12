@@ -60,11 +60,9 @@ pub fn isosurface(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xd
     }
 
     let (volume, dims) = extract_volume_3d(&args[0])?;
-    let isovalue = value_to_f64(&args[1]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[1]),
-        }
+    let isovalue = value_to_f64(&args[1]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "numeric".to_string(),
+        actual: format!("{:?}", args[1]),
     })?;
 
     let verbose = keywords.contains_key("VERBOSE");
@@ -98,7 +96,10 @@ pub fn isosurface(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xd
 /// IDL syntax: result = SHADE_VOLUME(volume [, OPACITY=opacity] [, /LOW])
 ///
 /// Performs ray casting through the volume for direct rendering
-pub fn shade_volume(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn shade_volume(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "SHADE_VOLUME: Expected volume argument".to_string(),
@@ -216,10 +217,7 @@ pub fn particle_trace(
         "PARTICLE_TRACE: Tracing {} particles for {} steps (dt={})",
         num_particles, num_steps, dt
     );
-    println!(
-        "  Vector field: {}x{}x{}",
-        dims[0], dims[1], dims[2]
-    );
+    println!("  Vector field: {}x{}x{}", dims[0], dims[1], dims[2]);
 
     // Trace particles using RK4 integration
     let mut traces = Vec::new();
@@ -483,10 +481,7 @@ pub fn polyshade(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xdl
     let num_verts = verts.len() / 3;
     let _gouraud = keywords.contains_key("GOURAUD");
 
-    println!(
-        "POLYSHADE: Shading mesh with {} vertices",
-        num_verts
-    );
+    println!("POLYSHADE: Shading mesh with {} vertices", num_verts);
 
     // Compute vertex normals for shading
     let mut normals = vec![0.0; verts.len()];
@@ -527,10 +522,9 @@ pub fn polyshade(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xdl
 
     // Normalize
     for i in 0..num_verts {
-        let len = (normals[i * 3].powi(2)
-            + normals[i * 3 + 1].powi(2)
-            + normals[i * 3 + 2].powi(2))
-        .sqrt();
+        let len =
+            (normals[i * 3].powi(2) + normals[i * 3 + 1].powi(2) + normals[i * 3 + 2].powi(2))
+                .sqrt();
         if len > 1e-10 {
             normals[i * 3] /= len;
             normals[i * 3 + 1] /= len;
@@ -676,40 +670,160 @@ fn marching_cubes(volume: &[f64], dims: [usize; 3], isovalue: f64) -> (Vec<f64>,
                 let mut vert_list = [[0.0f64; 3]; 12];
 
                 if edges & 1 != 0 {
-                    vert_list[0] = interp_vertex(x as f64, y as f64, z as f64, x as f64 + 1.0, y as f64, z as f64, v[0], v[1], isovalue);
+                    vert_list[0] = interp_vertex(
+                        x as f64,
+                        y as f64,
+                        z as f64,
+                        x as f64 + 1.0,
+                        y as f64,
+                        z as f64,
+                        v[0],
+                        v[1],
+                        isovalue,
+                    );
                 }
                 if edges & 2 != 0 {
-                    vert_list[1] = interp_vertex(x as f64 + 1.0, y as f64, z as f64, x as f64 + 1.0, y as f64 + 1.0, z as f64, v[1], v[2], isovalue);
+                    vert_list[1] = interp_vertex(
+                        x as f64 + 1.0,
+                        y as f64,
+                        z as f64,
+                        x as f64 + 1.0,
+                        y as f64 + 1.0,
+                        z as f64,
+                        v[1],
+                        v[2],
+                        isovalue,
+                    );
                 }
                 if edges & 4 != 0 {
-                    vert_list[2] = interp_vertex(x as f64 + 1.0, y as f64 + 1.0, z as f64, x as f64, y as f64 + 1.0, z as f64, v[2], v[3], isovalue);
+                    vert_list[2] = interp_vertex(
+                        x as f64 + 1.0,
+                        y as f64 + 1.0,
+                        z as f64,
+                        x as f64,
+                        y as f64 + 1.0,
+                        z as f64,
+                        v[2],
+                        v[3],
+                        isovalue,
+                    );
                 }
                 if edges & 8 != 0 {
-                    vert_list[3] = interp_vertex(x as f64, y as f64 + 1.0, z as f64, x as f64, y as f64, z as f64, v[3], v[0], isovalue);
+                    vert_list[3] = interp_vertex(
+                        x as f64,
+                        y as f64 + 1.0,
+                        z as f64,
+                        x as f64,
+                        y as f64,
+                        z as f64,
+                        v[3],
+                        v[0],
+                        isovalue,
+                    );
                 }
                 if edges & 16 != 0 {
-                    vert_list[4] = interp_vertex(x as f64, y as f64, z as f64 + 1.0, x as f64 + 1.0, y as f64, z as f64 + 1.0, v[4], v[5], isovalue);
+                    vert_list[4] = interp_vertex(
+                        x as f64,
+                        y as f64,
+                        z as f64 + 1.0,
+                        x as f64 + 1.0,
+                        y as f64,
+                        z as f64 + 1.0,
+                        v[4],
+                        v[5],
+                        isovalue,
+                    );
                 }
                 if edges & 32 != 0 {
-                    vert_list[5] = interp_vertex(x as f64 + 1.0, y as f64, z as f64 + 1.0, x as f64 + 1.0, y as f64 + 1.0, z as f64 + 1.0, v[5], v[6], isovalue);
+                    vert_list[5] = interp_vertex(
+                        x as f64 + 1.0,
+                        y as f64,
+                        z as f64 + 1.0,
+                        x as f64 + 1.0,
+                        y as f64 + 1.0,
+                        z as f64 + 1.0,
+                        v[5],
+                        v[6],
+                        isovalue,
+                    );
                 }
                 if edges & 64 != 0 {
-                    vert_list[6] = interp_vertex(x as f64 + 1.0, y as f64 + 1.0, z as f64 + 1.0, x as f64, y as f64 + 1.0, z as f64 + 1.0, v[6], v[7], isovalue);
+                    vert_list[6] = interp_vertex(
+                        x as f64 + 1.0,
+                        y as f64 + 1.0,
+                        z as f64 + 1.0,
+                        x as f64,
+                        y as f64 + 1.0,
+                        z as f64 + 1.0,
+                        v[6],
+                        v[7],
+                        isovalue,
+                    );
                 }
                 if edges & 128 != 0 {
-                    vert_list[7] = interp_vertex(x as f64, y as f64 + 1.0, z as f64 + 1.0, x as f64, y as f64, z as f64 + 1.0, v[7], v[4], isovalue);
+                    vert_list[7] = interp_vertex(
+                        x as f64,
+                        y as f64 + 1.0,
+                        z as f64 + 1.0,
+                        x as f64,
+                        y as f64,
+                        z as f64 + 1.0,
+                        v[7],
+                        v[4],
+                        isovalue,
+                    );
                 }
                 if edges & 256 != 0 {
-                    vert_list[8] = interp_vertex(x as f64, y as f64, z as f64, x as f64, y as f64, z as f64 + 1.0, v[0], v[4], isovalue);
+                    vert_list[8] = interp_vertex(
+                        x as f64,
+                        y as f64,
+                        z as f64,
+                        x as f64,
+                        y as f64,
+                        z as f64 + 1.0,
+                        v[0],
+                        v[4],
+                        isovalue,
+                    );
                 }
                 if edges & 512 != 0 {
-                    vert_list[9] = interp_vertex(x as f64 + 1.0, y as f64, z as f64, x as f64 + 1.0, y as f64, z as f64 + 1.0, v[1], v[5], isovalue);
+                    vert_list[9] = interp_vertex(
+                        x as f64 + 1.0,
+                        y as f64,
+                        z as f64,
+                        x as f64 + 1.0,
+                        y as f64,
+                        z as f64 + 1.0,
+                        v[1],
+                        v[5],
+                        isovalue,
+                    );
                 }
                 if edges & 1024 != 0 {
-                    vert_list[10] = interp_vertex(x as f64 + 1.0, y as f64 + 1.0, z as f64, x as f64 + 1.0, y as f64 + 1.0, z as f64 + 1.0, v[2], v[6], isovalue);
+                    vert_list[10] = interp_vertex(
+                        x as f64 + 1.0,
+                        y as f64 + 1.0,
+                        z as f64,
+                        x as f64 + 1.0,
+                        y as f64 + 1.0,
+                        z as f64 + 1.0,
+                        v[2],
+                        v[6],
+                        isovalue,
+                    );
                 }
                 if edges & 2048 != 0 {
-                    vert_list[11] = interp_vertex(x as f64, y as f64 + 1.0, z as f64, x as f64, y as f64 + 1.0, z as f64 + 1.0, v[3], v[7], isovalue);
+                    vert_list[11] = interp_vertex(
+                        x as f64,
+                        y as f64 + 1.0,
+                        z as f64,
+                        x as f64,
+                        y as f64 + 1.0,
+                        z as f64 + 1.0,
+                        v[3],
+                        v[7],
+                        isovalue,
+                    );
                 }
 
                 // Create triangles using simplified triangle table lookup
@@ -741,19 +855,21 @@ fn marching_cubes(volume: &[f64], dims: [usize; 3], isovalue: f64) -> (Vec<f64>,
 
 /// Interpolate vertex position on edge
 fn interp_vertex(
-    x1: f64, y1: f64, z1: f64,
-    x2: f64, y2: f64, z2: f64,
-    v1: f64, v2: f64, iso: f64,
+    x1: f64,
+    y1: f64,
+    z1: f64,
+    x2: f64,
+    y2: f64,
+    z2: f64,
+    v1: f64,
+    v2: f64,
+    iso: f64,
 ) -> [f64; 3] {
     if (v1 - v2).abs() < 1e-10 {
         return [x1, y1, z1];
     }
     let t = (iso - v1) / (v2 - v1);
-    [
-        x1 + t * (x2 - x1),
-        y1 + t * (y2 - y1),
-        z1 + t * (z2 - z1),
-    ]
+    [x1 + t * (x2 - x1), y1 + t * (y2 - y1), z1 + t * (z2 - z1)]
 }
 
 #[cfg(test)]

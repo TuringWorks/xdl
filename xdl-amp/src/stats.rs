@@ -359,7 +359,7 @@ impl ExecutionStats {
         }
 
         // Sort by count descending
-        op_summaries.sort_by(|a, b| b.count.cmp(&a.count));
+        op_summaries.sort_by_key(|summary| std::cmp::Reverse(summary.count));
 
         StatsReport {
             backend,

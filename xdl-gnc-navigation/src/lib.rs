@@ -13,8 +13,48 @@
 //! sophisticated estimator.
 
 use serde::{Deserialize, Serialize};
-use xdl_gnc_core::{GncError, Quality, Quaternion, SignalStatus, Timestamp, Vec3};
+use xdl_gnc_core::{GncError, Quality, Quaternion, SignalStatus, StepEvent, Timestamp, Vec3};
 use xdl_gnc_simulation::{GnssMeasurement, ImuMeasurement, KinematicState};
+
+mod replay;
+pub use replay::replay_alpha_beta;
+
+/// GNSS quality policy shared by every estimator in this crate.
+///
+/// `Invalid` and `Stale` are rejected with an error, so no state is updated.
+/// `Degraded` is accepted and tagged with [`StepEvent::DegradedInput`] so the
+/// caller can see that the update used weaker data.
+fn require_frame(
+    estimator: xdl_gnc_core::FrameId,
+    measured: xdl_gnc_core::FrameId,
+    context: &str,
+) -> Result<(), GncError> {
+    if measured != estimator {
+        return Err(GncError::InvalidValue {
+            context: context.to_string(),
+            reason: format!("frame {measured:?} does not match estimator frame {estimator:?}"),
+        });
+    }
+    Ok(())
+}
+
+fn accept_gnss_quality(
+    measurement: &GnssMeasurement,
+    context: &str,
+) -> Result<Vec<StepEvent>, GncError> {
+    match measurement.status.quality {
+        Quality::Nominal => Ok(Vec::new()),
+        Quality::Degraded => Ok(vec![StepEvent::DegradedInput]),
+        Quality::Invalid => Err(GncError::InvalidValue {
+            context: context.to_string(),
+            reason: "measurement is marked invalid".to_string(),
+        }),
+        Quality::Stale => Err(GncError::InvalidValue {
+            context: context.to_string(),
+            reason: "measurement is marked stale".to_string(),
+        }),
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct AlphaBetaConfig {
@@ -45,17 +85,18 @@ impl AlphaBetaConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NavigationEstimate {
     pub state: KinematicState,
-    pub position_residual: Vec3,
-    pub velocity_residual: Vec3,
+    /// `None` when no GNSS measurement was applied in this step. A residual is
+    /// never carried over from an earlier sample.
+    pub position_residual: Option<Vec3>,
+    pub velocity_residual: Option<Vec3>,
     pub status: SignalStatus,
+    pub events: Vec<StepEvent>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AlphaBetaFilter {
     config: AlphaBetaConfig,
     state: KinematicState,
-    last_position_residual: Vec3,
-    last_velocity_residual: Vec3,
 }
 
 pub type Covariance6 = [[f64; 6]; 6];
@@ -105,6 +146,7 @@ pub struct EkfEstimate {
     pub position_innovation: Vec3,
     pub velocity_innovation: Vec3,
     pub status: SignalStatus,
+    pub events: Vec<StepEvent>,
 }
 
 /// Fixed-size 3D position/velocity EKF with sequential GNSS updates.
@@ -232,13 +274,14 @@ impl ErrorStateEkfConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ErrorStateEstimate {
     pub nominal: StrapdownState,
     pub covariance: Covariance15,
     pub position_innovation: Vec3,
     pub velocity_innovation: Vec3,
     pub status: SignalStatus,
+    pub events: Vec<StepEvent>,
 }
 
 /// Coupled 15-state error-state EKF around a strapdown nominal state.
@@ -354,12 +397,7 @@ impl ErrorStateEkf {
         &mut self,
         measurement: GnssMeasurement,
     ) -> Result<ErrorStateEstimate, GncError> {
-        if measurement.status.quality == Quality::Invalid {
-            return Err(GncError::InvalidValue {
-                context: "error-state EKF GNSS measurement".to_string(),
-                reason: "measurement is marked invalid".to_string(),
-            });
-        }
+        let events = accept_gnss_quality(&measurement, "error-state EKF GNSS measurement")?;
         if measurement.status.timestamp != self.nominal.timestamp {
             return Err(GncError::InvalidTime(
                 "predict error-state EKF to GNSS timestamp before updating".to_string(),
@@ -385,6 +423,7 @@ impl ErrorStateEkf {
             position_innovation,
             velocity_innovation,
             status: measurement.status,
+            events,
         })
     }
 
@@ -576,12 +615,8 @@ impl PositionVelocityEkf {
     }
 
     pub fn update_gnss(&mut self, measurement: GnssMeasurement) -> Result<EkfEstimate, GncError> {
-        if measurement.status.quality == Quality::Invalid {
-            return Err(GncError::InvalidValue {
-                context: "EKF GNSS measurement".to_string(),
-                reason: "measurement is marked invalid".to_string(),
-            });
-        }
+        let events = accept_gnss_quality(&measurement, "EKF GNSS measurement")?;
+        require_frame(self.state.frame, measurement.frame, "EKF GNSS measurement")?;
         if measurement.status.timestamp != self.state.timestamp {
             return Err(GncError::InvalidTime(
                 "predict EKF to GNSS timestamp before applying measurement".to_string(),
@@ -609,6 +644,7 @@ impl PositionVelocityEkf {
             position_innovation,
             velocity_innovation,
             status: measurement.status,
+            events,
         })
     }
 
@@ -805,8 +841,6 @@ impl AlphaBetaFilter {
         Self {
             config,
             state: initial_state,
-            last_position_residual: Vec3::ZERO,
-            last_velocity_residual: Vec3::ZERO,
         }
     }
 
@@ -842,10 +876,14 @@ impl AlphaBetaFilter {
         &mut self,
         measurement: GnssMeasurement,
     ) -> Result<NavigationEstimate, GncError> {
-        if measurement.status.quality == Quality::Invalid {
+        let events = accept_gnss_quality(&measurement, "GNSS measurement")?;
+        if measurement.frame != self.state.frame {
             return Err(GncError::InvalidValue {
                 context: "GNSS measurement".to_string(),
-                reason: "measurement is marked invalid".to_string(),
+                reason: format!(
+                    "frame {:?} does not match estimator frame {:?}",
+                    measurement.frame, self.state.frame
+                ),
             });
         }
         if measurement.status.timestamp < self.state.timestamp {
@@ -867,14 +905,12 @@ impl AlphaBetaFilter {
             self.state.position + position_residual * self.config.position_gain,
             self.state.velocity + velocity_residual * self.config.velocity_gain,
         )?;
-        self.last_position_residual = position_residual;
-        self.last_velocity_residual = velocity_residual;
-
         Ok(NavigationEstimate {
             state: self.state,
-            position_residual,
-            velocity_residual,
+            position_residual: Some(position_residual),
+            velocity_residual: Some(velocity_residual),
             status: measurement.status,
+            events,
         })
     }
 
@@ -884,17 +920,23 @@ impl AlphaBetaFilter {
         acceleration: Vec3,
         gnss: Option<GnssMeasurement>,
     ) -> Result<NavigationEstimate, GncError> {
+        // Validate quality before predicting so a rejected measurement leaves
+        // the filter state untouched.
+        if let Some(measurement) = &gnss {
+            accept_gnss_quality(measurement, "GNSS measurement")?;
+        }
         self.predict(timestamp, acceleration)?;
         match gnss {
             Some(measurement) => self.update_gnss(measurement),
             None => Ok(NavigationEstimate {
                 state: self.state,
-                position_residual: self.last_position_residual,
-                velocity_residual: self.last_velocity_residual,
+                position_residual: None,
+                velocity_residual: None,
                 status: SignalStatus {
                     quality: Quality::Degraded,
                     timestamp,
                 },
+                events: Vec::new(),
             }),
         }
     }
@@ -928,7 +970,7 @@ mod tests {
             .step(timestamp, Vec3::ZERO, Some(measurement))
             .expect("valid estimator step");
 
-        assert!((estimate.position_residual.x - 0.2).abs() < 1e-12);
+        assert!((estimate.position_residual.expect("GNSS residual present").x - 0.2).abs() < 1e-12);
         assert!((estimate.state.position.x - 1.1).abs() < 1e-12);
         assert!((estimate.state.velocity.x - 1.025).abs() < 1e-12);
     }
@@ -1149,5 +1191,115 @@ mod tests {
             ..imu
         };
         assert!(filter.predict(unusable).is_err());
+    }
+}
+
+#[cfg(test)]
+mod policy_tests {
+    use super::*;
+    use xdl_gnc_core::FrameId;
+
+    fn initial() -> KinematicState {
+        KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+            .expect("finite state")
+    }
+
+    fn gnss_at(seconds: f64, quality: Quality) -> GnssMeasurement {
+        GnssMeasurement::new(
+            Timestamp::from_seconds(seconds).expect("finite timestamp"),
+            FrameId::Inertial,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::ZERO,
+        )
+        .expect("finite GNSS")
+        .with_quality(quality)
+    }
+
+    fn alpha_beta() -> AlphaBetaFilter {
+        AlphaBetaFilter::new(AlphaBetaConfig::new(0.5, 0.25).expect("gains"), initial())
+    }
+
+    #[test]
+    fn alpha_beta_rejects_stale_gnss_without_mutating_state() {
+        let mut filter = alpha_beta();
+        let before = filter.state();
+        let stale = gnss_at(1.0, Quality::Stale);
+        let result = filter.step(
+            Timestamp::from_seconds(1.0).expect("finite timestamp"),
+            Vec3::ZERO,
+            Some(stale),
+        );
+        assert!(result.is_err());
+        assert_eq!(filter.state(), before);
+    }
+
+    #[test]
+    fn alpha_beta_tags_degraded_gnss() {
+        let mut filter = alpha_beta();
+        let estimate = filter
+            .step(
+                Timestamp::from_seconds(1.0).expect("finite timestamp"),
+                Vec3::ZERO,
+                Some(gnss_at(1.0, Quality::Degraded)),
+            )
+            .expect("degraded input is accepted");
+        assert_eq!(estimate.events, vec![StepEvent::DegradedInput]);
+        assert!(estimate.position_residual.is_some());
+    }
+
+    #[test]
+    fn missing_gnss_returns_none_residuals() {
+        let mut filter = alpha_beta();
+        // First step with a real measurement establishes a non-zero residual.
+        filter
+            .step(
+                Timestamp::from_seconds(1.0).expect("finite timestamp"),
+                Vec3::ZERO,
+                Some(gnss_at(1.0, Quality::Nominal)),
+            )
+            .expect("nominal update");
+        let dropout = filter
+            .step(
+                Timestamp::from_seconds(2.0).expect("finite timestamp"),
+                Vec3::ZERO,
+                None,
+            )
+            .expect("prediction-only step");
+        assert_eq!(dropout.position_residual, None);
+        assert_eq!(dropout.velocity_residual, None);
+        assert_eq!(dropout.status.quality, Quality::Degraded);
+    }
+
+    #[test]
+    fn gnss_frame_mismatch_is_rejected() {
+        let mut filter = alpha_beta();
+        let wrong_frame = GnssMeasurement::new(
+            Timestamp::from_seconds(0.0).expect("finite timestamp"),
+            FrameId::Body,
+            Vec3::ZERO,
+            Vec3::ZERO,
+        )
+        .expect("finite GNSS");
+        assert!(filter.update_gnss(wrong_frame).is_err());
+    }
+
+    #[test]
+    fn ekf_rejects_stale_and_tags_degraded() {
+        let config = EkfConfig::new(0.01, 1.0, 1.0).expect("noise");
+        let mut ekf =
+            PositionVelocityEkf::new(config, initial(), [[4.0; 6]; 6]).expect("covariance");
+        ekf.predict(
+            Timestamp::from_seconds(1.0).expect("finite timestamp"),
+            Vec3::ZERO,
+        )
+        .expect("prediction");
+        let before = ekf.state();
+        assert!(ekf.update_gnss(gnss_at(1.0, Quality::Stale)).is_err());
+        assert_eq!(ekf.state(), before);
+
+        let estimate = ekf
+            .update_gnss(gnss_at(1.0, Quality::Degraded))
+            .expect("degraded input is accepted");
+        assert_eq!(estimate.events, vec![StepEvent::DegradedInput]);
     }
 }

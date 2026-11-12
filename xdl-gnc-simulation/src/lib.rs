@@ -170,6 +170,104 @@ pub struct ReplayRecord {
     pub gnss: Option<GnssMeasurement>,
 }
 
+/// A single sensor measurement in an asynchronous replay stream.
+///
+/// Unlike [`ReplayRecord`], this does not force different sensors to share a
+/// frame or a timestamp. IMU data can remain in the body frame while GNSS data
+/// remains in the navigation frame, and equal timestamps are ordered by
+/// `ReplayEvent::sequence`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum ReplayMeasurement {
+    Imu(ImuMeasurement),
+    Gnss(GnssMeasurement),
+}
+
+impl ReplayMeasurement {
+    pub fn timestamp(self) -> Timestamp {
+        match self {
+            Self::Imu(measurement) => measurement.status.timestamp,
+            Self::Gnss(measurement) => measurement.status.timestamp,
+        }
+    }
+
+    pub fn frame(self) -> FrameId {
+        match self {
+            Self::Imu(measurement) => measurement.frame,
+            Self::Gnss(measurement) => measurement.frame,
+        }
+    }
+}
+
+/// A deterministic event in an asynchronous sensor replay stream.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ReplayEvent {
+    pub timestamp: Timestamp,
+    pub sequence: u64,
+    pub measurement: ReplayMeasurement,
+}
+
+/// Ordered replay for independent, multi-rate sensor streams.
+///
+/// Events are ordered lexicographically by `(timestamp, sequence)`. The
+/// sequence number makes same-timestamp events deterministic without imposing
+/// an artificial ordering between IMU and GNSS clocks.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ReplayEventLog {
+    next_sequence: u64,
+    events: Vec<ReplayEvent>,
+}
+
+impl ReplayEventLog {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn push(&mut self, measurement: ReplayMeasurement) -> Result<u64, GncError> {
+        let sequence = self.next_sequence;
+        if sequence == u64::MAX {
+            return Err(GncError::InvalidValue {
+                context: "replay sequence".to_string(),
+                reason: "sequence number overflow".to_string(),
+            });
+        }
+        self.push_event(ReplayEvent {
+            timestamp: measurement.timestamp(),
+            sequence,
+            measurement,
+        })?;
+        self.next_sequence = sequence + 1;
+        Ok(sequence)
+    }
+
+    pub fn push_event(&mut self, event: ReplayEvent) -> Result<(), GncError> {
+        if event.timestamp != event.measurement.timestamp() {
+            return Err(GncError::InvalidTime(
+                "replay event timestamp does not match measurement timestamp".to_string(),
+            ));
+        }
+        if let Some(previous) = self.events.last() {
+            let previous_key = (previous.timestamp, previous.sequence);
+            let event_key = (event.timestamp, event.sequence);
+            if event_key <= previous_key {
+                return Err(GncError::InvalidTime(
+                    "replay events must be ordered by timestamp and sequence".to_string(),
+                ));
+            }
+        }
+        self.next_sequence = self.next_sequence.max(event.sequence.saturating_add(1));
+        self.events.push(event);
+        Ok(())
+    }
+
+    pub fn events(&self) -> &[ReplayEvent] {
+        &self.events
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.events.is_empty()
+    }
+}
+
 /// Ordered, deterministic sensor replay log. All records in one log share a
 /// single frame, fixed by the first record.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -423,5 +521,50 @@ mod tests {
         });
         assert!(mismatched.is_err());
         assert_eq!(log.records().len(), 1);
+    }
+
+    #[test]
+    fn event_log_allows_multi_rate_frames_and_equal_timestamps() {
+        let mut log = ReplayEventLog::new();
+        let timestamp = Timestamp::from_nanoseconds(1_000_000);
+        let imu =
+            ImuMeasurement::new(timestamp, body(), Vec3::ZERO, Vec3::ZERO).expect("finite IMU");
+        let gnss = GnssMeasurement::new(timestamp, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+            .expect("finite GNSS");
+
+        assert_eq!(log.push(ReplayMeasurement::Imu(imu)), Ok(0));
+        assert_eq!(log.push(ReplayMeasurement::Gnss(gnss)), Ok(1));
+        assert_eq!(log.events().len(), 2);
+        assert_eq!(log.events()[0].measurement.frame(), body());
+        assert_eq!(log.events()[1].measurement.frame(), FrameId::Inertial);
+    }
+
+    #[test]
+    fn event_log_rejects_timestamp_mismatch_and_out_of_order_sequence() {
+        let mut log = ReplayEventLog::new();
+        let measurement = GnssMeasurement::new(
+            Timestamp::from_nanoseconds(2),
+            FrameId::Inertial,
+            Vec3::ZERO,
+            Vec3::ZERO,
+        )
+        .expect("finite GNSS");
+        assert!(log
+            .push_event(ReplayEvent {
+                timestamp: Timestamp::from_nanoseconds(1),
+                sequence: 0,
+                measurement: ReplayMeasurement::Gnss(measurement),
+            })
+            .is_err());
+
+        log.push(ReplayMeasurement::Gnss(measurement))
+            .expect("first event");
+        assert!(log
+            .push_event(ReplayEvent {
+                timestamp: measurement.status.timestamp,
+                sequence: 0,
+                measurement: ReplayMeasurement::Gnss(measurement),
+            })
+            .is_err());
     }
 }

@@ -1154,13 +1154,21 @@ pub fn ocontour(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let n = (z_data.len() as f64).sqrt() as usize;
     if n * n != z_data.len() {
-        println!("OCONTOUR: Data should be square, got {} elements", z_data.len());
+        println!(
+            "OCONTOUR: Data should be square, got {} elements",
+            z_data.len()
+        );
     }
 
-    println!("OCONTOUR: Overplotting {} contour levels on existing plot", 10);
-    println!("  Data range: {:.3} to {:.3}",
+    println!(
+        "OCONTOUR: Overplotting {} contour levels on existing plot",
+        10
+    );
+    println!(
+        "  Data range: {:.3} to {:.3}",
         z_data.iter().cloned().fold(f64::INFINITY, f64::min),
-        z_data.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+        z_data.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+    );
 
     Ok(XdlValue::Undefined)
 }
@@ -1211,8 +1219,12 @@ pub fn warp_tri(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => return Err(XdlError::RuntimeError("image must be an array".to_string())),
     };
 
-    println!("WARP_TRI: Warping {}x{} image using {} control points",
-             nx, ny, xo.len().min(yo.len()).min(xi.len()).min(yi.len()));
+    println!(
+        "WARP_TRI: Warping {}x{} image using {} control points",
+        nx,
+        ny,
+        xo.len().min(yo.len()).min(xi.len()).min(yi.len())
+    );
     println!("  Uses Delaunay triangulation for smooth interpolation");
 
     // Return placeholder - actual warping would require image processing
@@ -1310,7 +1322,10 @@ pub fn poly_2d(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => return Err(XdlError::RuntimeError("ky must be an array".to_string())),
     };
 
-    println!("POLY_2D: Applying polynomial transformation to {}x{} image", nx, ny);
+    println!(
+        "POLY_2D: Applying polynomial transformation to {}x{} image",
+        nx, ny
+    );
     println!("  Kx terms: {}, Ky terms: {}", kx.len(), ky.len());
 
     // Return transformed image (placeholder - just return original)
@@ -1413,9 +1428,11 @@ pub fn profiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     println!("PROFILES: Extracted profile from {}x{} image", nx, ny);
     println!("  Row {}: {} values", row_idx, profile.len());
-    println!("  Range: {:.3} to {:.3}",
+    println!(
+        "  Range: {:.3} to {:.3}",
         profile.iter().cloned().fold(f64::INFINITY, f64::min),
-        profile.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+        profile.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+    );
 
     Ok(XdlValue::Array(profile))
 }
@@ -1455,7 +1472,10 @@ pub fn tvlct(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     let n_colors = r.min(g).min(b);
-    println!("TVLCT: Loading {} colors starting at index {}", n_colors, start);
+    println!(
+        "TVLCT: Loading {} colors starting at index {}",
+        n_colors, start
+    );
 
     Ok(XdlValue::Undefined)
 }
@@ -1503,11 +1523,16 @@ pub fn legend(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let labels = match &args[0] {
-        XdlValue::NestedArray(arr) => {
-            arr.iter()
-                .filter_map(|v| if let XdlValue::String(s) = v { Some(s.clone()) } else { None })
-                .collect::<Vec<_>>()
-        }
+        XdlValue::NestedArray(arr) => arr
+            .iter()
+            .filter_map(|v| {
+                if let XdlValue::String(s) = v {
+                    Some(s.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>(),
         XdlValue::String(s) => vec![s.clone()],
         _ => vec!["Data".to_string()],
     };

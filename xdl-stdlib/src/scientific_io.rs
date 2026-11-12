@@ -337,7 +337,11 @@ pub fn ncdf_open(args: &[XdlValue]) -> XdlResult<XdlValue> {
         )));
     }
 
-    let format = if is_netcdf3 { "NetCDF-3" } else { "NetCDF-4/HDF5" };
+    let format = if is_netcdf3 {
+        "NetCDF-3"
+    } else {
+        "NetCDF-4/HDF5"
+    };
     println!(
         "NCDF_OPEN: File '{}' appears to be {} format but full parsing requires netcdf library.",
         filename, format
@@ -461,7 +465,10 @@ pub fn h5d_open(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => "unknown".to_string(),
     };
 
-    println!("H5D_OPEN: Opening dataset '{}' (requires hdf5 library)", dataset_name);
+    println!(
+        "H5D_OPEN: Opening dataset '{}' (requires hdf5 library)",
+        dataset_name
+    );
     Ok(XdlValue::Long(1))
 }
 
@@ -508,7 +515,10 @@ pub fn h5g_open(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => "/".to_string(),
     };
 
-    println!("H5G_OPEN: Opening group '{}' (requires hdf5 library)", group_name);
+    println!(
+        "H5G_OPEN: Opening group '{}' (requires hdf5 library)",
+        group_name
+    );
     Ok(XdlValue::Long(1))
 }
 
@@ -609,7 +619,10 @@ pub fn ncdf_varinq(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Return placeholder structure
     let mut result = HashMap::new();
     result.insert("NAME".to_string(), XdlValue::String("unknown".to_string()));
-    result.insert("DATATYPE".to_string(), XdlValue::String("FLOAT".to_string()));
+    result.insert(
+        "DATATYPE".to_string(),
+        XdlValue::String("FLOAT".to_string()),
+    );
     result.insert("NDIMS".to_string(), XdlValue::Long(0));
     result.insert("NATTS".to_string(), XdlValue::Long(0));
     result.insert("DIM".to_string(), XdlValue::Array(vec![]));
@@ -647,7 +660,10 @@ pub fn ncdf_dimid(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => "unknown".to_string(),
     };
 
-    println!("NCDF_DIMID: Getting dimension ID for '{}' (requires netcdf library)", dim_name);
+    println!(
+        "NCDF_DIMID: Getting dimension ID for '{}' (requires netcdf library)",
+        dim_name
+    );
     Ok(XdlValue::Long(-1))
 }
 
@@ -664,7 +680,10 @@ pub fn ncdf_varid(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => "unknown".to_string(),
     };
 
-    println!("NCDF_VARID: Getting variable ID for '{}' (requires netcdf library)", var_name);
+    println!(
+        "NCDF_VARID: Getting variable ID for '{}' (requires netcdf library)",
+        var_name
+    );
     Ok(XdlValue::Long(-1))
 }
 
@@ -716,16 +735,21 @@ pub fn ncdf_create(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
 
     let filename = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "string".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let clobber = keywords.contains_key("CLOBBER");
     let netcdf4 = keywords.contains_key("NETCDF4_FORMAT");
 
-    println!("NCDF_CREATE: Would create '{}' (clobber={}, netcdf4={})", filename, clobber, netcdf4);
+    println!(
+        "NCDF_CREATE: Would create '{}' (clobber={}, netcdf4={})",
+        filename, clobber, netcdf4
+    );
     println!("  Full NetCDF creation requires netcdf library");
 
     Ok(XdlValue::Long(1))
@@ -744,7 +768,10 @@ pub fn ncdf_dimdef(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => "dim".to_string(),
     };
 
-    println!("NCDF_DIMDEF: Would define dimension '{}' (requires netcdf library)", name);
+    println!(
+        "NCDF_DIMDEF: Would define dimension '{}' (requires netcdf library)",
+        name
+    );
     Ok(XdlValue::Long(0))
 }
 
@@ -761,7 +788,10 @@ pub fn ncdf_vardef(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => "var".to_string(),
     };
 
-    println!("NCDF_VARDEF: Would define variable '{}' (requires netcdf library)", name);
+    println!(
+        "NCDF_VARDEF: Would define variable '{}' (requires netcdf library)",
+        name
+    );
     Ok(XdlValue::Long(0))
 }
 
@@ -790,7 +820,10 @@ pub fn ncdf_attput(args: &[XdlValue]) -> XdlResult<XdlValue> {
 }
 
 /// NCDF_CONTROL - Control NetCDF file state
-pub fn ncdf_control(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn ncdf_control(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "NCDF_CONTROL: Expected ncid".to_string(),
@@ -802,7 +835,10 @@ pub fn ncdf_control(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> 
     let sync = keywords.contains_key("SYNC");
     let fill = keywords.contains_key("FILL");
 
-    println!("NCDF_CONTROL: (endef={}, redef={}, sync={}, fill={})", endef, redef, sync, fill);
+    println!(
+        "NCDF_CONTROL: (endef={}, redef={}, sync={}, fill={})",
+        endef, redef, sync, fill
+    );
 
     Ok(XdlValue::Undefined)
 }
@@ -821,10 +857,12 @@ pub fn mrdfits(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
 
     let filename = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "string".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let extension = if args.len() > 1 {
@@ -840,7 +878,10 @@ pub fn mrdfits(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
     let silent = keywords.contains_key("SILENT");
 
     if !silent {
-        println!("MRDFITS: Reading extension {} from '{}' (requires cfitsio library)", extension, filename);
+        println!(
+            "MRDFITS: Reading extension {} from '{}' (requires cfitsio library)",
+            extension, filename
+        );
     }
 
     readfits(args, keywords)
@@ -856,17 +897,22 @@ pub fn mwrfits(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
 
     let filename = match &args[1] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "string".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let create = keywords.contains_key("CREATE");
     let silent = keywords.contains_key("SILENT");
 
     if !silent {
-        println!("MWRFITS: Would write to '{}' (create={}) - requires cfitsio library", filename, create);
+        println!(
+            "MWRFITS: Would write to '{}' (create={}) - requires cfitsio library",
+            filename, create
+        );
     }
 
     Ok(XdlValue::Long(1))
@@ -906,10 +952,12 @@ pub fn fits_info(args: &[XdlValue], _keywords: &HashMap<String, XdlValue>) -> Xd
 
     let filename = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "string".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     // Try to read header and extract basic info
@@ -920,7 +968,9 @@ pub fn fits_info(args: &[XdlValue], _keywords: &HashMap<String, XdlValue>) -> Xd
 
     let mut file = File::open(path).map_err(|e| XdlError::IoError(e.to_string()))?;
     let mut header_block = vec![0u8; 2880];
-    let bytes_read = file.read(&mut header_block).map_err(|e| XdlError::IoError(e.to_string()))?;
+    let bytes_read = file
+        .read(&mut header_block)
+        .map_err(|e| XdlError::IoError(e.to_string()))?;
 
     // Parse header for basic info
     let mut n_ext = 0;
@@ -934,11 +984,23 @@ pub fn fits_info(args: &[XdlValue], _keywords: &HashMap<String, XdlValue>) -> Xd
             let line = String::from_utf8_lossy(&header_block[start..end]);
             if line.starts_with("BITPIX") {
                 if let Some(val) = line.split('=').nth(1) {
-                    bitpix = val.split('/').next().unwrap_or("0").trim().parse().unwrap_or(0);
+                    bitpix = val
+                        .split('/')
+                        .next()
+                        .unwrap_or("0")
+                        .trim()
+                        .parse()
+                        .unwrap_or(0);
                 }
             } else if line.starts_with("NAXIS ") || line.starts_with("NAXIS=") {
                 if let Some(val) = line.split('=').nth(1) {
-                    naxis = val.split('/').next().unwrap_or("0").trim().parse().unwrap_or(0);
+                    naxis = val
+                        .split('/')
+                        .next()
+                        .unwrap_or("0")
+                        .trim()
+                        .parse()
+                        .unwrap_or(0);
                 }
             } else if line.starts_with("XTENSION") {
                 n_ext += 1;
@@ -949,7 +1011,10 @@ pub fn fits_info(args: &[XdlValue], _keywords: &HashMap<String, XdlValue>) -> Xd
         }
     }
 
-    println!("FITS_INFO: '{}' - BITPIX={}, NAXIS={}, Extensions={}", filename, bitpix, naxis, n_ext);
+    println!(
+        "FITS_INFO: '{}' - BITPIX={}, NAXIS={}, Extensions={}",
+        filename, bitpix, naxis, n_ext
+    );
 
     let mut result = HashMap::new();
     result.insert("FILENAME".to_string(), XdlValue::String(filename));

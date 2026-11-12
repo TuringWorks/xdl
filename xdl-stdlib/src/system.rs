@@ -392,8 +392,9 @@ pub fn systime(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let month = day_of_year / 30 + 1;
         let day = day_of_year % 30 + 1;
 
-        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        let months = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
         let month_name = months.get(month as usize % 12).unwrap_or(&"???");
 
         Ok(XdlValue::String(format!(
@@ -415,28 +416,34 @@ pub fn julday(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let month = match &args[0] {
         XdlValue::Long(n) => *n,
         XdlValue::Int(n) => *n as i32,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let day = match &args[1] {
         XdlValue::Long(n) => *n,
         XdlValue::Int(n) => *n as i32,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let year = match &args[2] {
         XdlValue::Long(n) => *n,
         XdlValue::Int(n) => *n as i32,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[2].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
     };
 
     // Optional hour, minute, second
@@ -446,7 +453,9 @@ pub fn julday(args: &[XdlValue]) -> XdlResult<XdlValue> {
             XdlValue::Double(n) => *n,
             _ => 0.0,
         }
-    } else { 0.0 };
+    } else {
+        0.0
+    };
 
     let minute = if args.len() > 4 {
         match &args[4] {
@@ -454,7 +463,9 @@ pub fn julday(args: &[XdlValue]) -> XdlResult<XdlValue> {
             XdlValue::Double(n) => *n,
             _ => 0.0,
         }
-    } else { 0.0 };
+    } else {
+        0.0
+    };
 
     let second = if args.len() > 5 {
         match &args[5] {
@@ -462,7 +473,9 @@ pub fn julday(args: &[XdlValue]) -> XdlResult<XdlValue> {
             XdlValue::Double(n) => *n,
             _ => 0.0,
         }
-    } else { 0.0 };
+    } else {
+        0.0
+    };
 
     // Julian day calculation (based on standard algorithm)
     let a = (14 - month) / 12;
@@ -490,10 +503,12 @@ pub fn caldat(args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Long(n) => *n as f64,
         XdlValue::Double(n) => *n,
         XdlValue::Float(n) => *n as f64,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let jdn = julian.floor() as i32;
@@ -582,10 +597,7 @@ pub fn tag_names(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     match &args[0] {
         XdlValue::Struct(map) => {
-            let names: Vec<XdlValue> = map
-                .keys()
-                .map(|k| XdlValue::String(k.clone()))
-                .collect();
+            let names: Vec<XdlValue> = map.keys().map(|k| XdlValue::String(k.clone())).collect();
             Ok(XdlValue::NestedArray(names))
         }
         _ => Ok(XdlValue::NestedArray(vec![])),
@@ -619,9 +631,12 @@ pub fn size_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             result.push(data.len() as f64);
             Ok(XdlValue::Array(result))
         }
-        XdlValue::String(s) => {
-            Ok(XdlValue::Array(vec![1.0, s.len() as f64, 7.0, s.len() as f64]))
-        }
+        XdlValue::String(s) => Ok(XdlValue::Array(vec![
+            1.0,
+            s.len() as f64,
+            7.0,
+            s.len() as f64,
+        ])),
         _ => Ok(XdlValue::Array(vec![0.0, 0.0, 0.0, 0.0])),
     }
 }
@@ -636,10 +651,12 @@ pub fn isa(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let type_name = match &args[1] {
         XdlValue::String(s) => s.to_uppercase(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "string".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let matches = match &args[0] {
@@ -921,7 +938,7 @@ pub fn memory(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Real implementation would query system memory
     let _ = args;
     Ok(XdlValue::Array(vec![
-        1024.0 * 1024.0 * 100.0, // Heap usage estimate (100MB)
+        1024.0 * 1024.0 * 100.0,  // Heap usage estimate (100MB)
         1024.0 * 1024.0 * 1024.0, // Available memory (1GB)
     ]))
 }
@@ -959,7 +976,10 @@ pub fn routine_info(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     // Return placeholder information
-    Ok(XdlValue::String(format!("Routine '{}' information not available", name)))
+    Ok(XdlValue::String(format!(
+        "Routine '{}' information not available",
+        name
+    )))
 }
 
 /// MESSAGE - Print a message/error
@@ -1254,7 +1274,11 @@ pub fn platform(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 /// IS_WINDOWS - Check if running on Windows
 pub fn is_windows(_args: &[XdlValue]) -> XdlResult<XdlValue> {
-    Ok(XdlValue::Int(if cfg!(target_os = "windows") { 1 } else { 0 }))
+    Ok(XdlValue::Int(if cfg!(target_os = "windows") {
+        1
+    } else {
+        0
+    }))
 }
 
 /// IS_MACOS - Check if running on macOS

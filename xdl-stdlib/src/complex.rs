@@ -135,7 +135,9 @@ pub fn dcomplex(args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Float(v) => *v as f64,
         XdlValue::Long(v) => *v as f64,
         XdlValue::Int(v) => *v as f64,
-        XdlValue::Complex(c) => return Ok(XdlValue::DComplex(Complex64::new(c.re as f64, c.im as f64))),
+        XdlValue::Complex(c) => {
+            return Ok(XdlValue::DComplex(Complex64::new(c.re as f64, c.im as f64)))
+        }
         XdlValue::DComplex(c) => return Ok(XdlValue::DComplex(*c)),
         _ => {
             return Err(XdlError::TypeMismatch {

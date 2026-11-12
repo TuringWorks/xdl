@@ -115,13 +115,12 @@ impl<const INPUTS: usize, const STATES: usize> LinearGainSchedule<INPUTS, STATES
         let fraction = ((parameter - self.lower_parameter)
             / (self.upper_parameter - self.lower_parameter))
             .clamp(0.0, 1.0);
-        let mut gain = [[0.0; STATES]; INPUTS];
-        for row in 0..INPUTS {
-            for column in 0..STATES {
-                gain[row][column] = self.lower_gain[row][column]
-                    + fraction * (self.upper_gain[row][column] - self.lower_gain[row][column]);
-            }
-        }
+        let gain = std::array::from_fn(|row| {
+            std::array::from_fn(|column| {
+                self.lower_gain[row][column]
+                    + fraction * (self.upper_gain[row][column] - self.lower_gain[row][column])
+            })
+        });
         Ok(gain)
     }
 }

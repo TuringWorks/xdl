@@ -512,9 +512,8 @@ pub fn file_info(args: &[XdlValue]) -> XdlResult<XdlValue> {
         return Ok(XdlValue::Struct(std::collections::HashMap::new()));
     }
 
-    let metadata = std::fs::metadata(path).map_err(|e| {
-        XdlError::RuntimeError(format!("FILE_INFO: Cannot get metadata: {}", e))
-    })?;
+    let metadata = std::fs::metadata(path)
+        .map_err(|e| XdlError::RuntimeError(format!("FILE_INFO: Cannot get metadata: {}", e)))?;
 
     let mut info = std::collections::HashMap::new();
 
@@ -536,7 +535,10 @@ pub fn file_info(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // Modification time (seconds since epoch)
     if let Ok(mtime) = metadata.modified() {
         if let Ok(duration) = mtime.duration_since(UNIX_EPOCH) {
-            info.insert("MTIME".to_string(), XdlValue::Double(duration.as_secs_f64()));
+            info.insert(
+                "MTIME".to_string(),
+                XdlValue::Double(duration.as_secs_f64()),
+            );
         }
     }
 
@@ -587,9 +589,7 @@ pub fn file_search(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let filename = entry.file_name().to_string_lossy().to_string();
             // Simple wildcard matching
             if simple_glob_match(pattern, &filename) {
-                matches.push(XdlValue::String(
-                    entry.path().to_string_lossy().to_string(),
-                ));
+                matches.push(XdlValue::String(entry.path().to_string_lossy().to_string()));
             }
         }
     }
@@ -724,7 +724,10 @@ pub fn file_copy(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     std::fs::copy(source, dest).map_err(|e| {
-        XdlError::RuntimeError(format!("FILE_COPY: Failed to copy {} to {}: {}", source, dest, e))
+        XdlError::RuntimeError(format!(
+            "FILE_COPY: Failed to copy {} to {}: {}",
+            source, dest, e
+        ))
     })?;
 
     Ok(XdlValue::Long(1))
@@ -759,7 +762,10 @@ pub fn file_move(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     std::fs::rename(source, dest).map_err(|e| {
-        XdlError::RuntimeError(format!("FILE_MOVE: Failed to move {} to {}: {}", source, dest, e))
+        XdlError::RuntimeError(format!(
+            "FILE_MOVE: Failed to move {} to {}: {}",
+            source, dest, e
+        ))
     })?;
 
     Ok(XdlValue::Long(1))
@@ -793,9 +799,10 @@ pub fn eof_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .ok_or_else(|| XdlError::RuntimeError(format!("EOF: LUN {} not open", lun)))?;
 
     // Get the reader
-    let reader = handle.reader.as_mut().ok_or_else(|| {
-        XdlError::RuntimeError(format!("EOF: LUN {} not open for reading", lun))
-    })?;
+    let reader = handle
+        .reader
+        .as_mut()
+        .ok_or_else(|| XdlError::RuntimeError(format!("EOF: LUN {} not open for reading", lun)))?;
 
     // Check if at EOF by peeking at buffer
     let at_eof = reader.fill_buf().map_or(true, |buf| buf.is_empty());
@@ -829,9 +836,9 @@ pub fn flush_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Get the writer
     if let Some(writer) = handle.writer.as_mut() {
-        writer.flush().map_err(|e| {
-            XdlError::RuntimeError(format!("FLUSH: Failed to flush: {}", e))
-        })?;
+        writer
+            .flush()
+            .map_err(|e| XdlError::RuntimeError(format!("FLUSH: Failed to flush: {}", e)))?;
     }
 
     Ok(XdlValue::Undefined)
@@ -932,11 +939,19 @@ pub fn spawn_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let output = std::process::Command::new(if cfg!(target_os = "windows") { "cmd" } else { "sh" })
-        .arg(if cfg!(target_os = "windows") { "/C" } else { "-c" })
-        .arg(cmd)
-        .output()
-        .map_err(|e| XdlError::RuntimeError(format!("SPAWN: Failed to execute: {}", e)))?;
+    let output = std::process::Command::new(if cfg!(target_os = "windows") {
+        "cmd"
+    } else {
+        "sh"
+    })
+    .arg(if cfg!(target_os = "windows") {
+        "/C"
+    } else {
+        "-c"
+    })
+    .arg(cmd)
+    .output()
+    .map_err(|e| XdlError::RuntimeError(format!("SPAWN: Failed to execute: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -1133,17 +1148,18 @@ pub fn findfile(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let search_paths: Vec<String> = if args.len() > 1 {
         match &args[1] {
             XdlValue::String(s) => s.split(':').map(|p| p.to_string()).collect(),
-            XdlValue::Array(arr) => arr
-                .iter()
-                .map(|v| format!("{}", v))
-                .collect(),
+            XdlValue::Array(arr) => arr.iter().map(|v| format!("{}", v)).collect(),
             _ => vec![".".to_string()],
         }
     } else {
         // Use current directory and PATH environment variable
         let mut paths = vec![".".to_string()];
         if let Ok(path_env) = std::env::var("PATH") {
-            let sep = if cfg!(target_os = "windows") { ';' } else { ':' };
+            let sep = if cfg!(target_os = "windows") {
+                ';'
+            } else {
+                ':'
+            };
             paths.extend(path_env.split(sep).map(|s| s.to_string()));
         }
         paths
@@ -1180,13 +1196,18 @@ pub fn file_basename(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     let path = Path::new(path_str);
-    let basename = path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+    let basename = path
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default();
 
     // Check for extension removal
     if args.len() > 1 {
         if let XdlValue::String(ext) = &args[1] {
             if basename.ends_with(ext) {
-                return Ok(XdlValue::String(basename[..basename.len() - ext.len()].to_string()));
+                return Ok(XdlValue::String(
+                    basename[..basename.len() - ext.len()].to_string(),
+                ));
             }
         }
     }
@@ -1213,7 +1234,10 @@ pub fn file_dirname(args: &[XdlValue]) -> XdlResult<XdlValue> {
     };
 
     let path = Path::new(path_str);
-    let dirname = path.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+    let dirname = path
+        .parent()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
 
     Ok(XdlValue::String(dirname))
 }
@@ -1286,11 +1310,13 @@ pub fn point_lun(args: &[XdlValue]) -> XdlResult<XdlValue> {
             };
 
             if let Some(ref mut reader) = handle.reader {
-                reader.seek(SeekFrom::Start(position))
+                reader
+                    .seek(SeekFrom::Start(position))
                     .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?;
             }
             if let Some(ref mut writer) = handle.writer {
-                writer.seek(SeekFrom::Start(position))
+                writer
+                    .seek(SeekFrom::Start(position))
                     .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?;
             }
 
@@ -1298,10 +1324,12 @@ pub fn point_lun(args: &[XdlValue]) -> XdlResult<XdlValue> {
         } else {
             // Get position
             let pos = if let Some(ref mut reader) = handle.reader {
-                reader.stream_position()
+                reader
+                    .stream_position()
                     .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?
             } else if let Some(ref mut writer) = handle.writer {
-                writer.stream_position()
+                writer
+                    .stream_position()
                     .map_err(|e| XdlError::RuntimeError(format!("POINT_LUN: {}", e)))?
             } else {
                 0
@@ -1310,7 +1338,10 @@ pub fn point_lun(args: &[XdlValue]) -> XdlResult<XdlValue> {
             Ok(XdlValue::Long64(pos as i64))
         }
     } else {
-        Err(XdlError::RuntimeError(format!("POINT_LUN: Invalid LUN {}", lun)))
+        Err(XdlError::RuntimeError(format!(
+            "POINT_LUN: Invalid LUN {}",
+            lun
+        )))
     }
 }
 
@@ -1344,7 +1375,7 @@ pub fn readu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Float(_) => 4,
         XdlValue::Double(_) => 8,
         XdlValue::Array(arr) => arr.len() * 8, // Assume f64 array
-        _ => 8, // Default to 8 bytes
+        _ => 8,                                // Default to 8 bytes
     };
 
     let mut handles = FILE_HANDLES.lock().unwrap();
@@ -1352,7 +1383,8 @@ pub fn readu(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if let Some(handle) = handles.get_mut(&lun) {
         if let Some(ref mut reader) = handle.reader {
             let mut buffer = vec![0u8; n_bytes];
-            reader.read_exact(&mut buffer)
+            reader
+                .read_exact(&mut buffer)
                 .map_err(|e| XdlError::RuntimeError(format!("READU: {}", e)))?;
 
             // Convert bytes to value
@@ -1372,8 +1404,8 @@ pub fn readu(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 }
                 XdlValue::Double(_) => {
                     let val = f64::from_le_bytes([
-                        buffer[0], buffer[1], buffer[2], buffer[3],
-                        buffer[4], buffer[5], buffer[6], buffer[7],
+                        buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5],
+                        buffer[6], buffer[7],
                     ]);
                     Ok(XdlValue::Double(val))
                 }
@@ -1381,8 +1413,14 @@ pub fn readu(args: &[XdlValue]) -> XdlResult<XdlValue> {
                     let mut result = Vec::with_capacity(arr.len());
                     for i in 0..arr.len() {
                         let val = f64::from_le_bytes([
-                            buffer[i*8], buffer[i*8+1], buffer[i*8+2], buffer[i*8+3],
-                            buffer[i*8+4], buffer[i*8+5], buffer[i*8+6], buffer[i*8+7],
+                            buffer[i * 8],
+                            buffer[i * 8 + 1],
+                            buffer[i * 8 + 2],
+                            buffer[i * 8 + 3],
+                            buffer[i * 8 + 4],
+                            buffer[i * 8 + 5],
+                            buffer[i * 8 + 6],
+                            buffer[i * 8 + 7],
                         ]);
                         result.push(val);
                     }
@@ -1391,10 +1429,15 @@ pub fn readu(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 _ => Ok(XdlValue::Array(vec![])),
             }
         } else {
-            Err(XdlError::RuntimeError("READU: File not opened for reading".to_string()))
+            Err(XdlError::RuntimeError(
+                "READU: File not opened for reading".to_string(),
+            ))
         }
     } else {
-        Err(XdlError::RuntimeError(format!("READU: Invalid LUN {}", lun)))
+        Err(XdlError::RuntimeError(format!(
+            "READU: Invalid LUN {}",
+            lun
+        )))
     }
 }
 
@@ -1427,28 +1470,34 @@ pub fn writeu(args: &[XdlValue]) -> XdlResult<XdlValue> {
             for arg in args.iter().skip(1) {
                 match arg {
                     XdlValue::Byte(v) => {
-                        writer.write_all(&[*v])
+                        writer
+                            .write_all(&[*v])
                             .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
                     }
                     XdlValue::Int(v) => {
-                        writer.write_all(&v.to_le_bytes())
+                        writer
+                            .write_all(&v.to_le_bytes())
                             .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
                     }
                     XdlValue::Long(v) => {
-                        writer.write_all(&v.to_le_bytes())
+                        writer
+                            .write_all(&v.to_le_bytes())
                             .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
                     }
                     XdlValue::Float(v) => {
-                        writer.write_all(&v.to_le_bytes())
+                        writer
+                            .write_all(&v.to_le_bytes())
                             .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
                     }
                     XdlValue::Double(v) => {
-                        writer.write_all(&v.to_le_bytes())
+                        writer
+                            .write_all(&v.to_le_bytes())
                             .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
                     }
                     XdlValue::Array(arr) => {
                         for v in arr {
-                            writer.write_all(&v.to_le_bytes())
+                            writer
+                                .write_all(&v.to_le_bytes())
                                 .map_err(|e| XdlError::RuntimeError(format!("WRITEU: {}", e)))?;
                         }
                     }
@@ -1457,10 +1506,15 @@ pub fn writeu(args: &[XdlValue]) -> XdlResult<XdlValue> {
             }
             Ok(XdlValue::Undefined)
         } else {
-            Err(XdlError::RuntimeError("WRITEU: File not opened for writing".to_string()))
+            Err(XdlError::RuntimeError(
+                "WRITEU: File not opened for writing".to_string(),
+            ))
         }
     } else {
-        Err(XdlError::RuntimeError(format!("WRITEU: Invalid LUN {}", lun)))
+        Err(XdlError::RuntimeError(format!(
+            "WRITEU: Invalid LUN {}",
+            lun
+        )))
     }
 }
 

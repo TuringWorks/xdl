@@ -618,7 +618,11 @@ pub fn butterworth(args: &[XdlValue]) -> XdlResult<XdlValue> {
             a_coeffs = convolve_poly(&a_coeffs, &new_a);
         } else if k < order / 2 {
             // Complex conjugate pair
-            let new_a = vec![1.0, -2.0 * pole_real, pole_real * pole_real + pole_imag * pole_imag];
+            let new_a = vec![
+                1.0,
+                -2.0 * pole_real,
+                pole_real * pole_real + pole_imag * pole_imag,
+            ];
             a_coeffs = convolve_poly(&a_coeffs, &new_a);
         }
     }
@@ -840,8 +844,11 @@ pub fn leefilt(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let window: Vec<f64> = data[start..end].to_vec();
 
         let local_mean: f64 = window.iter().sum::<f64>() / window.len() as f64;
-        let local_var: f64 =
-            window.iter().map(|&x| (x - local_mean).powi(2)).sum::<f64>() / window.len() as f64;
+        let local_var: f64 = window
+            .iter()
+            .map(|&x| (x - local_mean).powi(2))
+            .sum::<f64>()
+            / window.len() as f64;
 
         // Lee filter formula
         let weight = if local_var > noise_var {

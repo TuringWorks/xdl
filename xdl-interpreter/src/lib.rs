@@ -106,7 +106,8 @@ impl Interpreter {
                         .collect::<XdlResult<Vec<_>>>()?;
 
                     // Call the user function and get the result
-                    let result = self.call_user_function(name, &resolved_args, keywords, &func_def)?;
+                    let result =
+                        self.call_user_function(name, &resolved_args, keywords, &func_def)?;
 
                     // Return the result as a literal expression
                     Ok(Expression::Literal {

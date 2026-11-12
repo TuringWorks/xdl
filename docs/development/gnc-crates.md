@@ -17,7 +17,9 @@ xdl-gnc-core         types, errors, time, frames, limits, signal status
    ├── xdl-gnc-simulation   truth model, sensor records, replay log
    ├── xdl-gnc-navigation   alpha-beta filter, position/velocity EKF, strapdown, error-state EKF
    ├── xdl-gnc-guidance     waypoint guidance
-   └── xdl-gnc-control      bounded PID
+   ├── xdl-gnc-control      bounded PID, state-space, gain scheduling
+   ├── xdl-gnc-actuators    first-order actuator dynamics, command/rate limits
+   └── xdl-gnc-integration  deterministic end-to-end scenario contracts
 ```
 
 Rules:
@@ -25,6 +27,7 @@ Rules:
 - No crate depends on the XDL interpreter or on `XdlValue`. Bindings belong at the XDL boundary, not here.
 - Every step takes an explicit `Timestamp` / `DurationNs`. No hidden clocks.
 - Non-finite input is an error (`GncError::NonFinite`), not a silent value.
+- Every value carries its frame. Estimators take the frame from their initial state and reject measurements in another frame.
 - Signal validity travels with the value as `SignalStatus` (quality + `StepEvent`s), not as a sentinel.
 
 ## Crates
@@ -32,10 +35,12 @@ Rules:
 | Crate | Provides |
 |---|---|
 | `xdl-gnc-core` | `Vec3`, `Quaternion`, `FrameId`, `Pose`, `Transform`, `ScalarLimit`, `Timestamp`, `DurationNs`, `Quality`, `SignalStatus`, `StepResult`, `StepEvent`, `GncError` |
-| `xdl-gnc-simulation` | `KinematicState`, `ConstantAccelerationModel` (fixed-step truth), `ImuMeasurement`, `GnssMeasurement`, `ReplayLog` (ordered, rejects out-of-order records) |
+| `xdl-gnc-simulation` | `KinematicState`, `ConstantAccelerationModel` (fixed-step truth), `ImuMeasurement`, `GnssMeasurement`, `ReplayLog` (legacy synchronized records), `ReplayEventLog` (multi-rate typed events) |
 | `xdl-gnc-navigation` | `AlphaBetaFilter` (baseline), `PositionVelocityEkf` (6-state), `StrapdownMechanization`, `ErrorStateEkf` (15-state covariance, IMU predict, GNSS update) |
 | `xdl-gnc-guidance` | `WaypointGuidance` → `GuidanceCommand` |
-| `xdl-gnc-control` | `PidController` (integral clamp, anti-windup on saturation, output limit) → `PidOutput` |
+| `xdl-gnc-control` | `PidController` (integral clamp, anti-windup on saturation, output limit), discrete state-space, linear gain scheduling |
+| `xdl-gnc-actuators` | First-order actuator with command and rate limits; emits saturation/rate-limit events |
+| `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 
 ### Step events
 
@@ -45,28 +50,31 @@ Rules:
 |---|---|
 | `TargetReached` | `xdl-gnc-guidance` (waypoint within acceptance radius) |
 | `Saturated` | `xdl-gnc-control` (output clamped by limit) |
-| `RateLimited`, `StaleInput`, `DegradedInput`, `InvalidInput`, `NumericalWarning` | defined, not yet emitted |
+| `RateLimited` | `xdl-gnc-actuators` |
+| `StaleInput`, `DegradedInput`, `InvalidInput`, `NumericalWarning` | defined, not yet emitted uniformly |
 
 ## Status by crate
 
 | Crate | Unit tests | Known limits |
 |---|---|---|
-| `xdl-gnc-core` | 4 | Foundation only |
-| `xdl-gnc-simulation` | 4 | Constant-acceleration truth only; no disturbances, scheduling, or Monte Carlo |
-| `xdl-gnc-navigation` | 9 | Alpha-beta is a baseline, not a production estimator |
+| `xdl-gnc-core` | 9 | Foundation only |
+| `xdl-gnc-simulation` | 11 | Truth and replay primitives; no disturbances or Monte Carlo |
+| `xdl-gnc-navigation` | 14 | Alpha-beta is a baseline, not a production estimator |
 | `xdl-gnc-guidance` | 2 | Waypoint only |
-| `xdl-gnc-control` | 2 | Single-axis PID |
+| `xdl-gnc-control` | 6 | Single-axis PID plus state-space and gain-scheduled state feedback |
+| `xdl-gnc-actuators` | 3 | First-order scalar actuator only |
+| `xdl-gnc-integration` | 1 | Deterministic scenario; replay execution and fault injection remain pending |
 
-Counts from `cargo test -p <crate>` on 2026-11-12. Five crates, 21 tests, all passing.
+Counts from the targeted GNC test run on 2026-11-12. Eight crates, 44 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
 
 ## Build and test
 
 ```bash
-cargo check -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control --all-targets
-cargo test  -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control
+cargo check -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control -p xdl-gnc-actuators -p xdl-gnc-integration --all-targets
+cargo test  -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control -p xdl-gnc-actuators -p xdl-gnc-integration
 ```
 
-All five crates are `[workspace]` members, so `cargo test --workspace` covers them.
+All eight GNC crates are `[workspace]` members, so `cargo test --workspace` covers them.
 
 ## License
 

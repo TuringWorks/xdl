@@ -7,17 +7,16 @@
 //! - Hash tables (HASH, ORDEREDHASH, DICTIONARY)
 //! - Structures (CREATE_STRUCT)
 
+use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::RwLock;
-use lazy_static::lazy_static;
 use xdl_core::{XdlError, XdlResult, XdlValue};
 
 // Global pointer heap - stores allocated values by ID
 lazy_static! {
     static ref POINTER_HEAP: RwLock<HashMap<usize, XdlValue>> = RwLock::new(HashMap::new());
     static ref NEXT_PTR_ID: AtomicUsize = AtomicUsize::new(1);
-
     static ref OBJECT_HEAP: RwLock<HashMap<usize, XdlValue>> = RwLock::new(HashMap::new());
     static ref NEXT_OBJ_ID: AtomicUsize = AtomicUsize::new(1);
 }
@@ -38,7 +37,8 @@ pub fn ptr_new(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let value = args[0].clone();
     let id = NEXT_PTR_ID.fetch_add(1, Ordering::SeqCst);
 
-    let mut heap = POINTER_HEAP.write()
+    let mut heap = POINTER_HEAP
+        .write()
         .map_err(|_| XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string()))?;
     heap.insert(id, value);
 
@@ -58,18 +58,27 @@ pub fn ptr_valid(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if *id == 0 {
                 return Ok(XdlValue::Int(0)); // Null pointer
             }
-            let heap = POINTER_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string()))?;
+            let heap = POINTER_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string())
+            })?;
             Ok(XdlValue::Int(if heap.contains_key(id) { 1 } else { 0 }))
         }
         XdlValue::Array(arr) => {
             // Check multiple pointers
-            let heap = POINTER_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string()))?;
-            let results: Vec<f64> = arr.iter().map(|id| {
-                let ptr_id = *id as usize;
-                if ptr_id == 0 || !heap.contains_key(&ptr_id) { 0.0 } else { 1.0 }
-            }).collect();
+            let heap = POINTER_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string())
+            })?;
+            let results: Vec<f64> = arr
+                .iter()
+                .map(|id| {
+                    let ptr_id = *id as usize;
+                    if ptr_id == 0 || !heap.contains_key(&ptr_id) {
+                        0.0
+                    } else {
+                        1.0
+                    }
+                })
+                .collect();
             Ok(XdlValue::Array(results))
         }
         _ => Ok(XdlValue::Int(0)),
@@ -86,16 +95,18 @@ pub fn ptr_free(args: &[XdlValue]) -> XdlResult<XdlValue> {
     match &args[0] {
         XdlValue::Pointer(id) => {
             if *id != 0 {
-                let mut heap = POINTER_HEAP.write()
-                    .map_err(|_| XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string()))?;
+                let mut heap = POINTER_HEAP.write().map_err(|_| {
+                    XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string())
+                })?;
                 heap.remove(id);
             }
             Ok(XdlValue::Undefined)
         }
         XdlValue::Array(arr) => {
             // Free multiple pointers
-            let mut heap = POINTER_HEAP.write()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string()))?;
+            let mut heap = POINTER_HEAP.write().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string())
+            })?;
             for id in arr {
                 let ptr_id = *id as usize;
                 if ptr_id != 0 {
@@ -111,21 +122,28 @@ pub fn ptr_free(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Dereference a pointer - get the value it points to
 pub fn ptr_deref(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("PTR_DEREF requires a pointer".to_string()));
+        return Err(XdlError::RuntimeError(
+            "PTR_DEREF requires a pointer".to_string(),
+        ));
     }
 
     match &args[0] {
         XdlValue::Pointer(id) => {
             if *id == 0 {
-                return Err(XdlError::RuntimeError("Cannot dereference null pointer".to_string()));
+                return Err(XdlError::RuntimeError(
+                    "Cannot dereference null pointer".to_string(),
+                ));
             }
-            let heap = POINTER_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string()))?;
+            let heap = POINTER_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire pointer heap lock".to_string())
+            })?;
             heap.get(id)
                 .cloned()
                 .ok_or_else(|| XdlError::RuntimeError("Invalid pointer".to_string()))
         }
-        _ => Err(XdlError::RuntimeError("PTR_DEREF requires a pointer".to_string())),
+        _ => Err(XdlError::RuntimeError(
+            "PTR_DEREF requires a pointer".to_string(),
+        )),
     }
 }
 
@@ -160,7 +178,8 @@ pub fn obj_new(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     }
 
-    let mut heap = OBJECT_HEAP.write()
+    let mut heap = OBJECT_HEAP
+        .write()
         .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
     heap.insert(id, XdlValue::Struct(obj_data));
 
@@ -180,16 +199,18 @@ pub fn obj_valid(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if *id == 0 {
                 return Ok(XdlValue::Int(0)); // Null object
             }
-            let heap = OBJECT_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let heap = OBJECT_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             Ok(XdlValue::Int(if heap.contains_key(id) { 1 } else { 0 }))
         }
         XdlValue::ObjRef(id) => {
             if *id == 0 {
                 return Ok(XdlValue::Int(0));
             }
-            let heap = OBJECT_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let heap = OBJECT_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             Ok(XdlValue::Int(if heap.contains_key(id) { 1 } else { 0 }))
         }
         _ => Ok(XdlValue::Int(0)),
@@ -206,8 +227,9 @@ pub fn obj_destroy(args: &[XdlValue]) -> XdlResult<XdlValue> {
     match &args[0] {
         XdlValue::Object(id) | XdlValue::ObjRef(id) => {
             if *id != 0 {
-                let mut heap = OBJECT_HEAP.write()
-                    .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+                let mut heap = OBJECT_HEAP.write().map_err(|_| {
+                    XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+                })?;
                 heap.remove(id);
             }
             Ok(XdlValue::Undefined)
@@ -219,7 +241,9 @@ pub fn obj_destroy(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// OBJ_CLASS - Get the class name of an object
 pub fn obj_class(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("OBJ_CLASS requires an object".to_string()));
+        return Err(XdlError::RuntimeError(
+            "OBJ_CLASS requires an object".to_string(),
+        ));
     }
 
     match &args[0] {
@@ -227,8 +251,9 @@ pub fn obj_class(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if *id == 0 {
                 return Ok(XdlValue::String("".to_string()));
             }
-            let heap = OBJECT_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let heap = OBJECT_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             if let Some(XdlValue::Struct(data)) = heap.get(id) {
                 if let Some(XdlValue::String(class_name)) = data.get("__class__") {
                     return Ok(XdlValue::String(class_name.clone()));
@@ -243,12 +268,18 @@ pub fn obj_class(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// OBJ_ISA - Check if object is instance of a class
 pub fn obj_isa(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("OBJ_ISA requires object and class name".to_string()));
+        return Err(XdlError::RuntimeError(
+            "OBJ_ISA requires object and class name".to_string(),
+        ));
     }
 
     let class_name = match &args[1] {
         XdlValue::String(s) => s.to_uppercase(),
-        _ => return Err(XdlError::RuntimeError("Class name must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Class name must be a string".to_string(),
+            ))
+        }
     };
 
     match &args[0] {
@@ -256,8 +287,9 @@ pub fn obj_isa(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if *id == 0 {
                 return Ok(XdlValue::Int(0));
             }
-            let heap = OBJECT_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let heap = OBJECT_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             if let Some(XdlValue::Struct(data)) = heap.get(id) {
                 if let Some(XdlValue::String(obj_class)) = data.get("__class__") {
                     // Check direct class match
@@ -285,12 +317,18 @@ pub fn obj_isa(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: result = OBJ_HASMETHOD(obj, method_name)
 pub fn obj_hasmethod(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("OBJ_HASMETHOD requires object and method name".to_string()));
+        return Err(XdlError::RuntimeError(
+            "OBJ_HASMETHOD requires object and method name".to_string(),
+        ));
     }
 
     let method_name = match &args[1] {
         XdlValue::String(s) => s.to_uppercase(),
-        _ => return Err(XdlError::RuntimeError("Method name must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Method name must be a string".to_string(),
+            ))
+        }
     };
 
     match &args[0] {
@@ -298,8 +336,9 @@ pub fn obj_hasmethod(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if *id == 0 {
                 return Ok(XdlValue::Int(0));
             }
-            let heap = OBJECT_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let heap = OBJECT_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             if let Some(XdlValue::Struct(data)) = heap.get(id) {
                 // Check if method exists in __methods__ field
                 if let Some(XdlValue::String(methods)) = data.get("__methods__") {
@@ -321,7 +360,9 @@ pub fn obj_hasmethod(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: parent = OBJ_PARENT(obj)
 pub fn obj_parent(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::RuntimeError("OBJ_PARENT requires an object".to_string()));
+        return Err(XdlError::RuntimeError(
+            "OBJ_PARENT requires an object".to_string(),
+        ));
     }
 
     match &args[0] {
@@ -329,8 +370,9 @@ pub fn obj_parent(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if *id == 0 {
                 return Ok(XdlValue::String(String::new()));
             }
-            let heap = OBJECT_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let heap = OBJECT_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             if let Some(XdlValue::Struct(data)) = heap.get(id) {
                 if let Some(XdlValue::String(inherits)) = data.get("__inherits__") {
                     // Return first parent
@@ -350,25 +392,35 @@ pub fn obj_parent(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Note: This is a placeholder - full implementation requires interpreter context
 pub fn call_method(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("CALL_METHOD requires object and method name".to_string()));
+        return Err(XdlError::RuntimeError(
+            "CALL_METHOD requires object and method name".to_string(),
+        ));
     }
 
     let method_name = match &args[1] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::RuntimeError("Method name must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Method name must be a string".to_string(),
+            ))
+        }
     };
 
     match &args[0] {
         XdlValue::Object(id) | XdlValue::ObjRef(id) => {
             if *id == 0 {
-                return Err(XdlError::RuntimeError("Cannot call method on NULL object".to_string()));
+                return Err(XdlError::RuntimeError(
+                    "Cannot call method on NULL object".to_string(),
+                ));
             }
             // Placeholder - actual method dispatch requires interpreter context
             println!("CALL_METHOD: Would call '{}' on object {}", method_name, id);
             println!("  Note: Full method dispatch requires interpreter integration");
             Ok(XdlValue::Int(1))
         }
-        _ => Err(XdlError::RuntimeError("First argument must be an object".to_string())),
+        _ => Err(XdlError::RuntimeError(
+            "First argument must be an object".to_string(),
+        )),
     }
 }
 
@@ -376,21 +428,30 @@ pub fn call_method(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: SETPROPERTY, obj, property_name, value
 pub fn setproperty(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 3 {
-        return Err(XdlError::RuntimeError("SETPROPERTY requires object, property name, and value".to_string()));
+        return Err(XdlError::RuntimeError(
+            "SETPROPERTY requires object, property name, and value".to_string(),
+        ));
     }
 
     let prop_name = match &args[1] {
         XdlValue::String(s) => s.to_uppercase(),
-        _ => return Err(XdlError::RuntimeError("Property name must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Property name must be a string".to_string(),
+            ))
+        }
     };
 
     match &args[0] {
         XdlValue::Object(id) | XdlValue::ObjRef(id) => {
             if *id == 0 {
-                return Err(XdlError::RuntimeError("Cannot set property on NULL object".to_string()));
+                return Err(XdlError::RuntimeError(
+                    "Cannot set property on NULL object".to_string(),
+                ));
             }
-            let mut heap = OBJECT_HEAP.write()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let mut heap = OBJECT_HEAP.write().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             if let Some(XdlValue::Struct(data)) = heap.get_mut(id) {
                 data.insert(prop_name.clone(), args[2].clone());
                 println!("SETPROPERTY: Set '{}' on object {}", prop_name, id);
@@ -398,7 +459,9 @@ pub fn setproperty(args: &[XdlValue]) -> XdlResult<XdlValue> {
             }
             Err(XdlError::RuntimeError(format!("Object {} not found", id)))
         }
-        _ => Err(XdlError::RuntimeError("First argument must be an object".to_string())),
+        _ => Err(XdlError::RuntimeError(
+            "First argument must be an object".to_string(),
+        )),
     }
 }
 
@@ -406,21 +469,30 @@ pub fn setproperty(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// Usage: value = GETPROPERTY(obj, property_name)
 pub fn getproperty(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("GETPROPERTY requires object and property name".to_string()));
+        return Err(XdlError::RuntimeError(
+            "GETPROPERTY requires object and property name".to_string(),
+        ));
     }
 
     let prop_name = match &args[1] {
         XdlValue::String(s) => s.to_uppercase(),
-        _ => return Err(XdlError::RuntimeError("Property name must be a string".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "Property name must be a string".to_string(),
+            ))
+        }
     };
 
     match &args[0] {
         XdlValue::Object(id) | XdlValue::ObjRef(id) => {
             if *id == 0 {
-                return Err(XdlError::RuntimeError("Cannot get property from NULL object".to_string()));
+                return Err(XdlError::RuntimeError(
+                    "Cannot get property from NULL object".to_string(),
+                ));
             }
-            let heap = OBJECT_HEAP.read()
-                .map_err(|_| XdlError::RuntimeError("Failed to acquire object heap lock".to_string()))?;
+            let heap = OBJECT_HEAP.read().map_err(|_| {
+                XdlError::RuntimeError("Failed to acquire object heap lock".to_string())
+            })?;
             if let Some(XdlValue::Struct(data)) = heap.get(id) {
                 if let Some(value) = data.get(&prop_name) {
                     return Ok(value.clone());
@@ -430,7 +502,9 @@ pub fn getproperty(args: &[XdlValue]) -> XdlResult<XdlValue> {
             }
             Err(XdlError::RuntimeError(format!("Object {} not found", id)))
         }
-        _ => Err(XdlError::RuntimeError("First argument must be an object".to_string())),
+        _ => Err(XdlError::RuntimeError(
+            "First argument must be an object".to_string(),
+        )),
     }
 }
 
@@ -449,7 +523,9 @@ pub fn list(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// LIST_ADD - Add item to list
 pub fn list_add(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("LIST_ADD requires list and item".to_string()));
+        return Err(XdlError::RuntimeError(
+            "LIST_ADD requires list and item".to_string(),
+        ));
     }
 
     match &args[0] {
@@ -460,7 +536,9 @@ pub fn list_add(args: &[XdlValue]) -> XdlResult<XdlValue> {
             }
             Ok(XdlValue::NestedArray(new_items))
         }
-        _ => Err(XdlError::RuntimeError("First argument must be a list".to_string())),
+        _ => Err(XdlError::RuntimeError(
+            "First argument must be a list".to_string(),
+        )),
     }
 }
 
@@ -573,9 +651,7 @@ pub fn n_tags(args: &[XdlValue]) -> XdlResult<XdlValue> {
     match &args[0] {
         XdlValue::Struct(map) => {
             // Don't count internal tags like __name__, __class__
-            let count = map.keys()
-                .filter(|k| !k.starts_with("__"))
-                .count();
+            let count = map.keys().filter(|k| !k.starts_with("__")).count();
             Ok(XdlValue::Long(count as i32))
         }
         _ => Ok(XdlValue::Long(0)),
@@ -590,7 +666,8 @@ pub fn tag_names(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     match &args[0] {
         XdlValue::Struct(map) => {
-            let names: Vec<XdlValue> = map.keys()
+            let names: Vec<XdlValue> = map
+                .keys()
                 .filter(|k| !k.starts_with("__"))
                 .map(|k| XdlValue::String(k.to_uppercase()))
                 .collect();
@@ -603,7 +680,9 @@ pub fn tag_names(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// STRUCT_ASSIGN - Assign values to structure fields
 pub fn struct_assign(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::RuntimeError("STRUCT_ASSIGN requires structure and values".to_string()));
+        return Err(XdlError::RuntimeError(
+            "STRUCT_ASSIGN requires structure and values".to_string(),
+        ));
     }
 
     match &args[0] {
@@ -619,19 +698,17 @@ pub fn struct_assign(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
             Ok(XdlValue::Struct(new_map))
         }
-        _ => Err(XdlError::RuntimeError("First argument must be a structure".to_string())),
+        _ => Err(XdlError::RuntimeError(
+            "First argument must be a structure".to_string(),
+        )),
     }
 }
 
 /// HEAP_GC - Perform garbage collection on heap
 pub fn heap_gc(_args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For now, just return count of items in heap
-    let ptr_count = POINTER_HEAP.read()
-        .map(|h| h.len())
-        .unwrap_or(0);
-    let obj_count = OBJECT_HEAP.read()
-        .map(|h| h.len())
-        .unwrap_or(0);
+    let ptr_count = POINTER_HEAP.read().map(|h| h.len()).unwrap_or(0);
+    let obj_count = OBJECT_HEAP.read().map(|h| h.len()).unwrap_or(0);
 
     Ok(XdlValue::Long((ptr_count + obj_count) as i32))
 }
@@ -680,7 +757,8 @@ mod tests {
             XdlValue::Long(100),
             XdlValue::String("key2".to_string()),
             XdlValue::String("value2".to_string()),
-        ]).unwrap();
+        ])
+        .unwrap();
 
         match h {
             XdlValue::Struct(map) => {
@@ -698,7 +776,8 @@ mod tests {
             XdlValue::Double(1.0),
             XdlValue::String("y".to_string()),
             XdlValue::Double(2.0),
-        ]).unwrap();
+        ])
+        .unwrap();
 
         match s {
             XdlValue::Struct(map) => {

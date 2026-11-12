@@ -172,11 +172,9 @@ pub fn widget_button(
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let label = keywords
@@ -226,11 +224,9 @@ pub fn widget_slider(
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let minimum = keywords
@@ -292,11 +288,9 @@ pub fn widget_text(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let text = keywords
@@ -352,11 +346,9 @@ pub fn widget_label(
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let text = keywords
@@ -399,11 +391,9 @@ pub fn widget_draw(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let xsize = keywords
@@ -447,11 +437,9 @@ pub fn widget_list(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let num_items = match keywords.get("VALUE") {
@@ -500,11 +488,9 @@ pub fn widget_droplist(
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let title = keywords
@@ -556,11 +542,9 @@ pub fn widget_control(
         ));
     }
 
-    let id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let realize = keywords.contains_key("REALIZE");
@@ -604,7 +588,10 @@ pub fn widget_control(
             _ => true,
         };
         update_widget(id, |w| w.visible = is_mapped);
-        println!("WIDGET_CONTROL: Setting widget {} visible={}", id, is_mapped);
+        println!(
+            "WIDGET_CONTROL: Setting widget {} visible={}",
+            id, is_mapped
+        );
     }
 
     Ok(XdlValue::Undefined)
@@ -619,11 +606,9 @@ pub fn widget_info(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> X
         ));
     }
 
-    let id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let valid_id = keywords.contains_key("VALID_ID");
@@ -673,11 +658,9 @@ pub fn xmanager(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlR
         _ => "unknown".to_string(),
     };
 
-    let id = value_to_usize(&args[1]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[1]),
-        }
+    let id = value_to_usize(&args[1]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[1]),
     })?;
 
     let no_block = keywords.contains_key("NO_BLOCK");
@@ -712,16 +695,17 @@ pub fn widget_event(
         ));
     }
 
-    let id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let nowait = keywords.contains_key("NOWAIT");
 
-    println!("WIDGET_EVENT: Waiting for event on widget {} (nowait={})", id, nowait);
+    println!(
+        "WIDGET_EVENT: Waiting for event on widget {} (nowait={})",
+        id, nowait
+    );
     println!("  Note: Event handling requires xdl-gui. Returning empty event.");
 
     // Return an empty event structure
@@ -745,11 +729,9 @@ pub fn widget_table(
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let (rows, cols) = match keywords.get("VALUE") {
@@ -792,21 +774,16 @@ pub fn widget_table(
 
 /// WIDGET_TREE - Create a tree widget for hierarchical data
 /// IDL syntax: id = WIDGET_TREE(parent [, VALUE=label] [, /FOLDER] [, /EXPANDED])
-pub fn widget_tree(
-    args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
+pub fn widget_tree(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "WIDGET_TREE: Expected parent widget ID".to_string(),
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let label = keywords
@@ -846,21 +823,16 @@ pub fn widget_tree(
 
 /// WIDGET_TAB - Create a tab widget for organizing content
 /// IDL syntax: id = WIDGET_TAB(parent [, /MULTILINE] [, LOCATION=loc])
-pub fn widget_tab(
-    args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
+pub fn widget_tab(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "WIDGET_TAB: Expected parent widget ID".to_string(),
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let multiline = keywords.contains_key("MULTILINE");
@@ -915,11 +887,9 @@ pub fn widget_combobox(
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let num_items = match keywords.get("VALUE") {
@@ -965,11 +935,9 @@ pub fn widget_propertysheet(
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let num_props = match keywords.get("VALUE") {
@@ -1027,21 +995,16 @@ pub fn widget_displaycontextmenu(
 
 /// CW_FIELD - Compound widget for labeled field input
 /// IDL syntax: id = CW_FIELD(parent [, TITLE=title] [, VALUE=value] [, /STRING] [, /FLOAT] [, /INTEGER])
-pub fn cw_field(
-    args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
+pub fn cw_field(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "CW_FIELD: Expected parent widget ID".to_string(),
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let title = keywords
@@ -1087,21 +1050,16 @@ pub fn cw_field(
 
 /// CW_BGROUP - Compound widget for button group
 /// IDL syntax: id = CW_BGROUP(parent, labels [, /EXCLUSIVE] [, /NONEXCLUSIVE] [, /ROW] [, /COLUMN])
-pub fn cw_bgroup(
-    args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
+pub fn cw_bgroup(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     if args.len() < 2 {
         return Err(XdlError::InvalidArgument(
             "CW_BGROUP: Expected parent and labels".to_string(),
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let num_buttons = match &args[1] {
@@ -1151,21 +1109,16 @@ pub fn cw_bgroup(
 
 /// CW_PDMENU - Compound widget for pulldown menu
 /// IDL syntax: id = CW_PDMENU(parent, menu_desc [, /MBAR])
-pub fn cw_pdmenu(
-    args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
+pub fn cw_pdmenu(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     if args.len() < 2 {
         return Err(XdlError::InvalidArgument(
             "CW_PDMENU: Expected parent and menu description".to_string(),
         ));
     }
 
-    let parent_id = value_to_usize(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let parent_id = value_to_usize(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "integer".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
     let is_mbar = keywords.contains_key("MBAR");
@@ -1195,7 +1148,10 @@ pub fn cw_pdmenu(
 
 /// XREGISTERED - Check if a widget application is registered
 /// IDL syntax: result = XREGISTERED(name)
-pub fn xregistered(args: &[XdlValue], _keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn xregistered(
+    args: &[XdlValue],
+    _keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     let name = if !args.is_empty() {
         match &args[0] {
             XdlValue::String(s) => s.clone(),
@@ -1217,7 +1173,10 @@ pub fn xloadct(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
     let block = keywords.contains_key("BLOCK");
     let modal = keywords.contains_key("MODAL");
 
-    println!("XLOADCT: Color table selection dialog (block={}, modal={})", block, modal);
+    println!(
+        "XLOADCT: Color table selection dialog (block={}, modal={})",
+        block, modal
+    );
     println!("  Note: Interactive dialogs require xdl-gui.");
     println!("  Available color tables: 0-40 (use LOADCT, n to load)");
 
@@ -1238,7 +1197,10 @@ pub fn xpalette(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlR
 
 /// XDISPLAYFILE - Display a text file in a widget
 /// IDL syntax: XDISPLAYFILE, filename [, TITLE=title] [, /BLOCK]
-pub fn xdisplayfile(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn xdisplayfile(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "XDISPLAYFILE: Expected filename".to_string(),
@@ -1247,10 +1209,12 @@ pub fn xdisplayfile(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> 
 
     let filename = match &args[0] {
         XdlValue::String(s) => s.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "string".to_string(),
-            actual: format!("{:?}", args[0]),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string".to_string(),
+                actual: format!("{:?}", args[0]),
+            })
+        }
     };
 
     let title = keywords
@@ -1264,7 +1228,11 @@ pub fn xdisplayfile(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> 
     // Try to read and display file content
     if let Ok(content) = std::fs::read_to_string(&filename) {
         let lines: Vec<&str> = content.lines().take(20).collect();
-        println!("XDISPLAYFILE: '{}' (showing first {} lines)", title, lines.len());
+        println!(
+            "XDISPLAYFILE: '{}' (showing first {} lines)",
+            title,
+            lines.len()
+        );
         for line in lines {
             println!("  {}", line);
         }

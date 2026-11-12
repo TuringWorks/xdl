@@ -864,7 +864,11 @@ pub fn matrix_rank(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Compute rank via SVD
     let svd = matrix.svd(false, false);
-    let rank = svd.singular_values.iter().filter(|&&s| s > tolerance).count();
+    let rank = svd
+        .singular_values
+        .iter()
+        .filter(|&&s| s > tolerance)
+        .count();
 
     Ok(XdlValue::Long(rank as i32))
 }

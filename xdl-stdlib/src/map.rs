@@ -30,20 +30,20 @@ static MAP_PROJECTION: RwLock<Option<MapProjection>> = RwLock::new(None);
 /// Supported map projections
 #[derive(Debug, Clone)]
 pub enum ProjectionType {
-    Cylindrical,      // Equidistant cylindrical (Plate Carrée)
-    Mercator,         // Mercator conformal
-    LambertConic,     // Lambert conformal conic
-    Orthographic,     // Orthographic (view from space)
-    Stereographic,    // Stereographic
-    Gnomonic,         // Gnomonic (great circles as straight lines)
-    Sinusoidal,       // Sinusoidal (Sanson-Flamsteed)
-    Mollweide,        // Mollweide (equal area)
-    Robinson,         // Robinson (compromise)
-    Hammer,           // Hammer-Aitoff (equal area)
-    Aitoff,           // Aitoff
-    Albers,           // Albers equal area conic
+    Cylindrical,          // Equidistant cylindrical (Plate Carrée)
+    Mercator,             // Mercator conformal
+    LambertConic,         // Lambert conformal conic
+    Orthographic,         // Orthographic (view from space)
+    Stereographic,        // Stereographic
+    Gnomonic,             // Gnomonic (great circles as straight lines)
+    Sinusoidal,           // Sinusoidal (Sanson-Flamsteed)
+    Mollweide,            // Mollweide (equal area)
+    Robinson,             // Robinson (compromise)
+    Hammer,               // Hammer-Aitoff (equal area)
+    Aitoff,               // Aitoff
+    Albers,               // Albers equal area conic
     AzimuthalEquidistant, // Azimuthal equidistant
-    Satellite,        // General perspective (satellite view)
+    Satellite,            // General perspective (satellite view)
 }
 
 impl ProjectionType {
@@ -128,12 +128,14 @@ impl MapProjection {
             }
             ProjectionType::Stereographic => {
                 // Stereographic projection
-                let k = 2.0 / (1.0
-                    + center_lat_rad.sin() * lat_rad.sin()
-                    + center_lat_rad.cos() * lat_rad.cos() * lon_rad.cos());
+                let k = 2.0
+                    / (1.0
+                        + center_lat_rad.sin() * lat_rad.sin()
+                        + center_lat_rad.cos() * lat_rad.cos() * lon_rad.cos());
                 let x = k * lat_rad.cos() * lon_rad.sin();
-                let y = k * (center_lat_rad.cos() * lat_rad.sin()
-                    - center_lat_rad.sin() * lat_rad.cos() * lon_rad.cos());
+                let y = k
+                    * (center_lat_rad.cos() * lat_rad.sin()
+                        - center_lat_rad.sin() * lat_rad.cos() * lon_rad.cos());
                 (x, y)
             }
             ProjectionType::Sinusoidal => {
@@ -178,8 +180,9 @@ impl MapProjection {
                     return None;
                 }
                 let x = k * lat_rad.cos() * lon_rad.sin();
-                let y = k * (center_lat_rad.cos() * lat_rad.sin()
-                    - center_lat_rad.sin() * lat_rad.cos() * lon_rad.cos());
+                let y = k
+                    * (center_lat_rad.cos() * lat_rad.sin()
+                        - center_lat_rad.sin() * lat_rad.cos() * lon_rad.cos());
                 (x, y)
             }
             _ => {
@@ -325,7 +328,10 @@ pub fn map_continents(
         _ => None,
     });
 
-    println!("MAP_CONTINENTS: Drawing with {:?} projection", proj.projection);
+    println!(
+        "MAP_CONTINENTS: Drawing with {:?} projection",
+        proj.projection
+    );
     if draw_coasts {
         println!("  - Drawing coastlines");
     }
@@ -369,10 +375,7 @@ pub fn map_continents(
 
 /// MAP_GRID - Draw map grid lines (parallels and meridians)
 /// IDL syntax: MAP_GRID [, LATDEL=degrees] [, LONDEL=degrees] [, /LABEL] [, COLOR=color]
-pub fn map_grid(
-    _args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
+pub fn map_grid(_args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     let proj_guard = MAP_PROJECTION.read().unwrap();
     let proj = proj_guard
         .as_ref()
@@ -420,11 +423,7 @@ pub fn map_grid(
             lon += 2.0;
         }
         if !line_points.is_empty() {
-            println!(
-                "  - Parallel {}°: {} points",
-                lat,
-                line_points.len()
-            );
+            println!("  - Parallel {}°: {} points", lat, line_points.len());
         }
         lat += lat_del;
     }
@@ -441,11 +440,7 @@ pub fn map_grid(
             lat += 2.0;
         }
         if !line_points.is_empty() {
-            println!(
-                "  - Meridian {}°: {} points",
-                lon,
-                line_points.len()
-            );
+            println!("  - Meridian {}°: {} points", lon, line_points.len());
         }
         lon += lon_del;
     }
@@ -455,7 +450,10 @@ pub fn map_grid(
 
 /// Convert geographic coordinates to map coordinates
 /// IDL syntax: result = CONVERT_COORD(x, y, /DATA, /TO_DEVICE)
-pub fn convert_coord(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn convert_coord(
+    args: &[XdlValue],
+    keywords: &HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     if args.len() < 2 {
         return Err(XdlError::InvalidArgument(
             "CONVERT_COORD: Expected at least 2 arguments (lat, lon)".to_string(),
@@ -467,18 +465,14 @@ pub fn convert_coord(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) ->
         .as_ref()
         .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?;
 
-    let lat = value_to_f64(&args[0]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[0]),
-        }
+    let lat = value_to_f64(&args[0]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "numeric".to_string(),
+        actual: format!("{:?}", args[0]),
     })?;
 
-    let lon = value_to_f64(&args[1]).ok_or_else(|| {
-        XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[1]),
-        }
+    let lon = value_to_f64(&args[1]).ok_or_else(|| XdlError::TypeMismatch {
+        expected: "numeric".to_string(),
+        actual: format!("{:?}", args[1]),
     })?;
 
     let _from_data = keywords.contains_key("DATA");

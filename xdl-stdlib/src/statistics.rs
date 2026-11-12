@@ -730,7 +730,8 @@ pub fn spline(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let a = (x[k + 1] - ti) / h;
         let b = (ti - x[k]) / h;
 
-        let yi = a * y[k] + b * y[k + 1]
+        let yi = a * y[k]
+            + b * y[k + 1]
             + ((a * a * a - a) * d2y[k] + (b * b * b - b) * d2y[k + 1]) * h * h / 6.0;
 
         result.push(yi);
@@ -921,10 +922,7 @@ pub fn ladfit(args: &[XdlValue]) -> XdlResult<XdlValue> {
             .collect();
 
         // Compute weights (1 / |residual|, with small epsilon to avoid division by zero)
-        let weights: Vec<f64> = residuals
-            .iter()
-            .map(|r| 1.0 / (r.abs() + 1e-10))
-            .collect();
+        let weights: Vec<f64> = residuals.iter().map(|r| 1.0 / (r.abs() + 1e-10)).collect();
 
         let total_weight: f64 = weights.iter().sum();
 
@@ -1085,9 +1083,9 @@ pub fn curvefit(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let z = (x - a[1]) / a[2];
         let exp_term = (-z * z).exp();
         vec![
-            exp_term,                              // df/da[0]
-            a[0] * exp_term * 2.0 * z / a[2],      // df/da[1]
-            a[0] * exp_term * 2.0 * z * z / a[2],  // df/da[2]
+            exp_term,                             // df/da[0]
+            a[0] * exp_term * 2.0 * z / a[2],     // df/da[1]
+            a[0] * exp_term * 2.0 * z * z / a[2], // df/da[2]
         ]
     };
 
@@ -1132,7 +1130,11 @@ pub fn curvefit(args: &[XdlValue]) -> XdlResult<XdlValue> {
         // Solve for delta
         if let Ok(delta) = solve_linear_system(&jtj, &jtr) {
             // Try new parameters
-            let new_params: Vec<f64> = params.iter().zip(delta.iter()).map(|(p, d)| p + d).collect();
+            let new_params: Vec<f64> = params
+                .iter()
+                .zip(delta.iter())
+                .map(|(p, d)| p + d)
+                .collect();
 
             // Compute new error
             let old_error: f64 = residuals.iter().map(|r| r * r).sum();
@@ -1242,7 +1244,10 @@ pub fn robust_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
 
         let mean: f64 = filtered_data.iter().sum::<f64>() / filtered_data.len() as f64;
-        let variance: f64 = filtered_data.iter().map(|x| (x - mean).powi(2)).sum::<f64>()
+        let variance: f64 = filtered_data
+            .iter()
+            .map(|x| (x - mean).powi(2))
+            .sum::<f64>()
             / (filtered_data.len() - 1).max(1) as f64;
         let std_dev = variance.sqrt();
 

@@ -22,7 +22,8 @@ members = [
     "xdl-gnc-navigation",
     "xdl-gnc-guidance",
     "xdl-gnc-control",
-    "xdl-gnc-actuators"
+    "xdl-gnc-actuators",
+    "xdl-gnc-integration"
 ]
 resolver = "2"
 

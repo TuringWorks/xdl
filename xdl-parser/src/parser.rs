@@ -268,7 +268,7 @@ impl<'a> Parser<'a> {
         let else_block = if is_single_line {
             if self.check(&Token::Else) {
                 self.advance(); // consume 'else'
-                // Single-line ELSE: parse one statement
+                                // Single-line ELSE: parse one statement
                 let stmt = self.parse_statement()?;
                 Some(vec![stmt])
             } else {
@@ -686,7 +686,11 @@ impl<'a> Parser<'a> {
                 vec![self.parse_statement()?]
             };
 
-            branches.push(CaseBranch { values, body, location: Location::unknown() });
+            branches.push(CaseBranch {
+                values,
+                body,
+                location: Location::unknown(),
+            });
 
             // Skip newlines after the statement
             while matches!(self.peek(), Token::Newline) {
@@ -761,14 +765,21 @@ impl<'a> Parser<'a> {
                 vec![self.parse_statement()?]
             };
 
-            branches.push(CaseBranch { values, body, location: Location::unknown() });
+            branches.push(CaseBranch {
+                values,
+                body,
+                location: Location::unknown(),
+            });
 
             while matches!(self.peek(), Token::Newline) {
                 self.advance();
             }
         }
 
-        self.consume(Token::Endswitch, "Expected 'endswitch' to close switch statement")?;
+        self.consume(
+            Token::Endswitch,
+            "Expected 'endswitch' to close switch statement",
+        )?;
 
         Ok(Statement::Switch {
             expr,

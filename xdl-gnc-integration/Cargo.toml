@@ -1,0 +1,15 @@
+[package]
+name = "xdl-gnc-integration"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "End-to-end deterministic GNC integration scenario"
+
+[dependencies]
+xdl-gnc-actuators = { path = "../xdl-gnc-actuators" }
+xdl-gnc-control = { path = "../xdl-gnc-control" }
+xdl-gnc-core = { path = "../xdl-gnc-core" }
+xdl-gnc-guidance = { path = "../xdl-gnc-guidance" }
+xdl-gnc-navigation = { path = "../xdl-gnc-navigation" }
+xdl-gnc-simulation = { path = "../xdl-gnc-simulation" }

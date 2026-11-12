@@ -232,9 +232,10 @@ impl Evaluator {
                     }
 
                     // MultiDimArray methods: arr->Shape(), arr->Flatten(), etc.
-                    XdlValue::MultiDimArray { ref data, ref shape } => {
-                        methods::call_multidim_method(data, shape, method, &arg_values)
-                    }
+                    XdlValue::MultiDimArray {
+                        ref data,
+                        ref shape,
+                    } => methods::call_multidim_method(data, shape, method, &arg_values),
 
                     // NestedArray methods: matrix->NRows(), matrix->Flatten(), etc.
                     XdlValue::NestedArray(ref rows) => {
@@ -242,9 +243,7 @@ impl Evaluator {
                     }
 
                     // String methods: str->ToUpper(), str->Length(), str->Contains(), etc.
-                    XdlValue::String(ref s) => {
-                        methods::call_string_method(s, method, &arg_values)
-                    }
+                    XdlValue::String(ref s) => methods::call_string_method(s, method, &arg_values),
 
                     // Structs don't have methods - use dot notation for field access
                     XdlValue::Struct(ref _map) => Err(XdlError::TypeMismatch {

@@ -628,9 +628,7 @@ pub fn hough(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .collect();
 
     // Rho values
-    let rhos: Vec<f64> = (0..num_rhos)
-        .map(|i| i as f64 - rho_max)
-        .collect();
+    let rhos: Vec<f64> = (0..num_rhos).map(|i| i as f64 - rho_max).collect();
 
     // Accumulate votes
     for r in 0..rows {
@@ -706,7 +704,7 @@ pub fn radon(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let mut count = 0;
 
             // Sample along the ray
-            for s in -((diagonal as i32))..=((diagonal as i32)) {
+            for s in -(diagonal as i32)..=(diagonal as i32) {
                 let x = r * cos_t - (s as f64) * sin_t + center_c;
                 let y = r * sin_t + (s as f64) * cos_t + center_r;
 
@@ -975,7 +973,8 @@ pub fn hist_equal(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let mut histogram = vec![0usize; num_bins];
 
     for &val in &data {
-        let bin = (((val - min_val) / (max_val - min_val)) * (num_bins - 1) as f64).round() as usize;
+        let bin =
+            (((val - min_val) / (max_val - min_val)) * (num_bins - 1) as f64).round() as usize;
         histogram[bin.min(num_bins - 1)] += 1;
     }
 
@@ -1082,12 +1081,20 @@ pub fn edge_dog(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let blur1 = match convol_2d(&data, &shape, &k1, &s1)? {
         XdlValue::MultiDimArray { data, .. } => data,
-        _ => return Err(XdlError::RuntimeError("EDGE_DOG: Internal error".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "EDGE_DOG: Internal error".to_string(),
+            ))
+        }
     };
 
     let blur2 = match convol_2d(&data, &shape, &k2, &s2)? {
         XdlValue::MultiDimArray { data, .. } => data,
-        _ => return Err(XdlError::RuntimeError("EDGE_DOG: Internal error".to_string())),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "EDGE_DOG: Internal error".to_string(),
+            ))
+        }
     };
 
     // Difference

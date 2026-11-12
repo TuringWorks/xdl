@@ -1331,14 +1331,21 @@ pub fn array_equal_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             if a.len() != b.len() {
                 false
             } else {
-                a.iter().zip(b.iter()).all(|(x, y)| (x - y).abs() < f64::EPSILON)
+                a.iter()
+                    .zip(b.iter())
+                    .all(|(x, y)| (x - y).abs() < f64::EPSILON)
             }
         }
-        (XdlValue::MultiDimArray { data: a, shape: sa }, XdlValue::MultiDimArray { data: b, shape: sb }) => {
+        (
+            XdlValue::MultiDimArray { data: a, shape: sa },
+            XdlValue::MultiDimArray { data: b, shape: sb },
+        ) => {
             if sa != sb || a.len() != b.len() {
                 false
             } else {
-                a.iter().zip(b.iter()).all(|(x, y)| (x - y).abs() < f64::EPSILON)
+                a.iter()
+                    .zip(b.iter())
+                    .all(|(x, y)| (x - y).abs() < f64::EPSILON)
             }
         }
         // Scalar comparisons
@@ -1724,16 +1731,20 @@ pub fn cumsum_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("CUMSUM requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "CUMSUM requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let mut result = Vec::with_capacity(data.len());
@@ -1752,16 +1763,20 @@ pub fn cumprod_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("CUMPROD requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "CUMPROD requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let mut result = Vec::with_capacity(data.len());
@@ -1780,16 +1795,20 @@ pub fn argmin_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ARGMIN requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ARGMIN requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     if data.is_empty() {
@@ -1814,16 +1833,20 @@ pub fn argmax_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ARGMAX requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ARGMAX requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     if data.is_empty() {
@@ -1848,16 +1871,20 @@ pub fn diff_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("DIFF requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "DIFF requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     if data.len() < 2 {
@@ -1878,7 +1905,9 @@ pub fn append_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("APPEND requires at least two array arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "APPEND requires at least two array arguments".to_string(),
+        ));
     }
 
     let mut result = Vec::new();
@@ -1891,10 +1920,12 @@ pub fn append_func(
             XdlValue::Double(d) => result.push(*d),
             XdlValue::Int(i) => result.push(*i as f64),
             XdlValue::Long(l) => result.push(*l as f64),
-            _ => return Err(XdlError::TypeMismatch {
-                expected: "array or scalar".to_string(),
-                actual: format!("{:?}", arg.gdl_type()),
-            }),
+            _ => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "array or scalar".to_string(),
+                    actual: format!("{:?}", arg.gdl_type()),
+                })
+            }
         }
     }
 
@@ -1907,16 +1938,20 @@ pub fn any_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ANY requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ANY requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let any_true = data.iter().any(|&x| x != 0.0);
@@ -1929,16 +1964,20 @@ pub fn all_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ALL requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ALL requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let all_true = data.iter().all(|&x| x != 0.0);
@@ -1951,16 +1990,20 @@ pub fn flatten_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("FLATTEN requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "FLATTEN requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     Ok(XdlValue::Array(data))
@@ -1972,16 +2015,20 @@ pub fn nonzero_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("NONZERO requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "NONZERO requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let indices: Vec<f64> = data
@@ -2000,16 +2047,20 @@ pub fn clip_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.len() < 3 {
-        return Err(XdlError::InvalidArgument("CLIP requires array, min, max arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "CLIP requires array, min, max arguments".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let min_val = match &args[1] {
@@ -2017,10 +2068,12 @@ pub fn clip_func(
         XdlValue::Double(d) => *d,
         XdlValue::Int(i) => *i as f64,
         XdlValue::Long(l) => *l as f64,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let max_val = match &args[2] {
@@ -2028,16 +2081,15 @@ pub fn clip_func(
         XdlValue::Double(d) => *d,
         XdlValue::Int(i) => *i as f64,
         XdlValue::Long(l) => *l as f64,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[2].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
     };
 
-    let result: Vec<f64> = data
-        .iter()
-        .map(|&x| x.max(min_val).min(max_val))
-        .collect();
+    let result: Vec<f64> = data.iter().map(|&x| x.max(min_val).min(max_val)).collect();
 
     Ok(XdlValue::Array(result))
 }
@@ -2048,7 +2100,9 @@ pub fn linspace_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.len() < 3 {
-        return Err(XdlError::InvalidArgument("LINSPACE requires start, stop, num arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "LINSPACE requires start, stop, num arguments".to_string(),
+        ));
     }
 
     let start = match &args[0] {
@@ -2056,10 +2110,12 @@ pub fn linspace_func(
         XdlValue::Double(d) => *d,
         XdlValue::Int(i) => *i as f64,
         XdlValue::Long(l) => *l as f64,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let stop = match &args[1] {
@@ -2067,10 +2123,12 @@ pub fn linspace_func(
         XdlValue::Double(d) => *d,
         XdlValue::Int(i) => *i as f64,
         XdlValue::Long(l) => *l as f64,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let num = match &args[2] {
@@ -2078,10 +2136,12 @@ pub fn linspace_func(
         XdlValue::Long(l) => *l as usize,
         XdlValue::Float(f) => *f as usize,
         XdlValue::Double(d) => *d as usize,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[2].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
     };
 
     if num < 2 {
@@ -2100,7 +2160,9 @@ pub fn logspace_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.len() < 3 {
-        return Err(XdlError::InvalidArgument("LOGSPACE requires start_exp, stop_exp, num arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "LOGSPACE requires start_exp, stop_exp, num arguments".to_string(),
+        ));
     }
 
     let start_exp = match &args[0] {
@@ -2108,10 +2170,12 @@ pub fn logspace_func(
         XdlValue::Double(d) => *d,
         XdlValue::Int(i) => *i as f64,
         XdlValue::Long(l) => *l as f64,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let stop_exp = match &args[1] {
@@ -2119,10 +2183,12 @@ pub fn logspace_func(
         XdlValue::Double(d) => *d,
         XdlValue::Int(i) => *i as f64,
         XdlValue::Long(l) => *l as f64,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "numeric".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let num = match &args[2] {
@@ -2130,10 +2196,12 @@ pub fn logspace_func(
         XdlValue::Long(l) => *l as usize,
         XdlValue::Float(f) => *f as usize,
         XdlValue::Double(d) => *d as usize,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[2].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[2].gdl_type()),
+            })
+        }
     };
 
     if num < 2 {
@@ -2154,7 +2222,9 @@ pub fn arange_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ARANGE requires at least one argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ARANGE requires at least one argument".to_string(),
+        ));
     }
 
     let (start, stop, step) = match args.len() {
@@ -2164,10 +2234,12 @@ pub fn arange_func(
                 XdlValue::Double(d) => *d,
                 XdlValue::Int(i) => *i as f64,
                 XdlValue::Long(l) => *l as f64,
-                _ => return Err(XdlError::TypeMismatch {
-                    expected: "numeric".to_string(),
-                    actual: format!("{:?}", args[0].gdl_type()),
-                }),
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "numeric".to_string(),
+                        actual: format!("{:?}", args[0].gdl_type()),
+                    })
+                }
             };
             (0.0, stop, 1.0)
         }
@@ -2177,20 +2249,24 @@ pub fn arange_func(
                 XdlValue::Double(d) => *d,
                 XdlValue::Int(i) => *i as f64,
                 XdlValue::Long(l) => *l as f64,
-                _ => return Err(XdlError::TypeMismatch {
-                    expected: "numeric".to_string(),
-                    actual: format!("{:?}", args[0].gdl_type()),
-                }),
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "numeric".to_string(),
+                        actual: format!("{:?}", args[0].gdl_type()),
+                    })
+                }
             };
             let stop = match &args[1] {
                 XdlValue::Float(f) => *f as f64,
                 XdlValue::Double(d) => *d,
                 XdlValue::Int(i) => *i as f64,
                 XdlValue::Long(l) => *l as f64,
-                _ => return Err(XdlError::TypeMismatch {
-                    expected: "numeric".to_string(),
-                    actual: format!("{:?}", args[1].gdl_type()),
-                }),
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "numeric".to_string(),
+                        actual: format!("{:?}", args[1].gdl_type()),
+                    })
+                }
             };
             (start, stop, 1.0)
         }
@@ -2200,37 +2276,45 @@ pub fn arange_func(
                 XdlValue::Double(d) => *d,
                 XdlValue::Int(i) => *i as f64,
                 XdlValue::Long(l) => *l as f64,
-                _ => return Err(XdlError::TypeMismatch {
-                    expected: "numeric".to_string(),
-                    actual: format!("{:?}", args[0].gdl_type()),
-                }),
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "numeric".to_string(),
+                        actual: format!("{:?}", args[0].gdl_type()),
+                    })
+                }
             };
             let stop = match &args[1] {
                 XdlValue::Float(f) => *f as f64,
                 XdlValue::Double(d) => *d,
                 XdlValue::Int(i) => *i as f64,
                 XdlValue::Long(l) => *l as f64,
-                _ => return Err(XdlError::TypeMismatch {
-                    expected: "numeric".to_string(),
-                    actual: format!("{:?}", args[1].gdl_type()),
-                }),
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "numeric".to_string(),
+                        actual: format!("{:?}", args[1].gdl_type()),
+                    })
+                }
             };
             let step = match &args[2] {
                 XdlValue::Float(f) => *f as f64,
                 XdlValue::Double(d) => *d,
                 XdlValue::Int(i) => *i as f64,
                 XdlValue::Long(l) => *l as f64,
-                _ => return Err(XdlError::TypeMismatch {
-                    expected: "numeric".to_string(),
-                    actual: format!("{:?}", args[2].gdl_type()),
-                }),
+                _ => {
+                    return Err(XdlError::TypeMismatch {
+                        expected: "numeric".to_string(),
+                        actual: format!("{:?}", args[2].gdl_type()),
+                    })
+                }
             };
             (start, stop, step)
         }
     };
 
     if step == 0.0 {
-        return Err(XdlError::InvalidArgument("ARANGE step cannot be zero".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ARANGE step cannot be zero".to_string(),
+        ));
     }
 
     let mut result = Vec::new();
@@ -2256,16 +2340,20 @@ pub fn searchsorted_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("SEARCHSORTED requires sorted_array and values arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "SEARCHSORTED requires sorted_array and values arguments".to_string(),
+        ));
     }
 
     let sorted_arr = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let values = match &args[1] {
@@ -2275,16 +2363,20 @@ pub fn searchsorted_func(
         XdlValue::Double(d) => vec![*d],
         XdlValue::Int(i) => vec![*i as f64],
         XdlValue::Long(l) => vec![*l as f64],
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array or scalar".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array or scalar".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let indices: Vec<f64> = values
         .iter()
         .map(|&val| {
-            match sorted_arr.binary_search_by(|x| x.partial_cmp(&val).unwrap_or(std::cmp::Ordering::Equal)) {
+            match sorted_arr
+                .binary_search_by(|x| x.partial_cmp(&val).unwrap_or(std::cmp::Ordering::Equal))
+            {
                 Ok(i) => i as f64,
                 Err(i) => i as f64,
             }
@@ -2300,31 +2392,39 @@ pub fn digitize_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("DIGITIZE requires array and bins arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "DIGITIZE requires array and bins arguments".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let bins = match &args[1] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let indices: Vec<f64> = data
         .iter()
         .map(|&val| {
-            match bins.binary_search_by(|x| x.partial_cmp(&val).unwrap_or(std::cmp::Ordering::Equal)) {
+            match bins
+                .binary_search_by(|x| x.partial_cmp(&val).unwrap_or(std::cmp::Ordering::Equal))
+            {
                 Ok(i) => i as f64,
                 Err(i) => i as f64,
             }
@@ -2340,16 +2440,20 @@ pub fn tile_func(
     _keywords: &std::collections::HashMap<String, XdlValue>,
 ) -> Result<XdlValue, XdlError> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("TILE requires array and reps arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "TILE requires array and reps arguments".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     let reps = match &args[1] {
@@ -2357,10 +2461,12 @@ pub fn tile_func(
         XdlValue::Long(l) => *l as usize,
         XdlValue::Float(f) => *f as usize,
         XdlValue::Double(d) => *d as usize,
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "integer".to_string(),
-            actual: format!("{:?}", args[1].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer".to_string(),
+                actual: format!("{:?}", args[1].gdl_type()),
+            })
+        }
     };
 
     let mut result = Vec::with_capacity(data.len() * reps);

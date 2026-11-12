@@ -735,7 +735,8 @@ pub fn sprintf(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 // Get format character
                 if let Some(fmt_char) = chars.next() {
                     if value_idx < values.len() {
-                        let formatted = format_value(&values[value_idx], fmt_char, &width, &precision);
+                        let formatted =
+                            format_value(&values[value_idx], fmt_char, &width, &precision);
                         result.push_str(&formatted);
                         value_idx += 1;
                     } else {
@@ -803,9 +804,19 @@ fn format_value(value: &XdlValue, fmt_char: char, width: &str, precision: &str) 
             };
             if width_val > 0 {
                 if left_align {
-                    format!("{:<width$.prec$}", float_val, width = width_val, prec = precision_val)
+                    format!(
+                        "{:<width$.prec$}",
+                        float_val,
+                        width = width_val,
+                        prec = precision_val
+                    )
                 } else {
-                    format!("{:>width$.prec$}", float_val, width = width_val, prec = precision_val)
+                    format!(
+                        "{:>width$.prec$}",
+                        float_val,
+                        width = width_val,
+                        prec = precision_val
+                    )
                 }
             } else {
                 format!("{:.prec$}", float_val, prec = precision_val)
@@ -980,7 +991,10 @@ pub fn strtok(
 
     if extract && !tokens.is_empty() {
         // Return first token only
-        Ok(tokens.into_iter().next().unwrap_or(XdlValue::String(String::new())))
+        Ok(tokens
+            .into_iter()
+            .next()
+            .unwrap_or(XdlValue::String(String::new())))
     } else {
         Ok(XdlValue::NestedArray(tokens))
     }
@@ -1035,7 +1049,11 @@ pub fn strput(args: &[XdlValue]) -> XdlResult<XdlValue> {
             "{}{}{}",
             &dest[..position],
             &source[..(end_pos - position).min(source.len())],
-            if end_pos < dest.len() { &dest[end_pos..] } else { "" }
+            if end_pos < dest.len() {
+                &dest[end_pos..]
+            } else {
+                ""
+            }
         );
         dest = new_str;
     }

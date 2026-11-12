@@ -9,7 +9,10 @@ use xdl_core::{XdlError, XdlResult, XdlValue};
 /// DIALOG_MESSAGE - Display a message dialog
 /// IDL syntax: result = DIALOG_MESSAGE(message [, /ERROR] [, /INFORMATION] [, /QUESTION] [, TITLE=title])
 /// Returns 1 for OK, 0 for Cancel (for question dialogs)
-pub fn dialog_message(args: &[XdlValue], keywords: &std::collections::HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn dialog_message(
+    args: &[XdlValue],
+    keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Err(XdlError::InvalidArgument(
             "DIALOG_MESSAGE: Expected message argument".to_string(),
@@ -74,7 +77,10 @@ pub fn dialog_message(args: &[XdlValue], keywords: &std::collections::HashMap<St
 /// DIALOG_PICKFILE - Display a file picker dialog
 /// IDL syntax: result = DIALOG_PICKFILE([DEFAULT_EXTENSION=ext] [, FILTER=filter] [, /DIRECTORY] [, /WRITE] [, TITLE=title])
 /// Returns the selected file path as a string, or empty string if cancelled
-pub fn dialog_pickfile(args: &[XdlValue], keywords: &std::collections::HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn dialog_pickfile(
+    args: &[XdlValue],
+    keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     // Get optional parameters
     let title = keywords
         .get("TITLE")
@@ -162,7 +168,10 @@ pub fn dialog_pickfile(args: &[XdlValue], keywords: &std::collections::HashMap<S
 
 /// DIALOG_PRINTERSETUP - Display printer setup dialog (placeholder)
 /// In CLI mode, this just returns default printer info
-pub fn dialog_printersetup(_args: &[XdlValue], _keywords: &std::collections::HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn dialog_printersetup(
+    _args: &[XdlValue],
+    _keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     // In CLI mode, return a placeholder indicating no printer setup available
     println!("\n[PRINTER SETUP]");
     println!("Printer setup dialog not available in CLI mode.");
@@ -174,7 +183,10 @@ pub fn dialog_printersetup(_args: &[XdlValue], _keywords: &std::collections::Has
 
 /// DIALOG_READ_TEXT - Read text input from user via dialog
 /// IDL syntax: result = DIALOG_READ_TEXT([prompt] [, TITLE=title] [, DEFAULT=default])
-pub fn dialog_read_text(args: &[XdlValue], keywords: &std::collections::HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
+pub fn dialog_read_text(
+    args: &[XdlValue],
+    keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     let prompt = if !args.is_empty() {
         match &args[0] {
             XdlValue::String(s) => s.clone(),

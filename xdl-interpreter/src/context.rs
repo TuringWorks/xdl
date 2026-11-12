@@ -33,8 +33,8 @@ pub struct MethodDef {
 #[derive(Debug, Clone)]
 pub struct PropertyDef {
     pub name: String,
-    pub getter: Option<String>,  // Method name for GET
-    pub setter: Option<String>,  // Method name for SET
+    pub getter: Option<String>, // Method name for GET
+    pub setter: Option<String>, // Method name for SET
     pub init_value: Option<XdlValue>,
 }
 
@@ -42,7 +42,7 @@ pub struct PropertyDef {
 #[derive(Debug, Clone)]
 pub struct ClassDef {
     pub name: String,
-    pub parent: Option<String>,  // Parent class name for inheritance
+    pub parent: Option<String>, // Parent class name for inheritance
     pub fields: HashMap<String, XdlValue>, // Default field values from __define
     pub methods: HashMap<String, MethodDef>, // Method name -> definition (case-insensitive)
     pub class_methods: HashMap<String, MethodDef>, // Static/class methods
@@ -461,7 +461,11 @@ impl Context {
 
     /// Resolve a method on a class, following the inheritance chain
     /// Returns (class_name, method_def) for the class that defines the method
-    pub fn resolve_method(&self, class_name: &str, method_name: &str) -> XdlResult<(String, MethodDef)> {
+    pub fn resolve_method(
+        &self,
+        class_name: &str,
+        method_name: &str,
+    ) -> XdlResult<(String, MethodDef)> {
         let mut current_class = class_name.to_uppercase();
         let mut visited = std::collections::HashSet::new();
 
@@ -476,8 +480,9 @@ impl Context {
             visited.insert(current_class.clone());
 
             // Get the class definition
-            let class = self.classes.get(&current_class)
-                .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", current_class)))?;
+            let class = self.classes.get(&current_class).ok_or_else(|| {
+                XdlError::RuntimeError(format!("Class '{}' not defined", current_class))
+            })?;
 
             // Check if this class has the method
             if let Some(method) = class.get_method(method_name) {
@@ -501,7 +506,11 @@ impl Context {
     }
 
     /// Resolve a class method (static method), following the inheritance chain
-    pub fn resolve_class_method(&self, class_name: &str, method_name: &str) -> XdlResult<(String, MethodDef)> {
+    pub fn resolve_class_method(
+        &self,
+        class_name: &str,
+        method_name: &str,
+    ) -> XdlResult<(String, MethodDef)> {
         let mut current_class = class_name.to_uppercase();
         let mut visited = std::collections::HashSet::new();
 
@@ -514,8 +523,9 @@ impl Context {
             }
             visited.insert(current_class.clone());
 
-            let class = self.classes.get(&current_class)
-                .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", current_class)))?;
+            let class = self.classes.get(&current_class).ok_or_else(|| {
+                XdlError::RuntimeError(format!("Class '{}' not defined", current_class))
+            })?;
 
             if let Some(method) = class.get_class_method(method_name) {
                 return Ok((current_class, method.clone()));
@@ -597,7 +607,11 @@ impl Context {
     }
 
     /// Resolve a property definition, following the inheritance chain
-    pub fn resolve_property(&self, class_name: &str, prop_name: &str) -> XdlResult<(String, PropertyDef)> {
+    pub fn resolve_property(
+        &self,
+        class_name: &str,
+        prop_name: &str,
+    ) -> XdlResult<(String, PropertyDef)> {
         let mut current_class = class_name.to_uppercase();
         let mut visited = std::collections::HashSet::new();
 
@@ -610,8 +624,9 @@ impl Context {
             }
             visited.insert(current_class.clone());
 
-            let class = self.classes.get(&current_class)
-                .ok_or_else(|| XdlError::RuntimeError(format!("Class '{}' not defined", current_class)))?;
+            let class = self.classes.get(&current_class).ok_or_else(|| {
+                XdlError::RuntimeError(format!("Class '{}' not defined", current_class))
+            })?;
 
             if let Some(prop) = class.get_property(prop_name) {
                 return Ok((current_class, prop.clone()));

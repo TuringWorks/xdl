@@ -1074,10 +1074,7 @@ pub fn ulindgen_with_keywords(
 /// - /INDEX flag to fill with index values (like INDGEN)
 /// - /NOZERO flag to skip zero-initialization (no-op in our impl)
 /// - TYPE keyword to specify data type
-pub fn make_array(
-    args: &[XdlValue],
-    keywords: &HashMap<String, XdlValue>,
-) -> XdlResult<XdlValue> {
+pub fn make_array(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     // Determine dimensions from various sources
     let dimensions: Vec<usize> = if let Some(dim_val) = keywords.get("DIMENSION") {
         // DIMENSION keyword takes precedence
@@ -2722,16 +2719,27 @@ pub fn machar(_args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// SIGN - Return the sign of the input (-1, 0, or 1)
 pub fn sign(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("SIGN requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "SIGN requires an argument".to_string(),
+        ));
     }
 
     let input = &args[0];
 
     // Handle MultiDimArray
     if let XdlValue::MultiDimArray { data, shape } = input {
-        let result: Vec<f64> = data.iter().map(|&x| {
-            if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 }
-        }).collect();
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| {
+                if x > 0.0 {
+                    1.0
+                } else if x < 0.0 {
+                    -1.0
+                } else {
+                    0.0
+                }
+            })
+            .collect();
         return Ok(XdlValue::MultiDimArray {
             data: result,
             shape: shape.clone(),
@@ -2740,22 +2748,39 @@ pub fn sign(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Handle arrays
     if let XdlValue::Array(arr) = input {
-        let result: Vec<f64> = arr.iter().map(|&x| {
-            if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 }
-        }).collect();
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| {
+                if x > 0.0 {
+                    1.0
+                } else if x < 0.0 {
+                    -1.0
+                } else {
+                    0.0
+                }
+            })
+            .collect();
         return Ok(XdlValue::Array(result));
     }
 
     // Handle scalar
     let x = to_float(input)?;
-    let sign = if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 };
+    let sign = if x > 0.0 {
+        1.0
+    } else if x < 0.0 {
+        -1.0
+    } else {
+        0.0
+    };
     Ok(from_float(sign, input.gdl_type()))
 }
 
 /// HYPOT - Return sqrt(x^2 + y^2), the hypotenuse
 pub fn hypot(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("HYPOT requires two arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "HYPOT requires two arguments".to_string(),
+        ));
     }
 
     let x = to_float(&args[0])?;
@@ -2768,14 +2793,19 @@ pub fn hypot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// ISNAN - Check if value is NaN
 pub fn isnan_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ISNAN requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ISNAN requires an argument".to_string(),
+        ));
     }
 
     let input = &args[0];
 
     // Handle MultiDimArray
     if let XdlValue::MultiDimArray { data, shape } = input {
-        let result: Vec<f64> = data.iter().map(|&x| if x.is_nan() { 1.0 } else { 0.0 }).collect();
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| if x.is_nan() { 1.0 } else { 0.0 })
+            .collect();
         return Ok(XdlValue::MultiDimArray {
             data: result,
             shape: shape.clone(),
@@ -2784,7 +2814,10 @@ pub fn isnan_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Handle arrays
     if let XdlValue::Array(arr) = input {
-        let result: Vec<f64> = arr.iter().map(|&x| if x.is_nan() { 1.0 } else { 0.0 }).collect();
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| if x.is_nan() { 1.0 } else { 0.0 })
+            .collect();
         return Ok(XdlValue::Array(result));
     }
 
@@ -2796,14 +2829,19 @@ pub fn isnan_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// ISINF - Check if value is infinite
 pub fn isinf_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ISINF requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ISINF requires an argument".to_string(),
+        ));
     }
 
     let input = &args[0];
 
     // Handle MultiDimArray
     if let XdlValue::MultiDimArray { data, shape } = input {
-        let result: Vec<f64> = data.iter().map(|&x| if x.is_infinite() { 1.0 } else { 0.0 }).collect();
+        let result: Vec<f64> = data
+            .iter()
+            .map(|&x| if x.is_infinite() { 1.0 } else { 0.0 })
+            .collect();
         return Ok(XdlValue::MultiDimArray {
             data: result,
             shape: shape.clone(),
@@ -2812,7 +2850,10 @@ pub fn isinf_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Handle arrays
     if let XdlValue::Array(arr) = input {
-        let result: Vec<f64> = arr.iter().map(|&x| if x.is_infinite() { 1.0 } else { 0.0 }).collect();
+        let result: Vec<f64> = arr
+            .iter()
+            .map(|&x| if x.is_infinite() { 1.0 } else { 0.0 })
+            .collect();
         return Ok(XdlValue::Array(result));
     }
 
@@ -2827,16 +2868,20 @@ pub fn normalize_func(
     keywords: &HashMap<String, XdlValue>,
 ) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("NORMALIZE requires an array argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "NORMALIZE requires an array argument".to_string(),
+        ));
     }
 
     let data = match &args[0] {
         XdlValue::Array(arr) => arr.clone(),
         XdlValue::MultiDimArray { data, shape: _ } => data.clone(),
-        _ => return Err(XdlError::TypeMismatch {
-            expected: "array".to_string(),
-            actual: format!("{:?}", args[0].gdl_type()),
-        }),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "array".to_string(),
+                actual: format!("{:?}", args[0].gdl_type()),
+            })
+        }
     };
 
     if data.is_empty() {
@@ -2848,17 +2893,23 @@ pub fn normalize_func(
     let range = max_val - min_val;
 
     // Get output range from keywords
-    let out_min = keywords.get("MIN").map(|v| v.to_double().unwrap_or(0.0)).unwrap_or(0.0);
-    let out_max = keywords.get("MAX").map(|v| v.to_double().unwrap_or(1.0)).unwrap_or(1.0);
+    let out_min = keywords
+        .get("MIN")
+        .map(|v| v.to_double().unwrap_or(0.0))
+        .unwrap_or(0.0);
+    let out_max = keywords
+        .get("MAX")
+        .map(|v| v.to_double().unwrap_or(1.0))
+        .unwrap_or(1.0);
     let out_range = out_max - out_min;
 
     let result: Vec<f64> = if range == 0.0 {
         // All values are the same
         data.iter().map(|_| (out_min + out_max) / 2.0).collect()
     } else {
-        data.iter().map(|&x| {
-            out_min + (x - min_val) / range * out_range
-        }).collect()
+        data.iter()
+            .map(|&x| out_min + (x - min_val) / range * out_range)
+            .collect()
     };
 
     Ok(XdlValue::Array(result))
@@ -2867,7 +2918,9 @@ pub fn normalize_func(
 /// ROUND - Round to nearest integer
 pub fn round_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("ROUND requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "ROUND requires an argument".to_string(),
+        ));
     }
 
     let input = &args[0];
@@ -2895,7 +2948,9 @@ pub fn round_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// TRUNC - Truncate to integer (toward zero)
 pub fn trunc_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("TRUNC requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "TRUNC requires an argument".to_string(),
+        ));
     }
 
     let input = &args[0];
@@ -2923,7 +2978,9 @@ pub fn trunc_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// FRAC - Return fractional part of number
 pub fn frac_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("FRAC requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "FRAC requires an argument".to_string(),
+        ));
     }
 
     let input = &args[0];
@@ -2956,7 +3013,9 @@ pub fn signum_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// CBRT - Cube root
 pub fn cbrt_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("CBRT requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "CBRT requires an argument".to_string(),
+        ));
     }
 
     let input = &args[0];
@@ -2984,7 +3043,9 @@ pub fn cbrt_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// COPYSIGN - Copy sign of second argument to first
 pub fn copysign_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("COPYSIGN requires two arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "COPYSIGN requires two arguments".to_string(),
+        ));
     }
 
     let x = to_float(&args[0])?;
@@ -2995,7 +3056,9 @@ pub fn copysign_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// FDIM - Positive difference (max(x-y, 0))
 pub fn fdim_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("FDIM requires two arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "FDIM requires two arguments".to_string(),
+        ));
     }
 
     let x = to_float(&args[0])?;
@@ -3006,7 +3069,9 @@ pub fn fdim_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// FMA - Fused multiply-add (x*y + z)
 pub fn fma_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 3 {
-        return Err(XdlError::InvalidArgument("FMA requires three arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "FMA requires three arguments".to_string(),
+        ));
     }
 
     let x = to_float(&args[0])?;
@@ -3018,7 +3083,9 @@ pub fn fma_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// REMAINDER - IEEE remainder
 pub fn remainder_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("REMAINDER requires two arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "REMAINDER requires two arguments".to_string(),
+        ));
     }
 
     let x = to_float(&args[0])?;
@@ -3032,7 +3099,9 @@ pub fn remainder_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// LDEXP - Load exponent (x * 2^exp)
 pub fn ldexp_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() < 2 {
-        return Err(XdlError::InvalidArgument("LDEXP requires two arguments".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "LDEXP requires two arguments".to_string(),
+        ));
     }
 
     let x = to_float(&args[0])?;
@@ -3043,7 +3112,9 @@ pub fn ldexp_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// FREXP - Extract mantissa and exponent
 pub fn frexp_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.is_empty() {
-        return Err(XdlError::InvalidArgument("FREXP requires an argument".to_string()));
+        return Err(XdlError::InvalidArgument(
+            "FREXP requires an argument".to_string(),
+        ));
     }
 
     let x = to_float(&args[0])?;
