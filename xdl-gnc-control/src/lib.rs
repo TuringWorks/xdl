@@ -8,7 +8,7 @@ use xdl_gnc_core::{GncError, ScalarLimit, SignalStatus, StepEvent, StepResult, T
 
 pub type Matrix<const ROWS: usize, const COLUMNS: usize> = [[f64; COLUMNS]; ROWS];
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DiscreteStateSpace<const STATES: usize, const INPUTS: usize, const OUTPUTS: usize> {
     pub a: Matrix<STATES, STATES>,
     pub b: Matrix<STATES, INPUTS>,
@@ -68,7 +68,7 @@ impl<const STATES: usize, const INPUTS: usize, const OUTPUTS: usize>
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LinearGainSchedule<const INPUTS: usize, const STATES: usize> {
     pub lower_parameter: f64,
     pub upper_parameter: f64,
@@ -126,7 +126,7 @@ impl<const INPUTS: usize, const STATES: usize> LinearGainSchedule<INPUTS, STATES
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ScheduledStateFeedback<const INPUTS: usize, const STATES: usize> {
     schedule: LinearGainSchedule<INPUTS, STATES>,
 }
