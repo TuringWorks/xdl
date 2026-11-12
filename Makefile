@@ -44,6 +44,18 @@ NPM        ?= npm
 XDL_BIN    ?= ./target/release/xdl
 VSCODE_DIR := vscode-xdl
 
+# Cargo/sccache can exhaust macOS's per-process file-descriptor limit during a
+# full workspace build. Keep the safe defaults local to Make targets; callers
+# can opt into the cache with XDL_USE_SCCACHE=1.
+XDL_CARGO_JOBS ?= 2
+XDL_MAX_OPEN_FILES ?= 65536
+XDL_USE_SCCACHE ?= 0
+ifeq ($(XDL_USE_SCCACHE),1)
+XDL_CARGO_RUN = ulimit -n $(XDL_MAX_OPEN_FILES); CARGO_BUILD_JOBS=$(XDL_CARGO_JOBS) $(CARGO)
+else
+XDL_CARGO_RUN = ulimit -n $(XDL_MAX_OPEN_FILES); CARGO_BUILD_JOBS=$(XDL_CARGO_JOBS) RUSTC_WRAPPER= $(CARGO)
+endif
+
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
@@ -77,28 +89,28 @@ endif
 # ══════════════════════════════════════════════════════════════════════════════
 
 build: ## Build the full Rust workspace (release)
-	$(CARGO) build --workspace --release
+	$(XDL_CARGO_RUN) build --workspace --release
 	@echo ""
 	@ls -lh target/release/xdl 2>/dev/null || true
 	@echo ""
 	@echo "Binary: target/release/xdl"
 
 build-cli: ## Build the XDL interpreter (release)
-	$(CARGO) build --release -p xdl-cli
+	$(XDL_CARGO_RUN) build --release -p xdl-cli
 	@ls -lh $(XDL_BIN)
 
 build-lsp: ## Build the XDL language server (release)
-	$(CARGO) build --release -p xdl-lsp
+	$(XDL_CARGO_RUN) build --release -p xdl-lsp
 	@ls -lh target/release/xdl-lsp
 
 build-matlab: ## Build the MATLAB transpiler crate
-	$(CARGO) build -p xdl-matlab
+	$(XDL_CARGO_RUN) build -p xdl-matlab
 
 build-viewer: ## Build the Tauri chart viewer
-	$(CARGO) build -p xdl-chart-viewer
+	$(XDL_CARGO_RUN) build -p xdl-chart-viewer
 
 build-charts: ## Build the ECharts HTML generation crate
-	$(CARGO) build -p xdl-charts
+	$(XDL_CARGO_RUN) build -p xdl-charts
 
 # ── VS Code extension ─────────────────────────────────────────────────────────
 
@@ -115,10 +127,10 @@ build-vscode: $(VSCODE_DIR)/node_modules ## Compile the VS Code extension (tsc)
 check: check-workspace check-desktop ## Fast type-check (Rust workspace + desktop-viewer)
 
 check-workspace: ## Type-check the Rust workspace
-	$(CARGO) check --workspace --all-targets
+	$(XDL_CARGO_RUN) check --workspace --all-targets
 
 check-desktop: ## Type-check xdl-desktop-viewer (outside the workspace)
-	$(CARGO) check --manifest-path xdl-desktop-viewer/Cargo.toml
+	$(XDL_CARGO_RUN) check --manifest-path xdl-desktop-viewer/Cargo.toml
 
 check-vscode: $(VSCODE_DIR)/node_modules ## Type-check the VS Code extension (tsc --noEmit)
 	cd $(VSCODE_DIR) && npx tsc --noEmit
@@ -130,10 +142,10 @@ check-vscode: $(VSCODE_DIR)/node_modules ## Type-check the VS Code extension (ts
 test: test-workspace test-matlab ## Run all Rust tests (workspace + xdl-matlab)
 
 test-workspace: ## Run Rust workspace tests (--no-fail-fast)
-	$(CARGO) test --workspace --all-targets --no-fail-fast
+	$(XDL_CARGO_RUN) test --workspace --all-targets --no-fail-fast
 
 test-matlab: ## Run xdl-matlab tests (not covered by --workspace test target)
-	$(CARGO) test -p xdl-matlab --all-targets --no-fail-fast
+	$(XDL_CARGO_RUN) test -p xdl-matlab --all-targets --no-fail-fast
 
 test-all: test suite parity ## Everything: Rust tests + language suite + consistency checks
 	@echo ""
@@ -161,16 +173,16 @@ suite-survey: build-cli ## Survey every .xdl script (informational, never gates)
 lint: lint-rust fmt-check ## Run clippy + check formatting
 
 lint-rust: ## Run clippy on the workspace (-D warnings)
-	$(CARGO) clippy --workspace --all-targets -- -D warnings
+	$(XDL_CARGO_RUN) clippy --workspace --all-targets -- -D warnings
 
 lint-vscode: $(VSCODE_DIR)/node_modules ## Lint the VS Code extension (eslint)
 	cd $(VSCODE_DIR) && $(NPM) run lint
 
 fmt: ## Format all Rust code (cargo fmt)
-	$(CARGO) fmt --all
+	$(XDL_CARGO_RUN) fmt --all
 
 fmt-check: ## Check Rust formatting without modifying
-	$(CARGO) fmt --all -- --check
+	$(XDL_CARGO_RUN) fmt --all -- --check
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PARITY — consistency scripts (traps a build cannot catch)
@@ -199,7 +211,7 @@ parity-docs: ## Check relative links + heading anchors in docs
 docs: docs-rust ## Build Rust API documentation (cargo doc --no-deps)
 
 docs-rust: ## Build Rust API docs for the workspace
-	$(CARGO) doc --workspace --no-deps
+	$(XDL_CARGO_RUN) doc --workspace --no-deps
 
 # Jekyll site is published by .github/workflows/pages.yml. Local preview:
 #   cd docs && bundle exec jekyll serve
@@ -249,5 +261,5 @@ ci: ## Run the same checks CI does (parity + lint + test + suite + docs)
 # ══════════════════════════════════════════════════════════════════════════════
 
 clean: ## Remove Rust build artifacts
-	$(CARGO) clean
+	$(XDL_CARGO_RUN) clean
 	rm -f coverage.lcov coverage-matlab.lcov
