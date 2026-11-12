@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (C) 2026 Ravindra Boddipalli
 
-// Covariance and Jacobian updates index two fixed-size matrices with the same
-// loop variables; the iterator form is harder to audit against the equations.
-#![allow(clippy::needless_range_loop)]
-
 //! Small deterministic navigation estimators for the XDL GNC vertical slice.
 //!
 //! The alpha-beta filter here is intentionally a transparent baseline, not a
@@ -583,22 +579,24 @@ impl PositionVelocityEkf {
             self.state.velocity + acceleration * seconds,
         )?;
 
-        let mut predicted = [[0.0; 6]; 6];
-        for row in 0..6 {
-            for column in 0..6 {
-                let mut value = self.covariance[row][column];
+        // Each element reads only the prior covariance, so this is an
+        // independent per-element map (parallelizable).
+        let prior = self.covariance;
+        let mut predicted: Covariance6 = std::array::from_fn(|row| {
+            std::array::from_fn(|column| {
+                let mut value = prior[row][column];
                 if row < 3 {
-                    value += seconds * self.covariance[row + 3][column];
+                    value += seconds * prior[row + 3][column];
                 }
                 if column < 3 {
-                    value += seconds * self.covariance[row][column + 3];
+                    value += seconds * prior[row][column + 3];
                 }
                 if row < 3 && column < 3 {
-                    value += seconds * seconds * self.covariance[row + 3][column + 3];
+                    value += seconds * seconds * prior[row + 3][column + 3];
                 }
-                predicted[row][column] = value;
-            }
-        }
+                value
+            })
+        });
 
         let q = self.config.acceleration_process_noise;
         let q_position = 0.25 * seconds.powi(4) * q;
@@ -718,58 +716,45 @@ fn validate_covariance(covariance: Covariance6) -> Result<(), GncError> {
             });
         }
     }
-    for index in 0..6 {
-        if covariance[index][index] < 0.0 {
-            return Err(GncError::InvalidValue {
-                context: "EKF covariance".to_string(),
-                reason: "diagonal variances cannot be negative".to_string(),
-            });
-        }
+    if covariance
+        .iter()
+        .enumerate()
+        .any(|(index, row)| row[index] < 0.0)
+    {
+        return Err(GncError::InvalidValue {
+            context: "EKF covariance".to_string(),
+            reason: "diagonal variances cannot be negative".to_string(),
+        });
     }
     Ok(())
 }
 
 fn symmetrize_and_validate(covariance: Covariance6) -> Result<Covariance6, GncError> {
-    let mut result = covariance;
-    for row in 0..6 {
-        for column in row..6 {
-            let value = 0.5 * (covariance[row][column] + covariance[column][row]);
-            result[row][column] = value;
-            result[column][row] = value;
-        }
-    }
+    let result: Covariance6 = std::array::from_fn(|row| {
+        std::array::from_fn(|column| 0.5 * (covariance[row][column] + covariance[column][row]))
+    });
     validate_covariance(result)?;
     Ok(result)
 }
 
 fn identity15() -> Covariance15 {
-    let mut identity = [[0.0; 15]; 15];
-    for index in 0..15 {
-        identity[index][index] = 1.0;
-    }
-    identity
+    std::array::from_fn(|row| std::array::from_fn(|column| if row == column { 1.0 } else { 0.0 }))
 }
 
 fn transpose15(matrix: Covariance15) -> Covariance15 {
-    let mut transposed = [[0.0; 15]; 15];
-    for row in 0..15 {
-        for column in 0..15 {
-            transposed[row][column] = matrix[column][row];
-        }
-    }
-    transposed
+    std::array::from_fn(|row| std::array::from_fn(|column| matrix[column][row]))
 }
 
 fn mat15_mul(left: Covariance15, right: Covariance15) -> Covariance15 {
-    let mut result = [[0.0; 15]; 15];
-    for row in 0..15 {
-        for column in 0..15 {
-            result[row][column] = (0..15)
+    // Output elements are independent; the inner sum keeps its fixed order so
+    // results stay bit-identical across runs and backends.
+    std::array::from_fn(|row| {
+        std::array::from_fn(|column| {
+            (0..15)
                 .map(|index| left[row][index] * right[index][column])
-                .sum();
-        }
-    }
-    result
+                .sum()
+        })
+    })
 }
 
 fn skew(value: Vec3) -> [[f64; 3]; 3] {
@@ -812,26 +797,23 @@ fn validate_covariance15(covariance: Covariance15) -> Result<(), GncError> {
             });
         }
     }
-    for index in 0..15 {
-        if covariance[index][index] < 0.0 {
-            return Err(GncError::InvalidValue {
-                context: "error-state EKF covariance".to_string(),
-                reason: "diagonal variances cannot be negative".to_string(),
-            });
-        }
+    if covariance
+        .iter()
+        .enumerate()
+        .any(|(index, row)| row[index] < 0.0)
+    {
+        return Err(GncError::InvalidValue {
+            context: "error-state EKF covariance".to_string(),
+            reason: "diagonal variances cannot be negative".to_string(),
+        });
     }
     Ok(())
 }
 
 fn symmetrize_and_validate15(covariance: Covariance15) -> Result<Covariance15, GncError> {
-    let mut result = covariance;
-    for row in 0..15 {
-        for column in row..15 {
-            let value = 0.5 * (covariance[row][column] + covariance[column][row]);
-            result[row][column] = value;
-            result[column][row] = value;
-        }
-    }
+    let result: Covariance15 = std::array::from_fn(|row| {
+        std::array::from_fn(|column| 0.5 * (covariance[row][column] + covariance[column][row]))
+    });
     validate_covariance15(result)?;
     Ok(result)
 }
@@ -1010,11 +992,9 @@ mod tests {
     }
 
     fn diagonal_covariance(value: f64) -> Covariance6 {
-        let mut covariance = [[0.0; 6]; 6];
-        for index in 0..6 {
-            covariance[index][index] = value;
-        }
-        covariance
+        std::array::from_fn(|row| {
+            std::array::from_fn(|column| if row == column { value } else { 0.0 })
+        })
     }
 
     #[test]
@@ -1110,11 +1090,9 @@ mod tests {
     }
 
     fn diagonal_covariance15(value: f64) -> Covariance15 {
-        let mut covariance = [[0.0; 15]; 15];
-        for index in 0..15 {
-            covariance[index][index] = value;
-        }
-        covariance
+        std::array::from_fn(|row| {
+            std::array::from_fn(|column| if row == column { value } else { 0.0 })
+        })
     }
 
     #[test]

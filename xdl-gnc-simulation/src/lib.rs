@@ -266,6 +266,87 @@ impl ReplayEventLog {
     pub fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
+
+    /// Creates a forward-only cursor for deterministic replay execution.
+    pub fn cursor(&self) -> ReplayCursor<'_> {
+        ReplayCursor {
+            events: &self.events,
+            index: 0,
+        }
+    }
+}
+
+/// Forward-only execution cursor over a [`ReplayEventLog`].
+///
+/// The cursor deliberately has no clock or sleep behavior: callers decide how
+/// to schedule events, while this type guarantees that each event is observed
+/// once and in the log's deterministic order.
+#[derive(Debug, Clone)]
+pub struct ReplayCursor<'a> {
+    events: &'a [ReplayEvent],
+    index: usize,
+}
+
+impl<'a> ReplayCursor<'a> {
+    pub fn position(&self) -> usize {
+        self.index
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.index == self.events.len()
+    }
+
+    pub fn peek(&self) -> Option<&'a ReplayEvent> {
+        self.events.get(self.index)
+    }
+
+    pub fn advance(&mut self) -> Option<&'a ReplayEvent> {
+        let event = self.peek()?;
+        self.index += 1;
+        Some(event)
+    }
+
+    /// Consumes all events through `timestamp`, preserving event order.
+    pub fn next_through(&mut self, timestamp: Timestamp) -> Vec<&'a ReplayEvent> {
+        let start = self.index;
+        while self
+            .peek()
+            .is_some_and(|event| event.timestamp <= timestamp)
+        {
+            self.index += 1;
+        }
+        self.events[start..self.index].iter().collect()
+    }
+}
+
+/// Returns a copy of a replay stream with every `interval`th GNSS event
+/// removed. The returned log is renumbered deterministically, while IMU events
+/// and their relative ordering are preserved.
+pub fn drop_every_nth_gnss(
+    log: &ReplayEventLog,
+    interval: usize,
+) -> Result<(ReplayEventLog, usize), GncError> {
+    if interval == 0 {
+        return Err(GncError::InvalidValue {
+            context: "GNSS dropout interval".to_string(),
+            reason: "interval must be positive".to_string(),
+        });
+    }
+
+    let mut output = ReplayEventLog::new();
+    let mut gnss_count = 0;
+    let mut dropped = 0;
+    for event in log.events() {
+        if matches!(event.measurement, ReplayMeasurement::Gnss(_)) {
+            gnss_count += 1;
+            if gnss_count % interval == 0 {
+                dropped += 1;
+                continue;
+            }
+        }
+        output.push(event.measurement)?;
+    }
+    Ok((output, dropped))
 }
 
 /// Ordered, deterministic sensor replay log. All records in one log share a
@@ -566,5 +647,61 @@ mod tests {
                 measurement: ReplayMeasurement::Gnss(measurement),
             })
             .is_err());
+    }
+
+    #[test]
+    fn replay_cursor_dispatches_events_through_a_control_tick() {
+        let mut log = ReplayEventLog::new();
+        for nanoseconds in [1, 2, 2, 3] {
+            let measurement = GnssMeasurement::new(
+                Timestamp::from_nanoseconds(nanoseconds),
+                FrameId::Inertial,
+                Vec3::ZERO,
+                Vec3::ZERO,
+            )
+            .expect("finite GNSS");
+            log.push(ReplayMeasurement::Gnss(measurement))
+                .expect("ordered event");
+        }
+
+        let mut cursor = log.cursor();
+        assert_eq!(cursor.position(), 0);
+        assert_eq!(cursor.next_through(Timestamp::from_nanoseconds(2)).len(), 3);
+        assert_eq!(cursor.position(), 3);
+        assert_eq!(
+            cursor.peek().map(|event| event.timestamp),
+            Some(Timestamp::from_nanoseconds(3))
+        );
+        assert_eq!(cursor.advance().map(|event| event.sequence), Some(3));
+        assert!(cursor.is_finished());
+        assert!(cursor.advance().is_none());
+    }
+
+    #[test]
+    fn deterministic_gnss_dropout_preserves_imu_events() {
+        let mut log = ReplayEventLog::new();
+        for index in 1..=4 {
+            let timestamp = Timestamp::from_nanoseconds(index);
+            let imu =
+                ImuMeasurement::new(timestamp, body(), Vec3::ZERO, Vec3::ZERO).expect("finite IMU");
+            let gnss = GnssMeasurement::new(timestamp, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+                .expect("finite GNSS");
+            log.push(ReplayMeasurement::Imu(imu)).expect("ordered IMU");
+            log.push(ReplayMeasurement::Gnss(gnss))
+                .expect("ordered GNSS");
+        }
+
+        let (dropped, count) = drop_every_nth_gnss(&log, 2).expect("valid dropout interval");
+        assert_eq!(count, 2);
+        assert_eq!(dropped.events().len(), 6);
+        assert_eq!(
+            dropped
+                .events()
+                .iter()
+                .filter(|event| matches!(event.measurement, ReplayMeasurement::Imu(_)))
+                .count(),
+            4
+        );
+        assert!(drop_every_nth_gnss(&log, 0).is_err());
     }
 }
