@@ -6,6 +6,174 @@
 use serde::{Deserialize, Serialize};
 use xdl_gnc_core::{GncError, ScalarLimit, SignalStatus, StepEvent, StepResult, Timestamp};
 
+pub type Matrix<const ROWS: usize, const COLUMNS: usize> = [[f64; COLUMNS]; ROWS];
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct DiscreteStateSpace<const STATES: usize, const INPUTS: usize, const OUTPUTS: usize> {
+    pub a: Matrix<STATES, STATES>,
+    pub b: Matrix<STATES, INPUTS>,
+    pub c: Matrix<OUTPUTS, STATES>,
+    pub d: Matrix<OUTPUTS, INPUTS>,
+    pub state: [f64; STATES],
+}
+
+impl<const STATES: usize, const INPUTS: usize, const OUTPUTS: usize>
+    DiscreteStateSpace<STATES, INPUTS, OUTPUTS>
+{
+    pub fn new(
+        a: Matrix<STATES, STATES>,
+        b: Matrix<STATES, INPUTS>,
+        c: Matrix<OUTPUTS, STATES>,
+        d: Matrix<OUTPUTS, INPUTS>,
+        initial_state: [f64; STATES],
+    ) -> Result<Self, GncError> {
+        if !matrix_is_finite(&a)
+            || !matrix_is_finite(&b)
+            || !matrix_is_finite(&c)
+            || !matrix_is_finite(&d)
+            || !initial_state.iter().all(|value| value.is_finite())
+        {
+            return Err(GncError::NonFinite {
+                context: "discrete state-space model".to_string(),
+            });
+        }
+        Ok(Self {
+            a,
+            b,
+            c,
+            d,
+            state: initial_state,
+        })
+    }
+
+    pub fn reset(&mut self, state: [f64; STATES]) -> Result<(), GncError> {
+        if !state.iter().all(|value| value.is_finite()) {
+            return Err(GncError::NonFinite {
+                context: "state-space state".to_string(),
+            });
+        }
+        self.state = state;
+        Ok(())
+    }
+
+    pub fn step(&mut self, input: [f64; INPUTS]) -> Result<[f64; OUTPUTS], GncError> {
+        if !input.iter().all(|value| value.is_finite()) {
+            return Err(GncError::NonFinite {
+                context: "state-space input".to_string(),
+            });
+        }
+        let output = add_vectors(mat_vec(&self.c, &self.state), mat_vec(&self.d, &input));
+        self.state = add_vectors(mat_vec(&self.a, &self.state), mat_vec(&self.b, &input));
+        Ok(output)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LinearGainSchedule<const INPUTS: usize, const STATES: usize> {
+    pub lower_parameter: f64,
+    pub upper_parameter: f64,
+    pub lower_gain: Matrix<INPUTS, STATES>,
+    pub upper_gain: Matrix<INPUTS, STATES>,
+}
+
+impl<const INPUTS: usize, const STATES: usize> LinearGainSchedule<INPUTS, STATES> {
+    pub fn new(
+        lower_parameter: f64,
+        upper_parameter: f64,
+        lower_gain: Matrix<INPUTS, STATES>,
+        upper_gain: Matrix<INPUTS, STATES>,
+    ) -> Result<Self, GncError> {
+        if !lower_parameter.is_finite()
+            || !upper_parameter.is_finite()
+            || !matrix_is_finite(&lower_gain)
+            || !matrix_is_finite(&upper_gain)
+        {
+            return Err(GncError::NonFinite {
+                context: "gain schedule".to_string(),
+            });
+        }
+        if lower_parameter >= upper_parameter {
+            return Err(GncError::InvalidValue {
+                context: "gain schedule".to_string(),
+                reason: "lower parameter must be less than upper parameter".to_string(),
+            });
+        }
+        Ok(Self {
+            lower_parameter,
+            upper_parameter,
+            lower_gain,
+            upper_gain,
+        })
+    }
+
+    pub fn gain(&self, parameter: f64) -> Result<Matrix<INPUTS, STATES>, GncError> {
+        if !parameter.is_finite() {
+            return Err(GncError::NonFinite {
+                context: "gain scheduling parameter".to_string(),
+            });
+        }
+        let fraction = ((parameter - self.lower_parameter)
+            / (self.upper_parameter - self.lower_parameter))
+            .clamp(0.0, 1.0);
+        let mut gain = [[0.0; STATES]; INPUTS];
+        for row in 0..INPUTS {
+            for column in 0..STATES {
+                gain[row][column] = self.lower_gain[row][column]
+                    + fraction * (self.upper_gain[row][column] - self.lower_gain[row][column]);
+            }
+        }
+        Ok(gain)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ScheduledStateFeedback<const INPUTS: usize, const STATES: usize> {
+    schedule: LinearGainSchedule<INPUTS, STATES>,
+}
+
+impl<const INPUTS: usize, const STATES: usize> ScheduledStateFeedback<INPUTS, STATES> {
+    pub const fn new(schedule: LinearGainSchedule<INPUTS, STATES>) -> Self {
+        Self { schedule }
+    }
+
+    pub fn step(
+        &self,
+        timestamp: Timestamp,
+        parameter: f64,
+        state_error: [f64; STATES],
+    ) -> Result<StepResult<[f64; INPUTS]>, GncError> {
+        if !state_error.iter().all(|value| value.is_finite()) {
+            return Err(GncError::NonFinite {
+                context: "scheduled feedback state error".to_string(),
+            });
+        }
+        let gain = self.schedule.gain(parameter)?;
+        let command = mat_vec(&gain, &state_error);
+        Ok(StepResult::nominal(command, timestamp))
+    }
+}
+
+fn matrix_is_finite<const ROWS: usize, const COLUMNS: usize>(
+    matrix: &Matrix<ROWS, COLUMNS>,
+) -> bool {
+    matrix.iter().flatten().all(|value| value.is_finite())
+}
+
+fn mat_vec<const ROWS: usize, const COLUMNS: usize>(
+    matrix: &Matrix<ROWS, COLUMNS>,
+    vector: &[f64; COLUMNS],
+) -> [f64; ROWS] {
+    core::array::from_fn(|row| {
+        (0..COLUMNS)
+            .map(|column| matrix[row][column] * vector[column])
+            .sum()
+    })
+}
+
+fn add_vectors<const SIZE: usize>(left: [f64; SIZE], right: [f64; SIZE]) -> [f64; SIZE] {
+    core::array::from_fn(|index| left[index] + right[index])
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PidConfig {
     pub proportional_gain: f64,
@@ -191,5 +359,42 @@ mod tests {
             )
             .expect("second step");
         assert!((output.value.derivative - 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn discrete_state_space_updates_state_after_computing_output() {
+        let mut model =
+            DiscreteStateSpace::<1, 1, 1>::new([[1.0]], [[1.0]], [[1.0]], [[0.0]], [0.0])
+                .expect("finite state-space model");
+        assert_eq!(model.step([2.0]).expect("valid step"), [0.0]);
+        assert_eq!(model.step([2.0]).expect("valid step"), [2.0]);
+    }
+
+    #[test]
+    fn gain_schedule_interpolates_and_clamps_endpoints() {
+        let schedule =
+            LinearGainSchedule::new(0.0, 10.0, [[1.0, 0.0]], [[3.0, 2.0]]).expect("valid schedule");
+        assert_eq!(schedule.gain(-1.0).expect("lower clamp"), [[1.0, 0.0]]);
+        assert_eq!(schedule.gain(5.0).expect("interpolation"), [[2.0, 1.0]]);
+        assert_eq!(schedule.gain(11.0).expect("upper clamp"), [[3.0, 2.0]]);
+    }
+
+    #[test]
+    fn scheduled_feedback_returns_interpolated_command() {
+        let schedule =
+            LinearGainSchedule::new(0.0, 10.0, [[1.0, 0.0]], [[3.0, 2.0]]).expect("valid schedule");
+        let controller = ScheduledStateFeedback::new(schedule);
+        let result = controller
+            .step(Timestamp::ZERO, 5.0, [2.0, 4.0])
+            .expect("valid feedback");
+        assert_eq!(result.value, [8.0]);
+    }
+
+    #[test]
+    fn state_space_rejects_non_finite_input() {
+        let mut model =
+            DiscreteStateSpace::<1, 1, 1>::new([[1.0]], [[1.0]], [[1.0]], [[0.0]], [0.0])
+                .expect("finite state-space model");
+        assert!(model.step([f64::NAN]).is_err());
     }
 }
