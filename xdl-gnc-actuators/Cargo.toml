@@ -1,0 +1,11 @@
+[package]
+name = "xdl-gnc-actuators"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Bounded actuator dynamics for XDL GNC"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+xdl-gnc-core = { path = "../xdl-gnc-core" }

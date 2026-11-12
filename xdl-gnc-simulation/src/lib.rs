@@ -13,11 +13,13 @@
 //! angular rates in rad/s.
 
 use serde::{Deserialize, Serialize};
-use xdl_gnc_core::{DurationNs, FrameId, GncError, Quality, SignalStatus, Timestamp, Unit, Vec3, VectorMeta};
+use xdl_gnc_core::{
+    DurationNs, FrameId, GncError, Quality, SignalStatus, Timestamp, Unit, Vec3, VectorMeta,
+};
 
 /// A point-mass state expressed in `frame`. Position is in metres and velocity
 /// in m/s.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct KinematicState {
     pub timestamp: Timestamp,
     pub frame: FrameId,
@@ -51,17 +53,17 @@ impl KinematicState {
     }
 
     pub fn position_meta(&self) -> VectorMeta {
-        VectorMeta::new(self.frame.clone(), Unit::Meter)
+        VectorMeta::new(self.frame, Unit::Meter)
     }
 
     pub fn velocity_meta(&self) -> VectorMeta {
-        VectorMeta::new(self.frame.clone(), Unit::MeterPerSecond)
+        VectorMeta::new(self.frame, Unit::MeterPerSecond)
     }
 }
 
 /// Constant-acceleration truth model using an explicit fixed-step update.
 /// `acceleration` is in m/s^2 in `frame`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ConstantAccelerationModel {
     pub frame: FrameId,
     pub acceleration: Vec3,
@@ -101,13 +103,13 @@ impl ConstantAccelerationModel {
             + self.acceleration * (0.5 * seconds * seconds);
         let next_velocity = state.velocity + self.acceleration * seconds;
         let next_timestamp = state.timestamp.checked_add(dt)?;
-        KinematicState::new(next_timestamp, self.frame.clone(), next_position, next_velocity)
+        KinematicState::new(next_timestamp, self.frame, next_position, next_velocity)
     }
 }
 
 /// A deterministic idealized IMU sample. Specific force is in m/s^2 and angular
 /// rate in rad/s, both in `frame`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ImuMeasurement {
     pub status: SignalStatus,
     pub frame: FrameId,
@@ -141,17 +143,17 @@ impl ImuMeasurement {
     }
 
     pub fn specific_force_meta(&self) -> VectorMeta {
-        VectorMeta::new(self.frame.clone(), Unit::MeterPerSecondSquared)
+        VectorMeta::new(self.frame, Unit::MeterPerSecondSquared)
     }
 
     pub fn angular_rate_meta(&self) -> VectorMeta {
-        VectorMeta::new(self.frame.clone(), Unit::RadianPerSecond)
+        VectorMeta::new(self.frame, Unit::RadianPerSecond)
     }
 }
 
 /// A GNSS position/velocity sample with explicit quality status. Position is in
 /// metres and velocity in m/s, both in `frame`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct GnssMeasurement {
     pub status: SignalStatus,
     pub frame: FrameId,
@@ -215,7 +217,7 @@ impl ReplayLog {
             .chain(record.gnss.iter().map(|gnss| &gnss.frame));
         for frame in record_frames {
             match &self.frame {
-                None => self.frame = Some(frame.clone()),
+                None => self.frame = Some(*frame),
                 Some(expected) if expected == frame => {}
                 Some(expected) => {
                     return Err(GncError::InvalidValue {
@@ -264,11 +266,11 @@ impl GnssMeasurement {
     }
 
     pub fn position_meta(&self) -> VectorMeta {
-        VectorMeta::new(self.frame.clone(), Unit::Meter)
+        VectorMeta::new(self.frame, Unit::Meter)
     }
 
     pub fn velocity_meta(&self) -> VectorMeta {
-        VectorMeta::new(self.frame.clone(), Unit::MeterPerSecond)
+        VectorMeta::new(self.frame, Unit::MeterPerSecond)
     }
 
     pub fn with_quality(mut self, quality: Quality) -> Self {
@@ -298,7 +300,10 @@ mod tests {
         )
         .expect("finite state");
         let next = model
-            .step(&state, DurationNs::from_seconds(2.0).expect("finite duration"))
+            .step(
+                &state,
+                DurationNs::from_seconds(2.0).expect("finite duration"),
+            )
             .expect("positive step");
 
         assert_eq!(next.timestamp.as_nanoseconds(), 2_000_000_000);
@@ -309,7 +314,8 @@ mod tests {
 
     #[test]
     fn simulation_rejects_zero_step() {
-        let model = ConstantAccelerationModel::new(body(), Vec3::ZERO).expect("finite acceleration");
+        let model =
+            ConstantAccelerationModel::new(body(), Vec3::ZERO).expect("finite acceleration");
         let state = KinematicState::new(Timestamp::ZERO, body(), Vec3::ZERO, Vec3::ZERO)
             .expect("finite state");
         assert!(model.step(&state, DurationNs::ZERO).is_err());
@@ -317,7 +323,8 @@ mod tests {
 
     #[test]
     fn model_rejects_state_in_a_different_frame() {
-        let model = ConstantAccelerationModel::new(body(), Vec3::ZERO).expect("finite acceleration");
+        let model =
+            ConstantAccelerationModel::new(body(), Vec3::ZERO).expect("finite acceleration");
         let state = KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
             .expect("finite state");
         let dt = DurationNs::from_seconds(1.0).expect("finite duration");

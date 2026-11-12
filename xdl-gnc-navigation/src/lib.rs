@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (C) 2026 Ravindra Boddipalli
 
+// Covariance and Jacobian updates index two fixed-size matrices with the same
+// loop variables; the iterator form is harder to audit against the equations.
+#![allow(clippy::needless_range_loop)]
+
 //! Small deterministic navigation estimators for the XDL GNC vertical slice.
 //!
 //! The alpha-beta filter here is intentionally a transparent baseline, not a
@@ -38,7 +42,7 @@ impl AlphaBetaConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NavigationEstimate {
     pub state: KinematicState,
     pub position_residual: Vec3,
@@ -46,7 +50,7 @@ pub struct NavigationEstimate {
     pub status: SignalStatus,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AlphaBetaFilter {
     config: AlphaBetaConfig,
     state: KinematicState,
@@ -94,7 +98,7 @@ impl EkfConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EkfEstimate {
     pub state: KinematicState,
     pub covariance: Covariance6,
@@ -108,7 +112,7 @@ pub struct EkfEstimate {
 /// This is a navigation foundation, not a full inertial error-state filter:
 /// attitude and IMU bias states are intentionally deferred until the state,
 /// covariance, and replay contracts are independently exercised.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PositionVelocityEkf {
     config: EkfConfig,
     state: KinematicState,
@@ -533,6 +537,7 @@ impl PositionVelocityEkf {
         let seconds = dt.as_seconds();
         self.state = KinematicState::new(
             timestamp,
+            self.state.frame,
             self.state.position
                 + self.state.velocity * seconds
                 + acceleration * (0.5 * seconds * seconds),
@@ -637,8 +642,12 @@ impl PositionVelocityEkf {
         );
         corrected.position = corrected.position + correction;
         corrected.velocity = corrected.velocity + velocity_correction;
-        self.state =
-            KinematicState::new(corrected.timestamp, corrected.position, corrected.velocity)?;
+        self.state = KinematicState::new(
+            corrected.timestamp,
+            self.state.frame,
+            corrected.position,
+            corrected.velocity,
+        )?;
 
         let prior = self.covariance;
         let mut corrected_covariance = [[0.0; 6]; 6];
@@ -820,6 +829,7 @@ impl AlphaBetaFilter {
         let seconds = dt.as_seconds();
         self.state = KinematicState::new(
             timestamp,
+            self.state.frame,
             self.state.position
                 + self.state.velocity * seconds
                 + acceleration * (0.5 * seconds * seconds),
@@ -853,6 +863,7 @@ impl AlphaBetaFilter {
         let velocity_residual = measurement.velocity - self.state.velocity;
         self.state = KinematicState::new(
             self.state.timestamp,
+            self.state.frame,
             self.state.position + position_residual * self.config.position_gain,
             self.state.velocity + velocity_residual * self.config.velocity_gain,
         )?;
@@ -892,16 +903,23 @@ impl AlphaBetaFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use xdl_gnc_core::FrameId;
 
     #[test]
     fn alpha_beta_update_reduces_position_error() {
         let config = AlphaBetaConfig::new(0.5, 0.25).expect("valid gains");
-        let initial = KinematicState::new(Timestamp::ZERO, Vec3::ZERO, Vec3::new(1.0, 0.0, 0.0))
-            .expect("finite state");
+        let initial = KinematicState::new(
+            Timestamp::ZERO,
+            FrameId::Inertial,
+            Vec3::ZERO,
+            Vec3::new(1.0, 0.0, 0.0),
+        )
+        .expect("finite state");
         let mut filter = AlphaBetaFilter::new(config, initial);
         let timestamp = Timestamp::from_seconds(1.0).expect("finite timestamp");
         let measurement = GnssMeasurement::new(
             timestamp,
+            FrameId::Inertial,
             Vec3::new(1.2, 0.0, 0.0),
             Vec3::new(1.1, 0.0, 0.0),
         )
@@ -919,7 +937,8 @@ mod tests {
     fn missing_gnss_is_explicitly_degraded() {
         let config = AlphaBetaConfig::new(0.5, 0.25).expect("valid gains");
         let initial =
-            KinematicState::new(Timestamp::ZERO, Vec3::ZERO, Vec3::ZERO).expect("finite state");
+            KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+                .expect("finite state");
         let mut filter = AlphaBetaFilter::new(config, initial);
         let estimate = filter
             .step(
@@ -935,10 +954,12 @@ mod tests {
     fn future_gnss_requires_prediction_first() {
         let config = AlphaBetaConfig::new(0.5, 0.25).expect("valid gains");
         let initial =
-            KinematicState::new(Timestamp::ZERO, Vec3::ZERO, Vec3::ZERO).expect("finite state");
+            KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+                .expect("finite state");
         let mut filter = AlphaBetaFilter::new(config, initial);
         let measurement = GnssMeasurement::new(
             Timestamp::from_seconds(1.0).expect("finite timestamp"),
+            FrameId::Inertial,
             Vec3::ZERO,
             Vec3::ZERO,
         )
@@ -958,7 +979,8 @@ mod tests {
     fn ekf_update_reduces_position_variance() {
         let config = EkfConfig::new(0.01, 1.0, 1.0).expect("valid noise");
         let initial =
-            KinematicState::new(Timestamp::ZERO, Vec3::ZERO, Vec3::ZERO).expect("finite state");
+            KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+                .expect("finite state");
         let mut filter = PositionVelocityEkf::new(config, initial, diagonal_covariance(4.0))
             .expect("valid covariance");
         filter
@@ -970,6 +992,7 @@ mod tests {
         let before = filter.covariance()[0][0];
         let measurement = GnssMeasurement::new(
             filter.state().timestamp,
+            FrameId::Inertial,
             Vec3::new(2.0, 0.0, 0.0),
             Vec3::new(1.0, 0.0, 0.0),
         )
@@ -983,7 +1006,8 @@ mod tests {
     fn ekf_rejects_negative_covariance() {
         let config = EkfConfig::new(0.01, 1.0, 1.0).expect("valid noise");
         let initial =
-            KinematicState::new(Timestamp::ZERO, Vec3::ZERO, Vec3::ZERO).expect("finite state");
+            KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+                .expect("finite state");
         let mut covariance = [[0.0; 6]; 6];
         covariance[0][0] = -1.0;
         assert!(PositionVelocityEkf::new(config, initial, covariance).is_err());
@@ -1004,6 +1028,7 @@ mod tests {
         let mut mechanization = StrapdownMechanization::new(config, state);
         let measurement = ImuMeasurement::new(
             Timestamp::from_seconds(1.0).expect("finite timestamp"),
+            FrameId::Inertial,
             Vec3::new(0.0, 0.0, 9.81),
             Vec3::ZERO,
         )
@@ -1028,6 +1053,7 @@ mod tests {
         let mut mechanization = StrapdownMechanization::new(config, state);
         let measurement = ImuMeasurement::new(
             Timestamp::from_seconds(1.0).expect("finite timestamp"),
+            FrameId::Inertial,
             Vec3::ZERO,
             Vec3::new(0.0, 0.0, core::f64::consts::FRAC_PI_2),
         )
@@ -1070,12 +1096,22 @@ mod tests {
         )
         .expect("valid covariance");
         let timestamp = Timestamp::from_seconds(1.0).expect("finite timestamp");
-        let imu = ImuMeasurement::new(timestamp, Vec3::new(0.0, 0.0, 9.81), Vec3::ZERO)
-            .expect("finite IMU measurement");
+        let imu = ImuMeasurement::new(
+            timestamp,
+            FrameId::Inertial,
+            Vec3::new(0.0, 0.0, 9.81),
+            Vec3::ZERO,
+        )
+        .expect("finite IMU measurement");
         filter.predict(imu).expect("valid prediction");
         let before = filter.covariance()[0][0];
-        let gnss = GnssMeasurement::new(timestamp, Vec3::new(2.0, 0.0, 0.0), Vec3::ZERO)
-            .expect("finite GNSS measurement");
+        let gnss = GnssMeasurement::new(
+            timestamp,
+            FrameId::Inertial,
+            Vec3::new(2.0, 0.0, 0.0),
+            Vec3::ZERO,
+        )
+        .expect("finite GNSS measurement");
         let estimate = filter.update_gnss(gnss).expect("valid update");
         assert!(estimate.position_innovation.x > 0.0);
         assert!(estimate.nominal.position.x > 0.0);
@@ -1100,6 +1136,7 @@ mod tests {
                 .expect("valid covariance");
         let imu = ImuMeasurement::new(
             Timestamp::from_seconds(1.0).expect("finite timestamp"),
+            FrameId::Inertial,
             Vec3::ZERO,
             Vec3::ZERO,
         )

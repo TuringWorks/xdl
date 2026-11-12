@@ -81,10 +81,8 @@ fn find_definition_in_statement(stmt: &Statement, target: &str) -> Option<Range>
                 return Some(location_to_range(location));
             }
         }
-        Statement::Label { name, location } => {
-            if name.eq_ignore_ascii_case(target) {
-                return Some(location_to_range(location));
-            }
+        Statement::Label { name, location } if name.eq_ignore_ascii_case(target) => {
+            return Some(location_to_range(location));
         }
         _ => {}
     }
