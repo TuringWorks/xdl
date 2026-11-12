@@ -177,8 +177,8 @@ mod tests {
         let large_data: Vec<f64> = (0..200_000).map(|i| i as f64).collect();
         // GPU may or may not be available in test environment
         let result = gpu_min(&large_data);
-        if result.is_some() {
-            assert_eq!(result.unwrap(), 0.0);
+        if let Some(min) = result {
+            assert_eq!(min, 0.0);
         }
     }
 }

@@ -23,7 +23,8 @@ members = [
     "xdl-gnc-guidance",
     "xdl-gnc-control",
     "xdl-gnc-actuators",
-    "xdl-gnc-integration"
+    "xdl-gnc-integration",
+    "xdl-gnc-telemetry"
 ]
 resolver = "2"
 
@@ -40,6 +41,7 @@ documentation = "https://turingworks.github.io/xdl"
 [workspace.dependencies]
 # Core dependencies
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 thiserror = "1.0"
 anyhow = "1.0"
 tracing = "0.1"

@@ -1,3 +1,7 @@
+// Index loops here mirror the textbook matrix and FFT recurrences; rewriting
+// them as iterators obscures the algebra. Style lints only.
+#![allow(clippy::needless_range_loop, clippy::manual_memcpy)]
+
 //! Array manipulation functions
 
 use xdl_core::{XdlError, XdlResult, XdlValue};
@@ -1455,7 +1459,7 @@ pub fn histogram_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         if range <= 0.0 {
             1
         } else {
-            (range.ceil() as usize).max(1).min(256)
+            (range.ceil() as usize).clamp(1, 256)
         }
     };
 

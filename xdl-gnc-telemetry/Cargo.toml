@@ -1,0 +1,12 @@
+[package]
+name = "xdl-gnc-telemetry"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Deterministic telemetry records and JSON-lines export for XDL GNC"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+xdl-gnc-core = { path = "../xdl-gnc-core" }

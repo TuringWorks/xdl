@@ -263,11 +263,9 @@ pub fn map_set(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
     }
 
     // Parse LIMIT keyword
-    if let Some(limit_val) = keywords.get("LIMIT") {
-        if let XdlValue::Array(arr) = limit_val {
-            if arr.len() >= 4 {
-                proj.limit = Some([arr[0], arr[1], arr[2], arr[3]]);
-            }
+    if let Some(XdlValue::Array(arr)) = keywords.get("LIMIT") {
+        if arr.len() >= 4 {
+            proj.limit = Some([arr[0], arr[1], arr[2], arr[3]]);
         }
     }
 
@@ -565,8 +563,10 @@ mod tests {
 
     #[test]
     fn test_mercator_projection() {
-        let mut proj = MapProjection::default();
-        proj.projection = ProjectionType::Mercator;
+        let proj = MapProjection {
+            projection: ProjectionType::Mercator,
+            ..MapProjection::default()
+        };
 
         // Equator at prime meridian
         let (x, y) = proj.project(0.0, 0.0).unwrap();
@@ -579,8 +579,10 @@ mod tests {
 
     #[test]
     fn test_orthographic_projection() {
-        let mut proj = MapProjection::default();
-        proj.projection = ProjectionType::Orthographic;
+        let proj = MapProjection {
+            projection: ProjectionType::Orthographic,
+            ..MapProjection::default()
+        };
 
         // Center point should project to (0, 0)
         let (x, y) = proj.project(0.0, 0.0).unwrap();

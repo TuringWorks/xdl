@@ -1,3 +1,7 @@
+// Index loops here mirror the textbook matrix and FFT recurrences; rewriting
+// them as iterators obscures the algebra. Style lints only.
+#![allow(clippy::needless_range_loop, clippy::manual_memcpy)]
+
 //! Signal processing functions
 
 use xdl_core::{XdlError, XdlResult, XdlValue};

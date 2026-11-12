@@ -1,3 +1,7 @@
+// Index loops here mirror the textbook matrix and FFT recurrences; rewriting
+// them as iterators obscures the algebra. Style lints only.
+#![allow(clippy::needless_range_loop, clippy::manual_memcpy)]
+
 //! Scientific data format I/O functions
 //!
 //! This module provides placeholder implementations for scientific data formats:
@@ -188,9 +192,9 @@ pub fn sxpar(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 if let Some(eq_pos) = line.find('=') {
                     let value_part = line[eq_pos + 1..].trim();
                     // Handle string values (enclosed in quotes)
-                    if value_part.starts_with('\'') {
-                        if let Some(end_quote) = value_part[1..].find('\'') {
-                            return Ok(XdlValue::String(value_part[1..end_quote + 1].to_string()));
+                    if let Some(rest) = value_part.strip_prefix('\'') {
+                        if let Some(end_quote) = rest.find('\'') {
+                            return Ok(XdlValue::String(rest[..end_quote].to_string()));
                         }
                     }
                     // Handle numeric values
