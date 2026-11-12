@@ -120,8 +120,7 @@ fn benchmark_operations(size: usize) {
 
         // Metal matmul
         if let Ok(metal) = MetalDevice::new() {
-            let metal_time =
-                benchmark_metal_matmul(&metal, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
+            let metal_time = benchmark_metal_matmul(&metal, &mat_a, &mat_b, &mut mat_c, m, n, k, 3);
             let speedup = cpu_time.as_secs_f64() / metal_time.as_secs_f64();
             println!(
                 "  Metal: {:>10.3} ms  ({:.2}x {})",
@@ -309,6 +308,7 @@ fn benchmark_metal_add(
     start.elapsed() / iterations as u32
 }
 
+#[allow(clippy::too_many_arguments)]
 fn benchmark_metal_matmul(
     metal: &MetalDevice,
     a: &[f32],

@@ -207,10 +207,7 @@ pub fn particle_trace(
         .get("STEPS")
         .and_then(value_to_f64)
         .unwrap_or(100.0) as usize;
-    let dt = keywords
-        .get("DT")
-        .and_then(value_to_f64)
-        .unwrap_or(0.1);
+    let dt = keywords.get("DT").and_then(value_to_f64).unwrap_or(0.1);
 
     let num_particles = seeds.len() / 3;
     println!(
@@ -330,10 +327,7 @@ pub fn streamline(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> Xd
         .get("STEPS")
         .and_then(value_to_f64)
         .unwrap_or(200.0) as usize;
-    let dt = keywords
-        .get("DT")
-        .and_then(value_to_f64)
-        .unwrap_or(0.05);
+    let dt = keywords.get("DT").and_then(value_to_f64).unwrap_or(0.05);
 
     let num_seeds = seeds.len() / 3;
     println!(
@@ -854,6 +848,7 @@ fn marching_cubes(volume: &[f64], dims: [usize; 3], isovalue: f64) -> (Vec<f64>,
 }
 
 /// Interpolate vertex position on edge
+#[allow(clippy::too_many_arguments)]
 fn interp_vertex(
     x1: f64,
     y1: f64,
