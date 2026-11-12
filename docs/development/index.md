@@ -34,6 +34,18 @@ cargo install --path xdl-cli
 
 See [Build Guide](../BUILD_SUCCESS) for detailed instructions.
 
+### Make targets on macOS
+
+`make build`, `make check`, `make test`, and the other Cargo-wrapping targets
+run with `ulimit -n $(XDL_MAX_OPEN_FILES)` (default 65536), `CARGO_BUILD_JOBS=$(XDL_CARGO_JOBS)`
+(default 2), and `RUSTC_WRAPPER=` unset. Set `XDL_USE_SCCACHE=1` to keep the
+cache. Plain `cargo` commands are not affected.
+
+### GNC libraries
+
+The `xdl-gnc-*` crates are typed guidance, navigation, and control primitives.
+See [GNC Crates](gnc-crates.html).
+
 ## Testing
 
 ### Running Tests

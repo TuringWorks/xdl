@@ -1,0 +1,11 @@
+[package]
+name = "xdl-gnc-simulation"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Deterministic simulation and sensor records for XDL GNC research"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+xdl-gnc-core = { path = "../xdl-gnc-core" }

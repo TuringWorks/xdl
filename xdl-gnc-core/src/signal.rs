@@ -33,6 +33,7 @@ impl SignalStatus {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StepEvent {
+    TargetReached,
     Saturated,
     RateLimited,
     StaleInput,

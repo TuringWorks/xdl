@@ -17,7 +17,11 @@ members = [
     "xdl-database",
     "xdl-dataframe",
     "xdl-lsp",
-    "xdl-gnc-core"
+    "xdl-gnc-core",
+    "xdl-gnc-simulation",
+    "xdl-gnc-navigation",
+    "xdl-gnc-guidance",
+    "xdl-gnc-control"
 ]
 resolver = "2"
 

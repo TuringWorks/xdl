@@ -33,9 +33,10 @@ This file is the authority for all AI coding agents (Claude Code, Codex, Cursor,
 | Language server | `xdl-lsp` | bin | completion, hover, goto, symbols, semantic tokens, diagnostics |
 | VS Code extension | `vscode-xdl` | TS + TextMate | `syntaxes/xdl.tmLanguage.json`, `src/extension.ts` |
 | MATLAB transpiler | `xdl-matlab` | lib | `.m` → XDL; **not in `[workspace] members`**, auto-included as a path dep |
+| GNC libraries | `xdl-gnc-core`, `-simulation`, `-navigation`, `-guidance`, `-control` | lib | typed, interpreter-free; in development, no XDL built-ins yet — see `docs/development/gnc-crates.md` |
 | Docs site | `docs/` | Jekyll | just-the-docs, published to GitHub Pages |
 
-**`[workspace] members` lists 17 crates; `cargo metadata` reports 18.** Cargo
+**`[workspace] members` lists 22 crates; `cargo metadata` reports 23.** Cargo
 auto-includes `xdl-matlab` because `xdl-cli` and `xdl-gui` depend on it by path,
 so `--workspace` *does* cover it — do not "fix" the members list on the
 assumption that it doesn't.

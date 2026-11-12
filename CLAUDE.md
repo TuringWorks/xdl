@@ -39,7 +39,7 @@ cargo build --release -p xdl-cli          # the `xdl` binary
 ./target/release/xdl -e 'print, findgen(5)'
 ./target/release/xdl -i                   # REPL
 
-cargo check --workspace                   # what the edit hook runs (18 crates)
+cargo check --workspace                   # what the edit hook runs (23 packages)
 cargo test --workspace --no-fail-fast     # ALWAYS --no-fail-fast
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
@@ -47,7 +47,7 @@ cargo fmt --all
 
 ### Workspace membership is not what `Cargo.toml` says
 
-`[workspace] members` lists 17 crates; `cargo metadata` reports **18**. Cargo
+`[workspace] members` lists 22 crates; `cargo metadata` reports **23**. Cargo
 auto-includes `xdl-matlab` because `xdl-cli` and `xdl-gui` depend on it by path,
 so `--workspace` covers its lib. It does not cover `xdl-matlab/tests/` — run
 `cargo test -p xdl-matlab` after an AST change.

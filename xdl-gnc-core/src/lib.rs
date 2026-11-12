@@ -11,6 +11,7 @@ mod error;
 mod frame;
 mod limit;
 mod math;
+mod meta;
 mod signal;
 mod time;
 
@@ -18,5 +19,6 @@ pub use error::GncError;
 pub use frame::{FrameId, Pose, Transform};
 pub use limit::{LimitResult, ScalarLimit};
 pub use math::{Quaternion, Vec3};
+pub use meta::{Unit, VectorMeta};
 pub use signal::{Quality, SignalStatus, StepEvent, StepResult};
 pub use time::{DurationNs, Timestamp};

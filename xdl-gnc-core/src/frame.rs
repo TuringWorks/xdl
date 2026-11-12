@@ -4,7 +4,7 @@
 use crate::{GncError, Quaternion, Vec3};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FrameId {
     Inertial,
     EarthCenteredEarthFixed,
@@ -12,7 +12,8 @@ pub enum FrameId {
     NorthEastUp,
     Body,
     Sensor(u16),
-    Custom(String),
+    /// Application-defined frame, identified by number so that `FrameId` stays `Copy`.
+    Custom(u16),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

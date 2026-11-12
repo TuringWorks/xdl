@@ -31,6 +31,7 @@ The project is structured as a Cargo workspace with the following crates:
 - **`xdl-chart-viewer`**: Interactive chart viewer application
 - **`xdl-amp`**: Accelerated Math Processing
 - **`xdl-lsp`**: Language Server Protocol implementation for IDE support
+- **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**: Typed guidance, navigation, and control libraries (in development; no XDL built-ins yet). See [GNC Crates](docs/development/gnc-crates.md)
 
 **Additional Modules (not in workspace):**
 - **`xdl-matlab`**: MATLAB transpilation support (~83,000 line transpiler)
@@ -127,6 +128,11 @@ git clone https://github.com/TuringWorks/xdl
 cd xdl
 cargo build --release
 ```
+
+On macOS, a full workspace build can exhaust the per-process file-descriptor
+limit. The Makefile targets therefore default to `ulimit -n 65536`, 2 Cargo
+jobs, and no `sccache`. Override with `XDL_CARGO_JOBS`, `XDL_MAX_OPEN_FILES`,
+or `XDL_USE_SCCACHE=1`. Plain `cargo build` is unaffected.
 
 ### Installing with Cargo
 
@@ -244,6 +250,7 @@ xdl/
 ├── xdl-desktop-viewer/  # Desktop viewer
 ├── xdl-viz3d-threejs/    # Three.js components
 ├── xdl-viz3d-web/        # Web 3D visualization
+├── xdl-gnc-*/            # Typed GNC libraries (core, simulation, navigation, guidance, control)
 ├── examples/             # Example scripts and demos
 ├── tests/                # Test suite
 └── docs/                 # Documentation

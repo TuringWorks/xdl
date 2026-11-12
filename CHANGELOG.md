@@ -5,6 +5,22 @@ All notable changes to the XDL project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **GNC crates** (in development, no XDL built-ins yet):
+  - `xdl-gnc-core`: vectors, quaternions, frames, poses, scalar limits, timestamps, signal status, `GncError`
+  - `xdl-gnc-simulation`: constant-acceleration truth model, IMU/GNSS records, ordered `ReplayLog`
+  - `xdl-gnc-navigation`: alpha-beta filter, position/velocity EKF, strapdown mechanization, error-state EKF
+  - `xdl-gnc-guidance`: waypoint guidance
+  - `xdl-gnc-control`: bounded PID with anti-windup
+  - See `docs/development/gnc-crates.md`
+- `StepEvent::TargetReached`
+
+### Changed
+- Makefile Cargo targets default to `ulimit -n 65536`, 2 jobs, and no sccache on macOS. Override with `XDL_CARGO_JOBS`, `XDL_MAX_OPEN_FILES`, `XDL_USE_SCCACHE=1`.
+- Workspace members: 18 → 22.
+
 ## [0.1.7] - 2025-12-30
 
 ### Added

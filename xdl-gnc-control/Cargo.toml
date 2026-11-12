@@ -1,0 +1,11 @@
+[package]
+name = "xdl-gnc-control"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Bounded PID control primitives for XDL GNC"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+xdl-gnc-core = { path = "../xdl-gnc-core" }
