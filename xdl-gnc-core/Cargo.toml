@@ -1,0 +1,11 @@
+[package]
+name = "xdl-gnc-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Typed, reusable foundations for XDL guidance, navigation, and control libraries"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }

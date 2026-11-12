@@ -16,7 +16,8 @@ members = [
     "xdl-amp",
     "xdl-database",
     "xdl-dataframe",
-    "xdl-lsp"
+    "xdl-lsp",
+    "xdl-gnc-core"
 ]
 resolver = "2"
 
