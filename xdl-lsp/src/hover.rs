@@ -145,24 +145,22 @@ fn check_statement_for_symbol(
                 });
             }
         }
-        Statement::ProcedureDef { name, params, .. } => {
-            if name.eq_ignore_ascii_case(target_name) {
-                let param_str = params
-                    .iter()
-                    .map(|p| p.name.clone())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                return Some(Hover {
-                    contents: HoverContents::Markup(MarkupContent {
-                        kind: MarkupKind::Markdown,
-                        value: format!(
-                            "**User Procedure** `{}`\n\n```xdl\nPRO {}, {}\n```",
-                            name, name, param_str
-                        ),
-                    }),
-                    range: None,
-                });
-            }
+        Statement::ProcedureDef { name, params, .. } if name.eq_ignore_ascii_case(target_name) => {
+            let param_str = params
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Some(Hover {
+                contents: HoverContents::Markup(MarkupContent {
+                    kind: MarkupKind::Markdown,
+                    value: format!(
+                        "**User Procedure** `{}`\n\n```xdl\nPRO {}, {}\n```",
+                        name, name, param_str
+                    ),
+                }),
+                range: None,
+            });
         }
         _ => {}
     }
