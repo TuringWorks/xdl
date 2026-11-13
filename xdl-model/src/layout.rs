@@ -72,6 +72,8 @@ pub enum LayoutError {
     MissingBlock(BlockId),
     #[error("layout references unknown block {0:?}")]
     UnknownBlock(BlockId),
+    #[error("layout is missing port {0:?}")]
+    MissingPort(PortId),
     #[error("layout references unknown port {0:?}")]
     UnknownPort(PortId),
     #[error("layout geometry for block {0:?} is invalid")]
@@ -144,7 +146,7 @@ impl ModelLayout {
                     .ports
                     .get(&port.id)
                     .copied()
-                    .ok_or(LayoutError::UnknownPort(port.id))?;
+                    .ok_or(LayoutError::MissingPort(port.id))?;
                 if !layout.is_valid() {
                     return Err(LayoutError::InvalidPortGeometry(port.id));
                 }
@@ -215,6 +217,24 @@ mod tests {
             layout.validate(&model),
             Err(LayoutError::InputSide(_))
         ));
+    }
+
+    #[test]
+    fn layout_reports_a_model_port_missing_from_layout_as_missing() {
+        let mut model = Model::new("diagram");
+        let block = model.add_block("gain").expect("block");
+        let input = model
+            .add_port(block, "in", PortDirection::Input, SignalSpec::scalar())
+            .expect("input");
+        // Block geometry present, port layout absent: the layout lacks the port.
+        let layout = ModelLayout {
+            blocks: BTreeMap::from([(block, BlockLayout::new(10.0, 20.0, 120.0, 60.0))]),
+            ports: BTreeMap::new(),
+        };
+        assert_eq!(
+            layout.validate(&model),
+            Err(LayoutError::MissingPort(input))
+        );
     }
 
     #[test]
