@@ -79,7 +79,7 @@ pub mod directx;
 pub mod directml;
 
 // Linux backends
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "opencl"))]
 pub mod opencl;
 
 #[cfg(feature = "rocm")]
@@ -216,7 +216,7 @@ impl GpuContext {
             }
 
             // Cross-platform backends
-            #[cfg(feature = "opencl")]
+            #[cfg(all(target_os = "linux", feature = "opencl"))]
             GpuBackend::OpenCL => {
                 let device = opencl::OpenCLDevice::new()?;
                 Ok(Self {
