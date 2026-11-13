@@ -13,72 +13,40 @@ XDL now supports virtually all GDL/IDL syntax patterns commonly used in scientif
 
 ## ✅ Fully Compatible Syntax Features
 
-### 1. Optional END Keywords (NEW!)
+### 1. Loop and conditional terminators
 
-In GDL/IDL, when using `BEGIN...END` blocks, the explicit loop/conditional terminators are optional.
+XDL requires explicit terminators: `ENDFOR` closes `FOR`, `ENDWHILE` closes
+`WHILE`, and `ENDIF` closes `IF`. The forms below were run against the current
+`xdl` binary.
 
-**XDL now supports both styles:**
-
-#### FOR Loops
+#### FOR and WHILE
 
 ```idl
-; Style 1: Single statement (no ENDFOR, no BEGIN...END)
-for i=0,9 do a[i] = i * 2
-
-; Style 2: BEGIN...END without ENDFOR
+; Accepted: BEGIN...END with ENDFOR
 for i=0,9 do begin
   a[i] = i * 2
-end
-
-; Style 3: BEGIN...END with ENDFOR (also supported)
-for i=0,9 do begin
-  a[i] = i * 2
-end
 endfor
-```
 
-#### WHILE Loop Syntax
-
-```idl
-; Single statement (no ENDWHILE)
-while count lt 10 do count = count + 1
-
-; BEGIN...END without ENDWHILE
+; Accepted: BEGIN...END with ENDWHILE
 while count lt 10 do begin
   count = count + 1
-end
-
-; BEGIN...END with ENDWHILE (also supported)
-while count lt 10 do begin
-  count = count + 1
-end
 endwhile
 ```
 
-#### Conditional Statements (IF-THEN-ELSE)
+Rejected (parse error: "Expected 'endfor' to close for loop" or "Expected
+'endwhile' to close while loop"):
 
 ```idl
-; Single statement (no ENDIF)
-if x gt 0 then print, 'positive'
-if x gt 0 then print, 'positive' else print, 'negative'
-
-; BEGIN...END without ENDIF
-if x gt 0 then begin
-  print, 'positive'
-end else begin
-  print, 'negative'
-end
-
-; BEGIN...END with ENDIF (also supported)
-if x gt 0 then begin
-  print, 'positive'
-end else begin
-  print, 'negative'
-end
-endif
+for i=0,9 do a[i] = i * 2          ; single statement, no ENDFOR
+for i=0,9 do begin ... end         ; END does not close FOR
+while count lt 10 do count = count + 1
+while count lt 10 do begin ... end ; END does not close WHILE
 ```
 
-**Important:** Single-statement forms (without `BEGIN...END`) do **not** require explicit terminators. This matches GDL/IDL exactly!
+**Not verified here:** whether GDL or IDL accept `END` or single-statement
+loops without a terminator. Check against a reference GDL or IDL installation
+before relying on either behaviour.
+
 
 ---
 
@@ -251,7 +219,7 @@ When porting GDL/IDL code to XDL:
 1. ✅ **Control Flow:** Most syntax works as-is
 2. ✅ **Array Generation:** All *INDGEN functions available
 3. ✅ **Double Precision:** Use .d0 notation freely
-4. ✅ **Optional END Keywords:** Both styles work
+4. ✅ **Loop terminators:** `ENDFOR`/`ENDWHILE` are required; `END` alone does not close loops (see section 1)
 5. ⚠️ **SIZE Function:** Replace with manual dimension tracking
 6. ⚠️ **CASE Statements:** Replace with nested IF-THEN-ELSE
 7. ⚠️ **@batch:** Use command line execution instead
