@@ -25,6 +25,8 @@ members = [
     "xdl-gnc-actuators",
     "xdl-gnc-integration",
     "xdl-gnc-telemetry"
+    , "xdl-model",
+    "xdl-sim"
 ]
 resolver = "2"
 

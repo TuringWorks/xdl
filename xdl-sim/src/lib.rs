@@ -1,0 +1,951 @@
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2026 Ravindra Boddipalli
+
+//! Deterministic scheduling primitives for XDL model execution.
+//!
+//! This crate schedules work; it does not sleep, read a wall clock, or execute
+//! blocks. A future executor can consume [`ScheduledEvent`] values and apply
+//! block semantics without changing ordering or timing behavior.
+
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use thiserror::Error;
+use xdl_gnc_core::{DurationNs, GncError, Timestamp};
+use xdl_model::{BlockId, Model, ModelError, PortId, SignalShape, Subsystem};
+
+pub mod solver;
+pub use solver::{
+    euler_step, rk4_adaptive_step, rk4_step, AdaptiveConfig, AdaptiveStep, DerivativeFn,
+    SolverError,
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct TaskId(u32);
+
+impl TaskId {
+    pub const fn new(value: u32) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum SchedulerError {
+    #[error("invalid scheduler time: {0}")]
+    InvalidTime(String),
+    #[error("scheduler task count or event count exceeded its bound")]
+    EventBoundExceeded,
+    #[error("task identifier space exhausted")]
+    IdExhausted,
+    #[error("task {0:?} does not exist")]
+    UnknownTask(TaskId),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SignalValue {
+    Scalar(f64),
+    Vector(Vec<f64>),
+    Bus(BTreeMap<String, SignalValue>),
+}
+
+impl SignalValue {
+    fn is_finite(&self) -> bool {
+        match self {
+            Self::Scalar(value) => value.is_finite(),
+            Self::Vector(values) => values.iter().all(|value| value.is_finite()),
+            Self::Bus(fields) => fields.values().all(Self::is_finite),
+        }
+    }
+
+    fn matches_shape(&self, shape: &SignalShape) -> bool {
+        match (self, shape) {
+            (Self::Scalar(_), SignalShape::Scalar) => true,
+            (Self::Vector(values), SignalShape::Vector(length)) => values.len() == *length,
+            (Self::Vector(values), SignalShape::Matrix { rows, columns }) => {
+                values.len() == rows.saturating_mul(*columns)
+            }
+            (Self::Bus(values), SignalShape::Bus(fields)) => {
+                values.len() == fields.len()
+                    && fields.iter().all(|field| {
+                        values
+                            .get(&field.name)
+                            .is_some_and(|value| value.matches_shape(&field.shape))
+                    })
+            }
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum ExecutionError {
+    #[error("model error: {0}")]
+    Model(#[from] ModelError),
+    #[error("subsystem error: {0}")]
+    Subsystem(String),
+    #[error("scheduler error: {0}")]
+    Scheduler(#[from] SchedulerError),
+    #[error("task {0:?} is not registered with a runtime block")]
+    UnregisteredTask(TaskId),
+    #[error("required input port {0:?} has no signal")]
+    MissingInput(PortId),
+    #[error("block {block:?} emitted an invalid value for port {port:?}")]
+    InvalidOutput { block: BlockId, port: PortId },
+    #[error("block runtime failed: {0}")]
+    Runtime(String),
+}
+
+/// Runtime implementation for one graph block. Implementations should be
+/// deterministic and avoid wall-clock or blocking I/O.
+pub trait BlockRuntime {
+    fn step(
+        &mut self,
+        timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError>;
+}
+
+/// Continuous block contract. The runtime owns the physical state while the
+/// engine owns scheduling and input routing.
+pub trait ContinuousBlockRuntime {
+    fn derivative(
+        &mut self,
+        time: f64,
+        state: &[f64],
+        inputs: &BTreeMap<PortId, SignalValue>,
+        derivative: &mut [f64],
+    );
+
+    fn outputs(
+        &mut self,
+        time: f64,
+        state: &[f64],
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError>;
+}
+
+/// Adapts a continuous block to the scheduled block interface.
+pub struct AdaptiveContinuousRuntime {
+    runtime: Box<dyn ContinuousBlockRuntime>,
+    state: Vec<f64>,
+    config: AdaptiveConfig,
+    last_timestamp: Option<Timestamp>,
+}
+
+impl AdaptiveContinuousRuntime {
+    pub fn new(
+        runtime: Box<dyn ContinuousBlockRuntime>,
+        initial_state: Vec<f64>,
+        config: AdaptiveConfig,
+    ) -> Result<Self, ExecutionError> {
+        config
+            .validate()
+            .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+        if initial_state.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "continuous initial state must be finite".to_string(),
+            ));
+        }
+        Ok(Self {
+            runtime,
+            state: initial_state,
+            config,
+            last_timestamp: None,
+        })
+    }
+}
+
+impl BlockRuntime for AdaptiveContinuousRuntime {
+    fn step(
+        &mut self,
+        timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        if let Some(previous) = self.last_timestamp {
+            let duration = timestamp
+                .duration_since(previous)
+                .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+            if duration.as_nanoseconds() < 0 {
+                return Err(ExecutionError::Runtime(
+                    "continuous runtime timestamp moved backwards".to_string(),
+                ));
+            }
+            if duration.as_nanoseconds() > 0 {
+                let time = previous.as_seconds();
+                let step = duration.as_seconds();
+                let runtime = &mut self.runtime;
+                let state = &self.state;
+                let result = rk4_adaptive_step(
+                    time,
+                    step,
+                    state,
+                    self.config,
+                    &mut |sample_time, sample_state, derivative| {
+                        runtime.derivative(sample_time, sample_state, inputs, derivative);
+                    },
+                )
+                .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+                if result.accepted_step == 0.0 {
+                    return Err(ExecutionError::Runtime(format!(
+                        "continuous step rejected with normalized error {}",
+                        result.normalized_error
+                    )));
+                }
+                self.state = result.state;
+            }
+        }
+        self.last_timestamp = Some(timestamp);
+        self.runtime
+            .outputs(timestamp.as_seconds(), &self.state, inputs)
+    }
+}
+
+/// One-sample delay. The first execution emits `initial`; each later execution
+/// emits the previous input and stores the current input for the next tick.
+pub struct UnitDelay {
+    pub input: PortId,
+    pub output: PortId,
+    state: SignalValue,
+}
+
+impl UnitDelay {
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        initial: SignalValue,
+    ) -> Result<Self, ExecutionError> {
+        if !initial.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "unit-delay initial value must be finite".to_string(),
+            ));
+        }
+        Ok(Self {
+            input,
+            output,
+            state: initial,
+        })
+    }
+}
+
+impl BlockRuntime for UnitDelay {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let input = inputs
+            .get(&self.input)
+            .cloned()
+            .ok_or(ExecutionError::MissingInput(self.input))?;
+        let output = BTreeMap::from([(self.output, self.state.clone())]);
+        self.state = input;
+        Ok(output)
+    }
+}
+
+/// Explicit zero-order hold. It emits the most recently sampled input without
+/// interpolation; the scheduler controls when this block is executed.
+pub struct ZeroOrderHold {
+    pub input: PortId,
+    pub output: PortId,
+}
+
+impl BlockRuntime for ZeroOrderHold {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let value = inputs
+            .get(&self.input)
+            .cloned()
+            .ok_or(ExecutionError::MissingInput(self.input))?;
+        Ok(BTreeMap::from([(self.output, value)]))
+    }
+}
+
+struct RegisteredBlock {
+    block: BlockId,
+    runtime: Box<dyn BlockRuntime>,
+}
+
+pub struct ExecutionEngine {
+    pub model: Model,
+    pub scheduler: Scheduler,
+    registered: BTreeMap<TaskId, RegisteredBlock>,
+    signals: BTreeMap<PortId, SignalValue>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExecutionReport {
+    pub events: Vec<ScheduledEvent>,
+    pub signal_updates: usize,
+}
+
+impl ExecutionEngine {
+    pub fn new(model: Model, scheduler: Scheduler) -> Result<Self, ExecutionError> {
+        model.validate()?;
+        Ok(Self {
+            model,
+            scheduler,
+            registered: BTreeMap::new(),
+            signals: BTreeMap::new(),
+        })
+    }
+
+    pub fn register_task(
+        &mut self,
+        task: TaskId,
+        block: BlockId,
+        runtime: Box<dyn BlockRuntime>,
+    ) -> Result<(), ExecutionError> {
+        if !self.scheduler.has_task(task) {
+            return Err(ExecutionError::Scheduler(SchedulerError::UnknownTask(task)));
+        }
+        self.model.block(block)?;
+        self.registered
+            .insert(task, RegisteredBlock { block, runtime });
+        Ok(())
+    }
+
+    pub fn signal(&self, port: PortId) -> Option<&SignalValue> {
+        self.signals.get(&port)
+    }
+
+    pub fn inject_signal(
+        &mut self,
+        port: PortId,
+        value: SignalValue,
+    ) -> Result<(), ExecutionError> {
+        let definition = self.model.port(port)?;
+        if definition.direction != xdl_model::PortDirection::Input
+            || !value.matches_shape(&definition.signal.shape)
+            || !value.is_finite()
+        {
+            return Err(ExecutionError::InvalidOutput {
+                block: self.model.block_for_port(port)?,
+                port,
+            });
+        }
+        self.signals.insert(port, value);
+        Ok(())
+    }
+
+    pub fn advance_to(&mut self, timestamp: Timestamp) -> Result<ExecutionReport, ExecutionError> {
+        let events = self.scheduler.advance_to(timestamp)?;
+        let mut signal_updates = 0;
+        for event in &events {
+            let registered = self
+                .registered
+                .get_mut(&event.task)
+                .ok_or(ExecutionError::UnregisteredTask(event.task))?;
+            let block = registered.block;
+            let mut inputs = BTreeMap::new();
+            for port in self.model.block(block)?.ports.values() {
+                if port.direction == xdl_model::PortDirection::Input {
+                    let value = self
+                        .signals
+                        .get(&port.id)
+                        .cloned()
+                        .ok_or(ExecutionError::MissingInput(port.id))?;
+                    inputs.insert(port.id, value);
+                }
+            }
+            let outputs = registered.runtime.step(event.timestamp, &inputs)?;
+            for (port, value) in outputs {
+                let definition = self.model.port(port)?;
+                if self.model.block_for_port(port)? != block
+                    || !value.matches_shape(&definition.signal.shape)
+                    || !value.is_finite()
+                {
+                    return Err(ExecutionError::InvalidOutput { block, port });
+                }
+                self.signals.insert(port, value.clone());
+                for connection in self
+                    .model
+                    .connections
+                    .iter()
+                    .filter(|connection| connection.output == port)
+                {
+                    self.signals.insert(connection.input, value.clone());
+                }
+                signal_updates += 1;
+            }
+        }
+        Ok(ExecutionReport {
+            events,
+            signal_updates,
+        })
+    }
+}
+
+/// Executes a subsystem as one block in a parent graph.
+pub struct SubsystemRuntime {
+    engine: ExecutionEngine,
+    input_bindings: Vec<xdl_model::BoundaryBinding>,
+    output_bindings: Vec<xdl_model::BoundaryBinding>,
+}
+
+impl SubsystemRuntime {
+    pub fn new(subsystem: Subsystem, scheduler: Scheduler) -> Result<Self, ExecutionError> {
+        subsystem
+            .validate()
+            .map_err(|error| ExecutionError::Subsystem(error.to_string()))?;
+        let engine = ExecutionEngine::new(subsystem.model, scheduler)?;
+        Ok(Self {
+            engine,
+            input_bindings: subsystem.input_bindings,
+            output_bindings: subsystem.output_bindings,
+        })
+    }
+
+    pub fn engine_mut(&mut self) -> &mut ExecutionEngine {
+        &mut self.engine
+    }
+}
+
+impl BlockRuntime for SubsystemRuntime {
+    fn step(
+        &mut self,
+        timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        for binding in &self.input_bindings {
+            let value = inputs
+                .get(&binding.boundary)
+                .cloned()
+                .ok_or(ExecutionError::MissingInput(binding.boundary))?;
+            self.engine.inject_signal(binding.internal, value)?;
+        }
+        self.engine.advance_to(timestamp)?;
+        self.output_bindings
+            .iter()
+            .map(|binding| {
+                self.engine
+                    .signal(binding.internal)
+                    .cloned()
+                    .map(|value| (binding.boundary, value))
+                    .ok_or(ExecutionError::MissingInput(binding.internal))
+            })
+            .collect()
+    }
+}
+
+impl From<GncError> for SchedulerError {
+    fn from(error: GncError) -> Self {
+        Self::InvalidTime(error.to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SchedulerConfig {
+    pub base_period: DurationNs,
+    pub max_events_per_advance: usize,
+}
+
+impl SchedulerConfig {
+    pub fn new(
+        base_period: DurationNs,
+        max_events_per_advance: usize,
+    ) -> Result<Self, SchedulerError> {
+        if !base_period.is_positive() {
+            return Err(SchedulerError::InvalidTime(
+                "base period must be positive".to_string(),
+            ));
+        }
+        if max_events_per_advance == 0 {
+            return Err(SchedulerError::EventBoundExceeded);
+        }
+        Ok(Self {
+            base_period,
+            max_events_per_advance,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PeriodicTask {
+    pub id: TaskId,
+    pub name: String,
+    pub period: DurationNs,
+    pub phase: DurationNs,
+    pub priority: u32,
+    next_release: Timestamp,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScheduledEvent {
+    pub timestamp: Timestamp,
+    pub task: TaskId,
+    pub priority: u32,
+    pub sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Scheduler {
+    config: SchedulerConfig,
+    current_time: Timestamp,
+    next_task: u32,
+    next_sequence: u64,
+    tasks: BTreeMap<TaskId, PeriodicTask>,
+}
+
+impl Scheduler {
+    pub fn new(config: SchedulerConfig) -> Self {
+        Self {
+            config,
+            current_time: Timestamp::ZERO,
+            next_task: 0,
+            next_sequence: 0,
+            tasks: BTreeMap::new(),
+        }
+    }
+
+    pub fn add_periodic_task(
+        &mut self,
+        name: impl Into<String>,
+        period: DurationNs,
+        phase: DurationNs,
+        priority: u32,
+    ) -> Result<TaskId, SchedulerError> {
+        if !period.is_positive() || phase.as_nanoseconds() < 0 {
+            return Err(SchedulerError::InvalidTime(
+                "task period must be positive and phase non-negative".to_string(),
+            ));
+        }
+        if phase >= period {
+            return Err(SchedulerError::InvalidTime(
+                "task phase must be smaller than its period".to_string(),
+            ));
+        }
+        if period.as_nanoseconds() % self.config.base_period.as_nanoseconds() != 0 {
+            return Err(SchedulerError::InvalidTime(
+                "task period must be an integer multiple of the base period".to_string(),
+            ));
+        }
+        let id = TaskId(self.next_task);
+        self.next_task = self
+            .next_task
+            .checked_add(1)
+            .ok_or(SchedulerError::IdExhausted)?;
+        let next_release = Timestamp::ZERO.checked_add(phase)?;
+        self.tasks.insert(
+            id,
+            PeriodicTask {
+                id,
+                name: name.into(),
+                period,
+                phase,
+                priority,
+                next_release,
+            },
+        );
+        Ok(id)
+    }
+
+    pub fn current_time(&self) -> Timestamp {
+        self.current_time
+    }
+
+    pub fn tasks(&self) -> impl Iterator<Item = &PeriodicTask> {
+        self.tasks.values()
+    }
+
+    pub fn has_task(&self, task: TaskId) -> bool {
+        self.tasks.contains_key(&task)
+    }
+
+    /// Advances to `timestamp` and returns every task release at or before it.
+    /// Same-time releases are sorted by priority, then task ID, and receive a
+    /// monotonically increasing sequence number.
+    pub fn advance_to(
+        &mut self,
+        timestamp: Timestamp,
+    ) -> Result<Vec<ScheduledEvent>, SchedulerError> {
+        if timestamp < self.current_time {
+            return Err(SchedulerError::InvalidTime(
+                "scheduler time cannot move backwards".to_string(),
+            ));
+        }
+        let mut pending = Vec::new();
+        for task in self.tasks.values_mut() {
+            while task.next_release <= timestamp {
+                pending.push((task.next_release, task.priority, task.id));
+                task.next_release = task.next_release.checked_add(task.period)?;
+                if pending.len() > self.config.max_events_per_advance {
+                    return Err(SchedulerError::EventBoundExceeded);
+                }
+            }
+        }
+        pending.sort_by_key(|(release, priority, task)| (*release, *priority, *task));
+        let events = pending
+            .into_iter()
+            .map(|(release, priority, task)| {
+                let sequence = self.next_sequence;
+                self.next_sequence = self
+                    .next_sequence
+                    .checked_add(1)
+                    .ok_or(SchedulerError::EventBoundExceeded)?;
+                Ok(ScheduledEvent {
+                    timestamp: release,
+                    task,
+                    priority,
+                    sequence,
+                })
+            })
+            .collect::<Result<Vec<_>, SchedulerError>>()?;
+        self.current_time = timestamp;
+        Ok(events)
+    }
+
+    pub fn reset(&mut self) -> Result<(), SchedulerError> {
+        self.current_time = Timestamp::ZERO;
+        self.next_sequence = 0;
+        for task in self.tasks.values_mut() {
+            task.next_release = Timestamp::ZERO.checked_add(task.phase)?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn duration(nanoseconds: i64) -> DurationNs {
+        DurationNs::from_nanoseconds(nanoseconds)
+    }
+
+    #[test]
+    fn scheduler_orders_multi_rate_same_time_events_deterministically() {
+        let mut scheduler =
+            Scheduler::new(SchedulerConfig::new(duration(10), 32).expect("valid scheduler config"));
+        let slow = scheduler
+            .add_periodic_task("slow", duration(20), DurationNs::ZERO, 10)
+            .expect("task");
+        let fast = scheduler
+            .add_periodic_task("fast", duration(10), DurationNs::ZERO, 1)
+            .expect("task");
+
+        let events = scheduler
+            .advance_to(Timestamp::from_nanoseconds(20))
+            .expect("advance");
+        assert_eq!(events.len(), 5);
+        assert_eq!(events[0].task, fast);
+        assert_eq!(events[1].task, slow);
+        assert_eq!(events[2].task, fast);
+        assert_eq!(events[3].task, fast);
+        assert_eq!(events[4].task, slow);
+        assert!(events
+            .windows(2)
+            .all(|pair| pair[0].sequence < pair[1].sequence));
+    }
+
+    #[test]
+    fn scheduler_rejects_invalid_rates_and_backwards_time() {
+        let config = SchedulerConfig::new(duration(10), 8).expect("valid config");
+        let mut scheduler = Scheduler::new(config);
+        assert!(scheduler
+            .add_periodic_task("bad", duration(15), DurationNs::ZERO, 0)
+            .is_err());
+        scheduler
+            .add_periodic_task("good", duration(10), DurationNs::ZERO, 0)
+            .expect("task");
+        scheduler
+            .advance_to(Timestamp::from_nanoseconds(10))
+            .expect("advance");
+        assert!(scheduler
+            .advance_to(Timestamp::from_nanoseconds(9))
+            .is_err());
+    }
+
+    #[test]
+    fn scheduler_enforces_event_bound() {
+        let mut scheduler =
+            Scheduler::new(SchedulerConfig::new(duration(1), 2).expect("valid scheduler config"));
+        scheduler
+            .add_periodic_task("fast", duration(1), DurationNs::ZERO, 0)
+            .expect("task");
+        assert!(matches!(
+            scheduler.advance_to(Timestamp::from_nanoseconds(3)),
+            Err(SchedulerError::EventBoundExceeded)
+        ));
+    }
+
+    struct Constant {
+        output: PortId,
+        value: f64,
+    }
+
+    impl BlockRuntime for Constant {
+        fn step(
+            &mut self,
+            _timestamp: Timestamp,
+            _inputs: &BTreeMap<PortId, SignalValue>,
+        ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+            Ok(BTreeMap::from([(
+                self.output,
+                SignalValue::Scalar(self.value),
+            )]))
+        }
+    }
+
+    struct Gain {
+        input: PortId,
+        output: PortId,
+    }
+
+    impl BlockRuntime for Gain {
+        fn step(
+            &mut self,
+            _timestamp: Timestamp,
+            inputs: &BTreeMap<PortId, SignalValue>,
+        ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+            let Some(SignalValue::Scalar(value)) = inputs.get(&self.input) else {
+                return Err(ExecutionError::Runtime(
+                    "gain input is not scalar".to_string(),
+                ));
+            };
+            Ok(BTreeMap::from([(
+                self.output,
+                SignalValue::Scalar(value * 2.0),
+            )]))
+        }
+    }
+
+    struct Decay {
+        output: PortId,
+    }
+
+    impl ContinuousBlockRuntime for Decay {
+        fn derivative(
+            &mut self,
+            _time: f64,
+            state: &[f64],
+            _inputs: &BTreeMap<PortId, SignalValue>,
+            derivative: &mut [f64],
+        ) {
+            derivative[0] = -state[0];
+        }
+
+        fn outputs(
+            &mut self,
+            _time: f64,
+            state: &[f64],
+            _inputs: &BTreeMap<PortId, SignalValue>,
+        ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+            Ok(BTreeMap::from([(
+                self.output,
+                SignalValue::Scalar(state[0]),
+            )]))
+        }
+    }
+
+    #[test]
+    fn adaptive_continuous_runtime_integrates_state_through_engine() {
+        let mut model = Model::new("decay");
+        let block = model.add_block("decay").expect("block");
+        let output = model
+            .add_port(
+                block,
+                "out",
+                xdl_model::PortDirection::Output,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("port");
+        let config = SchedulerConfig::new(duration(100_000_000), 8).expect("scheduler");
+        let mut scheduler = Scheduler::new(config);
+        let task = scheduler
+            .add_periodic_task("decay", duration(100_000_000), DurationNs::ZERO, 0)
+            .expect("task");
+        let mut engine = ExecutionEngine::new(model, scheduler).expect("engine");
+        engine
+            .register_task(
+                task,
+                block,
+                Box::new(
+                    AdaptiveContinuousRuntime::new(
+                        Box::new(Decay { output }),
+                        vec![1.0],
+                        AdaptiveConfig {
+                            absolute_tolerance: 1e-6,
+                            relative_tolerance: 1e-6,
+                            minimum_step: 1e-4,
+                            maximum_step: 0.2,
+                        },
+                    )
+                    .expect("continuous runtime"),
+                ),
+            )
+            .expect("registration");
+        engine.advance_to(Timestamp::ZERO).expect("initial output");
+        engine
+            .advance_to(Timestamp::from_nanoseconds(100_000_000))
+            .expect("integrated output");
+        let SignalValue::Scalar(value) = engine.signal(output).expect("output") else {
+            panic!("expected scalar output");
+        };
+        assert!((*value - (-0.1_f64).exp()).abs() < 1e-5);
+    }
+
+    #[test]
+    fn execution_engine_routes_signals_in_scheduler_order() {
+        let mut model = Model::new("gain");
+        let source = model.add_block("source").expect("block");
+        let gain = model.add_block("gain").expect("block");
+        let source_output = model
+            .add_port(
+                source,
+                "out",
+                xdl_model::PortDirection::Output,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("port");
+        let gain_input = model
+            .add_port(
+                gain,
+                "in",
+                xdl_model::PortDirection::Input,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("port");
+        let gain_output = model
+            .add_port(
+                gain,
+                "out",
+                xdl_model::PortDirection::Output,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("port");
+        model
+            .connect(source_output, gain_input)
+            .expect("connection");
+
+        let config = SchedulerConfig::new(duration(10), 8).expect("config");
+        let mut scheduler = Scheduler::new(config);
+        let source_task = scheduler
+            .add_periodic_task("source", duration(10), DurationNs::ZERO, 0)
+            .expect("task");
+        let gain_task = scheduler
+            .add_periodic_task("gain", duration(10), DurationNs::ZERO, 1)
+            .expect("task");
+        let mut engine = ExecutionEngine::new(model, scheduler).expect("engine");
+        engine
+            .register_task(
+                source_task,
+                source,
+                Box::new(Constant {
+                    output: source_output,
+                    value: 3.0,
+                }),
+            )
+            .expect("source runtime");
+        engine
+            .register_task(
+                gain_task,
+                gain,
+                Box::new(Gain {
+                    input: gain_input,
+                    output: gain_output,
+                }),
+            )
+            .expect("gain runtime");
+
+        let report = engine.advance_to(Timestamp::ZERO).expect("execute tick");
+        assert_eq!(report.events.len(), 2);
+        assert_eq!(report.signal_updates, 2);
+        assert_eq!(engine.signal(gain_output), Some(&SignalValue::Scalar(6.0)));
+    }
+
+    #[test]
+    fn unit_delay_emits_initial_then_previous_input() {
+        let input = PortId::new(1);
+        let output = PortId::new(2);
+        let mut delay = UnitDelay::new(input, output, SignalValue::Scalar(0.0)).expect("delay");
+        let first = delay
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(input, SignalValue::Scalar(3.0))]),
+            )
+            .expect("first step");
+        let second = delay
+            .step(
+                Timestamp::from_nanoseconds(1),
+                &BTreeMap::from([(input, SignalValue::Scalar(5.0))]),
+            )
+            .expect("second step");
+        assert_eq!(first.get(&output), Some(&SignalValue::Scalar(0.0)));
+        assert_eq!(second.get(&output), Some(&SignalValue::Scalar(3.0)));
+    }
+
+    #[test]
+    fn subsystem_runtime_maps_boundary_inputs_and_outputs() {
+        let mut internal = Model::new("inner");
+        let block = internal.add_block("gain").expect("block");
+        let internal_input = internal
+            .add_port(
+                block,
+                "in",
+                xdl_model::PortDirection::Input,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("port");
+        let internal_output = internal
+            .add_port(
+                block,
+                "out",
+                xdl_model::PortDirection::Output,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("port");
+        let mut subsystem =
+            xdl_model::Subsystem::new(xdl_model::SubsystemId::new(2), "gain_subsystem", internal);
+        let boundary_input = subsystem
+            .add_boundary_port(
+                "in",
+                xdl_model::PortDirection::Input,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("boundary input");
+        let boundary_output = subsystem
+            .add_boundary_port(
+                "out",
+                xdl_model::PortDirection::Output,
+                xdl_model::SignalSpec::scalar(),
+            )
+            .expect("boundary output");
+        subsystem
+            .bind_input(boundary_input, internal_input)
+            .expect("input binding");
+        subsystem
+            .bind_output(boundary_output, internal_output)
+            .expect("output binding");
+        let scheduler = Scheduler::new(SchedulerConfig::new(duration(10), 8).expect("config"));
+        let mut runtime = SubsystemRuntime::new(subsystem, scheduler).expect("runtime");
+        let task = runtime
+            .engine_mut()
+            .scheduler
+            .add_periodic_task("gain", duration(10), DurationNs::ZERO, 0)
+            .expect("task");
+        runtime
+            .engine_mut()
+            .register_task(
+                task,
+                block,
+                Box::new(Gain {
+                    input: internal_input,
+                    output: internal_output,
+                }),
+            )
+            .expect("register internal block");
+        let output = runtime
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(boundary_input, SignalValue::Scalar(4.0))]),
+            )
+            .expect("subsystem step");
+        assert_eq!(
+            output.get(&boundary_output),
+            Some(&SignalValue::Scalar(8.0))
+        );
+    }
+}

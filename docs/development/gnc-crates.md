@@ -20,7 +20,9 @@ xdl-gnc-core         types, errors, time, frames, limits, signal status
    ├── xdl-gnc-control      bounded PID, state-space, gain scheduling
    ├── xdl-gnc-actuators    first-order actuator dynamics, command/rate limits
    ├── xdl-gnc-integration  deterministic end-to-end scenario contracts
-   └── xdl-gnc-telemetry    typed telemetry and JSON-lines export
+   ├── xdl-gnc-telemetry    typed telemetry and JSON-lines export
+   ├── xdl-model            typed block/port/signal graph and validation
+   └── xdl-sim              deterministic fixed-step/multi-rate scheduler and solvers
 ```
 
 Rules:
@@ -43,6 +45,8 @@ Rules:
 | `xdl-gnc-actuators` | First-order actuator with command and rate limits; emits saturation/rate-limit events |
 | `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 | `xdl-gnc-telemetry` | Ordered telemetry samples with finite-value validation and JSON-lines import/export |
+| `xdl-model` | Serializable block/port/signal graph with connection, bus, subsystem-boundary, and cycle validation |
+| `xdl-sim` | Bounded deterministic periodic-task scheduler, block executor, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
 
 ### Step events
 
@@ -67,17 +71,19 @@ Rules:
 | `xdl-gnc-actuators` | 3 | First-order scalar actuator only |
 | `xdl-gnc-integration` | 3 | Deterministic scenario plus typed replay runner; telemetry wiring remains separate |
 | `xdl-gnc-telemetry` | 2 | JSON-lines export; product-specific sinks remain pending |
+| `xdl-model` | 5 | Graph and typed subsystem-boundary contract; no visual editor yet |
+| `xdl-sim` | 11 | Scheduler, block executor, delay/hold, subsystem runtime, bounded Euler/RK4 solvers, and adaptive RK4 step control |
 
-Counts from the targeted GNC test run on 2026-11-12. Nine crates, 52 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
+Counts from the targeted GNC/model/scheduler test runs on 2026-11-12. Eleven crates, 68 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
 
 ## Build and test
 
 ```bash
-cargo check -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control -p xdl-gnc-actuators -p xdl-gnc-integration -p xdl-gnc-telemetry --all-targets
-cargo test  -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control -p xdl-gnc-actuators -p xdl-gnc-integration -p xdl-gnc-telemetry
+cargo check -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control -p xdl-gnc-actuators -p xdl-gnc-integration -p xdl-gnc-telemetry -p xdl-model -p xdl-sim --all-targets
+cargo test  -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-gnc-guidance -p xdl-gnc-control -p xdl-gnc-actuators -p xdl-gnc-integration -p xdl-gnc-telemetry -p xdl-model -p xdl-sim
 ```
 
-All nine GNC crates are `[workspace]` members, so `cargo test --workspace` covers them.
+All eleven GNC/model/simulation crates are `[workspace]` members, so `cargo test --workspace` covers them.
 
 ## Runnable XDL example
 
