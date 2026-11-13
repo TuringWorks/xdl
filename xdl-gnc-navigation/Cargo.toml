@@ -10,3 +10,4 @@ description = "Deterministic navigation estimators for XDL GNC research"
 serde = { workspace = true, features = ["derive"] }
 xdl-gnc-core = { path = "../xdl-gnc-core" }
 xdl-gnc-simulation = { path = "../xdl-gnc-simulation" }
+rayon = { workspace = true }

@@ -13,7 +13,7 @@ use xdl_gnc_core::{GncError, Quality, Quaternion, SignalStatus, StepEvent, Times
 use xdl_gnc_simulation::{GnssMeasurement, ImuMeasurement, KinematicState};
 
 mod replay;
-pub use replay::replay_alpha_beta;
+pub use replay::{replay_alpha_beta, replay_alpha_beta_batch, ReplayJob};
 
 /// GNSS quality policy shared by every estimator in this crate.
 ///
