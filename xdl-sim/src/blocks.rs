@@ -379,9 +379,163 @@ pub struct MatrixGain {
     pub values: Vec<f64>,
 }
 
+pub struct MatrixSum {
+    pub left: PortId,
+    pub right: PortId,
+    pub output: PortId,
+}
+
+impl MatrixSum {
+    pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
+        Self { left, right, output }
+    }
+}
+
+impl BlockRuntime for MatrixSum {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Matrix {
+            rows: left_rows,
+            columns: left_columns,
+            values: left_values,
+        }) = inputs.get(&self.left)
+        else {
+            return Err(ExecutionError::Runtime(
+                "matrix sum left input must be a matrix".to_string(),
+            ));
+        };
+        let Some(SignalValue::Matrix {
+            rows: right_rows,
+            columns: right_columns,
+            values: right_values,
+        }) = inputs.get(&self.right)
+        else {
+            return Err(ExecutionError::Runtime(
+                "matrix sum right input must be a matrix".to_string(),
+            ));
+        };
+        if left_rows != right_rows
+            || left_columns != right_columns
+            || left_values.len() != left_rows.saturating_mul(*left_columns)
+            || right_values.len() != right_rows.saturating_mul(*right_columns)
+            || left_values.iter().any(|value| !value.is_finite())
+            || right_values.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "matrix sum dimensions or values are invalid".to_string(),
+            ));
+        }
+        let values = left_values
+            .iter()
+            .zip(right_values)
+            .map(|(left, right)| left + right)
+            .collect::<Vec<_>>();
+        if values.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "matrix sum output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Matrix {
+                rows: *left_rows,
+                columns: *left_columns,
+                values,
+            },
+        )]))
+    }
+}
+
 pub struct MatrixTranspose {
     pub input: PortId,
     pub output: PortId,
+}
+
+pub struct MatrixMatrixProduct {
+    pub left: PortId,
+    pub right: PortId,
+    pub output: PortId,
+}
+
+impl MatrixMatrixProduct {
+    pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
+        Self {
+            left,
+            right,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for MatrixMatrixProduct {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Matrix {
+            rows: left_rows,
+            columns: left_columns,
+            values: left_values,
+        }) = inputs.get(&self.left)
+        else {
+            return Err(ExecutionError::Runtime(
+                "matrix product left input must be a matrix".to_string(),
+            ));
+        };
+        let Some(SignalValue::Matrix {
+            rows: right_rows,
+            columns: right_columns,
+            values: right_values,
+        }) = inputs.get(&self.right)
+        else {
+            return Err(ExecutionError::Runtime(
+                "matrix product right input must be a matrix".to_string(),
+            ));
+        };
+        if *left_rows == 0
+            || *left_columns == 0
+            || *right_rows == 0
+            || *right_columns == 0
+            || *left_columns != *right_rows
+            || left_values.len() != left_rows.saturating_mul(*left_columns)
+            || right_values.len() != right_rows.saturating_mul(*right_columns)
+            || left_values.iter().any(|value| !value.is_finite())
+            || right_values.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "matrix product dimensions or values are invalid".to_string(),
+            ));
+        }
+        let values = (0..*left_rows)
+            .flat_map(|row| {
+                (0..*right_columns).map(move |column| {
+                    (0..*left_columns)
+                        .map(|inner| {
+                            left_values[row * *left_columns + inner]
+                                * right_values[inner * *right_columns + column]
+                        })
+                        .sum::<f64>()
+                })
+            })
+            .collect::<Vec<_>>();
+        if values.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "matrix product output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Matrix {
+                rows: *left_rows,
+                columns: *right_columns,
+                values,
+            },
+        )]))
+    }
 }
 
 impl MatrixTranspose {
@@ -1632,6 +1786,21 @@ mod tests {
                 &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
             )
             .is_err());
+        let mut matrix_product =
+            MatrixMatrixProduct::new(PortId::new(1), PortId::new(2), PortId::new(3));
+        assert!(matrix_product
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
+            )
+            .is_err());
+        let mut matrix_sum = MatrixSum::new(PortId::new(1), PortId::new(2), PortId::new(3));
+        assert!(matrix_sum
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
+            )
+            .is_err());
     }
 
     #[test]
@@ -1891,6 +2060,73 @@ mod tests {
                 rows: 3,
                 columns: 2,
                 values: vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0],
+            })
+        );
+
+        let mut matrix_product =
+            MatrixMatrixProduct::new(PortId::new(25), PortId::new(27), PortId::new(28));
+        let product = matrix_product
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (
+                        PortId::new(25),
+                        SignalValue::Matrix {
+                            rows: 2,
+                            columns: 3,
+                            values: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+                        },
+                    ),
+                    (
+                        PortId::new(27),
+                        SignalValue::Matrix {
+                            rows: 3,
+                            columns: 2,
+                            values: vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0],
+                        },
+                    ),
+                ]),
+            )
+            .expect("matrix product");
+        assert_eq!(
+            product.get(&PortId::new(28)),
+            Some(&SignalValue::Matrix {
+                rows: 2,
+                columns: 2,
+                values: vec![14.0, 32.0, 32.0, 77.0],
+            })
+        );
+
+        let mut matrix_sum = MatrixSum::new(PortId::new(25), PortId::new(27), PortId::new(29));
+        let sum = matrix_sum
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (
+                        PortId::new(25),
+                        SignalValue::Matrix {
+                            rows: 2,
+                            columns: 2,
+                            values: vec![1.0, 2.0, 3.0, 4.0],
+                        },
+                    ),
+                    (
+                        PortId::new(27),
+                        SignalValue::Matrix {
+                            rows: 2,
+                            columns: 2,
+                            values: vec![5.0, 6.0, 7.0, 8.0],
+                        },
+                    ),
+                ]),
+            )
+            .expect("matrix sum");
+        assert_eq!(
+            sum.get(&PortId::new(29)),
+            Some(&SignalValue::Matrix {
+                rows: 2,
+                columns: 2,
+                values: vec![6.0, 8.0, 10.0, 12.0],
             })
         );
 
