@@ -214,7 +214,7 @@ impl StandardLibrary {
             "SCOPE_TRACEBACK" => system::scope_traceback(args),
             "EXIT" => system::exit_session(args),
             "RETALL" => system::retall(args),
-            "MESSAGE" => system::message(args),
+            "MESSAGE" => system::message(args, keywords),
             "ON_ERROR" => system::on_error(args),
             "EXECUTE" => system::execute(args),
 
