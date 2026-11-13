@@ -125,7 +125,12 @@ The basic runner can now emit a truthful summary manifest:
 
 ```bash
 xdl test tests --manifest runs/test-summary.json
+xdl replay runs/test-summary.json
 ```
+
+`xdl replay` validates the manifest and reruns its recorded test directory. It
+is local replay evidence, not a clean-machine guarantee; environment locking,
+data locking, numerical comparisons, and timeout enforcement remain open.
 
 The next step is to add an explicit, reviewable collection policy for timeouts,
 numerical evidence, and clean-machine replay, then

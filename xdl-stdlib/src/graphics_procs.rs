@@ -154,7 +154,8 @@ mod plot_order_tests {
     #[test]
     fn non_square_input_keeps_axes_apart() {
         // x is the longer axis here; a swap would show up as different lengths.
-        let (x, y) = plot_xy(&[arr(&[1.0, 2.0, 3.0, 4.0]), arr(&[10.0, 20.0, 30.0, 40.0])]).unwrap();
+        let (x, y) =
+            plot_xy(&[arr(&[1.0, 2.0, 3.0, 4.0]), arr(&[10.0, 20.0, 30.0, 40.0])]).unwrap();
         assert_eq!(x, vec![1.0, 2.0, 3.0, 4.0]);
         assert_eq!(y, vec![10.0, 20.0, 30.0, 40.0]);
     }

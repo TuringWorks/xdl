@@ -12,8 +12,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+# Least privilege: only the publish job writes to the repository (creating the
+# GitHub release). Every other job runs read-only.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # A tag that disagrees with the source is the fastest way to publish a binary
@@ -144,6 +146,8 @@ jobs:
     name: Publish the GitHub release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 

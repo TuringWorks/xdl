@@ -80,6 +80,11 @@ enum Commands {
         #[arg(long)]
         manifest: Option<PathBuf>,
     },
+    /// Replay the test directory recorded in a run manifest
+    Replay {
+        /// JSON run manifest emitted by `xdl test --manifest`
+        manifest: PathBuf,
+    },
     /// Show the current machine-readable compatibility baseline
     CompatibilityReport {
         /// Output format (text, json)
@@ -140,6 +145,7 @@ fn run(cli: Cli) -> Result<()> {
             directory,
             manifest,
         }) => run_tests(&directory, manifest.as_deref()),
+        Some(Commands::Replay { manifest }) => replay_manifest(&manifest),
         Some(Commands::CompatibilityReport {
             format,
             corpus,
@@ -296,6 +302,37 @@ fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
     } else {
         Err(anyhow::anyhow!("{} XDL test(s) failed", failures.len()))
     }
+}
+
+fn replay_manifest(path: &Path) -> Result<()> {
+    let json = fs::read_to_string(path)
+        .with_context(|| format!("failed to read run manifest: {}", path.display()))?;
+    let manifest = RunManifest::from_json(&json)
+        .map_err(|error| anyhow::anyhow!("invalid run manifest: {error}"))?;
+    let runner = manifest
+        .configuration
+        .get("runner")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if runner != "recursive-xdl-script-runner" {
+        return Err(anyhow::anyhow!(
+            "manifest runner '{runner}' is not replayable by xdl"
+        ));
+    }
+    let directory = manifest
+        .configuration
+        .get("test_directory")
+        .ok_or_else(|| anyhow::anyhow!("manifest does not record a test directory"))?;
+    let directory = Path::new(directory);
+    if !directory.is_dir() {
+        return Err(anyhow::anyhow!(
+            "recorded test directory does not exist: {}",
+            directory.display()
+        ));
+    }
+    println!("Replaying manifest: {}", path.display());
+    println!("Test directory: {}", directory.display());
+    run_tests(directory, None)
 }
 
 fn write_test_manifest(

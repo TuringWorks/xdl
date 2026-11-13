@@ -169,6 +169,16 @@ fn test_cli_test_command_writes_truthful_manifest() {
         fs::read_to_string(stdout_artifact).expect("read stdout artifact"),
         "ok\n"
     );
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay xdl test manifest");
+    assert!(
+        replay.status.success(),
+        "expected replay to pass, stderr: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
     let _ = fs::remove_dir_all(&directory);
 }
 
