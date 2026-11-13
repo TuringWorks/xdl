@@ -419,9 +419,9 @@ model-based foundation:
 |---|---|---:|---|
 | MATLAB transpiler | `cargo test -p xdl-matlab` | 28 passed | Tested syntax/function subset; not MATLAB/Octave parity |
 | Typed model graph/editor | `cargo test -p xdl-model` | 26 passed | Schema, typed connections, validation, layout, editor serialization, validated Mars system-model fixture, structural SVG rendering, and deterministic state/event contracts |
-| Deterministic simulation | `cargo test -p xdl-sim` | 21 passed | Scheduler, multi-rate ordering, delays, state-space blocks, typed model-graph execution, continuous integration, and solver error paths foundation |
+| Deterministic simulation | `cargo test -p xdl-sim` | 25 passed | Scheduler, multi-rate ordering, delays, state-space and multiport-switch blocks, typed model-graph execution, deterministic state-machine runtime, continuous integration, and solver error paths foundation |
 | Artifact contracts | `cargo test -p xdl-artifacts` | 7 passed | Versioned manifests, bundled JSON schemas, compatibility statuses, artifact hashes, and fail-closed validation |
-| CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 20 passed | Recursive and single-file tests, manifests, source/artifact hashes, stdout/failure artifacts, local replay, model-check validation/migration/SVG rendering, GNC closed-loop, Mars-helicopter execution/replay, and battery-string sweep |
+| CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 21 passed | Recursive and single-file tests, manifests, source/artifact hashes, stdout/failure artifacts, local replay, model-check validation/migration/SVG rendering, GNC closed-loop/state-space bindings, Mars-helicopter execution/replay, and battery-string sweep |
 
 These tests are useful exit-criteria evidence, but they do not establish
 production readiness. The next validation layer must add real XDL programs,

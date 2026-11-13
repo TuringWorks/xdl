@@ -7,6 +7,10 @@ nav_order: 9
 
 # GNC Crates
 
+See the [Mars Helicopter Parity Matrix](mars-helicopter-parity.md) for the
+feature-by-feature mapping from the MathWorks reference workflow to current
+XDL evidence and remaining gaps.
+
 Status: **in development**. Typed Rust libraries for guidance, navigation, and
 control with a partial XDL-facing `GNC_*` slice. Unverified on hardware or
 flight data.
@@ -84,7 +88,8 @@ state-machine editing remain open work.
 The XDL standard library currently exposes the explicit-state
 `GNC_FLIGHT_READINESS_STEP` binding used by the Mars example. It accepts the
 current state, temperature, SOC, and launch request, returning the next state
-and readiness flags. The binding is deterministic and has no process-global
+and readiness flags. It uses 10 °C for entry and 8 °C for thermal exit to avoid
+readiness chatter. The binding is deterministic and has no process-global
 state; it is a domain vertical slice, not a general Stateflow language.
 
 Counts from the targeted GNC/model/scheduler test run on 2026-11-13. Ten crates, 120 tests, all passing. The same targeted crate set also passes Clippy
@@ -148,6 +153,13 @@ Each tick also produces a JSON-lines telemetry record with
 is observable and capturable by the test/artifact workflow. This remains an
 example-level closed loop, not a validated Simulink-equivalent runtime.
 
+The Mars example prints readiness transitions (`COLD → READY → FLYING`) as
+evidence alongside the telemetry stream, so replay output exposes the gating
+decision and not only the final flight result.
+
+[`examples/gnc_state_space.xdl`](../../examples/gnc_state_space.xdl) demonstrates
+the explicit-state discrete state-space binding over three deterministic ticks.
+
 [`examples/mars_helicopter_system_level.xdl`](../../examples/mars_helicopter_system_level.xdl)
 is the first domain demonstration for a Mars-helicopter system-level workflow:
 it models Mars gravity, solar charging, battery state of charge, heater-driven
@@ -188,6 +200,18 @@ energy-budget model as reduced order.
 
 ```bash
 cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl
+```
+
+[`examples/mars_helicopter_results.xdl`](../../examples/mars_helicopter_results.xdl)
+reads the simulation's `mars_helicopter_results.csv` output and plots live
+altitude and battery-temperature columns. It copies each headless plot to a
+distinct PNG (`mars_helicopter_altitude.png` and
+`mars_helicopter_temperature.png`). Run the simulation first, then the plot
+script:
+
+```bash
+cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl
+cargo run -p xdl-cli -- -q examples/mars_helicopter_results.xdl
 ```
 
 ## License

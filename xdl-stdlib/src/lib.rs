@@ -283,6 +283,7 @@ impl StandardLibrary {
             "OPENW" => io::openw(args),
             "OPENU" => io::openu(args),
             "CLOSE" => io::close_file(args),
+            "FILE_COPY" => io::file_copy(args),
             "WRITEF" => io::writef(args),
             "PRINTF" => io::printf(args),
 
@@ -316,6 +317,7 @@ impl StandardLibrary {
             "GNC_WAYPOINT" => gnc::waypoint(args),
             "GNC_PID_STEP" => gnc::pid_step(args),
             "GNC_STATE_SPACE_STEP" => gnc::state_space_step(args),
+            "GNC_SCHEDULED_FEEDBACK_STEP" => gnc::scheduled_feedback_step(args),
             "GNC_ACTUATOR_STEP" => gnc::actuator_step(args),
             "GNC_ALPHA_BETA_STEP" => gnc::alpha_beta_step(args),
             "GNC_TELEMETRY_JSON" => gnc::telemetry_json(args),
@@ -1198,5 +1200,25 @@ mod gnc_dispatch_tests {
             panic!("expected state-space structure");
         };
         assert_eq!(fields.get("STATE"), Some(&XdlValue::Array(vec![2.0])));
+
+        let scheduled = library
+            .call_function(
+                "gnc_scheduled_feedback_step",
+                &[
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![3.0]),
+                    XdlValue::Double(0.0),
+                    XdlValue::Double(10.0),
+                    XdlValue::Double(5.0),
+                    XdlValue::Array(vec![2.0]),
+                    XdlValue::Long(1),
+                    XdlValue::Long(1),
+                ],
+            )
+            .expect("GNC_SCHEDULED_FEEDBACK_STEP should be registered");
+        let XdlValue::Struct(fields) = scheduled else {
+            panic!("expected scheduled feedback structure");
+        };
+        assert_eq!(fields.get("COMMAND"), Some(&XdlValue::Array(vec![4.0])));
     }
 }

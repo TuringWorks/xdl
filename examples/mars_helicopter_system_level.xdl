@@ -11,6 +11,9 @@
 
 PRINT, '=== XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==='
 
+OPENW, 42, 'mars_helicopter_results.csv'
+PRINTF, 42, 'time_s,altitude_m,battery_temperature_c,battery_soc,flight_state'
+
 dt = 1.0
 mars_gravity = 3.71
 ambient_temperature = -40.0
@@ -43,6 +46,7 @@ gear_ratio = 8.0
 motor_time_constant = 0.2
 flight_state = 0
 launch_requested = 1
+previous_flight_state = 0
 flying = 0
 
 FOR tick = 1, 60 DO BEGIN
@@ -63,10 +67,15 @@ FOR tick = 1, 60 DO BEGIN
                     - heater_on * heater_draw - flying * flight_draw $
                     - battery_current * 0.08
 
+    previous_flight_state = flight_state
     readiness = GNC_FLIGHT_READINESS_STEP(flight_state, battery_temperature, $
                                            state_of_charge, launch_requested)
     flight_state = readiness.STATE
     flying = readiness.FLYING
+    IF flight_state NE previous_flight_state THEN BEGIN
+        PRINT, 'state_transition tick=', tick, ' from=', previous_flight_state, $
+               ' to=', flight_state, ' name=', readiness.STATE_NAME
+    ENDIF
 
     IF flying EQ 1 THEN BEGIN
         position = GNC_VEC3(0.0, 0.0, position_z)
@@ -109,8 +118,12 @@ FOR tick = 1, 60 DO BEGIN
         PRINT, 'tick=', tick, ' state=GROUND heater=', heater_on, $
                ' temperature=', battery_temperature, ' soc=', state_of_charge
     ENDIF
+    PRINTF, 42, tick, ',', position_z, ',', battery_temperature, ',', $
+            state_of_charge, ',', flight_state
     previous_timestamp = timestamp
 ENDFOR
+
+CLOSE, 42
 
 PRINT, 'Final state: flying=', flying
 PRINT, 'Final altitude (m): ', position_z

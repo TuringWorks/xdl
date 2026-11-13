@@ -151,6 +151,32 @@ fn test_cli_runs_gnc_closed_loop_example() {
 }
 
 #[test]
+fn test_cli_runs_gnc_state_space_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_state_space.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run GNC state-space example");
+
+    assert!(
+        output.status.success(),
+        "GNC state-space example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("=== XDL GNC STATE-SPACE EXAMPLE ==="));
+    assert!(stdout.contains("tick= 0  output= 0.000000000000000"));
+    assert!(stdout.contains("tick= 2  output= 4.000000000000000"));
+    assert!(stdout.contains("scheduled_feedback_command= 4.000000000000000"));
+    assert!(stdout.contains("=== END XDL GNC STATE-SPACE EXAMPLE ==="));
+}
+
+#[test]
 fn test_cli_runs_mars_helicopter_system_level_example() {
     let binary = get_xdl_binary();
     let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -171,6 +197,9 @@ fn test_cli_runs_mars_helicopter_system_level_example() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("=== XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==="));
     assert!(stdout.contains("\"source\":\"mars_helicopter\""));
+    assert!(stdout.contains("state_transition tick="));
+    assert!(stdout.contains("name= READY"));
+    assert!(stdout.contains("name= FLYING"));
     assert!(stdout.contains("Final state: flying= 1"));
     assert!(stdout.contains("Final altitude (m):"));
     assert!(stdout.contains("Final motor speed (rpm-equivalent):"));
@@ -180,6 +209,47 @@ fn test_cli_runs_mars_helicopter_system_level_example() {
     assert!(stdout.contains("Final battery current (A, reduced-order):"));
     assert!(stdout.contains("Final battery load power (W, reduced-order):"));
     assert!(stdout.contains("=== END XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==="));
+}
+
+#[test]
+fn test_cli_runs_mars_helicopter_results_after_simulation() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let output_root = test_directory("mars-helicopter-live-results");
+    fs::create_dir_all(&output_root).expect("create live results directory");
+    let simulation = workspace_root.join("examples/mars_helicopter_system_level.xdl");
+    let simulation_output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&simulation)
+        .current_dir(&output_root)
+        .output()
+        .expect("run Mars simulation for live results");
+    assert!(
+        simulation_output.status.success(),
+        "Mars simulation failed: {}",
+        String::from_utf8_lossy(&simulation_output.stderr)
+    );
+
+    let plotter = workspace_root.join("examples/mars_helicopter_results.xdl");
+    let plots = Command::new(&binary)
+        .args(["--headless", "-q"])
+        .arg(&plotter)
+        .current_dir(&output_root)
+        .output()
+        .expect("plot Mars simulation results");
+    assert!(
+        plots.status.success(),
+        "Mars results plotting failed: {}",
+        String::from_utf8_lossy(&plots.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&plots.stdout);
+    assert_eq!(stdout.matches("Data points: 60 values").count(), 2);
+    assert!(stdout.contains("from 0.00 to 1.46"));
+    assert!(stdout.contains("from -37.50 to 11.98"));
+    let _ = fs::remove_dir_all(output_root);
 }
 
 #[test]

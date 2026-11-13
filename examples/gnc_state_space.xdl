@@ -1,0 +1,23 @@
+; XDL explicit-state discrete state-space example.
+; Matrices are row-major flattened arrays for the 1-state, 1-input,
+; 1-output system x[k+1] = x[k] + u[k], y[k] = x[k].
+
+PRINT, '=== XDL GNC STATE-SPACE EXAMPLE ==='
+
+a = [1.0]
+b = [1.0]
+c = [1.0]
+d = [0.0]
+state = [0.0]
+input = [2.0]
+
+FOR tick = 0, 2 DO BEGIN
+    result = GNC_STATE_SPACE_STEP(a, b, c, d, state, input, 1, 1, 1)
+    PRINT, 'tick=', tick, ' output=', result.OUTPUT[0], ' next_state=', result.STATE[0]
+    state = result.STATE
+ENDFOR
+
+scheduled = GNC_SCHEDULED_FEEDBACK_STEP([1.0], [3.0], 0.0, 10.0, 5.0, [2.0], 1, 1)
+PRINT, 'scheduled_feedback_command=', scheduled.COMMAND[0]
+
+PRINT, '=== END XDL GNC STATE-SPACE EXAMPLE ==='

@@ -126,8 +126,10 @@ fn optional_scalar(value: &XdlValue, name: &str) -> XdlResult<Option<f64>> {
 /// States are `0=COLD`, `1=READY`, and `2=FLYING`. A cold vehicle becomes
 /// ready when temperature is above 10 C and SOC is above 0.30; a ready vehicle
 /// launches when `launch_requested` is nonzero; a flying vehicle returns to
-/// ready when either readiness condition is lost. State is explicit so this
-/// function is deterministic and does not use process-global mutable state.
+/// ready when temperature falls below 8 C or SOC falls to 0.30. The 2 C
+/// thermal hysteresis prevents readiness chatter near the heater threshold.
+/// State is explicit so this function is deterministic and does not use
+/// process-global mutable state.
 pub fn flight_readiness_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 4 {
         return Err(XdlError::InvalidArgument(format!(
@@ -146,12 +148,13 @@ pub fn flight_readiness_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let soc = scalar(&args[2], "GNC_FLIGHT_READINESS_STEP soc")?;
     let launch_requested = scalar(&args[3], "GNC_FLIGHT_READINESS_STEP launch")? != 0.0;
     let thermally_ready = temperature > 10.0;
+    let thermally_cold = temperature < 8.0;
     let energetically_ready = soc > 0.30;
     let next_state = match state as i32 {
         0 if thermally_ready && energetically_ready => 1,
-        1 if !thermally_ready || !energetically_ready => 0,
+        1 if thermally_cold || !energetically_ready => 0,
         1 if launch_requested => 2,
-        2 if !thermally_ready || !energetically_ready => 1,
+        2 if thermally_cold || !energetically_ready => 1,
         current => current,
     };
     let state_name = match next_state {
@@ -389,6 +392,66 @@ pub fn state_space_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
     ])))
 }
 
+/// GNC_SCHEDULED_FEEDBACK_STEP(lower_gain, upper_gain, lower_parameter,
+/// upper_parameter, parameter, state_error, inputs, states) returns the
+/// interpolated state-feedback command using row-major flattened gains.
+pub fn scheduled_feedback_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 8 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_SCHEDULED_FEEDBACK_STEP: expected 8 arguments, got {}",
+            args.len()
+        )));
+    }
+    let inputs = dimension(&args[6], "GNC_SCHEDULED_FEEDBACK_STEP inputs")?;
+    let states = dimension(&args[7], "GNC_SCHEDULED_FEEDBACK_STEP states")?;
+    let lower_gain = numeric_array(&args[0], "GNC_SCHEDULED_FEEDBACK_STEP lower gain")?;
+    let upper_gain = numeric_array(&args[1], "GNC_SCHEDULED_FEEDBACK_STEP upper gain")?;
+    let expected = matrix_length(inputs, states, "GNC_SCHEDULED_FEEDBACK_STEP gain")?;
+    if lower_gain.len() != expected || upper_gain.len() != expected {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_SCHEDULED_FEEDBACK_STEP: gains must contain {expected} elements"
+        )));
+    }
+    let lower_parameter = scalar(&args[2], "GNC_SCHEDULED_FEEDBACK_STEP lower parameter")?;
+    let upper_parameter = scalar(&args[3], "GNC_SCHEDULED_FEEDBACK_STEP upper parameter")?;
+    if lower_parameter >= upper_parameter {
+        return Err(XdlError::InvalidArgument(
+            "GNC_SCHEDULED_FEEDBACK_STEP: lower parameter must be less than upper parameter"
+                .to_string(),
+        ));
+    }
+    let parameter = scalar(&args[4], "GNC_SCHEDULED_FEEDBACK_STEP parameter")?;
+    let state_error = numeric_array(&args[5], "GNC_SCHEDULED_FEEDBACK_STEP state error")?;
+    if state_error.len() != states {
+        return Err(XdlError::InvalidArgument(
+            "GNC_SCHEDULED_FEEDBACK_STEP: state error length does not match states".to_string(),
+        ));
+    }
+    let fraction =
+        ((parameter - lower_parameter) / (upper_parameter - lower_parameter)).clamp(0.0, 1.0);
+    let command = (0..inputs)
+        .map(|row| {
+            (0..states)
+                .map(|column| {
+                    let index = row * states + column;
+                    let gain =
+                        lower_gain[index] + fraction * (upper_gain[index] - lower_gain[index]);
+                    gain * state_error[column]
+                })
+                .sum::<f64>()
+        })
+        .collect::<Vec<_>>();
+    if command.iter().any(|value| !value.is_finite()) {
+        return Err(XdlError::RuntimeError(
+            "GNC_SCHEDULED_FEEDBACK_STEP: command must be finite".to_string(),
+        ));
+    }
+    Ok(XdlValue::Struct(HashMap::from([(
+        "COMMAND".to_string(),
+        XdlValue::Array(command),
+    )])))
+}
+
 pub fn actuator_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 8 {
         return Err(XdlError::InvalidArgument(format!(
@@ -568,7 +631,7 @@ mod tests {
 
         let flying = flight_readiness_step(&[
             XdlValue::Long(1),
-            XdlValue::Double(12.0),
+            XdlValue::Double(9.0),
             XdlValue::Double(0.8),
             XdlValue::Long(1),
         ])
@@ -577,6 +640,30 @@ mod tests {
             panic!("expected readiness structure");
         };
         assert_eq!(fields.get("FLYING"), Some(&XdlValue::Long(1)));
+
+        let hysteresis_holds = flight_readiness_step(&[
+            XdlValue::Long(2),
+            XdlValue::Double(9.0),
+            XdlValue::Double(0.8),
+            XdlValue::Long(0),
+        ])
+        .expect("thermal hysteresis holds flight");
+        let XdlValue::Struct(fields) = hysteresis_holds else {
+            panic!("expected readiness structure");
+        };
+        assert_eq!(fields.get("FLYING"), Some(&XdlValue::Long(1)));
+
+        let thermal_exit = flight_readiness_step(&[
+            XdlValue::Long(2),
+            XdlValue::Double(7.0),
+            XdlValue::Double(0.8),
+            XdlValue::Long(0),
+        ])
+        .expect("thermal exit");
+        let XdlValue::Struct(fields) = thermal_exit else {
+            panic!("expected readiness structure");
+        };
+        assert_eq!(fields.get("STATE"), Some(&XdlValue::Long(1)));
     }
 
     #[test]
@@ -655,6 +742,25 @@ mod tests {
         };
         assert_eq!(fields.get("OUTPUT"), Some(&XdlValue::Array(vec![0.0])));
         assert_eq!(fields.get("STATE"), Some(&XdlValue::Array(vec![2.0])));
+    }
+
+    #[test]
+    fn scheduled_feedback_binding_interpolates_and_clamps_gain() {
+        let result = scheduled_feedback_step(&[
+            XdlValue::Array(vec![1.0]),
+            XdlValue::Array(vec![3.0]),
+            XdlValue::Double(0.0),
+            XdlValue::Double(10.0),
+            XdlValue::Double(5.0),
+            XdlValue::Array(vec![2.0]),
+            XdlValue::Long(1),
+            XdlValue::Long(1),
+        ])
+        .expect("valid scheduled feedback step");
+        let XdlValue::Struct(fields) = result else {
+            panic!("expected scheduled feedback structure");
+        };
+        assert_eq!(fields.get("COMMAND"), Some(&XdlValue::Array(vec![4.0])));
     }
 
     #[test]

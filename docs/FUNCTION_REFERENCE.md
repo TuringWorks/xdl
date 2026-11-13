@@ -588,6 +588,7 @@ the native GNC crates retain typed frames, timestamps, and error semantics.
 | `GNC_WAYPOINT` | `GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)` | Structure with `DESIRED_VELOCITY`, `DISTANCE`, `REACHED`, and `DEGRADED` |
 | `GNC_PID_STEP` | `GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)` | Structure with `COMMAND`, `ERROR`, `DERIVATIVE`, `INTEGRAL`, and `SATURATED` |
 | `GNC_STATE_SPACE_STEP` | `GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)` | Explicit-state discrete state-space update using row-major flattened matrices; returns `OUTPUT` and next `STATE` |
+| `GNC_SCHEDULED_FEEDBACK_STEP` | `GNC_SCHEDULED_FEEDBACK_STEP(lower_gain, upper_gain, lower_parameter, upper_parameter, parameter, state_error, inputs, states)` | Interpolated state-feedback command using row-major flattened gain matrices; parameter is clamped to the schedule range |
 | `GNC_ACTUATOR_STEP` | `GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min, output_max, rate_limit, previous_timestamp_ns, previous_output)` | Structure with `OUTPUT`, `SATURATED`, and `RATE_LIMITED` |
 | `GNC_ALPHA_BETA_STEP` | `GNC_ALPHA_BETA_STEP(timestamp_ns, initial_timestamp_ns, position, velocity, acceleration, gnss_position, gnss_velocity, position_gain, velocity_gain)` | Structure with updated `POSITION`, `VELOCITY`, and residual fields |
 | `GNC_TELEMETRY_JSON` | `GNC_TELEMETRY_JSON(timestamp_ns, sequence, source, position, velocity, command)` | Newline-terminated JSON telemetry record |
@@ -599,6 +600,7 @@ the guidance configuration limits.
 `GNC_FLIGHT_READINESS_STEP` uses explicit states `0=COLD`, `1=READY`, and
 `2=FLYING`. A cold vehicle becomes ready when `temperature_c > 10` and
 `soc > 0.30`; a ready vehicle launches when `launch_requested` is nonzero; a
-flying vehicle returns to ready when either readiness condition is lost. The
-caller owns and passes the state on every step, so the function has no hidden
-process-global state.
+flying vehicle returns to ready when `temperature_c < 8` or `soc <= 0.30`.
+The 2 C thermal hysteresis prevents readiness chatter near the heater
+threshold. The caller owns and passes the state on every step, so the function
+has no hidden process-global state.

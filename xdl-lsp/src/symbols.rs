@@ -491,6 +491,12 @@ impl SymbolTable {
                 "GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)",
             ),
             (
+                "GNC_SCHEDULED_FEEDBACK_STEP",
+                "gnc_scheduled_feedback_step(...) - Compute an interpolated state-feedback command",
+                "STRUCT",
+                "GNC_SCHEDULED_FEEDBACK_STEP(lower_gain, upper_gain, lower_parameter, upper_parameter, parameter, state_error, inputs, states)",
+            ),
+            (
                 "GNC_ACTUATOR_STEP",
                 "gnc_actuator_step(...) - Perform an explicit-state actuator update",
                 "STRUCT",
@@ -732,6 +738,21 @@ pub fn get_document_symbols(doc: &DocumentState) -> Vec<DocumentSymbol> {
     }
 
     symbols
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SymbolTable;
+
+    #[test]
+    fn flight_readiness_builtin_is_available_case_insensitively() {
+        let table = SymbolTable::new();
+        let info = table
+            .get_function("gnc_flight_readiness_step")
+            .expect("readiness function in LSP symbol table");
+        assert_eq!(info.return_type, "STRUCT");
+        assert!(info.signature.contains("launch_requested"));
+    }
 }
 
 fn statement_to_symbol(stmt: &Statement) -> Option<DocumentSymbol> {
