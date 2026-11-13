@@ -112,6 +112,8 @@ pub fn run_deterministic_scenario() -> Result<ScenarioSummary, GncError> {
         nominal,
         diagonal_covariance(1.0),
         Vec3::new(0.0, 0.0, -9.81),
+        navigation_frame,
+        body_frame,
     )?;
 
     let guidance = WaypointGuidance::new(WaypointGuidanceConfig::new(2.0, 0.2)?);
@@ -201,6 +203,8 @@ mod tests {
             nominal,
             diagonal_covariance(1.0),
             Vec3::new(0.0, 0.0, -9.81),
+            navigation_frame,
+            body_frame,
         )
         .expect("valid EKF");
         let mut log = ReplayEventLog::new();
@@ -250,6 +254,8 @@ mod tests {
             nominal,
             diagonal_covariance(1.0),
             Vec3::new(0.0, 0.0, -9.81),
+            FrameId::Inertial,
+            FrameId::Body,
         )
         .expect("valid EKF");
         let timestamp = Timestamp::from_nanoseconds(100_000_000);
