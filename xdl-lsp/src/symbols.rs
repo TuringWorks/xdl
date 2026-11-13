@@ -484,6 +484,18 @@ impl SymbolTable {
                 "STRUCT",
                 "GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min, output_max, rate_limit, previous_timestamp_ns, previous_output)",
             ),
+            (
+                "GNC_ALPHA_BETA_STEP",
+                "gnc_alpha_beta_step(...) - Perform an explicit-state navigation update",
+                "STRUCT",
+                "GNC_ALPHA_BETA_STEP(timestamp_ns, initial_timestamp_ns, position, velocity, acceleration, gnss_position, gnss_velocity, position_gain, velocity_gain)",
+            ),
+            (
+                "GNC_TELEMETRY_JSON",
+                "gnc_telemetry_json(...) - Export one validated telemetry record as JSON Lines",
+                "STRING",
+                "GNC_TELEMETRY_JSON(timestamp_ns, sequence, source, position, velocity, command)",
+            ),
         ] {
             self.builtin_functions.insert(
                 name.to_string(),

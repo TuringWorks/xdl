@@ -315,6 +315,8 @@ impl StandardLibrary {
             "GNC_WAYPOINT" => gnc::waypoint(args),
             "GNC_PID_STEP" => gnc::pid_step(args),
             "GNC_ACTUATOR_STEP" => gnc::actuator_step(args),
+            "GNC_ALPHA_BETA_STEP" => gnc::alpha_beta_step(args),
+            "GNC_TELEMETRY_JSON" => gnc::telemetry_json(args),
 
             // Trigonometric functions
             "SIN" => math::sin(args),

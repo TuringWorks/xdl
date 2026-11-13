@@ -79,6 +79,25 @@ cargo test  -p xdl-gnc-core -p xdl-gnc-simulation -p xdl-gnc-navigation -p xdl-g
 
 All nine GNC crates are `[workspace]` members, so `cargo test --workspace` covers them.
 
+## Runnable XDL example
+
+The current XDL-facing slice is demonstrated by
+[`examples/gnc_guidance_control.xdl`](../../examples/gnc_guidance_control.xdl):
+
+```bash
+cargo run -p xdl-cli -- -q examples/gnc_guidance_control.xdl
+```
+
+It creates a vector, computes waypoint guidance, performs an explicit-state PID
+step, and applies a first-order actuator update with saturation/rate-limit
+reporting.
+
+[`examples/gnc_closed_loop.xdl`](../../examples/gnc_closed_loop.xdl) extends
+that slice to ten deterministic control ticks and makes the plant update
+explicit: navigation → guidance → PID → actuator → position/velocity update.
+Each tick also produces a JSON-lines telemetry record with
+`GNC_TELEMETRY_JSON`.
+
 ## License
 
 MIT, like the rest of XDL (see `LICENSE`).

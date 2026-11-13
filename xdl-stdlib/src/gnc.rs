@@ -9,6 +9,9 @@ use xdl_gnc_actuators::{FirstOrderActuator, FirstOrderActuatorConfig};
 use xdl_gnc_control::{PidConfig, PidController};
 use xdl_gnc_core::{ScalarLimit, StepEvent, Timestamp, Vec3};
 use xdl_gnc_guidance::{WaypointGuidance, WaypointGuidanceConfig};
+use xdl_gnc_navigation::{AlphaBetaConfig, AlphaBetaFilter};
+use xdl_gnc_simulation::{GnssMeasurement, KinematicState};
+use xdl_gnc_telemetry::{TelemetryLog, TelemetrySample};
 
 fn scalar(value: &XdlValue, name: &str) -> XdlResult<f64> {
     let result = match value {
@@ -255,6 +258,119 @@ pub fn actuator_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Struct(output))
 }
 
+/// `GNC_ALPHA_BETA_STEP(timestamp_ns, initial_timestamp_ns, position, velocity,
+/// acceleration, gnss_position, gnss_velocity, position_gain, velocity_gain)`
+/// runs one explicit-state alpha-beta navigation update. The first six vectors
+/// are expressed in the current navigation frame; the binding uses the
+/// inertial frame until named XDL frame objects are exposed.
+pub fn alpha_beta_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 9 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_ALPHA_BETA_STEP: expected 9 arguments, got {}",
+            args.len()
+        )));
+    }
+    let timestamp_value = timestamp(&args[0])?;
+    let initial_timestamp = timestamp(&args[1])?;
+    let initial_state = KinematicState::new(
+        initial_timestamp,
+        xdl_gnc_core::FrameId::Inertial,
+        vector(&args[2], "GNC_ALPHA_BETA_STEP position")?,
+        vector(&args[3], "GNC_ALPHA_BETA_STEP velocity")?,
+    )
+    .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    let config = AlphaBetaConfig::new(
+        scalar(&args[7], "GNC_ALPHA_BETA_STEP position gain")?,
+        scalar(&args[8], "GNC_ALPHA_BETA_STEP velocity gain")?,
+    )
+    .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    let gnss = GnssMeasurement::new(
+        timestamp_value,
+        xdl_gnc_core::FrameId::Inertial,
+        vector(&args[5], "GNC_ALPHA_BETA_STEP GNSS position")?,
+        vector(&args[6], "GNC_ALPHA_BETA_STEP GNSS velocity")?,
+    )
+    .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    let mut filter = AlphaBetaFilter::new(config, initial_state);
+    let result = filter
+        .step(
+            timestamp_value,
+            vector(&args[4], "GNC_ALPHA_BETA_STEP acceleration")?,
+            Some(gnss),
+        )
+        .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    let mut output = HashMap::new();
+    output.insert(
+        "POSITION".to_string(),
+        XdlValue::Array(vec![
+            result.state.position.x,
+            result.state.position.y,
+            result.state.position.z,
+        ]),
+    );
+    output.insert(
+        "VELOCITY".to_string(),
+        XdlValue::Array(vec![
+            result.state.velocity.x,
+            result.state.velocity.y,
+            result.state.velocity.z,
+        ]),
+    );
+    if let Some(residual) = result.position_residual {
+        output.insert(
+            "POSITION_RESIDUAL".to_string(),
+            XdlValue::Array(vec![residual.x, residual.y, residual.z]),
+        );
+    }
+    if let Some(residual) = result.velocity_residual {
+        output.insert(
+            "VELOCITY_RESIDUAL".to_string(),
+            XdlValue::Array(vec![residual.x, residual.y, residual.z]),
+        );
+    }
+    output.insert(
+        "DEGRADED".to_string(),
+        XdlValue::Long(i32::from(!result.status.is_usable())),
+    );
+    Ok(XdlValue::Struct(output))
+}
+
+/// `GNC_TELEMETRY_JSON(timestamp_ns, sequence, source, position, velocity,
+/// command)` returns one newline-terminated JSON telemetry record.
+pub fn telemetry_json(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 6 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_TELEMETRY_JSON: expected 6 arguments, got {}",
+            args.len()
+        )));
+    }
+    let source = match &args[2] {
+        XdlValue::String(value) => value.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string source name".to_string(),
+                actual: format!("GNC_TELEMETRY_JSON: {:?}", args[2].gdl_type()),
+            })
+        }
+    };
+    let sequence = scalar(&args[1], "GNC_TELEMETRY_JSON sequence")?;
+    if sequence.fract() != 0.0 || sequence < 0.0 || sequence >= 18_446_744_073_709_551_616.0 {
+        return Err(XdlError::InvalidArgument(
+            "GNC_TELEMETRY_JSON sequence: expected a non-negative integer in u64 range".to_string(),
+        ));
+    }
+    let mut sample = TelemetrySample::new(timestamp(&args[0])?, sequence as u64, source);
+    sample.position = Some(vector(&args[3], "GNC_TELEMETRY_JSON position")?);
+    sample.velocity = Some(vector(&args[4], "GNC_TELEMETRY_JSON velocity")?);
+    sample.command = Some(scalar(&args[5], "GNC_TELEMETRY_JSON command")?);
+    let mut log = TelemetryLog::new();
+    log.push(sample)
+        .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    Ok(XdlValue::String(log.to_json_lines().map_err(|error| {
+        XdlError::RuntimeError(error.to_string())
+    })?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -333,5 +449,44 @@ mod tests {
             panic!("expected actuator structure");
         };
         assert_eq!(fields.get("RATE_LIMITED"), Some(&XdlValue::Long(1)));
+    }
+
+    #[test]
+    fn alpha_beta_binding_returns_updated_state_and_residuals() {
+        let result = alpha_beta_step(&[
+            XdlValue::Long(1),
+            XdlValue::Long(0),
+            XdlValue::Array(vec![0.0, 0.0, 0.0]),
+            XdlValue::Array(vec![0.0, 0.0, 0.0]),
+            XdlValue::Array(vec![1.0, 0.0, 0.0]),
+            XdlValue::Array(vec![1.0, 0.0, 0.0]),
+            XdlValue::Array(vec![1.0, 0.0, 0.0]),
+            XdlValue::Double(0.5),
+            XdlValue::Double(0.5),
+        ])
+        .expect("valid navigation step");
+        let XdlValue::Struct(fields) = result else {
+            panic!("expected navigation structure");
+        };
+        assert!(fields.contains_key("POSITION"));
+        assert!(fields.contains_key("POSITION_RESIDUAL"));
+    }
+
+    #[test]
+    fn telemetry_binding_returns_json_lines() {
+        let value = telemetry_json(&[
+            XdlValue::Long(1),
+            XdlValue::Long(0),
+            XdlValue::String("control".to_string()),
+            XdlValue::Array(vec![1.0, 2.0, 3.0]),
+            XdlValue::Array(vec![4.0, 5.0, 6.0]),
+            XdlValue::Double(0.75),
+        ])
+        .expect("valid telemetry sample");
+        let XdlValue::String(json) = value else {
+            panic!("expected JSON string");
+        };
+        assert!(json.contains("\"source\":\"control\""));
+        assert!(json.ends_with('\n'));
     }
 }
