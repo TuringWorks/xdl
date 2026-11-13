@@ -2,7 +2,10 @@
 
 This document describes XDL's compatibility with GDL/IDL syntax and functions for porting existing code.
 
-## Status: ~90% Core Syntax Compatible
+## Status: core syntax coverage not measured
+
+No percentage is currently authoritative. Per-area status is listed by
+`xdl compatibility-report --format json`.
 
 XDL now supports virtually all GDL/IDL syntax patterns commonly used in scientific computing scripts, including single-line control statements.
 
