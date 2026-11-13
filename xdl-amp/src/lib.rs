@@ -126,7 +126,10 @@ impl GpuContext {
 
     /// Create a GPU context with a preferred backend
     pub fn with_preference(preference: Option<GpuBackend>) -> Result<Self> {
-        let backend = preference.unwrap_or_else(Self::default_backend);
+        let backend = match preference {
+            Some(backend) => backend,
+            None => Self::select_default_backend()?,
+        };
 
         match backend {
             // Apple backends
@@ -301,38 +304,55 @@ impl GpuContext {
         GpuBackend::DirectX12
     }
 
+    /// Select the default backend for the current platform, failing closed.
+    ///
+    /// On Linux no GPU backend is enabled by default, so this returns an error
+    /// instead of panicking. Callers (for example `gpu_min` in xdl-stdlib) treat
+    /// the error as "no GPU" and use the CPU path. A panic here would end the
+    /// user's session.
+    fn select_default_backend() -> Result<GpuBackend> {
+        #[cfg(target_os = "linux")]
+        return Self::linux_default_backend();
+
+        #[cfg(not(target_os = "linux"))]
+        Ok(Self::default_backend())
+    }
+
     #[cfg(target_os = "linux")]
-    fn default_backend() -> GpuBackend {
+    fn linux_default_backend() -> Result<GpuBackend> {
         // Prefer cuDNN for ML workloads
         #[cfg(feature = "cudnn")]
         if cudnn::CuDNNDevice::is_available() {
-            return GpuBackend::CuDNN;
+            return Ok(GpuBackend::CuDNN);
         }
 
         // Then CUDA for NVIDIA GPUs
         #[cfg(feature = "cuda")]
         if cuda::CudaDevice::is_available() {
-            return GpuBackend::Cuda;
+            return Ok(GpuBackend::Cuda);
         }
 
         // ROCm for AMD GPUs
         #[cfg(feature = "rocm")]
         if rocm::ROCmDevice::is_available() {
-            return GpuBackend::ROCm;
+            return Ok(GpuBackend::ROCm);
         }
 
         // Vulkan for cross-platform support
         #[cfg(feature = "vulkan")]
         if vulkan::VulkanDevice::is_available() {
-            return GpuBackend::Vulkan;
+            return Ok(GpuBackend::Vulkan);
         }
 
-        // OpenCL fallback
-        #[cfg(feature = "opencl")]
-        return GpuBackend::OpenCL;
+        // OpenCL fallback (only when the ocl-backed module is compiled in)
+        if cfg!(all(target_os = "linux", feature = "opencl")) {
+            return Ok(GpuBackend::OpenCL);
+        }
 
-        #[cfg(not(any(feature = "cuda", feature = "rocm", feature = "opencl")))]
-        panic!("No GPU backend available on Linux. Enable 'cuda', 'rocm', or 'opencl' feature.");
+        Err(GpuError::UnsupportedBackend(
+            "No GPU backend available on Linux. Enable the 'cuda', 'rocm', 'vulkan' or 'opencl' feature."
+                .to_string(),
+        ))
     }
 
     /// Get the name of the active backend
