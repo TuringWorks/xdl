@@ -57,6 +57,12 @@ dynamics, ground contact, and JSON-lines telemetry:
 cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl
 ```
 
+The companion battery-string parameter sweep is also executable:
+
+```bash
+cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl
+```
+
 This is an evidence-bearing starting point for the MATLAB/Aerospace
 Blockset/Simscape compatibility track, not a claim of drop-in Simulink parity.
 See [the GNC documentation](docs/development/gnc-crates.md) for the current
@@ -246,7 +252,7 @@ xdl compatibility-report --corpus tests/compatibility/matlab --execute --require
 
 # With an adjacent example.m.expected sidecar, verify normalized observed output
 
-# Validate an XDL block-model document
+# Validate an XDL block-model graph or document (raw graphs are auto-laid out)
 xdl model-check model.json
 xdl model-check model.json --svg > model.svg
 ```

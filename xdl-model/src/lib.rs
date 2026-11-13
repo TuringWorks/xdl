@@ -15,6 +15,8 @@ pub mod layout;
 pub use layout::{BlockLayout, LayoutError, ModelLayout, PortLayout, PortSide};
 pub mod editor;
 pub use editor::{EditorError, EditorEvent, EditorSession, HitTarget, ModelDocument};
+pub mod state;
+pub use state::{State, StateId, StateMachine, StateMachineError, Transition};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BlockId(u32);

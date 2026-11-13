@@ -1,0 +1,36 @@
+; Reduced-order battery-string endurance sweep for the Mars helicopter model.
+; This mirrors the system-level question of how battery configuration changes
+; flight duration, without claiming electrochemical or Simscape fidelity.
+
+PRINT, '=== XDL MARS HELICOPTER BATTERY-STRING SWEEP ==='
+PRINT, 'Configuration: one to four parallel strings; fixed flight load model'
+
+dt = 1.0
+solar_charge_per_tick = 0.0005
+single_string_flight_draw = 0.006
+mission_limit_ticks = 1000
+
+FOR battery_strings = 1, 4 DO BEGIN
+    state_of_charge = 1.0
+    active = 1
+    elapsed_ticks = 0
+    flight_draw = single_string_flight_draw / battery_strings
+
+    FOR tick = 1, mission_limit_ticks DO BEGIN
+        IF active EQ 1 THEN BEGIN
+            state_of_charge = state_of_charge + solar_charge_per_tick $
+                            - flight_draw * dt
+            elapsed_ticks = tick
+            IF state_of_charge LE 0.0 THEN BEGIN
+                state_of_charge = 0.0
+                active = 0
+            ENDIF
+        ENDIF
+    ENDFOR
+
+    PRINT, 'battery_strings=', battery_strings, $
+           ' flight_duration_s=', elapsed_ticks * dt, $
+           ' final_soc=', state_of_charge
+ENDFOR
+
+PRINT, '=== END XDL MARS HELICOPTER BATTERY-STRING SWEEP ==='

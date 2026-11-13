@@ -17,9 +17,10 @@ pub mod blocks;
 pub use blocks::{
     BusCreator, BusSelector, Constant, CrossProduct, Deadzone, Demux, Derivative, DotProduct, Gain,
     Integrator, LookupTable1D, MatrixGain, MatrixMatrixProduct, MatrixScale, MatrixSum,
-    MatrixTranspose, MatrixVectorProduct, Mux, Pid, PidBlockConfig, Product, QuaternionConjugate,
-    QuaternionInverse, QuaternionMultiply, QuaternionNormalize, QuaternionRotate, RateLimiter,
-    Saturation, Sum, Switch, VectorNorm, VectorNormalize, VectorScale, VectorSum,
+    MatrixTranspose, MatrixVectorProduct, MultiportSwitch, Mux, Pid, PidBlockConfig, Product,
+    QuaternionConjugate, QuaternionInverse, QuaternionMultiply, QuaternionNormalize,
+    QuaternionRotate, RateLimiter, Saturation, StateSpace, StateSpaceConfig, Sum, Switch,
+    VectorNorm, VectorNormalize, VectorScale, VectorSum,
 };
 pub mod solver;
 pub use solver::{
@@ -1289,6 +1290,77 @@ mod tests {
             .restore_signal_snapshot(snapshot)
             .expect("restore snapshot");
         assert_eq!(engine.signal(gain_output), Some(&SignalValue::Scalar(8.0)));
+    }
+
+    #[test]
+    fn execution_engine_runs_state_space_from_typed_model_graph() {
+        let mut model = Model::new("state_space");
+        let block = model.add_block("state_space").expect("block");
+        let input = model
+            .add_port(
+                block,
+                "input",
+                xdl_model::PortDirection::Input,
+                xdl_model::SignalSpec {
+                    shape: SignalShape::Vector(1),
+                    unit: None,
+                    frame: None,
+                    sample_period: None,
+                },
+            )
+            .expect("input");
+        let output = model
+            .add_port(
+                block,
+                "output",
+                xdl_model::PortDirection::Output,
+                xdl_model::SignalSpec {
+                    shape: SignalShape::Vector(1),
+                    unit: None,
+                    frame: None,
+                    sample_period: None,
+                },
+            )
+            .expect("output");
+        let scheduler_config = SchedulerConfig::new(duration(10), 8).expect("config");
+        let mut scheduler = Scheduler::new(scheduler_config);
+        let task = scheduler
+            .add_periodic_task("state_space", duration(10), DurationNs::ZERO, 0)
+            .expect("task");
+        let mut engine = ExecutionEngine::new(model, scheduler).expect("engine");
+        engine
+            .inject_signal(input, SignalValue::Vector(vec![2.0]))
+            .expect("input signal");
+        engine
+            .register_task(
+                task,
+                block,
+                Box::new(
+                    StateSpace::new(
+                        input,
+                        output,
+                        StateSpaceConfig {
+                            states: 1,
+                            inputs: 1,
+                            outputs: 1,
+                            a: vec![1.0],
+                            b: vec![1.0],
+                            c: vec![1.0],
+                            d: vec![0.0],
+                            initial_state: vec![0.0],
+                        },
+                    )
+                    .expect("state-space runtime"),
+                ),
+            )
+            .expect("registration");
+
+        engine.advance_to(Timestamp::ZERO).expect("initial step");
+        assert_eq!(engine.signal(output), Some(&SignalValue::Vector(vec![0.0])));
+        engine
+            .advance_to(Timestamp::from_nanoseconds(10))
+            .expect("second step");
+        assert_eq!(engine.signal(output), Some(&SignalValue::Vector(vec![2.0])));
     }
 
     #[test]

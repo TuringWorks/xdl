@@ -100,7 +100,7 @@ enum Commands {
         #[arg(long)]
         require_reference: bool,
     },
-    /// Validate and normalize a versioned XDL model document
+    /// Validate and normalize an XDL model graph or versioned model document
     ModelCheck {
         /// JSON model document
         file: PathBuf,
@@ -1111,8 +1111,23 @@ fn compatibility_status_name(status: CompatibilityStatus) -> &'static str {
 fn check_model_file(file: &Path, migrate: bool, svg: bool) -> Result<()> {
     let content = fs::read_to_string(file)
         .with_context(|| format!("Failed to read model document: {}", file.display()))?;
-    let document = xdl_model::ModelDocument::from_json(&content)
-        .with_context(|| format!("Invalid model document: {}", file.display()))?;
+    let document = match xdl_model::ModelDocument::from_json(&content) {
+        Ok(document) => document,
+        Err(document_error) => {
+            let model: xdl_model::Model = serde_json::from_str(&content).with_context(|| {
+                format!(
+                    "Invalid model document or raw model graph: {} (document error: {})",
+                    file.display(),
+                    document_error
+                )
+            })?;
+            let layout = xdl_model::ModelLayout::from_model(&model).with_context(|| {
+                format!("Unable to auto-layout raw model graph: {}", file.display())
+            })?;
+            xdl_model::ModelDocument::new(model, layout)
+                .with_context(|| format!("Invalid raw model graph: {}", file.display()))?
+        }
+    };
     if svg {
         println!("{}", document.to_svg()?);
     } else if migrate {

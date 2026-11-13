@@ -262,6 +262,67 @@ pub struct Switch {
     pub threshold: f64,
 }
 
+/// Selects one of several data inputs using an integral scalar selector.
+/// `index_base` is explicit so zero-based and one-based model conventions do
+/// not get conflated; selectors outside the configured range are errors.
+pub struct MultiportSwitch {
+    pub selector: PortId,
+    pub inputs: Vec<PortId>,
+    pub output: PortId,
+    pub index_base: usize,
+}
+
+impl MultiportSwitch {
+    pub fn new(
+        selector: PortId,
+        inputs: Vec<PortId>,
+        output: PortId,
+        index_base: usize,
+    ) -> Result<Self, ExecutionError> {
+        if inputs.is_empty() || index_base > 1 {
+            return Err(ExecutionError::Runtime(
+                "multiport switch requires inputs and a zero- or one-based index".to_string(),
+            ));
+        }
+        Ok(Self {
+            selector,
+            inputs,
+            output,
+            index_base,
+        })
+    }
+}
+
+impl BlockRuntime for MultiportSwitch {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let selector = scalar_input(inputs, self.selector, "multiport switch selector")?;
+        let relative = selector - self.index_base as f64;
+        if !relative.is_finite() || relative.fract() != 0.0 || relative < 0.0 {
+            return Err(ExecutionError::Runtime(
+                "multiport switch selector must be an in-range integer".to_string(),
+            ));
+        }
+        let index = relative as usize;
+        let data_port = self.inputs.get(index).ok_or_else(|| {
+            ExecutionError::Runtime("multiport switch selector is out of range".to_string())
+        })?;
+        let value = inputs
+            .get(data_port)
+            .cloned()
+            .ok_or(ExecutionError::MissingInput(*data_port))?;
+        if !value.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "multiport switch input must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(self.output, value)]))
+    }
+}
+
 pub struct RateLimiter {
     pub input: PortId,
     pub output: PortId,
@@ -704,6 +765,125 @@ impl BlockRuntime for MatrixVectorProduct {
             ));
         }
         Ok(BTreeMap::from([(self.output, SignalValue::Vector(result))]))
+    }
+}
+
+/// Discrete state-space block with row-major A/B/C/D matrices.
+///
+/// The output is computed from the current state before the state is advanced:
+/// `y[k] = C*x[k] + D*u[k]`, `x[k+1] = A*x[k] + B*u[k]`.
+pub struct StateSpaceConfig {
+    pub states: usize,
+    pub inputs: usize,
+    pub outputs: usize,
+    pub a: Vec<f64>,
+    pub b: Vec<f64>,
+    pub c: Vec<f64>,
+    pub d: Vec<f64>,
+    pub initial_state: Vec<f64>,
+}
+
+pub struct StateSpace {
+    pub input: PortId,
+    pub output: PortId,
+    states: usize,
+    inputs: usize,
+    outputs: usize,
+    a: Vec<f64>,
+    b: Vec<f64>,
+    c: Vec<f64>,
+    d: Vec<f64>,
+    state: Vec<f64>,
+}
+
+impl StateSpace {
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        config: StateSpaceConfig,
+    ) -> Result<Self, ExecutionError> {
+        let StateSpaceConfig {
+            states,
+            inputs,
+            outputs,
+            a,
+            b,
+            c,
+            d,
+            initial_state,
+        } = config;
+        if states == 0 || inputs == 0 || outputs == 0 {
+            return Err(ExecutionError::Runtime(
+                "state-space dimensions must be positive".to_string(),
+            ));
+        }
+        if !valid_matrix(&a, states, states)
+            || !valid_matrix(&b, states, inputs)
+            || !valid_matrix(&c, outputs, states)
+            || !valid_matrix(&d, outputs, inputs)
+            || initial_state.len() != states
+            || initial_state.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "state-space dimensions or values are invalid".to_string(),
+            ));
+        }
+        Ok(Self {
+            input,
+            output,
+            states,
+            inputs,
+            outputs,
+            a,
+            b,
+            c,
+            d,
+            state: initial_state,
+        })
+    }
+}
+
+impl BlockRuntime for StateSpace {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(input)) = inputs.get(&self.input) else {
+            return Err(ExecutionError::Runtime(
+                "state-space input must be a vector".to_string(),
+            ));
+        };
+        if input.len() != self.inputs || input.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "state-space input dimensions or values are invalid".to_string(),
+            ));
+        }
+        let output = matrix_vector_sum(
+            &self.c,
+            self.outputs,
+            self.states,
+            &self.state,
+            &self.d,
+            input,
+        );
+        let next_state = matrix_vector_sum(
+            &self.a,
+            self.states,
+            self.states,
+            &self.state,
+            &self.b,
+            input,
+        );
+        if output.iter().any(|value| !value.is_finite())
+            || next_state.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "state-space output must be finite".to_string(),
+            ));
+        }
+        self.state = next_state;
+        Ok(BTreeMap::from([(self.output, SignalValue::Vector(output))]))
     }
 }
 
@@ -1745,6 +1925,36 @@ fn lookup_linear(breakpoints: &[f64], values: &[f64], input: f64) -> f64 {
     values[lower] + fraction * (values[upper] - values[lower])
 }
 
+fn valid_matrix(values: &[f64], rows: usize, columns: usize) -> bool {
+    rows > 0
+        && columns > 0
+        && values.len() == rows.saturating_mul(columns)
+        && values.iter().all(|value| value.is_finite())
+}
+
+fn matrix_vector_sum(
+    left_matrix: &[f64],
+    rows: usize,
+    left_columns: usize,
+    left_vector: &[f64],
+    right_matrix: &[f64],
+    right_vector: &[f64],
+) -> Vec<f64> {
+    (0..rows)
+        .map(|row| {
+            let left = (0..left_columns)
+                .map(|column| left_matrix[row * left_columns + column] * left_vector[column])
+                .sum::<f64>();
+            let right = (0..right_vector.len())
+                .map(|column| {
+                    right_matrix[row * right_vector.len() + column] * right_vector[column]
+                })
+                .sum::<f64>();
+            left + right
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1816,7 +2026,26 @@ mod tests {
         .is_err());
         assert!(Mux::new(Vec::new(), PortId::new(2)).is_err());
         assert!(Demux::new(PortId::new(1), Vec::new()).is_err());
+        assert!(MultiportSwitch::new(PortId::new(1), Vec::new(), PortId::new(2), 0).is_err());
+        assert!(
+            MultiportSwitch::new(PortId::new(1), vec![PortId::new(2)], PortId::new(3), 2,).is_err()
+        );
         assert!(MatrixGain::new(PortId::new(1), PortId::new(2), 2, 2, vec![1.0]).is_err());
+        assert!(StateSpace::new(
+            PortId::new(1),
+            PortId::new(2),
+            StateSpaceConfig {
+                a: vec![1.0],
+                b: vec![1.0],
+                c: vec![1.0],
+                d: vec![0.0],
+                initial_state: vec![0.0],
+                states: 2,
+                inputs: 1,
+                outputs: 1,
+            },
+        )
+        .is_err());
         let mut matrix_vector =
             MatrixVectorProduct::new(PortId::new(1), PortId::new(2), PortId::new(3));
         assert!(matrix_vector
@@ -1934,6 +2163,37 @@ mod tests {
                 .expect("switch step")[&switch_output],
             SignalValue::Scalar(3.0)
         );
+
+        let selector = PortId::new(7);
+        let first = PortId::new(8);
+        let second = PortId::new(9);
+        let multiport_output = PortId::new(10);
+        let mut multiport =
+            MultiportSwitch::new(selector, vec![first, second], multiport_output, 1)
+                .expect("multiport switch");
+        assert_eq!(
+            multiport
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([
+                        (selector, SignalValue::Scalar(2.0)),
+                        (first, SignalValue::Scalar(3.0)),
+                        (second, SignalValue::Scalar(5.0)),
+                    ]),
+                )
+                .expect("one-based multiport switch")[&multiport_output],
+            SignalValue::Scalar(5.0)
+        );
+        assert!(multiport
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (selector, SignalValue::Scalar(1.5)),
+                    (first, SignalValue::Scalar(3.0)),
+                    (second, SignalValue::Scalar(5.0)),
+                ]),
+            )
+            .is_err());
 
         let mut limiter = RateLimiter::new(input, output, 2.0, 0.0).expect("rate limiter");
         limiter
@@ -2422,6 +2682,41 @@ mod tests {
         assert_eq!(
             inverted.get(&PortId::new(24)),
             Some(&SignalValue::Vector(vec![0.5, 0.0, 0.0, 0.0]))
+        );
+    }
+
+    #[test]
+    fn state_space_emits_current_output_before_advancing_state() {
+        let input = PortId::new(40);
+        let output = PortId::new(41);
+        let mut state_space = StateSpace::new(
+            input,
+            output,
+            StateSpaceConfig {
+                a: vec![1.0],
+                b: vec![1.0],
+                c: vec![1.0],
+                d: vec![0.0],
+                initial_state: vec![0.0],
+                states: 1,
+                inputs: 1,
+                outputs: 1,
+            },
+        )
+        .expect("state-space block");
+        let inputs = BTreeMap::from([(input, SignalValue::Vector(vec![2.0]))]);
+
+        assert_eq!(
+            state_space
+                .step(Timestamp::ZERO, &inputs)
+                .expect("first state-space step")[&output],
+            SignalValue::Vector(vec![0.0])
+        );
+        assert_eq!(
+            state_space
+                .step(Timestamp::from_nanoseconds(1), &inputs)
+                .expect("second state-space step")[&output],
+            SignalValue::Vector(vec![2.0])
         );
     }
 }

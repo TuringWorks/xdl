@@ -46,7 +46,7 @@ Rules:
 | `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 | `xdl-gnc-telemetry` | Ordered telemetry samples with finite-value validation and JSON-lines import/export |
 | `xdl-model` | Serializable block/port/signal graph with connection, bus, subsystem-boundary, and cycle validation |
-| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
+| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
 
 ### Step events
 
@@ -65,16 +65,23 @@ Rules:
 |---|---|---|
 | `xdl-gnc-core` | 9 | Foundation only |
 | `xdl-gnc-simulation` | 16 | Truth and replay primitives, frame-aware constant bias, seeded Gaussian sensor noise, and deterministic Monte Carlo summaries |
-| `xdl-gnc-navigation` | 14 | Alpha-beta is a baseline, not a production estimator |
+| `xdl-gnc-navigation` | 21 | Alpha-beta is a baseline, not a production estimator |
 | `xdl-gnc-guidance` | 2 | Waypoint only |
 | `xdl-gnc-control` | 6 | Single-axis PID plus state-space and gain-scheduled state feedback |
 | `xdl-gnc-actuators` | 3 | First-order scalar actuator only |
-| `xdl-gnc-integration` | 4 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, and ordered telemetry output |
+| `xdl-gnc-integration` | 9 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, ordered telemetry output, and vertical-slice replay tests |
 | `xdl-gnc-telemetry` | 3 | Ordered telemetry samples with buffered and streaming JSON-lines export; product-specific sinks remain pending |
-| `xdl-model` | 19 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, and editor events |
-| `xdl-sim` | 19 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
+| `xdl-model` | 26 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, editor events, Mars system-model validation, structural SVG rendering, and state/event contracts |
+| `xdl-sim` | 21 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, typed model-graph execution, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
-Counts from the targeted GNC/model/scheduler test runs on 2026-11-13. Eleven crates, 96 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
+`xdl-model` also exposes a typed `StateMachine` contract with explicit states,
+initial-state validation, deterministic event transitions, and duplicate-event
+rejection. It is the semantic foundation for Stateflow/Xcos-style state/event
+subsystems; a scheduler-integrated runtime, timed events, guards, and graphical
+state-machine editing remain open work.
+
+Counts from the targeted GNC/model/scheduler test run on 2026-11-13. Ten crates, 116 tests, all passing. The same targeted crate set also passes Clippy
+with `-D warnings`; Clippy is not yet a repository-wide gate.
 
 ## Standard block library
 
@@ -86,9 +93,9 @@ adapters and product applications. The current GNC-oriented mapping is:
 | `Constant`, `Gain`, `Sum`, `Product`, `Saturation`, `Deadzone`, `RateLimiter` | Command shaping, actuator limits, and calibration logic |
 | `Integrator`, `Derivative`, `Pid`, `UnitDelay`, `ZeroOrderHold` | Discrete controllers, plant state, and sampled-data loops |
 | `Mux`, `Demux`, `VectorSum`, `VectorScale`, `VectorNorm`, `VectorNormalize`, `DotProduct`, `CrossProduct` | Multi-axis guidance, line-of-sight geometry, and vector control |
-| `MatrixGain`, `MatrixScale`, `MatrixSum`, `MatrixTranspose`, `MatrixVectorProduct`, `MatrixMatrixProduct` | State-space models, covariance transforms, and coordinate maps |
+| `StateSpace`, `MatrixGain`, `MatrixScale`, `MatrixSum`, `MatrixTranspose`, `MatrixVectorProduct`, `MatrixMatrixProduct` | State-space models, covariance transforms, and coordinate maps |
 | `QuaternionNormalize`, `QuaternionMultiply`, `QuaternionConjugate`, `QuaternionInverse`, `QuaternionRotate` | Attitude propagation and frame transformations |
-| `BusCreator`, `BusSelector`, `LookupTable1D`, `Switch` | Structured telemetry, calibration maps, and supervisory modes |
+| `BusCreator`, `BusSelector`, `LookupTable1D`, `Switch`, `MultiportSwitch` | Structured telemetry, calibration maps, and supervisory modes |
 
 All blocks preserve explicit signal shapes and return execution errors for
 missing inputs, incompatible dimensions, non-finite values, or invalid time.
@@ -137,9 +144,11 @@ actuator dynamics, ground contact, and JSON-lines flight telemetry. It is
 executable and covered by `xdl-cli` integration tests.
 
 The plant now includes explicit first-order motor speed, gearbox reduction,
-and equal-speed contra-rotating rotor state. Thrust is still a calibrated
-reduced-order map, so the rotor state is an architectural model component,
-not a validated aerodynamic prediction.
+equal-speed contra-rotating rotor state, and a six-cell series battery
+abstraction with SOC-dependent voltage, load power, and current. Thrust and
+battery behavior are still calibrated reduced-order maps, so these states are
+architectural model components, not validated aerodynamic or electrochemical
+predictions.
 
 The compatibility target is the [MathWorks Mars Helicopter Simulink-based
 system-level design](https://www.mathworks.com/help/aeroblks/mars-helicopter-system-level-design.html),
@@ -149,12 +158,24 @@ workflow.
 This is deliberately a reduced-order XDL analogue, not a claim of MATLAB
 Aerospace Blockset/Simscape parity. It does not yet model electrical or thermal
 physical networks, coaxial rotor aerodynamics, gearbox mechanics, flap effects,
-3-D attitude, parameter sweeps, or graphical block-diagram editing. Those are
-explicit follow-on compatibility gaps; the example provides a truthful,
-repeatable vertical slice on which to implement them.
+3-D attitude, or graphical block-diagram editing. Parameter studies are
+available as a separate reduced-order battery-string sweep, while the
+physical-network and aerodynamic gaps remain explicit follow-on compatibility
+gaps; the example provides a truthful, repeatable vertical slice on which to
+implement them.
 
 ```bash
 cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl
+```
+
+The companion
+[`examples/mars_helicopter_battery_sweep.xdl`](../../examples/mars_helicopter_battery_sweep.xdl)
+executes a deterministic one-to-four battery-string endurance sweep. It makes
+the parameter-study workflow executable in XDL while clearly labeling its
+energy-budget model as reduced order.
+
+```bash
+cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl
 ```
 
 ## License

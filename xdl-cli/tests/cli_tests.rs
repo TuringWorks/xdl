@@ -176,7 +176,35 @@ fn test_cli_runs_mars_helicopter_system_level_example() {
     assert!(stdout.contains("Final motor speed (rpm-equivalent):"));
     assert!(stdout.contains("Final upper rotor speed (rpm-equivalent):"));
     assert!(stdout.contains("Final lower rotor speed (rpm-equivalent):"));
+    assert!(stdout.contains("Final battery voltage (V, reduced-order):"));
+    assert!(stdout.contains("Final battery current (A, reduced-order):"));
+    assert!(stdout.contains("Final battery load power (W, reduced-order):"));
     assert!(stdout.contains("=== END XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==="));
+}
+
+#[test]
+fn test_cli_runs_mars_helicopter_battery_sweep_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/mars_helicopter_battery_sweep.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run Mars helicopter battery sweep example");
+
+    assert!(
+        output.status.success(),
+        "Mars battery sweep failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("=== XDL MARS HELICOPTER BATTERY-STRING SWEEP ==="));
+    assert!(stdout.contains("battery_strings= 1"));
+    assert!(stdout.contains("battery_strings= 4"));
+    assert!(stdout.contains("=== END XDL MARS HELICOPTER BATTERY-STRING SWEEP ==="));
 }
 
 #[test]
@@ -249,6 +277,105 @@ fn test_cli_tests_and_replays_mars_helicopter_example() {
     assert!(
         replay.status.success(),
         "Mars helicopter replay failed: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    let _ = fs::remove_dir_all(&run_root);
+}
+
+#[test]
+fn test_cli_model_check_auto_layouts_mars_graph() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let model = workspace_root.join("examples/mars_helicopter_system_level.model.json");
+
+    let check = Command::new(&binary)
+        .args(["model-check", model.to_str().expect("utf-8 model path")])
+        .output()
+        .expect("check Mars model graph");
+    assert!(
+        check.status.success(),
+        "Mars model check failed: {}",
+        String::from_utf8_lossy(&check.stderr)
+    );
+    assert!(String::from_utf8_lossy(&check.stdout).contains("Model OK: 10 blocks, 9 connections"));
+
+    let svg = Command::new(&binary)
+        .args([
+            "model-check",
+            model.to_str().expect("utf-8 model path"),
+            "--svg",
+        ])
+        .output()
+        .expect("render Mars model graph");
+    assert!(
+        svg.status.success(),
+        "Mars model SVG failed: {}",
+        String::from_utf8_lossy(&svg.stderr)
+    );
+    let svg_stdout = String::from_utf8_lossy(&svg.stdout);
+    assert!(svg_stdout.starts_with("<svg "));
+    assert!(svg_stdout.contains("SixCellBatteryPack"));
+    assert_eq!(svg_stdout.matches("<rect ").count(), 10);
+
+    let migrated = Command::new(&binary)
+        .args([
+            "model-check",
+            model.to_str().expect("utf-8 model path"),
+            "--migrate",
+        ])
+        .output()
+        .expect("migrate Mars model graph");
+    assert!(
+        migrated.status.success(),
+        "Mars model migration failed: {}",
+        String::from_utf8_lossy(&migrated.stderr)
+    );
+    let migrated_stdout = String::from_utf8_lossy(&migrated.stdout);
+    assert!(migrated_stdout.contains("\"schema_version\": 1"));
+    assert!(migrated_stdout.contains("\"layout\""));
+    assert!(migrated_stdout.contains("\"model\""));
+}
+
+#[test]
+fn test_cli_replays_relative_script_with_external_manifest() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let run_root = test_directory("relative-script-manifest");
+    fs::create_dir_all(&run_root).expect("create manifest directory");
+    let manifest = run_root.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            "examples/mars_helicopter_system_level.xdl",
+            "--manifest",
+        ])
+        .arg(&manifest)
+        .current_dir(&workspace_root)
+        .output()
+        .expect("run relative Mars helicopter script");
+    assert!(
+        run.status.success(),
+        "relative script test failed: {}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    let replay = Command::new(&binary)
+        .args(["replay"])
+        .arg(&manifest)
+        .current_dir(&workspace_root)
+        .output()
+        .expect("replay relative Mars helicopter script");
+    assert!(
+        replay.status.success(),
+        "relative script replay failed: {}",
         String::from_utf8_lossy(&replay.stderr)
     );
     assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
