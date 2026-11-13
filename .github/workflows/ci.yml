@@ -66,6 +66,17 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+
+      # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
+      # GTK/WebKit and fontconfig. Without these packages the build script for
+      # glib-sys and yeslogic-fontconfig-sys fails on the runner.
+      - name: Install Linux GUI system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libfontconfig1-dev libglib2.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev libssl-dev
         with:
           # Include both the workspace Cargo.lock and the xdl-desktop-viewer
           # manifest hash so the cache is invalidated when either changes.
@@ -109,6 +120,17 @@ jobs:
 
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
 
+      # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
+      # GTK/WebKit and fontconfig. Without these packages the build script for
+      # glib-sys and yeslogic-fontconfig-sys fails on the runner.
+      - name: Install Linux GUI system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libfontconfig1-dev libglib2.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev libssl-dev
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
@@ -126,6 +148,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+
+      # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
+      # GTK/WebKit and fontconfig. Without these packages the build script for
+      # glib-sys and yeslogic-fontconfig-sys fails on the runner.
+      - name: Install Linux GUI system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libfontconfig1-dev libglib2.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev libssl-dev
 
       - name: Build the interpreter
         run: cargo build --release -p xdl-cli
@@ -158,6 +191,17 @@ jobs:
           components: llvm-tools-preview
 
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+
+      # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
+      # GTK/WebKit and fontconfig. Without these packages the build script for
+      # glib-sys and yeslogic-fontconfig-sys fails on the runner.
+      - name: Install Linux GUI system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libfontconfig1-dev libglib2.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev libssl-dev
 
       - uses: taiki-e/install-action@v2
         with:
@@ -198,6 +242,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+
+      # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
+      # GTK/WebKit and fontconfig. Without these packages the build script for
+      # glib-sys and yeslogic-fontconfig-sys fails on the runner.
+      - name: Install Linux GUI system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libfontconfig1-dev libglib2.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            libxdo-dev libssl-dev
 
       # Build only (gate). Publishing is owned by pages.yml, which builds the
       # cargo API docs and the Jekyll site and deploys both — two workflows
