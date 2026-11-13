@@ -3,7 +3,7 @@ name = "xdl-gnc-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "GPL-2.0-only OR MIT"
 description = "Typed, reusable foundations for XDL guidance, navigation, and control libraries"
 
 [dependencies]

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Bounded, deterministic control primitives for the XDL GNC vertical slice.

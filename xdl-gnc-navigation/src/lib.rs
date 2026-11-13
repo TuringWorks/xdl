@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Small deterministic navigation estimators for the XDL GNC vertical slice.
@@ -399,17 +399,24 @@ impl ErrorStateEkf {
                 "predict error-state EKF to GNSS timestamp before updating".to_string(),
             ));
         }
+        // Prior innovations, reported to the caller.
         let position_innovation = measurement.position - self.nominal.position;
         let velocity_innovation = measurement.velocity - self.nominal.velocity;
+        // Recompute each residual from the nominal state left by the previous
+        // scalar update (injection moves it), not from the prior state.
         for axis in 0..3 {
+            let position_residual = component(measurement.position, axis)?
+                - component(self.nominal.position, axis)?;
             self.scalar_update(
                 axis,
-                component(position_innovation, axis)?,
+                position_residual,
                 self.config.position_measurement_noise,
             )?;
+            let velocity_residual = component(measurement.velocity, axis)?
+                - component(self.nominal.velocity, axis)?;
             self.scalar_update(
                 axis + 3,
-                component(velocity_innovation, axis)?,
+                velocity_residual,
                 self.config.velocity_measurement_noise,
             )?;
         }
@@ -621,17 +628,24 @@ impl PositionVelocityEkf {
             ));
         }
 
+        // Prior innovations, reported to the caller.
         let position_innovation = measurement.position - self.state.position;
         let velocity_innovation = measurement.velocity - self.state.velocity;
+        // Each scalar update must see the state left by the previous one; a
+        // residual computed once before the loop would be stale for axes 1+.
         for axis in 0..3 {
+            let position_residual = component(measurement.position, axis)?
+                - component(self.state.position, axis)?;
             self.scalar_update(
                 axis,
-                component(position_innovation, axis)?,
+                position_residual,
                 self.config.position_measurement_noise,
             )?;
+            let velocity_residual = component(measurement.velocity, axis)?
+                - component(self.state.velocity, axis)?;
             self.scalar_update(
                 axis + 3,
-                component(velocity_innovation, axis)?,
+                velocity_residual,
                 self.config.velocity_measurement_noise,
             )?;
         }
@@ -1279,5 +1293,98 @@ mod policy_tests {
             .update_gnss(gnss_at(1.0, Quality::Degraded))
             .expect("degraded input is accepted");
         assert_eq!(estimate.events, vec![StepEvent::DegradedInput]);
+    }
+}
+
+#[cfg(test)]
+mod sequential_update_tests {
+    use super::*;
+    use xdl_gnc_core::FrameId;
+
+    // Joint (batch) posterior for a position/velocity pair with prior
+    // P = [[2, 1], [1, 3]], measurement noise R = I, innovation y = (1, 2).
+    // S = P + R, K = P S^-1, x+ = x + K y, P+ = P - P S^-1 P.
+    // Hand-computed: x+ = (9/11, 17/11), P+[0][0] = 7/11.
+    // A sequential update must reproduce these exactly; the stale-innovation
+    // version gives velocity 59/33 instead of 17/11.
+
+    fn prior_covariance6() -> Covariance6 {
+        let mut p = [[0.0; 6]; 6];
+        p[0][0] = 2.0;
+        p[3][3] = 3.0;
+        p[0][3] = 1.0;
+        p[3][0] = 1.0;
+        for axis in [1, 2, 4, 5] {
+            p[axis][axis] = 0.1;
+        }
+        p
+    }
+
+    #[test]
+    fn ekf_sequential_update_matches_joint_posterior() {
+        let config = EkfConfig::new(0.01, 1.0, 1.0).expect("noise");
+        let initial = KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+            .expect("finite state");
+        let mut ekf = PositionVelocityEkf::new(config, initial, prior_covariance6()).expect("covariance");
+        let measurement = GnssMeasurement::new(
+            Timestamp::ZERO,
+            FrameId::Inertial,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(2.0, 0.0, 0.0),
+        )
+        .expect("finite GNSS");
+        let estimate = ekf.update_gnss(measurement).expect("update");
+        let tol = 1e-12;
+        assert!((estimate.state.position.x - 9.0 / 11.0).abs() < tol);
+        assert!((estimate.state.velocity.x - 17.0 / 11.0).abs() < tol);
+        assert!((estimate.covariance[0][0] - 7.0 / 11.0).abs() < tol);
+        // Reported innovations are the prior ones.
+        assert!((estimate.position_innovation.x - 1.0).abs() < tol);
+        assert!((estimate.velocity_innovation.x - 2.0).abs() < tol);
+    }
+
+    #[test]
+    fn error_state_sequential_update_matches_joint_posterior() {
+        let config = ErrorStateEkfConfig::new(0.01, 0.001, 0.0001, 0.0001, 1.0, 1.0).expect("noise");
+        let nominal = StrapdownState::new(
+            Timestamp::ZERO,
+            Vec3::ZERO,
+            Vec3::ZERO,
+            Quaternion::IDENTITY,
+            Vec3::ZERO,
+            Vec3::ZERO,
+        )
+        .expect("finite state");
+        let mut covariance = prior_covariance6_as_15();
+        covariance[9][9] = 0.1;
+        let mut ekf = ErrorStateEkf::new(config, nominal, covariance, Vec3::new(0.0, 0.0, -9.81))
+            .expect("EKF");
+        let measurement = GnssMeasurement::new(
+            Timestamp::ZERO,
+            FrameId::Inertial,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(2.0, 0.0, 0.0),
+        )
+        .expect("finite GNSS");
+        let estimate = ekf.update_gnss(measurement).expect("update");
+        let tol = 1e-12;
+        assert!((estimate.nominal.position.x - 9.0 / 11.0).abs() < tol);
+        assert!((estimate.nominal.velocity.x - 17.0 / 11.0).abs() < tol);
+        assert!((estimate.covariance[0][0] - 7.0 / 11.0).abs() < tol);
+    }
+
+    fn prior_covariance6_as_15() -> Covariance15 {
+        let mut p = [[0.0; 15]; 15];
+        p[0][0] = 2.0;
+        p[3][3] = 3.0;
+        p[0][3] = 1.0;
+        p[3][0] = 1.0;
+        for axis in [1, 2, 4, 5] {
+            p[axis][axis] = 0.1;
+        }
+        for (index, row) in p.iter_mut().enumerate().skip(6) {
+            row[index] = 0.1;
+        }
+        p
     }
 }
