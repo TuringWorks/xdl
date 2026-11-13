@@ -458,6 +458,80 @@ impl GnssMeasurement {
     }
 }
 
+/// Deterministic, frame-aware constant sensor bias injection for simulation
+/// and replay tests. It does not model random noise or time-varying drift.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SensorBias {
+    pub frame: FrameId,
+    pub imu_specific_force: Vec3,
+    pub imu_angular_rate: Vec3,
+    pub gnss_position: Vec3,
+    pub gnss_velocity: Vec3,
+}
+
+impl SensorBias {
+    pub fn zero(frame: FrameId) -> Self {
+        Self {
+            frame,
+            imu_specific_force: Vec3::ZERO,
+            imu_angular_rate: Vec3::ZERO,
+            gnss_position: Vec3::ZERO,
+            gnss_velocity: Vec3::ZERO,
+        }
+    }
+
+    pub fn validate(self) -> Result<Self, GncError> {
+        if [
+            self.imu_specific_force,
+            self.imu_angular_rate,
+            self.gnss_position,
+            self.gnss_velocity,
+        ]
+        .into_iter()
+        .any(|value| !value.is_finite())
+        {
+            return Err(GncError::NonFinite {
+                context: "sensor bias".to_string(),
+            });
+        }
+        Ok(self)
+    }
+
+    pub fn apply_imu(&self, measurement: &ImuMeasurement) -> Result<ImuMeasurement, GncError> {
+        if measurement.frame != self.frame {
+            return Err(GncError::InvalidValue {
+                context: "IMU sensor bias".to_string(),
+                reason: "measurement frame does not match bias frame".to_string(),
+            });
+        }
+        let mut biased = ImuMeasurement::new(
+            measurement.status.timestamp,
+            measurement.frame,
+            measurement.specific_force + self.imu_specific_force,
+            measurement.angular_rate + self.imu_angular_rate,
+        )?;
+        biased.status = measurement.status;
+        Ok(biased)
+    }
+
+    pub fn apply_gnss(&self, measurement: &GnssMeasurement) -> Result<GnssMeasurement, GncError> {
+        if measurement.frame != self.frame {
+            return Err(GncError::InvalidValue {
+                context: "GNSS sensor bias".to_string(),
+                reason: "measurement frame does not match bias frame".to_string(),
+            });
+        }
+        let mut biased = GnssMeasurement::new(
+            measurement.status.timestamp,
+            measurement.frame,
+            measurement.position + self.gnss_position,
+            measurement.velocity + self.gnss_velocity,
+        )?;
+        biased.status = measurement.status;
+        Ok(biased)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -522,6 +596,26 @@ mod tests {
             .velocity_meta()
             .require(&body(), Unit::MeterPerSecond, "velocity")
             .is_ok());
+    }
+
+    #[test]
+    fn sensor_bias_is_deterministic_and_frame_aware() {
+        let timestamp = Timestamp::from_nanoseconds(10);
+        let imu = ImuMeasurement::new(
+            timestamp,
+            body(),
+            Vec3::new(1.0, 2.0, 3.0),
+            Vec3::new(0.1, 0.2, 0.3),
+        )
+        .expect("IMU");
+        let mut bias = SensorBias::zero(body());
+        bias.imu_specific_force = Vec3::new(0.5, 0.0, 0.0);
+        bias.imu_angular_rate = Vec3::new(0.0, 0.1, 0.0);
+        let biased = bias.apply_imu(&imu).expect("biased IMU");
+        assert_eq!(biased.specific_force, Vec3::new(1.5, 2.0, 3.0));
+        assert!((biased.angular_rate.y - 0.3).abs() < 1e-12);
+        let wrong_frame = SensorBias::zero(FrameId::Inertial);
+        assert!(wrong_frame.apply_imu(&imu).is_err());
     }
 
     #[test]

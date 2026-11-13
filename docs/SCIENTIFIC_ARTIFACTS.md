@@ -1,8 +1,9 @@
 # Scientific artifacts and compatibility contracts
 
 `xdl-artifacts` is the first P0 foundation for reproducible scientific
-workflows. It defines data contracts; it does not yet execute tests, hash files,
-collect plots, or guarantee reproducibility by itself.
+workflows. It defines data contracts; it does not execute tests, collect plots,
+or guarantee reproducibility by itself. The `xdl test --manifest` workflow now
+records SHA-256 hashes for discovered XDL source files.
 
 ## Run manifests
 
@@ -60,6 +61,7 @@ xdl compatibility-report
 xdl compatibility-report --format json
 xdl compatibility-report --corpus examples/matlab --format json
 xdl compatibility-report --corpus examples/matlab --execute --format json
+xdl compatibility-report --corpus tests/compatibility/matlab --execute --require-reference --format json
 ```
 
 This baseline is intentionally not generated from the full corpus yet. Its
@@ -79,6 +81,11 @@ example.m.expected.json
 With `--execute`, matching normalized stdout is reported as `verified` for
 that observed-output case. A mismatch is reported as `failed`; this does not
 prove or disprove broader array, runtime, or numerical equivalence.
+
+`--require-reference` makes the command exit nonzero when any corpus case is
+not `verified`. This is suitable for CI, but the references are declared
+sidecars, not an independent MATLAB or Octave runtime. Independent oracle
+generation remains an open compatibility-harness task.
 
 The JSON sidecar can additionally verify named numeric variables:
 
@@ -113,8 +120,8 @@ The basic runner can now emit a truthful summary manifest:
 xdl test tests --manifest runs/test-summary.json
 ```
 
-The next step is to add an explicit, reviewable collection policy for file
-hashes, outputs, timeouts, numerical evidence, and clean-machine replay, then
+The next step is to add an explicit, reviewable collection policy for outputs,
+timeouts, numerical evidence, and clean-machine replay, then
 expose those richer artifacts through VibeCoder.
 
 ## Verification

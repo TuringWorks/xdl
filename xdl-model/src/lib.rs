@@ -115,6 +115,8 @@ pub struct Block {
     /// Delays and state-holding blocks set this to `false`, allowing them to
     /// break a feedback cycle without creating an algebraic loop.
     pub direct_feedthrough: bool,
+    #[serde(default)]
+    pub parameters: BTreeMap<String, serde_json::Value>,
     pub ports: BTreeMap<PortId, Port>,
 }
 
@@ -294,6 +296,8 @@ pub enum ModelError {
     Cycle,
     #[error("identifier space exhausted")]
     IdExhausted,
+    #[error("block parameter name must not be empty")]
+    InvalidParameterName,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -332,6 +336,7 @@ impl Model {
                 id,
                 name,
                 direct_feedthrough: true,
+                parameters: BTreeMap::new(),
                 ports: BTreeMap::new(),
             },
         );
@@ -348,6 +353,37 @@ impl Model {
             .ok_or(ModelError::UnknownBlock(block))?
             .direct_feedthrough = direct_feedthrough;
         Ok(())
+    }
+
+    pub fn set_block_parameter(
+        &mut self,
+        block: BlockId,
+        name: impl Into<String>,
+        value: serde_json::Value,
+    ) -> Result<(), ModelError> {
+        let name = name.into();
+        if name.trim().is_empty() {
+            return Err(ModelError::InvalidParameterName);
+        }
+        self.blocks
+            .get_mut(&block)
+            .ok_or(ModelError::UnknownBlock(block))?
+            .parameters
+            .insert(name, value);
+        Ok(())
+    }
+
+    pub fn block_parameter(
+        &self,
+        block: BlockId,
+        name: &str,
+    ) -> Result<Option<&serde_json::Value>, ModelError> {
+        Ok(self
+            .blocks
+            .get(&block)
+            .ok_or(ModelError::UnknownBlock(block))?
+            .parameters
+            .get(name))
     }
 
     pub fn add_port(
@@ -630,6 +666,26 @@ mod tests {
             model.connect(output, input),
             Err(ModelError::SignalMismatch { .. })
         ));
+    }
+
+    #[test]
+    fn block_parameters_round_trip_and_reject_empty_names() {
+        let mut model = Model::new("parameters");
+        let block = model.add_block("gain").expect("block");
+        model
+            .set_block_parameter(block, "gain", serde_json::json!(2.5))
+            .expect("parameter");
+        assert_eq!(
+            model.block_parameter(block, "gain").expect("lookup"),
+            Some(&serde_json::json!(2.5))
+        );
+        assert_eq!(
+            model.set_block_parameter(block, "  ", serde_json::json!(1)),
+            Err(ModelError::InvalidParameterName)
+        );
+        let encoded = serde_json::to_string(&model).expect("serialize");
+        let decoded: Model = serde_json::from_str(&encoded).expect("deserialize");
+        assert_eq!(decoded, model);
     }
 
     #[test]

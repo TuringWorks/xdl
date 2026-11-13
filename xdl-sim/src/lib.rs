@@ -114,6 +114,8 @@ pub enum ExecutionError {
     MissingInput(PortId),
     #[error("block {block:?} emitted an invalid value for port {port:?}")]
     InvalidOutput { block: BlockId, port: PortId },
+    #[error("trace update metadata does not match the owning model block")]
+    TraceMetadataMismatch,
     #[error("block runtime failed: {0}")]
     Runtime(String),
 }
@@ -121,6 +123,13 @@ pub enum ExecutionError {
 /// Runtime implementation for one graph block. Implementations should be
 /// deterministic and avoid wall-clock or blocking I/O.
 pub trait BlockRuntime {
+    fn configure(
+        &mut self,
+        _parameters: &BTreeMap<String, serde_json::Value>,
+    ) -> Result<(), ExecutionError> {
+        Ok(())
+    }
+
     fn step(
         &mut self,
         timestamp: Timestamp,
@@ -400,6 +409,138 @@ pub struct TraceCursor {
     position: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum TraceCompareError {
+    #[error("trace comparison tolerances must be finite and non-negative")]
+    InvalidTolerance,
+    #[error("trace lengths differ: expected {expected}, actual {actual}")]
+    LengthMismatch { expected: usize, actual: usize },
+    #[error("trace metadata differs at update {index}")]
+    MetadataMismatch { index: usize },
+    #[error("trace values differ at update {index} ({path})")]
+    ValueMismatch { index: usize, path: String },
+}
+
+pub fn compare_traces(
+    expected: &[SignalUpdate],
+    actual: &[SignalUpdate],
+    absolute_tolerance: f64,
+    relative_tolerance: f64,
+) -> Result<(), TraceCompareError> {
+    if !absolute_tolerance.is_finite()
+        || absolute_tolerance < 0.0
+        || !relative_tolerance.is_finite()
+        || relative_tolerance < 0.0
+    {
+        return Err(TraceCompareError::InvalidTolerance);
+    }
+    if expected.len() != actual.len() {
+        return Err(TraceCompareError::LengthMismatch {
+            expected: expected.len(),
+            actual: actual.len(),
+        });
+    }
+    for (index, (expected, actual)) in expected.iter().zip(actual).enumerate() {
+        if expected.timestamp != actual.timestamp
+            || expected.task != actual.task
+            || expected.block != actual.block
+            || expected.port != actual.port
+        {
+            return Err(TraceCompareError::MetadataMismatch { index });
+        }
+        compare_signal_values(
+            &expected.value,
+            &actual.value,
+            absolute_tolerance,
+            relative_tolerance,
+            &index.to_string(),
+        )
+        .map_err(|path| TraceCompareError::ValueMismatch { index, path })?;
+    }
+    Ok(())
+}
+
+fn compare_signal_values(
+    expected: &SignalValue,
+    actual: &SignalValue,
+    absolute_tolerance: f64,
+    relative_tolerance: f64,
+    path: &str,
+) -> Result<(), String> {
+    match (expected, actual) {
+        (SignalValue::Scalar(expected), SignalValue::Scalar(actual)) => {
+            let bound = absolute_tolerance + relative_tolerance * expected.abs().max(actual.abs());
+            if (expected - actual).abs() <= bound {
+                Ok(())
+            } else {
+                Err(path.to_string())
+            }
+        }
+        (SignalValue::Vector(expected), SignalValue::Vector(actual)) => {
+            if expected.len() != actual.len() {
+                return Err(format!("{path}.length"));
+            }
+            expected
+                .iter()
+                .zip(actual)
+                .enumerate()
+                .try_for_each(|(index, (expected, actual))| {
+                    compare_signal_values(
+                        &SignalValue::Scalar(*expected),
+                        &SignalValue::Scalar(*actual),
+                        absolute_tolerance,
+                        relative_tolerance,
+                        &format!("{path}[{index}]"),
+                    )
+                })
+        }
+        (
+            SignalValue::Matrix {
+                rows: expected_rows,
+                columns: expected_columns,
+                values: expected,
+            },
+            SignalValue::Matrix {
+                rows: actual_rows,
+                columns: actual_columns,
+                values: actual,
+            },
+        ) => {
+            if expected_rows != actual_rows || expected_columns != actual_columns {
+                return Err(format!("{path}.shape"));
+            }
+            expected
+                .iter()
+                .zip(actual)
+                .enumerate()
+                .try_for_each(|(index, (expected, actual))| {
+                    compare_signal_values(
+                        &SignalValue::Scalar(*expected),
+                        &SignalValue::Scalar(*actual),
+                        absolute_tolerance,
+                        relative_tolerance,
+                        &format!("{path}[{index}]"),
+                    )
+                })
+        }
+        (SignalValue::Bus(expected), SignalValue::Bus(actual)) => {
+            if expected.keys().ne(actual.keys()) {
+                return Err(format!("{path}.fields"));
+            }
+            expected.iter().try_for_each(|(name, expected)| {
+                compare_signal_values(
+                    expected,
+                    &actual[name],
+                    absolute_tolerance,
+                    relative_tolerance,
+                    &format!("{path}.{name}"),
+                )
+            })
+        }
+        _ => Err(format!("{path}.shape")),
+    }
+}
+
 impl TraceCursor {
     pub fn new(updates: Vec<SignalUpdate>) -> Result<Self, ExecutionError> {
         if updates.iter().any(|update| !update.value.is_finite()) {
@@ -470,7 +611,9 @@ impl ExecutionEngine {
         if !self.scheduler.has_task(task) {
             return Err(ExecutionError::Scheduler(SchedulerError::UnknownTask(task)));
         }
-        self.model.block(block)?;
+        let parameters = &self.model.block(block)?.parameters;
+        let mut runtime = runtime;
+        runtime.configure(parameters)?;
         self.registered
             .insert(task, RegisteredBlock { block, runtime });
         Ok(())
@@ -478,6 +621,27 @@ impl ExecutionEngine {
 
     pub fn signal(&self, port: PortId) -> Option<&SignalValue> {
         self.signals.get(&port)
+    }
+
+    pub fn signal_snapshot(&self) -> BTreeMap<PortId, SignalValue> {
+        self.signals.clone()
+    }
+
+    pub fn restore_signal_snapshot(
+        &mut self,
+        snapshot: BTreeMap<PortId, SignalValue>,
+    ) -> Result<(), ExecutionError> {
+        for (port, value) in &snapshot {
+            let definition = self.model.port(*port)?;
+            if !value.matches_shape(&definition.signal.shape) || !value.is_finite() {
+                return Err(ExecutionError::InvalidOutput {
+                    block: self.model.block_for_port(*port)?,
+                    port: *port,
+                });
+            }
+        }
+        self.signals = snapshot;
+        Ok(())
     }
 
     pub fn validate_ready(&self) -> Result<(), ExecutionError> {
@@ -510,6 +674,55 @@ impl ExecutionEngine {
         }
         self.signals.insert(port, value);
         Ok(())
+    }
+
+    pub fn apply_trace_update(&mut self, update: &SignalUpdate) -> Result<(), ExecutionError> {
+        let definition = self.model.port(update.port)?;
+        let block = self.model.block_for_port(update.port)?;
+        if block != update.block {
+            return Err(ExecutionError::TraceMetadataMismatch);
+        }
+        if definition.direction != xdl_model::PortDirection::Output
+            || !update.value.matches_shape(&definition.signal.shape)
+            || !update.value.is_finite()
+        {
+            return Err(ExecutionError::InvalidOutput {
+                block,
+                port: update.port,
+            });
+        }
+        self.signals.insert(update.port, update.value.clone());
+        for connection in self
+            .model
+            .connections
+            .iter()
+            .filter(|connection| connection.output == update.port)
+        {
+            self.signals.insert(connection.input, update.value.clone());
+        }
+        Ok(())
+    }
+
+    pub fn apply_trace_until(
+        &mut self,
+        cursor: &mut TraceCursor,
+        timestamp: Timestamp,
+    ) -> Result<usize, ExecutionError> {
+        let mut applied = 0;
+        while cursor
+            .peek()
+            .is_some_and(|update| update.timestamp <= timestamp)
+        {
+            let update = cursor
+                .next_update()
+                .ok_or_else(|| {
+                    ExecutionError::Runtime("trace cursor advanced unexpectedly".to_string())
+                })?
+                .clone();
+            self.apply_trace_update(&update)?;
+            applied += 1;
+        }
+        Ok(applied)
     }
 
     pub fn advance_to(&mut self, timestamp: Timestamp) -> Result<ExecutionReport, ExecutionError> {
@@ -889,6 +1102,18 @@ mod tests {
     }
 
     impl BlockRuntime for Constant {
+        fn configure(
+            &mut self,
+            parameters: &BTreeMap<String, serde_json::Value>,
+        ) -> Result<(), ExecutionError> {
+            if let Some(value) = parameters.get("value") {
+                self.value = value.as_f64().ok_or_else(|| {
+                    ExecutionError::Runtime("constant value parameter must be numeric".to_string())
+                })?;
+            }
+            Ok(())
+        }
+
         fn step(
             &mut self,
             _timestamp: Timestamp,
@@ -1031,6 +1256,9 @@ mod tests {
         model
             .connect(source_output, gain_input)
             .expect("connection");
+        model
+            .set_block_parameter(source, "value", serde_json::json!(4.0))
+            .expect("source parameter");
 
         let config = SchedulerConfig::new(duration(10), 8).expect("config");
         let mut scheduler = Scheduler::new(config);
@@ -1069,7 +1297,7 @@ mod tests {
         assert_eq!(report.updates[0].task, source_task);
         assert_eq!(report.updates[0].port, source_output);
         assert_eq!(report.updates[1].task, gain_task);
-        assert_eq!(report.updates[1].value, SignalValue::Scalar(6.0));
+        assert_eq!(report.updates[1].value, SignalValue::Scalar(8.0));
         let trace = report.to_json_lines().expect("json trace");
         assert_eq!(trace.lines().count(), 2);
         assert!(trace.contains("\"port\""));
@@ -1082,7 +1310,36 @@ mod tests {
         assert!(!cursor.is_exhausted());
         cursor.reset();
         assert_eq!(cursor.updates(), report.updates.as_slice());
-        assert_eq!(engine.signal(gain_output), Some(&SignalValue::Scalar(6.0)));
+        assert_eq!(
+            engine
+                .apply_trace_until(&mut cursor, Timestamp::ZERO)
+                .expect("apply trace through time zero"),
+            2
+        );
+        assert!(cursor.is_exhausted());
+        engine
+            .apply_trace_update(&report.updates[1])
+            .expect("apply replay update");
+        compare_traces(&report.updates, &report.updates, 0.0, 0.0).expect("equal traces");
+        let mut changed = report.updates.clone();
+        changed[1].value = SignalValue::Scalar(8.1);
+        assert!(compare_traces(&report.updates, &changed, 1e-3, 0.0).is_err());
+        compare_traces(&report.updates, &changed, 0.2, 0.0).expect("tolerant comparison");
+        let mut misattributed = report.updates[1].clone();
+        misattributed.block = BlockId::new(999);
+        assert_eq!(
+            engine.apply_trace_update(&misattributed),
+            Err(ExecutionError::TraceMetadataMismatch)
+        );
+        let snapshot = engine.signal_snapshot();
+        engine
+            .restore_signal_snapshot(BTreeMap::new())
+            .expect("clear snapshot");
+        assert_eq!(engine.signal(gain_output), None);
+        engine
+            .restore_signal_snapshot(snapshot)
+            .expect("restore snapshot");
+        assert_eq!(engine.signal(gain_output), Some(&SignalValue::Scalar(8.0)));
     }
 
     #[test]

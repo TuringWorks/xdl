@@ -3,7 +3,7 @@
 //! Command-line interface for the Extended Data Language (XDL) Rust implementation.
 
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -12,6 +12,7 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use tracing::{error, info};
 use xdl_artifacts::{
     CompatibilityEntry, CompatibilityInventory, CompatibilityStatus, RunManifest, RunStatus,
@@ -90,6 +91,9 @@ enum Commands {
         /// Also execute successfully transpiled files through the XDL interpreter
         #[arg(long)]
         execute: bool,
+        /// Fail if any corpus case lacks a passing declared reference
+        #[arg(long)]
+        require_reference: bool,
     },
     /// Validate and normalize a versioned XDL model document
     ModelCheck {
@@ -140,7 +144,8 @@ fn run(cli: Cli) -> Result<()> {
             format,
             corpus,
             execute,
-        }) => compatibility_report(&format, corpus.as_deref(), execute),
+            require_reference,
+        }) => compatibility_report(&format, corpus.as_deref(), execute, require_reference),
         Some(Commands::ModelCheck { file, migrate, svg }) => check_model_file(&file, migrate, svg),
         Some(Commands::Version) => {
             print_version();
@@ -252,7 +257,7 @@ fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
     };
 
     if let Some(path) = manifest_path {
-        write_test_manifest(path, directory, status, files.len(), failures.len())?;
+        write_test_manifest(path, directory, status, &files, failures.len())?;
     }
 
     if failures.is_empty() {
@@ -266,7 +271,7 @@ fn write_test_manifest(
     path: &Path,
     directory: &Path,
     status: RunStatus,
-    discovered: usize,
+    files: &[PathBuf],
     failed: usize,
 ) -> Result<()> {
     let now = SystemTime::now()
@@ -289,12 +294,22 @@ fn write_test_manifest(
         env!("CARGO_PKG_VERSION").to_string(),
     );
     manifest.test_summary = Some(TestSummary {
-        discovered,
-        passed: discovered - failed,
+        discovered: files.len(),
+        passed: files.len() - failed,
         failed,
     });
+    manifest.inputs = files
+        .iter()
+        .map(|file| {
+            Ok(xdl_artifacts::RunArtifact {
+                kind: "xdl-test-source".to_string(),
+                path: file.display().to_string(),
+                sha256: Some(sha256_file(file)?),
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
     manifest.warnings.push(
-        "This manifest contains test counts only; file hashes, output artifacts, timeouts, and numerical evidence are not collected by this runner.".to_string(),
+        "This runner records source hashes and test counts; output artifacts, timeouts, and numerical evidence are not collected yet.".to_string(),
     );
 
     let json = manifest
@@ -304,6 +319,23 @@ fn write_test_manifest(
         .with_context(|| format!("failed to write test run manifest: {}", path.display()))?;
     println!("Manifest: {}", path.display());
     Ok(())
+}
+
+fn sha256_file(path: &Path) -> Result<String> {
+    let mut file = fs::File::open(path)
+        .with_context(|| format!("failed to open test source for hashing: {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 8192];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .with_context(|| format!("failed to hash test source: {}", path.display()))?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(format!("sha256:{:x}", hasher.finalize()))
 }
 
 fn collect_xdl_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
@@ -331,7 +363,12 @@ fn collect_xdl_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-fn compatibility_report(format: &str, corpus: Option<&Path>, execute: bool) -> Result<()> {
+fn compatibility_report(
+    format: &str,
+    corpus: Option<&Path>,
+    execute: bool,
+    require_reference: bool,
+) -> Result<()> {
     if execute && corpus.is_none() {
         return Err(anyhow::anyhow!(
             "--execute requires --corpus because the baseline has no source files"
@@ -341,6 +378,26 @@ fn compatibility_report(format: &str, corpus: Option<&Path>, execute: bool) -> R
         Some(directory) => corpus_compatibility_inventory(directory, execute)?,
         None => baseline_compatibility_inventory(),
     };
+    if require_reference {
+        if corpus.is_none() {
+            return Err(anyhow::anyhow!(
+                "--require-reference requires --corpus because the baseline has no corpus files"
+            ));
+        }
+        let incomplete: Vec<&str> = inventory
+            .entries
+            .iter()
+            .filter(|entry| entry.status != CompatibilityStatus::Verified)
+            .map(|entry| entry.capability.as_str())
+            .collect();
+        if !incomplete.is_empty() {
+            return Err(anyhow::anyhow!(
+                "{} corpus case(s) lack passing declared references: {}",
+                incomplete.len(),
+                incomplete.join(", ")
+            ));
+        }
+    }
     match format {
         "json" => println!(
             "{}",

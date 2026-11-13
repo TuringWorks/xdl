@@ -153,7 +153,10 @@ fn test_cli_test_command_writes_truthful_manifest() {
     let _ = fs::remove_dir_all(&directory);
     assert!(manifest_json.contains("\"status\": \"passed\""));
     assert!(manifest_json.contains("\"discovered\": 1"));
-    assert!(manifest_json.contains("file hashes"));
+    assert!(manifest_json.contains("\"kind\": \"xdl-test-source\""));
+    assert!(manifest_json.contains(
+        "\"sha256\": \"sha256:94ba589944019a00e78f1f53fe6e035e0d6850347c538b370145d4b4c6b80582\""
+    ));
 }
 
 #[test]
@@ -246,6 +249,35 @@ fn test_cli_compatibility_report_scans_matlab_corpus() {
     assert!(stdout.contains("stdout-reference"));
     assert!(stdout.contains("numeric-reference"));
     assert!(stdout.contains("verified"));
+}
+
+#[test]
+fn test_cli_compatibility_report_can_require_references() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("reference-gate");
+    fs::create_dir_all(&directory).expect("create corpus directory");
+    fs::write(directory.join("unreferenced.m"), "x = 1 + 2;\n")
+        .expect("write unreferenced MATLAB file");
+
+    let output = Command::new(&binary)
+        .args([
+            "compatibility-report",
+            "--corpus",
+            directory.to_str().expect("utf-8 corpus path"),
+            "--execute",
+            "--require-reference",
+        ])
+        .output()
+        .expect("run reference gate");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(!output.status.success());
+    let diagnostic = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(diagnostic.contains("lack passing declared references"));
 }
 
 fn test_directory(label: &str) -> PathBuf {

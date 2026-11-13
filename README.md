@@ -106,7 +106,7 @@ complete or uniformly production-ready:
 - **Canonical numerics**: Sparse, chunked, units-aware, frame-aware, and distributed data types are incomplete
 
 ### Testing & Quality
-- **Test runner**: `xdl test` discovers and executes `.xdl` scripts recursively; `--manifest` emits a test-count summary, while golden vectors, numerical tolerances, file hashes, timeouts, and artifact capture are not yet implemented
+- **Test runner**: `xdl test` discovers and executes `.xdl` scripts recursively; `--manifest` emits test counts and SHA-256 source artifacts, while golden vectors, numerical tolerances, timeouts, and output artifact capture are not yet implemented
 - **Edge cases**: Various edge cases in control flow, type conversions, and array operations
 - **Error messages**: Could be more helpful in some scenarios
 
@@ -216,6 +216,10 @@ xdl compatibility-report --corpus examples/matlab --format json
 
 # Also execute the transpiled XDL (runtime/numerical equivalence still unverified)
 xdl compatibility-report --corpus examples/matlab --execute --format json
+
+# Require every corpus case to have a passing declared reference. This is a
+# reproducibility gate, not an independent MATLAB/Octave oracle.
+xdl compatibility-report --corpus tests/compatibility/matlab --execute --require-reference --format json
 
 # With an adjacent example.m.expected sidecar, verify normalized observed output
 
