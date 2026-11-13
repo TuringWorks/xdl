@@ -1,8 +1,11 @@
-# XDL 3D Visualization - Complete Implementation
+# XDL 3D Visualization — Implementation Snapshot
 
 ## Summary
 
-Successfully implemented a complete 3D volume visualization system for XDL with WebGPU rendering, multi-dimensional arrays, parser fixes, and GUI compatibility.
+Implemented a 3D volume-visualization path for XDL with WebGPU rendering,
+multi-dimensional arrays, parser fixes, and GUI compatibility. Backend,
+platform, dataset-size, and display behavior require capability-specific
+validation; this is not a production-readiness claim.
 
 ## Features Implemented
 
@@ -12,7 +15,7 @@ Successfully implemented a complete 3D volume visualization system for XDL with 
 - **Volume Ray Marching**: GPU-accelerated volume rendering with WGSL shaders
 - **Interactive Camera**: Mouse rotation and zoom controls
 - **Scientific Colormaps**: Viridis, Rainbow, Plasma, Inferno, Turbo, Grayscale
-- **Multi-dimensional Data**: Full support for 3D array visualization
+- **Multi-dimensional Data**: Implemented support for selected 3D array visualization paths
 
 ### ✅ Parser Enhancements
 
@@ -243,7 +246,9 @@ cargo fmt --all              # All code formatted
 
 ## Summary of Achievements
 
-This implementation represents a **complete, production-ready 3D visualization system** for XDL:
+This implementation represents a substantial 3D visualization path for XDL.
+Production deployment still requires platform, dataset, rendering, and
+numerical validation for the intended workload:
 
 1. **Full GPU acceleration** with WebGPU and modern graphics APIs
 2. **Interactive 3D windows** with smooth camera controls

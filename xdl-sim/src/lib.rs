@@ -171,26 +171,47 @@ impl BlockRuntime for AdaptiveContinuousRuntime {
             }
             if duration.as_nanoseconds() > 0 {
                 let time = previous.as_seconds();
-                let step = duration.as_seconds();
-                let runtime = &mut self.runtime;
-                let state = &self.state;
-                let result = rk4_adaptive_step(
-                    time,
-                    step,
-                    state,
-                    self.config,
-                    &mut |sample_time, sample_state, derivative| {
-                        runtime.derivative(sample_time, sample_state, inputs, derivative);
-                    },
-                )
-                .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
-                if result.accepted_step == 0.0 {
-                    return Err(ExecutionError::Runtime(format!(
-                        "continuous step rejected with normalized error {}",
-                        result.normalized_error
-                    )));
+                let total_step = duration.as_seconds();
+                let mut elapsed = 0.0;
+                let mut proposed_step = total_step.min(self.config.maximum_step);
+                let mut rejected_steps = 0;
+                while elapsed < total_step {
+                    let remaining = total_step - elapsed;
+                    let config = AdaptiveConfig {
+                        minimum_step: self.config.minimum_step.min(remaining),
+                        ..self.config
+                    };
+                    let runtime = &mut self.runtime;
+                    let result = rk4_adaptive_step(
+                        time + elapsed,
+                        proposed_step.min(remaining),
+                        &self.state,
+                        config,
+                        &mut |sample_time, sample_state, derivative| {
+                            runtime.derivative(sample_time, sample_state, inputs, derivative);
+                        },
+                    )
+                    .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+                    if result.accepted_step == 0.0 {
+                        rejected_steps += 1;
+                        if rejected_steps > 64 {
+                            return Err(ExecutionError::Runtime(
+                                "continuous solver exceeded its retry bound".to_string(),
+                            ));
+                        }
+                        if result.next_step >= proposed_step.min(remaining) {
+                            return Err(ExecutionError::Runtime(format!(
+                                "continuous step rejected at minimum step with normalized error {}",
+                                result.normalized_error
+                            )));
+                        }
+                        proposed_step = result.next_step;
+                        continue;
+                    }
+                    elapsed += result.accepted_step;
+                    self.state = result.state;
+                    proposed_step = result.next_step;
                 }
-                self.state = result.state;
             }
         }
         self.last_timestamp = Some(timestamp);
@@ -767,8 +788,8 @@ mod tests {
                         Box::new(Decay { output }),
                         vec![1.0],
                         AdaptiveConfig {
-                            absolute_tolerance: 1e-6,
-                            relative_tolerance: 1e-6,
+                            absolute_tolerance: 1e-10,
+                            relative_tolerance: 1e-10,
                             minimum_step: 1e-4,
                             maximum_step: 0.2,
                         },

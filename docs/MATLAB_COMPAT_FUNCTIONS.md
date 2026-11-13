@@ -584,7 +584,7 @@ cargo install --path xdl-cli
 The MATLAB compatibility functions in XDL provide:
 
 ✅ **7 fully implemented functions** extending beyond IDL/GDL
-✅ **Complete unit tests** with 100% pass rate
+✅ **Unit tests for the implemented compatibility functions** with the current test suite passing; this does not imply MATLAB toolbox parity
 ✅ **Full integration** with XDL stdlib and transpiler
 ✅ **Production ready** for use in scientific computing applications
 ✅ **Well documented** with examples and usage guidelines

@@ -8,6 +8,7 @@ description = "Typed block and signal graphs for XDL model-based simulation"
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 xdl-gnc-core = { path = "../xdl-gnc-core" }
 

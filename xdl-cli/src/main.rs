@@ -68,6 +68,17 @@ enum Commands {
         #[arg(default_value = "tests")]
         directory: PathBuf,
     },
+    /// Validate and normalize a versioned XDL model document
+    ModelCheck {
+        /// JSON model document
+        file: PathBuf,
+        /// Rewrite the validated document as canonical current-version JSON
+        #[arg(long)]
+        migrate: bool,
+        /// Render the validated document as SVG
+        #[arg(long)]
+        svg: bool,
+    },
     /// Show version information
     Version,
 }
@@ -99,6 +110,7 @@ fn run(cli: Cli) -> Result<()> {
         Some(Commands::Parse { file, format }) => parse_file(&file, &format),
         Some(Commands::Check { file }) => check_file(&file),
         Some(Commands::Test { directory }) => run_tests(&directory),
+        Some(Commands::ModelCheck { file, migrate, svg }) => check_model_file(&file, migrate, svg),
         Some(Commands::Version) => {
             print_version();
             Ok(())
@@ -175,6 +187,26 @@ fn run_tests(directory: &Path) -> Result<()> {
 
     // TODO: Implement test runner
     println!("Test runner not yet implemented");
+    Ok(())
+}
+
+fn check_model_file(file: &Path, migrate: bool, svg: bool) -> Result<()> {
+    let content = fs::read_to_string(file)
+        .with_context(|| format!("Failed to read model document: {}", file.display()))?;
+    let document = xdl_model::ModelDocument::from_json(&content)
+        .with_context(|| format!("Invalid model document: {}", file.display()))?;
+    if svg {
+        println!("{}", document.to_svg()?);
+    } else if migrate {
+        println!("{}", document.to_json()?);
+    } else {
+        println!(
+            "✓ Model OK: {} blocks, {} connections, schema {}",
+            document.model.blocks.len(),
+            document.model.connections.len(),
+            document.schema_version
+        );
+    }
     Ok(())
 }
 

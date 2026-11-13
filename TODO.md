@@ -1,19 +1,24 @@
 # XDL Implementation TODO
 
-**Last Updated:** 2025-12-30
+**Last Updated:** 2026-11-12
+
+> This is an implementation TODO, not a compatibility certification. The
+> historical coverage percentages below are estimates and should be replaced
+> by generated conformance reports. Placeholder I/O, widget, map, and dialog
+> paths are intentionally marked as such and are not production support.
 
 This document tracks remaining IDL/GDL features that need to be implemented in XDL for full compatibility.
 
 ## Current Status
 
-| Category | Status | Coverage |
-|----------|--------|----------|
-| Core Functions | 320+ implemented | ~90% |
-| ML Functions | 60+ implemented | ~86% |
-| Graphics | 61+ implemented | ~78% |
-| Widget/GUI | 25+ implemented | ~75% |
-| Scientific I/O | 45+ implemented | ~80% |
-| **Total** | **510+ functions** | **~90%** |
+| Category | Current evidence | Status |
+|----------|------------------|--------|
+| Core functions | Broad registry; exact count should come from dispatch | Partial conformance |
+| ML functions | Native and XDLML paths with uneven depth | Partial conformance |
+| Graphics | 2D/3D/chart procedures with backend-dependent depth | Partial conformance |
+| Widget/GUI | API surface plus CLI/GUI-specific implementations | Partial; placeholders exist |
+| Scientific I/O | Feature-gated paths; some placeholder behavior remains | Not production-complete |
+| **Overall** | **No single percentage is currently authoritative** | **Active audit** |
 
 ## Priority Legend
 - 🔴 **CRITICAL** - Fundamental language features required for basic programs

@@ -11,6 +11,11 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use thiserror::Error;
 use xdl_gnc_core::{DurationNs, FrameId, Unit};
 
+pub mod layout;
+pub use layout::{BlockLayout, LayoutError, ModelLayout, PortLayout, PortSide};
+pub mod editor;
+pub use editor::{EditorError, HitTarget, ModelDocument};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BlockId(u32);
 
@@ -106,6 +111,10 @@ pub struct Port {
 pub struct Block {
     pub id: BlockId,
     pub name: String,
+    /// Whether outputs depend directly on current inputs during a step.
+    /// Delays and state-holding blocks set this to `false`, allowing them to
+    /// break a feedback cycle without creating an algebraic loop.
+    pub direct_feedthrough: bool,
     pub ports: BTreeMap<PortId, Port>,
 }
 
@@ -322,10 +331,23 @@ impl Model {
             Block {
                 id,
                 name,
+                direct_feedthrough: true,
                 ports: BTreeMap::new(),
             },
         );
         Ok(id)
+    }
+
+    pub fn set_block_direct_feedthrough(
+        &mut self,
+        block: BlockId,
+        direct_feedthrough: bool,
+    ) -> Result<(), ModelError> {
+        self.blocks
+            .get_mut(&block)
+            .ok_or(ModelError::UnknownBlock(block))?
+            .direct_feedthrough = direct_feedthrough;
+        Ok(())
     }
 
     pub fn add_port(
@@ -407,8 +429,16 @@ impl Model {
         }
         let mut visiting = HashSet::new();
         let mut visited = HashSet::new();
+        let mut stack = Vec::new();
         for block in self.blocks.keys().copied() {
-            if has_cycle(block, &adjacency, &mut visiting, &mut visited) {
+            if has_algebraic_cycle(
+                block,
+                &adjacency,
+                &self.blocks,
+                &mut visiting,
+                &mut visited,
+                &mut stack,
+            ) {
                 return Err(ModelError::Cycle);
             }
         }
@@ -452,27 +482,38 @@ impl Model {
     }
 }
 
-fn has_cycle(
+fn has_algebraic_cycle(
     block: BlockId,
     adjacency: &HashMap<BlockId, Vec<BlockId>>,
+    blocks: &BTreeMap<BlockId, Block>,
     visiting: &mut HashSet<BlockId>,
     visited: &mut HashSet<BlockId>,
+    stack: &mut Vec<BlockId>,
 ) -> bool {
     if visiting.contains(&block) {
-        return true;
+        let Some(start) = stack.iter().position(|candidate| *candidate == block) else {
+            return true;
+        };
+        return stack[start..].iter().all(|candidate| {
+            blocks
+                .get(candidate)
+                .is_some_and(|item| item.direct_feedthrough)
+        });
     }
     if visited.contains(&block) {
         return false;
     }
     visiting.insert(block);
+    stack.push(block);
     if adjacency
         .get(&block)
         .into_iter()
         .flatten()
-        .any(|next| has_cycle(*next, adjacency, visiting, visited))
+        .any(|next| has_algebraic_cycle(*next, adjacency, blocks, visiting, visited, stack))
     {
         return true;
     }
+    stack.pop();
     visiting.remove(&block);
     visited.insert(block);
     false
@@ -560,6 +601,36 @@ mod tests {
             .expect("port");
         model.connect(source_out, sink_in).expect("connection");
         assert!(model.validate().is_ok());
+    }
+
+    #[test]
+    fn delayed_feedback_cycle_is_valid_but_algebraic_cycle_is_rejected() {
+        let mut model = Model::new("feedback");
+        let first = model.add_block("first").expect("block");
+        let delayed = model.add_block("delay").expect("block");
+        let first_input = model
+            .add_port(first, "in", PortDirection::Input, SignalSpec::scalar())
+            .expect("port");
+        let first_output = model
+            .add_port(first, "out", PortDirection::Output, SignalSpec::scalar())
+            .expect("port");
+        let delayed_input = model
+            .add_port(delayed, "in", PortDirection::Input, SignalSpec::scalar())
+            .expect("port");
+        let delayed_output = model
+            .add_port(delayed, "out", PortDirection::Output, SignalSpec::scalar())
+            .expect("port");
+        model
+            .connect(first_output, delayed_input)
+            .expect("connection");
+        model
+            .connect(delayed_output, first_input)
+            .expect("connection");
+        assert!(matches!(model.validate(), Err(ModelError::Cycle)));
+        model
+            .set_block_direct_feedthrough(delayed, false)
+            .expect("delay block");
+        model.validate().expect("delay breaks algebraic loop");
     }
 
     #[test]

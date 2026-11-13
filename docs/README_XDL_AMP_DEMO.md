@@ -2,6 +2,10 @@
 
 This guide explains how to run the XDL AMP (Accelerated Math Processing) demonstrations.
 
+> **Scope note:** This is a backend demo guide. “Working” means the selected
+> example runs on the tested machine and configuration; it does not establish
+> production readiness, universal hardware support, or a guaranteed speedup.
+
 ## Available Demos
 
 ### 1. Rust Demo (Working Today) ✅
@@ -393,4 +397,5 @@ cargo update -p xdl-amp
 📝 **IDL Demo**: Reference for future integration
 🚀 **Future**: 20-50x speedup on large arrays
 
-The GPU acceleration infrastructure is **production-ready** on macOS with Metal Performance Shaders!
+The GPU acceleration infrastructure has a macOS Metal Performance Shaders
+path; production deployment requires device- and operation-specific validation.

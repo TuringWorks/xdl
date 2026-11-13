@@ -193,7 +193,7 @@ All tests completed!
 
 - ✅ Complex MATLAB plotting code works
 - ✅ Standard MATLAB constants recognized
-- ✅ `linspace()` fully functional
+- ✅ `linspace()` implemented for the tested compatibility cases; broader parity remains under conformance testing
 - ✅ Graphics commands handled gracefully
 - ✅ Line styles ignored without errors
 - ✅ Array operations work correctly

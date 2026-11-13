@@ -2,7 +2,9 @@
 
 ## What Was Built
 
-We've implemented a **MATLAB to XDL compatibility layer** that enables loading and executing MATLAB .m files in XDL.
+We've implemented a **MATLAB to XDL compatibility layer** that enables loading
+and executing a tested subset of MATLAB `.m` files in XDL. It is a migration
+foundation, not drop-in MATLAB or toolbox compatibility.
 
 ### ✅ Completed Components
 
@@ -173,7 +175,7 @@ cargo test -p xdl-matlab
 
 **Test Results:**
 
-- ✅ **28/28 tests passing** (100% success rate)
+- ✅ **28/28 focused tests passing** (100% pass rate for those tests; not a language-coverage percentage)
 - **Coverage**: Lexer, transpiler, function mapping, control flow, arrays, math
 
 ### Integration Tests ✅
@@ -224,20 +226,21 @@ examples/
 
 ## Next Steps
 
-To complete the integration:
+To move from the current compatibility foundation toward dependable migration:
 
-1. **CLI Integration**: Add `.m` file detection to xdl-cli
-2. **GUI Support**: Enable loading .m files in xdl-gui
-3. **More functions**: Expand function mapping table
-4. **Advanced syntax**: Matrix operations, slicing
-5. **Testing**: Comprehensive test suite with real MATLAB code
-6. **Documentation**: User guide with examples
+1. **Conformance**: Maintain a generated syntax/function pass-fail matrix
+2. **Diagnostics**: Preserve source maps and report unsupported semantics
+3. **More functions**: Expand mappings only with behavioral tests
+4. **Advanced syntax**: Matrix operations, slicing, cells, structs, and handles
+5. **Testing**: Run a larger real MATLAB/Octave corpus and independent references
+6. **Documentation**: Keep examples explicit about supported subset versus parity
 
 ## Performance
 
 - **Lexing**: Fast, single-pass tokenization
 - **Transpilation**: Lightweight AST-based conversion
-- **No runtime overhead**: Transpiles to native XDL code
+- **No extra MATLAB runtime layer**: Transpiles to XDL; execution still uses
+  the XDL interpreter or selected native backends
 
 ## Maintenance
 
@@ -270,5 +273,8 @@ This provides a **solid foundation** for MATLAB/Octave compatibility and can be 
 
 ---
 
-**Status**: ✅ Core infrastructure complete and working
-**Next**: Integration with XDL CLI/GUI for seamless .m file execution
+**Status**: ✅ Core infrastructure exists and is exercised by a focused test
+subset
+**Next**: Expand conformance coverage, improve source maps and diagnostics, and
+validate CLI/GUI execution on a larger real-world corpus. This is not seamless
+MATLAB compatibility or toolbox parity.
