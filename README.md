@@ -38,6 +38,7 @@ The project is structured as a Cargo workspace with the following crates:
 - **`xdl-chart-viewer`**: Interactive chart viewer application
 - **`xdl-amp`**: Accelerated Math Processing
 - **`xdl-lsp`**: Language Server Protocol implementation for IDE support
+- **`xdl-artifacts`**: Versioned run-manifest and compatibility-status contracts
 - **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**: Typed guidance, navigation, and control libraries (in development; no XDL built-ins yet). See [GNC Crates](docs/development/gnc-crates.md)
 
 **Additional Modules (not in workspace):**
