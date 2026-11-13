@@ -4,7 +4,7 @@
   "description": "Language support for XDL (Extended Data Language) - IDL/GDL compatible scientific programming",
   "version": "0.1.1",
   "publisher": "xdl-team",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/gnudatalanguage/gdl"

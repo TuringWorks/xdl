@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Small deterministic navigation estimators for the XDL GNC vertical slice.

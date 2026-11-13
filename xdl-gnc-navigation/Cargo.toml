@@ -3,7 +3,7 @@ name = "xdl-gnc-navigation"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "GPL-2.0-only OR MIT"
+license = "MIT"
 description = "Deterministic navigation estimators for XDL GNC research"
 
 [dependencies]

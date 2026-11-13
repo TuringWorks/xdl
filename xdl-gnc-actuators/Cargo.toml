@@ -3,7 +3,7 @@ name = "xdl-gnc-actuators"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "GPL-2.0-only OR MIT"
+license = "MIT"
 description = "Bounded actuator dynamics for XDL GNC"
 
 [dependencies]

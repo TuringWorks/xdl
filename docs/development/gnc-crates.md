@@ -81,6 +81,4 @@ All nine GNC crates are `[workspace]` members, so `cargo test --workspace` cover
 
 ## License
 
-The source headers say `GPL-2.0-only`. The repository's license is itself
-inconsistent (`Cargo.toml` GPL-2.0, `LICENSE` MIT). Resolve that before
-publishing these crates separately.
+MIT, like the rest of XDL (see `LICENSE`).

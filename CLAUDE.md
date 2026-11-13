@@ -284,7 +284,6 @@ These are measured, not guessed. Each has a check that stops it getting worse.
 
 | Defect | Where | Ratcheted by |
 |---|---|---|
-| **License stated three ways** — needs a maintainer decision, not a script | `Cargo.toml` says `GPL-2.0`; `LICENSE` and the README badge say MIT | `scripts/check-version-sync.sh` (warns) |
 | **Panic debt** — a panic here kills the user's session | 248 `xdl-stdlib`, 131 `xdl-amp`, 34 `xdl-core`, 29 `xdl-interpreter`, 20 `xdl-parser`, 14 `xdl-dataframe` | `.github/workflows/security.yml` (counts may fall, never rise) |
 | **Three disagreeing colormap registries**, two with silent fallbacks — `LOADCT, 5` returns grayscale | `graphics/state.rs`, `viz3d-threejs/colormaps.rs`, `charts/echarts.rs` | [design-system/foundations/color.md](./design-system/foundations/color.md) |
 | **34 hard-coded hex colours** | `echarts.rs` 23, `chart-viewer/main.rs` 6, `viz3d-web/template.rs` 4, `viz3d-threejs/templates.rs` 1 | design-system rule 1 |

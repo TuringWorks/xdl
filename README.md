@@ -1,6 +1,6 @@
 # XDL - Extended Data Language (Rust)
 
-[![License: GPL-2.0](https://img.shields.io/badge/License-GPL--2.0-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A modern Rust implementation of GNU Data Language (GDL), providing IDL-compatible data analysis and visualization capabilities.
 
@@ -409,9 +409,7 @@ the summary is in [CLAUDE.md](./CLAUDE.md).
 
 ## License
 
-This project is licensed under the GNU General Public License v2.0 - see the [LICENSE](LICENSE) file for details.
-
-The GNC crates (`xdl-gnc-*`) are additionally available under the MIT License - see [LICENSE-MIT](LICENSE-MIT).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 

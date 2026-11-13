@@ -244,4 +244,4 @@ Contributions welcome! Priority areas:
 
 ## License
 
-GPL-2.0 - Same as parent XDL project
+MIT - Same as parent XDL project

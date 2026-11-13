@@ -16,9 +16,7 @@ ignore = []
 
 [licenses]
 version = 2
-# XDL itself is MIT (LICENSE). Note: Cargo.toml currently declares GPL-2.0 —
-# that is a known inconsistency tracked by scripts/check-version-sync.sh, not a
-# second license.
+# XDL is MIT (LICENSE). Crate license fields and SPDX headers are MIT too.
 allow = [
     "MIT",
     "Apache-2.0",
@@ -28,6 +26,9 @@ allow = [
     "ISC",
     "Unicode-3.0",
     "Unicode-DFS-2016",
+    # Font licences used by egui's bundled fonts (epaint), via xdl-gui.
+    "OFL-1.1",
+    "LicenseRef-UFL-1.0",
     "Zlib",
     "CC0-1.0",
     "MPL-2.0",

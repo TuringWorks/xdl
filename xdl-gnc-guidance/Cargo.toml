@@ -3,7 +3,7 @@ name = "xdl-gnc-guidance"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "GPL-2.0-only OR MIT"
+license = "MIT"
 description = "Waypoint and line-of-sight guidance primitives for XDL GNC"
 
 [dependencies]

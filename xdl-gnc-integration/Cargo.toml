@@ -3,7 +3,7 @@ name = "xdl-gnc-integration"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "GPL-2.0-only OR MIT"
+license = "MIT"
 description = "End-to-end deterministic GNC integration scenario"
 
 [dependencies]
