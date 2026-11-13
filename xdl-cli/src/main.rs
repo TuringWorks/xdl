@@ -1192,17 +1192,44 @@ fn execute_command(command: &str) -> Result<()> {
 }
 
 fn execute_file(file: &Path) -> Result<()> {
-    // Print what the program printed. Dropping this string silently discarded
-    // every PRINT, so `xdl script.xdl` and the daemon's /xdl/run showed no output.
-    let output = execute_file_with_output(file)?;
+    // Print what the program printed, including output produced before a
+    // runtime error. Dropping it on error hid everything a failing script had
+    // already said.
+    let (output, result) = run_file_capturing(file);
     use std::io::Write;
     let mut stdout = std::io::stdout().lock();
     stdout.write_all(output.as_bytes())?;
     stdout.flush()?;
-    Ok(())
+    result
 }
 
 fn execute_file_with_output(file: &Path) -> Result<String> {
+    let (output, result) = run_file_capturing(file);
+    result.map(|()| output)
+}
+
+/// Run a file and return everything it printed, together with the outcome.
+/// Output is returned even when execution fails.
+fn run_file_capturing(file: &Path) -> (String, Result<()>) {
+    let buffer = Rc::new(RefCell::new(Vec::<u8>::new()));
+    let result = run_file_into(file, &buffer);
+    let text = match String::from_utf8(buffer.borrow().clone()) {
+        Ok(text) => text,
+        Err(e) => {
+            return (
+                String::new(),
+                result.and(Err(anyhow::anyhow!(
+                    "output from {} was not UTF-8: {}",
+                    file.display(),
+                    e
+                ))),
+            )
+        }
+    };
+    (text, result)
+}
+
+fn run_file_into(file: &Path, buffer: &Rc<RefCell<Vec<u8>>>) -> Result<()> {
     info!("Executing file: {}", file.display());
 
     let content = fs::read_to_string(file)
@@ -1219,17 +1246,13 @@ fn execute_file_with_output(file: &Path) -> Result<String> {
 
     let program = xdl_parser::parse_xdl(&xdl_code).with_context(|| "Failed to parse XDL code")?;
 
-    let buffer = Rc::new(RefCell::new(Vec::<u8>::new()));
     let output: Rc<RefCell<dyn std::io::Write>> =
         Rc::new(RefCell::new(SharedOutput(buffer.clone())));
     let mut interpreter = Interpreter::with_output(output);
     interpreter
         .execute_program(&program)
         .with_context(|| "Failed to execute program")?;
-
-    let bytes = buffer.borrow().clone();
-    String::from_utf8(bytes)
-        .with_context(|| format!("output from {} was not UTF-8", file.display()))
+    Ok(())
 }
 
 /// Format a XdlValue for display

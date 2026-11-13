@@ -13,6 +13,20 @@ pub struct Evaluator {
     stdlib: StandardLibrary,
 }
 
+/// Position of a subscript, counting negative values from the end. `None` when
+/// out of range.
+fn offset_from_end(raw: i64, extent: usize) -> Option<usize> {
+    let position = if raw < 0 { extent as i64 + raw } else { raw };
+    usize::try_from(position).ok().filter(|&p| p < extent)
+}
+
+fn out_of_bounds(raw: i64, extent: usize) -> XdlError {
+    XdlError::RuntimeError(format!(
+        "Index {} out of bounds for array of length {}",
+        raw, extent
+    ))
+}
+
 impl Evaluator {
     pub fn new() -> Self {
         Self {
@@ -162,6 +176,9 @@ impl Evaluator {
             }
 
             Expression::ArrayRef { array, indices, .. } => {
+                if let Some(value) = self.try_read_element(array, indices, context)? {
+                    return Ok(value);
+                }
                 let array_val = self.evaluate(array, context)?;
                 self.evaluate_array_ref(&array_val, indices, context)
             }
@@ -1034,6 +1051,93 @@ impl Evaluator {
         }
     }
 
+    /// Read one element of a named array without copying the array. Reading
+    /// `x[i]` by value made every element read O(N) in the array length.
+    ///
+    /// Returns `Ok(None)` before evaluating anything when the access is not a
+    /// single-element read of a variable; the general path then handles it.
+    /// Once the shape of the access is known, index expressions are evaluated
+    /// exactly once.
+    fn try_read_element(
+        &self,
+        array: &Expression,
+        indices: &[ArrayIndex],
+        context: &mut Context,
+    ) -> XdlResult<Option<XdlValue>> {
+        let Expression::Variable { name, .. } = array else {
+            return Ok(None);
+        };
+        if !indices
+            .iter()
+            .all(|index| matches!(index, ArrayIndex::Single(_)))
+        {
+            return Ok(None);
+        }
+        let Ok(target) = context.get_variable(name) else {
+            return Ok(None);
+        };
+        let accepted = match target {
+            XdlValue::Array(_) | XdlValue::NestedArray(_) => indices.len() == 1,
+            XdlValue::MultiDimArray { shape, .. } => {
+                indices.len() == 1 || indices.len() == shape.len()
+            }
+            _ => false,
+        };
+        if !accepted {
+            return Ok(None);
+        }
+
+        let mut raw = Vec::with_capacity(indices.len());
+        for index in indices {
+            if let ArrayIndex::Single(expr) = index {
+                raw.push(i64::from(self.evaluate(expr, context)?.to_long()?));
+            }
+        }
+
+        let target = context.get_variable(name)?;
+        match target {
+            XdlValue::Array(arr) => {
+                let position = offset_from_end(raw[0], arr.len())
+                    .ok_or_else(|| out_of_bounds(raw[0], arr.len()))?;
+                Ok(Some(XdlValue::Double(arr[position])))
+            }
+            XdlValue::NestedArray(rows) => {
+                let position = offset_from_end(raw[0], rows.len())
+                    .ok_or_else(|| out_of_bounds(raw[0], rows.len()))?;
+                Ok(Some(rows[position].clone()))
+            }
+            XdlValue::MultiDimArray { data, .. } if raw.len() == 1 => {
+                // One subscript addresses the flat, column-major element.
+                let position = offset_from_end(raw[0], data.len())
+                    .ok_or_else(|| out_of_bounds(raw[0], data.len()))?;
+                Ok(Some(XdlValue::Double(data[position])))
+            }
+            XdlValue::MultiDimArray { data, shape } => {
+                let mut linear = 0usize;
+                let mut stride = 1usize;
+                for (dim, (&index, &extent)) in raw.iter().zip(shape.iter()).enumerate() {
+                    let position = offset_from_end(index, extent).ok_or_else(|| {
+                        XdlError::RuntimeError(format!(
+                            "Index {} out of bounds for dimension {} of size {}",
+                            index, dim, extent
+                        ))
+                    })?;
+                    linear += position * stride;
+                    stride *= extent;
+                }
+                let value = data.get(linear).copied().ok_or_else(|| {
+                    XdlError::RuntimeError(format!(
+                        "Computed index {} out of bounds for array of size {}",
+                        linear,
+                        data.len()
+                    ))
+                })?;
+                Ok(Some(XdlValue::Double(value)))
+            }
+            _ => Ok(None),
+        }
+    }
+
     /// Evaluate array indexing and slicing
     fn evaluate_array_ref(
         &self,
@@ -1092,6 +1196,23 @@ impl Evaluator {
                 }
                 ArrayIndex::All => unreachable!(),
             }
+        }
+
+        // A single subscript on a multi-dimensional array addresses the flat,
+        // column-major element (IDL). Treating it as a partial index into dimension 0
+        // returned a whole row for w[1] instead of the element.
+        if evaluated_indices.len() == 1 {
+            let raw = i64::from(evaluated_indices[0]);
+            let len = data.len() as i64;
+            let position = if raw < 0 { len + raw } else { raw };
+            if position < 0 || position >= len {
+                return Err(XdlError::RuntimeError(format!(
+                    "Index {} out of bounds for array of size {}",
+                    raw,
+                    data.len()
+                )));
+            }
+            return Ok(XdlValue::Double(data[position as usize]));
         }
 
         // If fewer indices than dimensions, return a sub-array

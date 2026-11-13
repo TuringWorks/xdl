@@ -336,7 +336,8 @@ pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
@@ -357,7 +358,8 @@ pub fn max_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
@@ -378,7 +380,8 @@ pub fn mean_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
@@ -403,7 +406,8 @@ pub fn total_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             let sum: f64 = arr.iter().sum();
             Ok(XdlValue::Double(sum))
         }
@@ -2495,5 +2499,21 @@ mod n_elements_shape_tests {
             shape: vec![3, 2],
         };
         assert_eq!(n_elements(&[shaped]).unwrap(), XdlValue::Long(6));
+    }
+
+    #[test]
+    fn test_reducers_read_all_elements_of_multidim_arrays() {
+        // Non-square shape: a transpose or a first-element fallback would show here.
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![3.0, 0.0, 0.0, 5.0, 1.0, 2.0],
+            shape: vec![2, 3],
+        };
+        let args = std::slice::from_ref(&shaped);
+        assert!(matches!(total_func(args), Ok(XdlValue::Double(v)) if v == 11.0));
+        assert!(matches!(min_func(args), Ok(XdlValue::Double(v)) if v == 0.0));
+        assert!(matches!(max_func(args), Ok(XdlValue::Double(v)) if v == 5.0));
+        assert!(
+            matches!(mean_func(args), Ok(XdlValue::Double(v)) if (v - 11.0 / 6.0).abs() < 1e-12)
+        );
     }
 }

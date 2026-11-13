@@ -79,7 +79,8 @@ pub fn moment(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "MOMENT: Input array is empty".to_string(),
@@ -146,7 +147,8 @@ pub fn variance(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "VARIANCE: Input array is empty".to_string(),
@@ -193,7 +195,8 @@ pub fn median(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let mut values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "MEDIAN: Input array is empty".to_string(),
@@ -235,7 +238,8 @@ pub fn meanabsdev(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "MEANABSDEV: Input array is empty".to_string(),
@@ -1711,5 +1715,16 @@ mod tests {
             r_correlate(&[x, y]),
             Ok(XdlValue::Double(v)) if v.is_nan()
         ));
+    }
+
+    #[test]
+    fn test_median_and_variance_read_multidim_arrays() {
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![3.0, 0.0, 0.0, 5.0],
+            shape: vec![2, 2],
+        };
+        let args = std::slice::from_ref(&shaped);
+        assert!(matches!(median(args), Ok(XdlValue::Double(v)) if (v - 1.5).abs() < 1e-12));
+        assert!(matches!(variance(args), Ok(XdlValue::Double(v)) if (v - 6.0).abs() < 1e-12));
     }
 }
