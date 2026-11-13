@@ -18,6 +18,36 @@ pub const RUN_MANIFEST_SCHEMA_VERSION: u32 = 1;
 /// Current version of the serialized compatibility-inventory contract.
 pub const COMPATIBILITY_SCHEMA_VERSION: u32 = 1;
 
+/// Lifecycle/result state recorded in a run manifest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunStatus {
+    InProgress,
+    Passed,
+    Failed,
+}
+
+/// Summary of discovered script tests for a run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TestSummary {
+    pub discovered: usize,
+    pub passed: usize,
+    pub failed: usize,
+}
+
+impl TestSummary {
+    pub fn validate(&self) -> Result<(), ArtifactError> {
+        if self.passed.saturating_add(self.failed) != self.discovered {
+            return Err(ArtifactError::InvalidTestSummary {
+                discovered: self.discovered,
+                passed: self.passed,
+                failed: self.failed,
+            });
+        }
+        Ok(())
+    }
+}
+
 /// A capability's observed implementation state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -119,6 +149,8 @@ impl RunArtifact {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RunManifest {
     pub schema_version: u32,
+    #[serde(default = "default_run_status")]
+    pub status: RunStatus,
     pub run_id: String,
     pub project: String,
     pub entrypoint: String,
@@ -145,6 +177,8 @@ pub struct RunManifest {
     #[serde(default)]
     pub warnings: Vec<String>,
     #[serde(default)]
+    pub test_summary: Option<TestSummary>,
+    #[serde(default)]
     pub inputs: Vec<RunArtifact>,
     #[serde(default)]
     pub outputs: Vec<RunArtifact>,
@@ -158,6 +192,7 @@ impl RunManifest {
     ) -> Self {
         Self {
             schema_version: RUN_MANIFEST_SCHEMA_VERSION,
+            status: RunStatus::InProgress,
             run_id: run_id.into(),
             project: project.into(),
             entrypoint: entrypoint.into(),
@@ -172,6 +207,7 @@ impl RunManifest {
             solver: None,
             tolerances: BTreeMap::new(),
             warnings: Vec::new(),
+            test_summary: None,
             inputs: Vec::new(),
             outputs: Vec::new(),
         }
@@ -187,6 +223,15 @@ impl RunManifest {
         require_non_empty("run id", &self.run_id)?;
         require_non_empty("project", &self.project)?;
         require_non_empty("entrypoint", &self.entrypoint)?;
+        if let Some(summary) = self.test_summary {
+            summary.validate()?;
+            if self.status == RunStatus::Passed && summary.failed != 0 {
+                return Err(ArtifactError::InvalidStatusForTestSummary);
+            }
+            if self.status == RunStatus::Failed && summary.failed == 0 {
+                return Err(ArtifactError::InvalidStatusForTestSummary);
+            }
+        }
         self.inputs
             .iter()
             .chain(self.outputs.iter())
@@ -211,6 +256,14 @@ pub enum ArtifactError {
     EmptyField { field: &'static str },
     #[error("unsupported {kind} schema version: {version}")]
     UnsupportedSchemaVersion { kind: &'static str, version: u32 },
+    #[error("invalid test summary: discovered={discovered}, passed={passed}, failed={failed}")]
+    InvalidTestSummary {
+        discovered: usize,
+        passed: usize,
+        failed: usize,
+    },
+    #[error("run status does not agree with its test summary")]
+    InvalidStatusForTestSummary,
     #[error("artifact serialization failed: {0}")]
     Serialization(#[from] serde_json::Error),
 }
@@ -221,6 +274,10 @@ fn require_non_empty(field: &'static str, value: &str) -> Result<(), ArtifactErr
     } else {
         Ok(())
     }
+}
+
+const fn default_run_status() -> RunStatus {
+    RunStatus::InProgress
 }
 
 #[cfg(test)]
@@ -294,6 +351,22 @@ mod tests {
                 kind: "run manifest",
                 ..
             })
+        ));
+    }
+
+    #[test]
+    fn test_summary_must_match_run_status_and_counts() {
+        let mut manifest = RunManifest::new("run-001", "project", "tests");
+        manifest.status = RunStatus::Passed;
+        manifest.test_summary = Some(TestSummary {
+            discovered: 2,
+            passed: 1,
+            failed: 1,
+        });
+
+        assert!(matches!(
+            manifest.validate(),
+            Err(ArtifactError::InvalidStatusForTestSummary)
         ));
     }
 }

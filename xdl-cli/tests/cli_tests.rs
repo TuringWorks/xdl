@@ -1,5 +1,7 @@
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Get the path to the xdl binary (built by cargo test)
 fn get_xdl_binary() -> PathBuf {
@@ -100,4 +102,82 @@ fn test_cli_execute_expression() {
         "Expected '5' in output, got: {}",
         stdout
     );
+}
+
+#[test]
+fn test_cli_test_command_runs_nested_xdl_files_and_reports_summary() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("passing");
+    fs::create_dir_all(directory.join("nested")).expect("create test directory");
+    fs::write(directory.join("nested/pass.xdl"), "PRINT, 'ok'\n").expect("write passing test");
+
+    let output = Command::new(&binary)
+        .args(["test", directory.to_str().expect("utf-8 test path")])
+        .output()
+        .expect("run xdl test command");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(
+        output.status.success(),
+        "expected passing test command, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("1 passed, 0 failed"), "stdout: {stdout}");
+}
+
+#[test]
+fn test_cli_test_command_writes_truthful_manifest() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("manifest");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("pass.xdl"), "PRINT, 'ok'\n").expect("write passing test");
+    let manifest = directory.join("run.json");
+
+    let output = Command::new(&binary)
+        .args([
+            "test",
+            directory.to_str().expect("utf-8 test path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run xdl test command");
+
+    assert!(
+        output.status.success(),
+        "expected passing test command, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
+    let _ = fs::remove_dir_all(&directory);
+    assert!(manifest_json.contains("\"status\": \"passed\""));
+    assert!(manifest_json.contains("\"discovered\": 1"));
+    assert!(manifest_json.contains("file hashes"));
+}
+
+#[test]
+fn test_cli_test_command_fails_for_invalid_xdl() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("failing");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("fail.xdl"), "not valid xdl syntax").expect("write failing test");
+
+    let output = Command::new(&binary)
+        .args(["test", directory.to_str().expect("utf-8 test path")])
+        .output()
+        .expect("run xdl test command");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(!output.status.success(), "invalid test must fail");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("0 passed, 1 failed"), "stdout: {stdout}");
+}
+
+fn test_directory(label: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock before unix epoch")
+        .as_nanos();
+    std::env::temp_dir().join(format!("xdl-cli-{label}-{}-{nanos}", std::process::id()))
 }

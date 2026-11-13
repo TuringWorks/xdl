@@ -5,10 +5,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use tracing::{error, info};
+use xdl_artifacts::{RunManifest, RunStatus, TestSummary};
 use xdl_core::XdlValue;
 use xdl_interpreter::Interpreter;
 use xdl_matlab::transpile_matlab_to_xdl;
@@ -67,6 +69,9 @@ enum Commands {
         /// Test directory
         #[arg(default_value = "tests")]
         directory: PathBuf,
+        /// Write a truthful run summary manifest to this path
+        #[arg(long)]
+        manifest: Option<PathBuf>,
     },
     /// Validate and normalize a versioned XDL model document
     ModelCheck {
@@ -109,7 +114,10 @@ fn run(cli: Cli) -> Result<()> {
     match cli.command {
         Some(Commands::Parse { file, format }) => parse_file(&file, &format),
         Some(Commands::Check { file }) => check_file(&file),
-        Some(Commands::Test { directory }) => run_tests(&directory),
+        Some(Commands::Test {
+            directory,
+            manifest,
+        }) => run_tests(&directory, manifest.as_deref()),
         Some(Commands::ModelCheck { file, migrate, svg }) => check_model_file(&file, migrate, svg),
         Some(Commands::Version) => {
             print_version();
@@ -182,11 +190,121 @@ fn check_file(file: &Path) -> Result<()> {
     }
 }
 
-fn run_tests(directory: &Path) -> Result<()> {
+fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
     info!("Running tests in directory: {}", directory.display());
 
-    // TODO: Implement test runner
-    println!("Test runner not yet implemented");
+    let mut files = Vec::new();
+    collect_xdl_files(directory, &mut files)
+        .with_context(|| format!("Failed to discover tests in {}", directory.display()))?;
+    files.sort();
+
+    if files.is_empty() {
+        return Err(anyhow::anyhow!(
+            "no .xdl test files found in {}",
+            directory.display()
+        ));
+    }
+
+    let mut failures = Vec::new();
+    for file in &files {
+        match execute_file(file) {
+            Ok(()) => println!("✓ {}", file.display()),
+            Err(error) => {
+                println!("✗ {}: {error:#}", file.display());
+                failures.push((file.display().to_string(), error.to_string()));
+            }
+        }
+    }
+
+    println!(
+        "\nTest summary: {} passed, {} failed",
+        files.len() - failures.len(),
+        failures.len()
+    );
+
+    let status = if failures.is_empty() {
+        RunStatus::Passed
+    } else {
+        RunStatus::Failed
+    };
+
+    if let Some(path) = manifest_path {
+        write_test_manifest(path, directory, status, files.len(), failures.len())?;
+    }
+
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("{} XDL test(s) failed", failures.len()))
+    }
+}
+
+fn write_test_manifest(
+    path: &Path,
+    directory: &Path,
+    status: RunStatus,
+    discovered: usize,
+    failed: usize,
+) -> Result<()> {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?;
+    let run_id = format!("xdl-test-{}-{}", process::id(), now.as_nanos());
+    let mut manifest = RunManifest::new(run_id, "xdl", &directory.display().to_string());
+    manifest.status = status;
+    manifest.started_at = Some(format!("unix:{}", now.as_secs()));
+    manifest.configuration.insert(
+        "test_directory".to_string(),
+        directory.display().to_string(),
+    );
+    manifest.configuration.insert(
+        "runner".to_string(),
+        "recursive-xdl-script-runner".to_string(),
+    );
+    manifest.environment.insert(
+        "xdl_cli_version".to_string(),
+        env!("CARGO_PKG_VERSION").to_string(),
+    );
+    manifest.test_summary = Some(TestSummary {
+        discovered,
+        passed: discovered - failed,
+        failed,
+    });
+    manifest.warnings.push(
+        "This manifest contains test counts only; file hashes, output artifacts, timeouts, and numerical evidence are not collected by this runner.".to_string(),
+    );
+
+    let json = manifest
+        .to_json_pretty()
+        .with_context(|| "failed to validate test run manifest")?;
+    fs::write(path, json)
+        .with_context(|| format!("failed to write test run manifest: {}", path.display()))?;
+    println!("Manifest: {}", path.display());
+    Ok(())
+}
+
+fn collect_xdl_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+    let entries = fs::read_dir(directory)
+        .with_context(|| format!("Failed to read test directory: {}", directory.display()))?;
+
+    for entry in entries {
+        let entry = entry.with_context(|| {
+            format!("Failed to inspect test directory: {}", directory.display())
+        })?;
+        let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .with_context(|| format!("Failed to inspect {}", path.display()))?;
+
+        if file_type.is_dir() {
+            collect_xdl_files(&path, files)?;
+        } else if file_type.is_file()
+            && path.extension().and_then(|ext| ext.to_str()) == Some("xdl")
+        {
+            files.push(path);
+        }
+    }
+
     Ok(())
 }
 

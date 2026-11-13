@@ -106,7 +106,7 @@ complete or uniformly production-ready:
 - **Canonical numerics**: Sparse, chunked, units-aware, frame-aware, and distributed data types are incomplete
 
 ### Testing & Quality
-- **Test runner**: `xdl test` is not yet a complete scientific test/evidence runner
+- **Test runner**: `xdl test` now discovers and executes `.xdl` scripts recursively; golden vectors, numerical tolerances, manifests, timeouts, and artifact capture are not yet implemented
 - **Edge cases**: Various edge cases in control flow, type conversions, and array operations
 - **Error messages**: Could be more helpful in some scenarios
 
@@ -415,7 +415,8 @@ the summary is in [CLAUDE.md](./CLAUDE.md).
 ### Phase 5: Compatibility, reproducibility, and optimization 🚧 **(Current Focus)**
 - [ ] Publish generated IDL/GDL and MATLAB/Octave conformance reports
 - [ ] Replace placeholder scientific-I/O paths with tested readers/writers
-- [ ] Complete the scientific test runner and replayable run manifests
+- [x] Basic recursive `.xdl` script test runner with pass/fail exit status
+- [ ] Scientific test evidence, replayable run manifests, and artifact capture
 - [x] Legacy code migration foundation
 - [x] Documentation and examples
 - [x] User-defined procedures (PRO/ENDPRO) ✅
