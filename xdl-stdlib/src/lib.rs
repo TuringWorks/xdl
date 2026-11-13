@@ -312,6 +312,7 @@ impl StandardLibrary {
         match name.to_uppercase().as_str() {
             // Guidance, navigation, and control bindings
             "GNC_VEC3" => gnc::vec3(args),
+            "GNC_FLIGHT_READINESS_STEP" => gnc::flight_readiness_step(args),
             "GNC_WAYPOINT" => gnc::waypoint(args),
             "GNC_PID_STEP" => gnc::pid_step(args),
             "GNC_STATE_SPACE_STEP" => gnc::state_space_step(args),

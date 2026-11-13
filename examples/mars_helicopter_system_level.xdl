@@ -41,6 +41,8 @@ upper_rotor_speed = 0.0
 lower_rotor_speed = 0.0
 gear_ratio = 8.0
 motor_time_constant = 0.2
+flight_state = 0
+launch_requested = 1
 flying = 0
 
 FOR tick = 1, 60 DO BEGIN
@@ -61,14 +63,10 @@ FOR tick = 1, 60 DO BEGIN
                     - heater_on * heater_draw - flying * flight_draw $
                     - battery_current * 0.08
 
-    IF flying EQ 0 THEN BEGIN
-        IF battery_temperature GT temperature_ready AND state_of_charge GT soc_ready THEN BEGIN
-            flying = 1
-        ENDIF
-    ENDIF
-    IF flying EQ 1 THEN BEGIN
-        IF state_of_charge LT soc_ready THEN flying = 0
-    ENDIF
+    readiness = GNC_FLIGHT_READINESS_STEP(flight_state, battery_temperature, $
+                                           state_of_charge, launch_requested)
+    flight_state = readiness.STATE
+    flying = readiness.FLYING
 
     IF flying EQ 1 THEN BEGIN
         position = GNC_VEC3(0.0, 0.0, position_z)

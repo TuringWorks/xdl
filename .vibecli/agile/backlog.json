@@ -2408,49 +2408,6 @@
     ]
   },
   {
-    "id": "cr-0da948dd",
-    "title": "[INFO] docs/GDL_IDL_COMPATIBILITY.md:30: The Style 3 examples (lines 30-34, 48-52, 69-75) chain both terminators, e.g....",
-    "description": "The Style 3 examples (lines 30-34, 48-52, 69-75) chain both terminators, e.g. 'end' followed by 'endfor' (or 'endwhile'/'endif'). Real IDL/GDL rejects a duplicated terminator, so the claim that this 'matches GDL/IDL exactly!' is wrong for these cases, and the syntax guide would flag the second token as unexpected.\n\n**Location:** `docs/GDL_IDL_COMPATIBILITY.md:30`\n**Category:** `correctness`\n**Flagged by:** Ollama (glm-5.3-flash:cloud)\n\n**Suggested Fix:**\n```\nRemove the doubled-terminator examples or clearly mark them as XDL-only extensions that will not run under stock IDL/GDL.\n```",
-    "assignee": "",
-    "priority": "P2",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "correctness",
-      "info"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Fix issue identified in docs/GDL_IDL_COMPATIBILITY.md:30",
-      "Ensure changes satisfy security, performance, and correctness standards",
-      "Verify git diff and tests pass without regressions",
-      "Apply suggested fix: Remove the doubled-terminator examples or clearly mark them as XDL-only extensions that will not run under stock IDL/GDL."
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-0da948dd",
-        "title": "Locate docs/GDL_IDL_COMPATIBILITY.md around line 30",
-        "done": false
-      },
-      {
-        "id": "st2-0da948dd",
-        "title": "Implement code fix for correctness",
-        "done": false
-      },
-      {
-        "id": "st3-0da948dd",
-        "title": "Review diff and run verification tests",
-        "done": false
-      },
-      {
-        "id": "st4-0da948dd",
-        "title": "Create clean conventional commit",
-        "done": false
-      }
-    ]
-  },
-  {
     "id": "cr-9ccda60b",
     "title": "[INFO] docs/GDL_IDL_SYNTAX.md:13: The heading 'Single Statement Form (requires ENDIF)' contradicts the code imm...",
     "description": "The heading 'Single Statement Form (requires ENDIF)' contradicts the code immediately below it: the one-line forms (lines 16-20) need no ENDIF; only the multi-line variant (lines 22-24) does.\n\n**Location:** `docs/GDL_IDL_SYNTAX.md:13`\n**Category:** `style`\n**Flagged by:** Ollama (glm-5.3-flash:cloud)\n\n**Suggested Fix:**\n```\nReword the heading to something like 'Single Statement Form (ENDIF only needed when split across lines)'.\n```",
@@ -6744,49 +6701,6 @@
       },
       {
         "id": "st4-52c8f71d",
-        "title": "Create clean conventional commit",
-        "done": false
-      }
-    ]
-  },
-  {
-    "id": "cr-3a75beef",
-    "title": "[INFO] .github/workflows/pages.yml:18: No 'timeout-minutes' on deploy job; same hang risk",
-    "description": "No 'timeout-minutes' on deploy job; same hang risk\n\n**Location:** `.github/workflows/pages.yml:18`\n**Category:** `correctness`\n**Flagged by:** Ollama (muse-spark-open:cloud)\n\n**Suggested Fix:**\n```\nAdd 'timeout-minutes: 15'\n```",
-    "assignee": "",
-    "priority": "P2",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "correctness",
-      "info"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Fix issue identified in .github/workflows/pages.yml:18",
-      "Ensure changes satisfy security, performance, and correctness standards",
-      "Verify git diff and tests pass without regressions",
-      "Apply suggested fix: Add 'timeout-minutes: 15'"
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-3a75beef",
-        "title": "Locate .github/workflows/pages.yml around line 18",
-        "done": false
-      },
-      {
-        "id": "st2-3a75beef",
-        "title": "Implement code fix for correctness",
-        "done": false
-      },
-      {
-        "id": "st3-3a75beef",
-        "title": "Review diff and run verification tests",
-        "done": false
-      },
-      {
-        "id": "st4-3a75beef",
         "title": "Create clean conventional commit",
         "done": false
       }
@@ -11661,37 +11575,6 @@
     ]
   },
   {
-    "id": "cr-sugg-d1c3f7a7",
-    "title": "[SUGGESTION] docs/DOCUMENTATION_UPDATE_2025.md: Follow the doc's own recommendation to add a CHANGELOG.md; meta-summaries lik...",
-    "description": "Follow the doc's own recommendation to add a CHANGELOG.md; meta-summaries like this one fit better as changelog entries than as top-level docs in the repository.\n\n**File:** `docs/DOCUMENTATION_UPDATE_2025.md`",
-    "assignee": "",
-    "priority": "P3",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "suggestion"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Evaluate suggestion feasibility and benefits",
-      "Implement improvement if beneficial",
-      "Verify no regressions introduced"
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-d1c3f7a7",
-        "title": "Analyze suggested improvement",
-        "done": false
-      },
-      {
-        "id": "st2-d1c3f7a7",
-        "title": "Apply code refinement",
-        "done": false
-      }
-    ]
-  },
-  {
     "id": "cr-sugg-1c63c7f0",
     "title": "[SUGGESTION] docs/EMBEDDING_GUIDE.md: Ship a real 'xdl_ffi.h' header in the repository and reference it from the C/...",
     "description": "Ship a real 'xdl_ffi.h' header in the repository and reference it from the C/C++ and CMake sections; the C declarations currently carry the comment 'would be in a header file', which undermines the CMake 'find_path(xdl_ffi.h ...)' instructions.\n\n**File:** `docs/EMBEDDING_GUIDE.md`",
@@ -13893,37 +13776,6 @@
     ]
   },
   {
-    "id": "cr-sugg-c67eebe4",
-    "title": "[SUGGESTION] docs/DOCUMENTATION_UPDATE_2025.md: Standardize all documentation file references to use relative paths and avoid...",
-    "description": "Standardize all documentation file references to use relative paths and avoid embedding developer-specific absolute paths.\n\n**File:** `docs/DOCUMENTATION_UPDATE_2025.md`",
-    "assignee": "",
-    "priority": "P3",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "suggestion"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Evaluate suggestion feasibility and benefits",
-      "Implement improvement if beneficial",
-      "Verify no regressions introduced"
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-c67eebe4",
-        "title": "Analyze suggested improvement",
-        "done": false
-      },
-      {
-        "id": "st2-c67eebe4",
-        "title": "Apply code refinement",
-        "done": false
-      }
-    ]
-  },
-  {
     "id": "cr-sugg-acaf5f4e",
     "title": "[SUGGESTION] docs/EMBEDDING_GUIDE.md: Add a dedicated 'Thread Safety' section near the top of the guide to make it ...",
     "description": "Add a dedicated 'Thread Safety' section near the top of the guide to make it clear that XDL contexts are not thread-safe, rather than burying this warning only in the Troubleshooting section.\n\n**File:** `docs/EMBEDDING_GUIDE.md`",
@@ -15313,37 +15165,6 @@
       },
       {
         "id": "st2-2f62850b",
-        "title": "Apply code refinement",
-        "done": false
-      }
-    ]
-  },
-  {
-    "id": "cr-sugg-cd3921e2",
-    "title": "[SUGGESTION] docs/DOCUMENTATION_UPDATE_2025.md: Move volatile statistics (line counts, pass rates) to a generated IMPLEMENTAT...",
-    "description": "Move volatile statistics (line counts, pass rates) to a generated IMPLEMENTATION_STATUS.md with CI job that updates them, keeping README/docs/index.md stable.\n\n**File:** `docs/DOCUMENTATION_UPDATE_2025.md`",
-    "assignee": "",
-    "priority": "P3",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "suggestion"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Evaluate suggestion feasibility and benefits",
-      "Implement improvement if beneficial",
-      "Verify no regressions introduced"
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-cd3921e2",
-        "title": "Analyze suggested improvement",
-        "done": false
-      },
-      {
-        "id": "st2-cd3921e2",
         "title": "Apply code refinement",
         "done": false
       }
@@ -17266,37 +17087,6 @@
       },
       {
         "id": "st2-789d93d9",
-        "title": "Apply code refinement",
-        "done": false
-      }
-    ]
-  },
-  {
-    "id": "cr-sugg-a1d6434a",
-    "title": "[SUGGESTION] docs/DOCUMENTATION_UPDATE_2025.md: The 'Known Limitations' section in the documentation is very honest; consider...",
-    "description": "The 'Known Limitations' section in the documentation is very honest; consider moving these into a formal GitHub Issue tracker to track resolution.\n\n**File:** `docs/DOCUMENTATION_UPDATE_2025.md`",
-    "assignee": "",
-    "priority": "P3",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "suggestion"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Evaluate suggestion feasibility and benefits",
-      "Implement improvement if beneficial",
-      "Verify no regressions introduced"
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-a1d6434a",
-        "title": "Analyze suggested improvement",
-        "done": false
-      },
-      {
-        "id": "st2-a1d6434a",
         "title": "Apply code refinement",
         "done": false
       }

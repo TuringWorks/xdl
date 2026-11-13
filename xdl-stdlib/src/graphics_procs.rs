@@ -136,48 +136,6 @@ pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 }
 
-#[cfg(test)]
-mod plot_order_tests {
-    use super::*;
-
-    fn arr(v: &[f64]) -> XdlValue {
-        XdlValue::Array(v.to_vec())
-    }
-
-    #[test]
-    fn two_arguments_are_x_then_y() {
-        let (x, y) = plot_xy(&[arr(&[0.0, 1.0, 2.0]), arr(&[0.0, 1.0, 4.0])]).unwrap();
-        assert_eq!(x, vec![0.0, 1.0, 2.0]);
-        assert_eq!(y, vec![0.0, 1.0, 4.0]);
-    }
-
-    #[test]
-    fn non_square_input_keeps_axes_apart() {
-        // x is the longer axis here; a swap would show up as different lengths.
-        let (x, y) =
-            plot_xy(&[arr(&[1.0, 2.0, 3.0, 4.0]), arr(&[10.0, 20.0, 30.0, 40.0])]).unwrap();
-        assert_eq!(x, vec![1.0, 2.0, 3.0, 4.0]);
-        assert_eq!(y, vec![10.0, 20.0, 30.0, 40.0]);
-    }
-
-    #[test]
-    fn one_argument_plots_against_index() {
-        let (x, y) = plot_xy(&[arr(&[5.0, 6.0])]).unwrap();
-        assert_eq!(x, vec![0.0, 1.0]);
-        assert_eq!(y, vec![5.0, 6.0]);
-    }
-
-    #[test]
-    fn mismatched_lengths_are_an_error() {
-        assert!(plot_xy(&[arr(&[1.0, 2.0]), arr(&[1.0])]).is_err());
-    }
-
-    #[test]
-    fn no_arguments_is_an_error() {
-        assert!(plot_xy(&[]).is_err());
-    }
-}
-
 pub fn oplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For now, just call plot - in a full implementation this would overlay
     plot(args)
@@ -1587,4 +1545,46 @@ pub fn colorbar(args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("  Range: [min, max] from current color table");
 
     Ok(XdlValue::Undefined)
+}
+
+#[cfg(test)]
+mod plot_order_tests {
+    use super::*;
+
+    fn arr(v: &[f64]) -> XdlValue {
+        XdlValue::Array(v.to_vec())
+    }
+
+    #[test]
+    fn two_arguments_are_x_then_y() {
+        let (x, y) = plot_xy(&[arr(&[0.0, 1.0, 2.0]), arr(&[0.0, 1.0, 4.0])]).unwrap();
+        assert_eq!(x, vec![0.0, 1.0, 2.0]);
+        assert_eq!(y, vec![0.0, 1.0, 4.0]);
+    }
+
+    #[test]
+    fn non_square_input_keeps_axes_apart() {
+        // x is the longer axis here; a swap would show up as different lengths.
+        let (x, y) =
+            plot_xy(&[arr(&[1.0, 2.0, 3.0, 4.0]), arr(&[10.0, 20.0, 30.0, 40.0])]).unwrap();
+        assert_eq!(x, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(y, vec![10.0, 20.0, 30.0, 40.0]);
+    }
+
+    #[test]
+    fn one_argument_plots_against_index() {
+        let (x, y) = plot_xy(&[arr(&[5.0, 6.0])]).unwrap();
+        assert_eq!(x, vec![0.0, 1.0]);
+        assert_eq!(y, vec![5.0, 6.0]);
+    }
+
+    #[test]
+    fn mismatched_lengths_are_an_error() {
+        assert!(plot_xy(&[arr(&[1.0, 2.0]), arr(&[1.0])]).is_err());
+    }
+
+    #[test]
+    fn no_arguments_is_an_error() {
+        assert!(plot_xy(&[]).is_err());
+    }
 }

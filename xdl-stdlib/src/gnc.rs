@@ -120,6 +120,67 @@ fn optional_scalar(value: &XdlValue, name: &str) -> XdlResult<Option<f64>> {
     }
 }
 
+/// `GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)`
+/// advances the explicit flight-readiness state machine.
+///
+/// States are `0=COLD`, `1=READY`, and `2=FLYING`. A cold vehicle becomes
+/// ready when temperature is above 10 C and SOC is above 0.30; a ready vehicle
+/// launches when `launch_requested` is nonzero; a flying vehicle returns to
+/// ready when either readiness condition is lost. State is explicit so this
+/// function is deterministic and does not use process-global mutable state.
+pub fn flight_readiness_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 4 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_FLIGHT_READINESS_STEP: expected 4 arguments, got {}",
+            args.len()
+        )));
+    }
+    let state = scalar(&args[0], "GNC_FLIGHT_READINESS_STEP state")?;
+    if state.fract() != 0.0 || !(0.0..=2.0).contains(&state) {
+        return Err(XdlError::InvalidArgument(
+            "GNC_FLIGHT_READINESS_STEP state: expected 0 (COLD), 1 (READY), or 2 (FLYING)"
+                .to_string(),
+        ));
+    }
+    let temperature = scalar(&args[1], "GNC_FLIGHT_READINESS_STEP temperature")?;
+    let soc = scalar(&args[2], "GNC_FLIGHT_READINESS_STEP soc")?;
+    let launch_requested = scalar(&args[3], "GNC_FLIGHT_READINESS_STEP launch")? != 0.0;
+    let thermally_ready = temperature > 10.0;
+    let energetically_ready = soc > 0.30;
+    let next_state = match state as i32 {
+        0 if thermally_ready && energetically_ready => 1,
+        1 if !thermally_ready || !energetically_ready => 0,
+        1 if launch_requested => 2,
+        2 if !thermally_ready || !energetically_ready => 1,
+        current => current,
+    };
+    let state_name = match next_state {
+        0 => "COLD",
+        1 => "READY",
+        2 => "FLYING",
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "invalid readiness state".to_string(),
+            ))
+        }
+    };
+    let mut output = HashMap::new();
+    output.insert("STATE".to_string(), XdlValue::Long(next_state));
+    output.insert(
+        "STATE_NAME".to_string(),
+        XdlValue::String(state_name.to_string()),
+    );
+    output.insert(
+        "READY".to_string(),
+        XdlValue::Long(i32::from(next_state > 0)),
+    );
+    output.insert(
+        "FLYING".to_string(),
+        XdlValue::Long(i32::from(next_state == 2)),
+    );
+    Ok(XdlValue::Struct(output))
+}
+
 /// `GNC_VEC3(x, y, z)` returns a three-element numeric XDL array.
 pub fn vec3(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 3 {
@@ -486,6 +547,37 @@ pub fn telemetry_json(args: &[XdlValue]) -> XdlResult<XdlValue> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn flight_readiness_binding_advances_explicit_states() {
+        let ready = flight_readiness_step(&[
+            XdlValue::Long(0),
+            XdlValue::Double(12.0),
+            XdlValue::Double(0.8),
+            XdlValue::Long(0),
+        ])
+        .expect("cold to ready");
+        let XdlValue::Struct(fields) = ready else {
+            panic!("expected readiness structure");
+        };
+        assert_eq!(fields.get("STATE"), Some(&XdlValue::Long(1)));
+        assert_eq!(
+            fields.get("STATE_NAME"),
+            Some(&XdlValue::String("READY".to_string()))
+        );
+
+        let flying = flight_readiness_step(&[
+            XdlValue::Long(1),
+            XdlValue::Double(12.0),
+            XdlValue::Double(0.8),
+            XdlValue::Long(1),
+        ])
+        .expect("ready to flying");
+        let XdlValue::Struct(fields) = flying else {
+            panic!("expected readiness structure");
+        };
+        assert_eq!(fields.get("FLYING"), Some(&XdlValue::Long(1)));
+    }
 
     #[test]
     fn vec3_binding_returns_an_xdl_array() {

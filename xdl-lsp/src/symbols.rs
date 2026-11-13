@@ -467,6 +467,12 @@ impl SymbolTable {
                 "GNC_VEC3(x, y, z)",
             ),
             (
+                "GNC_FLIGHT_READINESS_STEP",
+                "gnc_flight_readiness_step(state, temperature_c, soc, launch_requested) - Advance the explicit flight-readiness state machine",
+                "STRUCT",
+                "GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)",
+            ),
+            (
                 "GNC_WAYPOINT",
                 "gnc_waypoint(position, waypoint, timestamp_ns, cruise_speed, radius) - Compute waypoint guidance",
                 "STRUCT",

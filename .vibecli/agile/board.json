@@ -244,7 +244,7 @@
         "correctness",
         "warning"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in .cargo/config.toml:3",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -256,24 +256,27 @@
         {
           "id": "st1-9fc89772",
           "title": "Locate .cargo/config.toml around line 3",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-9fc89772",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-9fc89772",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-9fc89772",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at .cargo/config.toml:3"
     },
     {
       "id": "cr-8738a427",
@@ -1622,7 +1625,7 @@
         "correctness",
         "warning"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/GDL_IDL_COMPATIBILITY.md:26",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -1634,24 +1637,27 @@
         {
           "id": "st1-49f066d0",
           "title": "Locate docs/GDL_IDL_COMPATIBILITY.md around line 26",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-49f066d0",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-49f066d0",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-49f066d0",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/GDL_IDL_COMPATIBILITY.md:26"
     },
     {
       "id": "cr-a89bb798",
@@ -14119,7 +14125,7 @@
         "style",
         "warning"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in .cargo/config.toml:3",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -14131,24 +14137,27 @@
         {
           "id": "st1-68f62d9d",
           "title": "Locate .cargo/config.toml around line 3",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-68f62d9d",
           "title": "Implement code fix for style",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-68f62d9d",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-68f62d9d",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at .cargo/config.toml:3"
     },
     {
       "id": "cr-9ed47409",
@@ -14641,7 +14650,7 @@
         "correctness",
         "critical"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/GDL_IDL_COMPATIBILITY.md:28",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -14653,24 +14662,27 @@
         {
           "id": "st1-6cf78f8e",
           "title": "Locate docs/GDL_IDL_COMPATIBILITY.md around line 28",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-6cf78f8e",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-6cf78f8e",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-6cf78f8e",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/GDL_IDL_COMPATIBILITY.md:28"
     },
     {
       "id": "cr-1b3c35bc",
@@ -14684,7 +14696,7 @@
         "correctness",
         "critical"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/GDL_IDL_COMPATIBILITY.md:46",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -14696,24 +14708,27 @@
         {
           "id": "st1-1b3c35bc",
           "title": "Locate docs/GDL_IDL_COMPATIBILITY.md around line 46",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-1b3c35bc",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-1b3c35bc",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-1b3c35bc",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/GDL_IDL_COMPATIBILITY.md:46"
     },
     {
       "id": "cr-ba11bb3b",
@@ -14727,7 +14742,7 @@
         "correctness",
         "warning"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/GDL_IDL_COMPATIBILITY.md:67",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -14739,24 +14754,27 @@
         {
           "id": "st1-ba11bb3b",
           "title": "Locate docs/GDL_IDL_COMPATIBILITY.md around line 67",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-ba11bb3b",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-ba11bb3b",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-ba11bb3b",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/GDL_IDL_COMPATIBILITY.md:67"
     },
     {
       "id": "cr-065f96b9",
@@ -19761,7 +19779,7 @@
         "correctness",
         "info"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/GDL_IDL_COMPATIBILITY.md:30",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -19773,24 +19791,27 @@
         {
           "id": "st1-0da948dd",
           "title": "Locate docs/GDL_IDL_COMPATIBILITY.md around line 30",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-0da948dd",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-0da948dd",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-0da948dd",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:03.197243+00:00",
+      "resolutionReason": "Verified code resolution in docs/GDL_IDL_COMPATIBILITY.md"
     },
     {
       "id": "cr-9ccda60b",
@@ -25069,7 +25090,7 @@
         "correctness",
         "info"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in .github/workflows/pages.yml:18",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -25081,24 +25102,27 @@
         {
           "id": "st1-3a75beef",
           "title": "Locate .github/workflows/pages.yml around line 18",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-3a75beef",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-3a75beef",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-3a75beef",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at .github/workflows/pages.yml:18"
     },
     {
       "id": "cr-b8f52dff",
@@ -32543,7 +32567,7 @@
         "code-review",
         "suggestion"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Evaluate suggestion feasibility and benefits",
         "Implement improvement if beneficial",
@@ -32554,14 +32578,17 @@
         {
           "id": "st1-d1c3f7a7",
           "title": "Analyze suggested improvement",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-d1c3f7a7",
           "title": "Apply code refinement",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/DOCUMENTATION_UPDATE_2025.md"
     },
     {
       "id": "cr-sugg-f43008ee",
@@ -36237,7 +36264,7 @@
         "code-review",
         "suggestion"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Evaluate suggestion feasibility and benefits",
         "Implement improvement if beneficial",
@@ -36248,14 +36275,17 @@
         {
           "id": "st1-c67eebe4",
           "title": "Analyze suggested improvement",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-c67eebe4",
           "title": "Apply code refinement",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/DOCUMENTATION_UPDATE_2025.md"
     },
     {
       "id": "cr-sugg-fe83de5d",
@@ -39499,7 +39529,7 @@
         "code-review",
         "suggestion"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Evaluate suggestion feasibility and benefits",
         "Implement improvement if beneficial",
@@ -39510,14 +39540,17 @@
         {
           "id": "st1-cd3921e2",
           "title": "Analyze suggested improvement",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-cd3921e2",
           "title": "Apply code refinement",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/DOCUMENTATION_UPDATE_2025.md"
     },
     {
       "id": "cr-sugg-3a0a0756",
@@ -42710,7 +42743,7 @@
         "code-review",
         "suggestion"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Evaluate suggestion feasibility and benefits",
         "Implement improvement if beneficial",
@@ -42721,14 +42754,17 @@
         {
           "id": "st1-a1d6434a",
           "title": "Analyze suggested improvement",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-a1d6434a",
           "title": "Apply code refinement",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:33:11.578053+00:00",
+      "resolutionReason": "Code updated at docs/DOCUMENTATION_UPDATE_2025.md"
     },
     {
       "id": "cr-sugg-fc119f42",

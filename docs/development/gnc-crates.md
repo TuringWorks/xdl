@@ -8,7 +8,8 @@ nav_order: 9
 # GNC Crates
 
 Status: **in development**. Typed Rust libraries for guidance, navigation, and
-control. Not yet exposed as XDL built-ins. Unverified on hardware or flight data.
+control with a partial XDL-facing `GNC_*` slice. Unverified on hardware or
+flight data.
 
 ## Layering
 
@@ -79,6 +80,12 @@ initial-state validation, deterministic event transitions, and duplicate-event
 rejection. It is the semantic foundation for Stateflow/Xcos-style state/event
 subsystems; a scheduler-integrated runtime, timed events, guards, and graphical
 state-machine editing remain open work.
+
+The XDL standard library currently exposes the explicit-state
+`GNC_FLIGHT_READINESS_STEP` binding used by the Mars example. It accepts the
+current state, temperature, SOC, and launch request, returning the next state
+and readiness flags. The binding is deterministic and has no process-global
+state; it is a domain vertical slice, not a general Stateflow language.
 
 Counts from the targeted GNC/model/scheduler test run on 2026-11-13. Ten crates, 120 tests, all passing. The same targeted crate set also passes Clippy
 with `-D warnings`; Clippy is not yet a repository-wide gate.
