@@ -205,7 +205,8 @@ Goal: a scientist can install the platform, import a real dataset, write MATLAB-
 - Establish `xdl.toml`, lockfile, package identity, profiles, and environment capture.
 - Implement first-class notebook/run artifacts in VibeCoder.
 - Finish core MATLAB/Octave syntax: literals, colon/range/indexing, broadcasting, anonymous functions, structs/cells where feasible, `try/catch`, file I/O, plotting properties.
-- Replace compatibility claims with a generated function/syntax coverage report.
+- Replace compatibility claims with a generated function/syntax coverage report,
+  then add runtime and numerical reference evidence to corpus entries.
 - Promote scientific I/O from placeholders to tested readers/writers; prioritize HDF5, NetCDF, FITS, MAT, Arrow/Parquet, Zarr, CSV.
 - Implement `xdl test` with unit, script, golden-vector, property, and numerical-tolerance modes.
 - Build numerical diff views: array summary, histogram/delta, plot image diff, table diff, model graph diff.

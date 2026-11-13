@@ -208,6 +208,17 @@ xdl parse script.pro
 # Check syntax
 xdl check script.pro
 
+# Inspect the current compatibility baseline
+xdl compatibility-report --format json
+
+# Measure MATLAB transpilation over a corpus (transpilation only)
+xdl compatibility-report --corpus examples/matlab --format json
+
+# Also execute the transpiled XDL (runtime/numerical equivalence still unverified)
+xdl compatibility-report --corpus examples/matlab --execute --format json
+
+# With an adjacent example.m.expected sidecar, verify normalized observed output
+
 # Validate an XDL block-model document
 xdl model-check model.json
 xdl model-check model.json --svg > model.svg

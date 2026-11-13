@@ -7,7 +7,7 @@
 //! connections, then validates the graph before a scheduler or solver runs it.
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use thiserror::Error;
 use xdl_gnc_core::{DurationNs, FrameId, Unit};
 
@@ -445,6 +445,54 @@ impl Model {
         Ok(())
     }
 
+    /// Returns a deterministic same-step order for the direct-feedthrough
+    /// portion of the graph. Inputs to state-holding blocks do not constrain
+    /// the current step because those blocks emit stored state first.
+    pub fn execution_order(&self) -> Result<Vec<BlockId>, ModelError> {
+        self.validate()?;
+        let mut indegree: BTreeMap<BlockId, usize> = self
+            .blocks
+            .keys()
+            .copied()
+            .map(|block| (block, 0))
+            .collect();
+        let mut adjacency: BTreeMap<BlockId, Vec<BlockId>> = BTreeMap::new();
+        for connection in &self.connections {
+            let source = self.block_for_port_ref(connection.output)?;
+            let destination = self.block_for_port_ref(connection.input)?;
+            let destination_is_direct = self.blocks[&destination].direct_feedthrough;
+            if destination_is_direct {
+                *indegree
+                    .get_mut(&destination)
+                    .ok_or(ModelError::UnknownBlock(destination))? += 1;
+                adjacency.entry(source).or_default().push(destination);
+            }
+        }
+        let mut ready: VecDeque<_> = indegree
+            .iter()
+            .filter_map(|(block, degree)| (*degree == 0).then_some(*block))
+            .collect();
+        let mut order = Vec::with_capacity(self.blocks.len());
+        while let Some(block) = ready.pop_front() {
+            order.push(block);
+            if let Some(destinations) = adjacency.get(&block) {
+                for destination in destinations {
+                    let degree = indegree
+                        .get_mut(destination)
+                        .ok_or(ModelError::UnknownBlock(*destination))?;
+                    *degree -= 1;
+                    if *degree == 0 {
+                        ready.push_back(*destination);
+                    }
+                }
+            }
+        }
+        if order.len() != self.blocks.len() {
+            return Err(ModelError::Cycle);
+        }
+        Ok(order)
+    }
+
     fn validate_connections(&self) -> Result<(), ModelError> {
         for connection in &self.connections {
             let output = self.port(connection.output)?;
@@ -541,6 +589,7 @@ mod tests {
         let (mut model, output, input) = graph();
         model.connect(output, input).expect("compatible ports");
         model.validate().expect("acyclic model");
+        assert_eq!(model.execution_order().expect("execution order").len(), 2);
         let encoded = serde_json::to_string(&model).expect("serializable model");
         let decoded: Model = serde_json::from_str(&encoded).expect("deserializable model");
         assert_eq!(decoded, model);
@@ -631,6 +680,7 @@ mod tests {
             .set_block_direct_feedthrough(delayed, false)
             .expect("delay block");
         model.validate().expect("delay breaks algebraic loop");
+        assert_eq!(model.execution_order().expect("execution order").len(), 2);
     }
 
     #[test]

@@ -3,12 +3,15 @@
 //! Command-line interface for the Extended Data Language (XDL) Rust implementation.
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use serde::Deserialize;
 use tracing::{error, info};
 use xdl_artifacts::{
     CompatibilityEntry, CompatibilityInventory, CompatibilityStatus, RunManifest, RunStatus,
@@ -81,6 +84,12 @@ enum Commands {
         /// Output format (text, json)
         #[arg(short, long, default_value = "text")]
         format: String,
+        /// Scan a directory of MATLAB `.m` files and report transpilation outcomes
+        #[arg(long)]
+        corpus: Option<PathBuf>,
+        /// Also execute successfully transpiled files through the XDL interpreter
+        #[arg(long)]
+        execute: bool,
     },
     /// Validate and normalize a versioned XDL model document
     ModelCheck {
@@ -127,7 +136,11 @@ fn run(cli: Cli) -> Result<()> {
             directory,
             manifest,
         }) => run_tests(&directory, manifest.as_deref()),
-        Some(Commands::CompatibilityReport { format }) => compatibility_report(&format),
+        Some(Commands::CompatibilityReport {
+            format,
+            corpus,
+            execute,
+        }) => compatibility_report(&format, corpus.as_deref(), execute),
         Some(Commands::ModelCheck { file, migrate, svg }) => check_model_file(&file, migrate, svg),
         Some(Commands::Version) => {
             print_version();
@@ -318,8 +331,16 @@ fn collect_xdl_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-fn compatibility_report(format: &str) -> Result<()> {
-    let inventory = baseline_compatibility_inventory();
+fn compatibility_report(format: &str, corpus: Option<&Path>, execute: bool) -> Result<()> {
+    if execute && corpus.is_none() {
+        return Err(anyhow::anyhow!(
+            "--execute requires --corpus because the baseline has no source files"
+        ));
+    }
+    let inventory = match corpus {
+        Some(directory) => corpus_compatibility_inventory(directory, execute)?,
+        None => baseline_compatibility_inventory(),
+    };
     match format {
         "json" => println!(
             "{}",
@@ -340,7 +361,17 @@ fn compatibility_report(format: &str) -> Result<()> {
                     entry.capability
                 );
             }
-            println!("\nThis is a curated baseline, not a generated conformance percentage.");
+            if execute {
+                println!(
+                    "\nThis report measures transpilation and XDL execution only; runtime semantics and numerical equivalence are not independently verified."
+                );
+            } else if corpus.is_some() {
+                println!(
+                    "\nThis report measures transpilation only; runtime and numerical equivalence are not verified."
+                );
+            } else {
+                println!("\nThis is a curated baseline, not a generated conformance percentage.");
+            }
         }
         other => {
             return Err(anyhow::anyhow!(
@@ -348,6 +379,263 @@ fn compatibility_report(format: &str) -> Result<()> {
             ));
         }
     }
+    Ok(())
+}
+
+fn corpus_compatibility_inventory(
+    directory: &Path,
+    execute: bool,
+) -> Result<CompatibilityInventory> {
+    let mut files = Vec::new();
+    collect_matlab_files(directory, &mut files).with_context(|| {
+        format!(
+            "Failed to discover MATLAB corpus in {}",
+            directory.display()
+        )
+    })?;
+    files.sort();
+
+    if files.is_empty() {
+        return Err(anyhow::anyhow!(
+            "no .m files found in MATLAB corpus {}",
+            directory.display()
+        ));
+    }
+
+    let mut entries = Vec::with_capacity(files.len());
+    for file in files {
+        let relative = file
+            .strip_prefix(directory)
+            .unwrap_or(&file)
+            .display()
+            .to_string();
+        let source = fs::read_to_string(&file)
+            .with_context(|| format!("Failed to read MATLAB corpus file: {}", file.display()))?;
+        let (status, notes, evidence) = match transpile_matlab_to_xdl(&source) {
+            Ok(xdl_code) if execute => match execute_transpiled_source(&xdl_code) {
+                Ok((output, variables)) => corpus_reference_result(&file, &output, &variables),
+                Err(error) => (
+                    CompatibilityStatus::Unsupported,
+                    format!("Transpilation passed but XDL execution failed: {error}"),
+                    vec![format!("transpile: {}", file.display())],
+                ),
+            },
+            Ok(_) => (
+                CompatibilityStatus::Partial,
+                "Transpilation passed; runtime and numerical equivalence remain unverified."
+                    .to_string(),
+                vec![format!("transpile: {}", file.display())],
+            ),
+            Err(error) => (
+                CompatibilityStatus::Unsupported,
+                format!("Transpilation failed: {error}"),
+                Vec::new(),
+            ),
+        };
+        entries.push(CompatibilityEntry {
+            id: format!("matlab.corpus.{relative}"),
+            surface: "matlab-transpiler".to_string(),
+            capability: relative,
+            status,
+            evidence,
+            notes: Some(notes),
+        });
+    }
+
+    Ok(CompatibilityInventory::new(
+        format!("xdl-cli-matlab-corpus:{}", directory.display()),
+        entries,
+    ))
+}
+
+fn execute_transpiled_source(source: &str) -> Result<(String, BTreeMap<String, XdlValue>)> {
+    let program = xdl_parser::parse_xdl(source)
+        .map_err(|error| anyhow::anyhow!("transpiled XDL parse failed: {error}"))?;
+    let buffer = Rc::new(RefCell::new(Vec::<u8>::new()));
+    let output: Rc<RefCell<dyn std::io::Write>> =
+        Rc::new(RefCell::new(SharedOutput(buffer.clone())));
+    let mut interpreter = Interpreter::with_output(output);
+    interpreter
+        .execute_program(&program)
+        .map_err(|error| anyhow::anyhow!("transpiled XDL execution failed: {error}"))?;
+    let bytes = buffer.borrow().clone();
+    let output = String::from_utf8(bytes)
+        .map_err(|error| anyhow::anyhow!("interpreter output was not UTF-8: {error}"))?;
+    let variables = interpreter
+        .get_variables()
+        .into_iter()
+        .map(|(name, value)| (name, value.clone()))
+        .collect();
+    Ok((output, variables))
+}
+
+#[derive(Debug, Deserialize)]
+struct NumericReference {
+    #[serde(default = "default_numeric_tolerance")]
+    abs_tolerance: f64,
+    values: BTreeMap<String, Vec<f64>>,
+}
+
+fn default_numeric_tolerance() -> f64 {
+    1e-9
+}
+
+fn corpus_reference_result(
+    file: &Path,
+    output: &str,
+    variables: &BTreeMap<String, XdlValue>,
+) -> (CompatibilityStatus, String, Vec<String>) {
+    let mut evidence = vec![
+        format!("transpile: {}", file.display()),
+        format!("execute: {}", file.display()),
+    ];
+    let mut failures = Vec::new();
+    let stdout_reference = PathBuf::from(format!("{}.expected", file.display()));
+    if stdout_reference.is_file() {
+        match fs::read_to_string(&stdout_reference) {
+            Ok(expected) if output.trim_end() == expected.trim_end() => {
+                evidence.push(format!("stdout-reference: {}", stdout_reference.display()));
+            }
+            Ok(_) => failures.push(format!(
+                "observed output did not match {}",
+                stdout_reference.display()
+            )),
+            Err(error) => failures.push(format!(
+                "could not read {}: {error}",
+                stdout_reference.display()
+            )),
+        }
+    }
+
+    let numeric_reference = PathBuf::from(format!("{}.expected.json", file.display()));
+    if numeric_reference.is_file() {
+        evidence.push(format!(
+            "numeric-reference: {}",
+            numeric_reference.display()
+        ));
+        match fs::read_to_string(&numeric_reference)
+            .map_err(|error| error.to_string())
+            .and_then(|json| {
+                serde_json::from_str::<NumericReference>(&json).map_err(|error| error.to_string())
+            })
+            .and_then(|reference| compare_numeric_reference(&reference, variables))
+        {
+            Ok(()) => {}
+            Err(error) => failures.push(format!("numeric reference failed: {error}")),
+        }
+    }
+
+    if !failures.is_empty() {
+        (CompatibilityStatus::Failed, failures.join("; "), evidence)
+    } else if evidence.len() > 2 {
+        (
+            CompatibilityStatus::Verified,
+            "Transpilation, XDL execution, and declared observed-output/numeric references passed; broader runtime and numerical equivalence remain unverified.".to_string(),
+            evidence,
+        )
+    } else {
+        (
+            CompatibilityStatus::Partial,
+            "Transpilation and XDL execution passed; no observed-output or numeric reference was supplied.".to_string(),
+            evidence,
+        )
+    }
+}
+
+fn compare_numeric_reference(
+    reference: &NumericReference,
+    variables: &BTreeMap<String, XdlValue>,
+) -> Result<(), String> {
+    if !reference.abs_tolerance.is_finite() || reference.abs_tolerance < 0.0 {
+        return Err("absolute tolerance must be finite and non-negative".to_string());
+    }
+    for (name, expected) in &reference.values {
+        let actual = variables
+            .get(name)
+            .ok_or_else(|| format!("variable '{name}' was not produced"))?;
+        let actual = numeric_values(actual)
+            .ok_or_else(|| format!("variable '{name}' is not a supported numeric value"))?;
+        if actual.len() != expected.len() {
+            return Err(format!(
+                "variable '{name}' length {} != expected {}",
+                actual.len(),
+                expected.len()
+            ));
+        }
+        for (index, (actual, expected)) in actual.iter().zip(expected).enumerate() {
+            let matches = if actual.is_nan() && expected.is_nan() {
+                true
+            } else if actual.is_infinite() || expected.is_infinite() {
+                actual == expected
+            } else {
+                (actual - expected).abs() <= reference.abs_tolerance
+            };
+            if !matches {
+                return Err(format!(
+                    "variable '{name}' element {index}: actual {actual} != expected {expected} within {}",
+                    reference.abs_tolerance
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn numeric_values(value: &XdlValue) -> Option<Vec<f64>> {
+    match value {
+        XdlValue::Byte(value) => Some(vec![f64::from(*value)]),
+        XdlValue::Int(value) => Some(vec![f64::from(*value)]),
+        XdlValue::Long(value) => Some(vec![f64::from(*value)]),
+        XdlValue::Float(value) => Some(vec![f64::from(*value)]),
+        XdlValue::Double(value) => Some(vec![*value]),
+        XdlValue::UInt(value) => Some(vec![f64::from(*value)]),
+        XdlValue::ULong(value) => Some(vec![f64::from(*value)]),
+        XdlValue::Long64(value) => Some(vec![*value as f64]),
+        XdlValue::ULong64(value) => Some(vec![*value as f64]),
+        XdlValue::Array(values) => Some(values.clone()),
+        XdlValue::MultiDimArray { data, .. } => Some(data.clone()),
+        XdlValue::NestedArray(values) => values
+            .iter()
+            .map(numeric_values)
+            .collect::<Option<Vec<Vec<f64>>>>()
+            .map(|values| values.into_iter().flatten().collect()),
+        _ => None,
+    }
+}
+
+struct SharedOutput(Rc<RefCell<Vec<u8>>>);
+
+impl Write for SharedOutput {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.borrow_mut().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+fn collect_matlab_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+    let entries = fs::read_dir(directory)
+        .with_context(|| format!("Failed to read MATLAB corpus: {}", directory.display()))?;
+
+    for entry in entries {
+        let entry = entry
+            .with_context(|| format!("Failed to inspect MATLAB corpus: {}", directory.display()))?;
+        let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .with_context(|| format!("Failed to inspect {}", path.display()))?;
+
+        if file_type.is_dir() {
+            collect_matlab_files(&path, files)?;
+        } else if file_type.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("m")
+        {
+            files.push(path);
+        }
+    }
+
     Ok(())
 }
 
@@ -467,6 +755,7 @@ fn compatibility_status_name(status: CompatibilityStatus) -> &'static str {
         CompatibilityStatus::Experimental => "experimental",
         CompatibilityStatus::Delegated => "delegated",
         CompatibilityStatus::Unsupported => "unsupported",
+        CompatibilityStatus::Failed => "failed",
     }
 }
 

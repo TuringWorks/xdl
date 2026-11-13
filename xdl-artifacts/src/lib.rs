@@ -63,6 +63,8 @@ pub enum CompatibilityStatus {
     Delegated,
     /// The capability is explicitly unavailable.
     Unsupported,
+    /// An attempted compatibility check produced evidence that did not match.
+    Failed,
 }
 
 /// One machine-readable compatibility claim.

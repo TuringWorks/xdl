@@ -206,6 +206,49 @@ fn test_cli_compatibility_report_rejects_unknown_format() {
     assert!(diagnostic.contains("unsupported compatibility report format"));
 }
 
+#[test]
+fn test_cli_compatibility_report_scans_matlab_corpus() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("matlab-corpus");
+    fs::create_dir_all(directory.join("nested")).expect("create corpus directory");
+    fs::write(directory.join("nested/good.m"), "disp(1 + 2);\n")
+        .expect("write supported MATLAB file");
+    fs::write(directory.join("nested/good.m.expected"), "3\n")
+        .expect("write MATLAB output reference");
+    fs::write(directory.join("matrix.m"), "y = [1 2; 3 4];\n").expect("write matrix MATLAB file");
+    fs::write(
+        directory.join("matrix.m.expected.json"),
+        r#"{"abs_tolerance": 0.0, "values": {"y": [1.0, 2.0, 3.0, 4.0]}}"#,
+    )
+    .expect("write MATLAB numeric reference");
+
+    let output = Command::new(&binary)
+        .args([
+            "compatibility-report",
+            "--corpus",
+            directory.to_str().expect("utf-8 corpus path"),
+            "--format",
+            "json",
+            "--execute",
+        ])
+        .output()
+        .expect("run MATLAB corpus report");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(
+        output.status.success(),
+        "corpus report failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("nested/good.m"));
+    assert!(stdout.contains("matrix.m"));
+    assert!(stdout.contains("Transpilation and XDL execution passed"));
+    assert!(stdout.contains("stdout-reference"));
+    assert!(stdout.contains("numeric-reference"));
+    assert!(stdout.contains("verified"));
+}
+
 fn test_directory(label: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)

@@ -40,10 +40,15 @@ pub enum SchedulerError {
     UnknownTask(TaskId),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SignalValue {
     Scalar(f64),
     Vector(Vec<f64>),
+    Matrix {
+        rows: usize,
+        columns: usize,
+        values: Vec<f64>,
+    },
     Bus(BTreeMap<String, SignalValue>),
 }
 
@@ -52,6 +57,14 @@ impl SignalValue {
         match self {
             Self::Scalar(value) => value.is_finite(),
             Self::Vector(values) => values.iter().all(|value| value.is_finite()),
+            Self::Matrix {
+                rows,
+                columns,
+                values,
+            } => {
+                values.len() == rows.saturating_mul(*columns)
+                    && values.iter().all(|value| value.is_finite())
+            }
             Self::Bus(fields) => fields.values().all(Self::is_finite),
         }
     }
@@ -60,8 +73,17 @@ impl SignalValue {
         match (self, shape) {
             (Self::Scalar(_), SignalShape::Scalar) => true,
             (Self::Vector(values), SignalShape::Vector(length)) => values.len() == *length,
-            (Self::Vector(values), SignalShape::Matrix { rows, columns }) => {
-                values.len() == rows.saturating_mul(*columns)
+            (
+                Self::Matrix {
+                    rows: value_rows,
+                    columns: value_columns,
+                    values,
+                },
+                SignalShape::Matrix { rows, columns },
+            ) => {
+                *value_rows == *rows
+                    && *value_columns == *columns
+                    && values.len() == rows.saturating_mul(*columns)
             }
             (Self::Bus(values), SignalShape::Bus(fields)) => {
                 values.len() == fields.len()
@@ -86,6 +108,8 @@ pub enum ExecutionError {
     Scheduler(#[from] SchedulerError),
     #[error("task {0:?} is not registered with a runtime block")]
     UnregisteredTask(TaskId),
+    #[error("block {0:?} has no registered runtime task")]
+    UnregisteredBlock(BlockId),
     #[error("required input port {0:?} has no signal")]
     MissingInput(PortId),
     #[error("block {block:?} emitted an invalid value for port {port:?}")]
@@ -226,6 +250,7 @@ pub struct UnitDelay {
     pub input: PortId,
     pub output: PortId,
     state: SignalValue,
+    initialized: bool,
 }
 
 impl UnitDelay {
@@ -243,6 +268,7 @@ impl UnitDelay {
             input,
             output,
             state: initial,
+            initialized: false,
         })
     }
 }
@@ -253,12 +279,13 @@ impl BlockRuntime for UnitDelay {
         _timestamp: Timestamp,
         inputs: &BTreeMap<PortId, SignalValue>,
     ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
-        let input = inputs
-            .get(&self.input)
-            .cloned()
-            .ok_or(ExecutionError::MissingInput(self.input))?;
         let output = BTreeMap::from([(self.output, self.state.clone())]);
-        self.state = input;
+        if let Some(input) = inputs.get(&self.input).cloned() {
+            self.state = input;
+            self.initialized = true;
+        } else if self.initialized {
+            return Err(ExecutionError::MissingInput(self.input));
+        }
         Ok(output)
     }
 }
@@ -268,6 +295,26 @@ impl BlockRuntime for UnitDelay {
 pub struct ZeroOrderHold {
     pub input: PortId,
     pub output: PortId,
+    state: SignalValue,
+}
+
+impl ZeroOrderHold {
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        initial: SignalValue,
+    ) -> Result<Self, ExecutionError> {
+        if !initial.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "zero-order-hold initial value must be finite".to_string(),
+            ));
+        }
+        Ok(Self {
+            input,
+            output,
+            state: initial,
+        })
+    }
 }
 
 impl BlockRuntime for ZeroOrderHold {
@@ -276,11 +323,10 @@ impl BlockRuntime for ZeroOrderHold {
         _timestamp: Timestamp,
         inputs: &BTreeMap<PortId, SignalValue>,
     ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
-        let value = inputs
-            .get(&self.input)
-            .cloned()
-            .ok_or(ExecutionError::MissingInput(self.input))?;
-        Ok(BTreeMap::from([(self.output, value)]))
+        if let Some(value) = inputs.get(&self.input).cloned() {
+            self.state = value;
+        }
+        Ok(BTreeMap::from([(self.output, self.state.clone())]))
     }
 }
 
@@ -296,10 +342,56 @@ pub struct ExecutionEngine {
     signals: BTreeMap<PortId, SignalValue>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExecutionReport {
     pub events: Vec<ScheduledEvent>,
     pub signal_updates: usize,
+    pub updates: Vec<SignalUpdate>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SignalUpdate {
+    pub timestamp: Timestamp,
+    pub task: TaskId,
+    pub block: BlockId,
+    pub port: PortId,
+    pub value: SignalValue,
+}
+
+impl ExecutionReport {
+    pub fn to_json_lines(&self) -> Result<String, ExecutionError> {
+        self.updates
+            .iter()
+            .map(|update| {
+                serde_json::to_string(update)
+                    .map_err(|error| ExecutionError::Runtime(error.to_string()))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|lines| lines.join("\n"))
+    }
+
+    pub fn parse_json_lines(lines: &str) -> Result<Vec<SignalUpdate>, ExecutionError> {
+        let mut updates = Vec::new();
+        for (line_number, line) in lines.lines().enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let update: SignalUpdate = serde_json::from_str(line).map_err(|error| {
+                ExecutionError::Runtime(format!("invalid trace line {}: {error}", line_number + 1))
+            })?;
+            if updates
+                .last()
+                .is_some_and(|previous: &SignalUpdate| update.timestamp < previous.timestamp)
+            {
+                return Err(ExecutionError::Runtime(format!(
+                    "trace timestamp moved backwards at line {}",
+                    line_number + 1
+                )));
+            }
+            updates.push(update);
+        }
+        Ok(updates)
+    }
 }
 
 impl ExecutionEngine {
@@ -332,6 +424,19 @@ impl ExecutionEngine {
         self.signals.get(&port)
     }
 
+    pub fn validate_ready(&self) -> Result<(), ExecutionError> {
+        for block in self.model.blocks.keys().copied() {
+            if !self
+                .registered
+                .values()
+                .any(|registered| registered.block == block)
+            {
+                return Err(ExecutionError::UnregisteredBlock(block));
+            }
+        }
+        Ok(())
+    }
+
     pub fn inject_signal(
         &mut self,
         port: PortId,
@@ -352,8 +457,30 @@ impl ExecutionEngine {
     }
 
     pub fn advance_to(&mut self, timestamp: Timestamp) -> Result<ExecutionReport, ExecutionError> {
-        let events = self.scheduler.advance_to(timestamp)?;
+        self.validate_ready()?;
+        let mut events = self.scheduler.advance_to(timestamp)?;
+        let order = self.model.execution_order()?;
+        let ranks: BTreeMap<_, _> = order
+            .into_iter()
+            .enumerate()
+            .map(|(rank, block)| (block, rank))
+            .collect();
+        events.sort_by_key(|event| {
+            let rank = self
+                .registered
+                .get(&event.task)
+                .and_then(|registered| ranks.get(&registered.block).copied())
+                .unwrap_or(usize::MAX);
+            (
+                event.timestamp,
+                rank,
+                event.priority,
+                event.task,
+                event.sequence,
+            )
+        });
         let mut signal_updates = 0;
+        let mut updates = Vec::new();
         for event in &events {
             let registered = self
                 .registered
@@ -390,11 +517,19 @@ impl ExecutionEngine {
                     self.signals.insert(connection.input, value.clone());
                 }
                 signal_updates += 1;
+                updates.push(SignalUpdate {
+                    timestamp: event.timestamp,
+                    task: event.task,
+                    block,
+                    port,
+                    value,
+                });
             }
         }
         Ok(ExecutionReport {
             events,
             signal_updates,
+            updates,
         })
     }
 }
@@ -844,10 +979,10 @@ mod tests {
         let config = SchedulerConfig::new(duration(10), 8).expect("config");
         let mut scheduler = Scheduler::new(config);
         let source_task = scheduler
-            .add_periodic_task("source", duration(10), DurationNs::ZERO, 0)
+            .add_periodic_task("source", duration(10), DurationNs::ZERO, 1)
             .expect("task");
         let gain_task = scheduler
-            .add_periodic_task("gain", duration(10), DurationNs::ZERO, 1)
+            .add_periodic_task("gain", duration(10), DurationNs::ZERO, 0)
             .expect("task");
         let mut engine = ExecutionEngine::new(model, scheduler).expect("engine");
         engine
@@ -874,7 +1009,75 @@ mod tests {
         let report = engine.advance_to(Timestamp::ZERO).expect("execute tick");
         assert_eq!(report.events.len(), 2);
         assert_eq!(report.signal_updates, 2);
+        assert_eq!(report.updates.len(), 2);
+        assert_eq!(report.updates[0].task, source_task);
+        assert_eq!(report.updates[0].port, source_output);
+        assert_eq!(report.updates[1].task, gain_task);
+        assert_eq!(report.updates[1].value, SignalValue::Scalar(6.0));
+        let trace = report.to_json_lines().expect("json trace");
+        assert_eq!(trace.lines().count(), 2);
+        assert!(trace.contains("\"port\""));
+        let decoded = ExecutionReport::parse_json_lines(&trace).expect("parse trace");
+        assert_eq!(decoded, report.updates);
+        assert!(ExecutionReport::parse_json_lines("not json").is_err());
         assert_eq!(engine.signal(gain_output), Some(&SignalValue::Scalar(6.0)));
+    }
+
+    #[test]
+    fn execution_engine_reports_missing_runtime_before_advance() {
+        let mut model = Model::new("incomplete");
+        let block = model.add_block("unimplemented").expect("block");
+        let scheduler =
+            Scheduler::new(SchedulerConfig::new(duration(10), 4).expect("scheduler config"));
+        let mut engine = ExecutionEngine::new(model, scheduler).expect("engine");
+        assert_eq!(
+            engine.advance_to(Timestamp::ZERO),
+            Err(ExecutionError::UnregisteredBlock(block))
+        );
+    }
+
+    #[test]
+    fn matrix_signal_preserves_shape_and_rejects_wrong_dimensions() {
+        let mut model = Model::new("matrix");
+        let block = model.add_block("matrix_sink").expect("block");
+        let input = model
+            .add_port(
+                block,
+                "in",
+                xdl_model::PortDirection::Input,
+                xdl_model::SignalSpec {
+                    shape: xdl_model::SignalShape::Matrix {
+                        rows: 2,
+                        columns: 2,
+                    },
+                    unit: None,
+                    frame: None,
+                    sample_period: None,
+                },
+            )
+            .expect("input");
+        let scheduler =
+            Scheduler::new(SchedulerConfig::new(duration(10), 4).expect("scheduler config"));
+        let mut engine = ExecutionEngine::new(model, scheduler).expect("engine");
+        let matrix = SignalValue::Matrix {
+            rows: 2,
+            columns: 2,
+            values: vec![1.0, 2.0, 3.0, 4.0],
+        };
+        engine
+            .inject_signal(input, matrix.clone())
+            .expect("matrix input");
+        assert_eq!(engine.signal(input), Some(&matrix));
+        assert!(engine
+            .inject_signal(
+                input,
+                SignalValue::Matrix {
+                    rows: 1,
+                    columns: 4,
+                    values: vec![1.0, 2.0, 3.0, 4.0],
+                },
+            )
+            .is_err());
     }
 
     #[test]
@@ -896,6 +1099,43 @@ mod tests {
             .expect("second step");
         assert_eq!(first.get(&output), Some(&SignalValue::Scalar(0.0)));
         assert_eq!(second.get(&output), Some(&SignalValue::Scalar(3.0)));
+        assert_eq!(
+            delay.step(Timestamp::from_nanoseconds(2), &BTreeMap::new()),
+            Err(ExecutionError::MissingInput(input))
+        );
+    }
+
+    #[test]
+    fn unit_delay_can_emit_initial_state_before_feedback_input_exists() {
+        let input = PortId::new(3);
+        let output = PortId::new(4);
+        let mut delay = UnitDelay::new(input, output, SignalValue::Scalar(7.0)).expect("delay");
+        let first = delay
+            .step(Timestamp::ZERO, &BTreeMap::new())
+            .expect("initial state");
+        assert_eq!(first.get(&output), Some(&SignalValue::Scalar(7.0)));
+    }
+
+    #[test]
+    fn zero_order_hold_starts_with_initial_value_then_holds_last_sample() {
+        let input = PortId::new(5);
+        let output = PortId::new(6);
+        let mut hold = ZeroOrderHold::new(input, output, SignalValue::Scalar(2.0)).expect("hold");
+        let first = hold
+            .step(Timestamp::ZERO, &BTreeMap::new())
+            .expect("initial");
+        assert_eq!(first.get(&output), Some(&SignalValue::Scalar(2.0)));
+        let second = hold
+            .step(
+                Timestamp::from_nanoseconds(1),
+                &BTreeMap::from([(input, SignalValue::Scalar(9.0))]),
+            )
+            .expect("sample");
+        assert_eq!(second.get(&output), Some(&SignalValue::Scalar(9.0)));
+        let third = hold
+            .step(Timestamp::from_nanoseconds(2), &BTreeMap::new())
+            .expect("held sample");
+        assert_eq!(third.get(&output), Some(&SignalValue::Scalar(9.0)));
     }
 
     #[test]

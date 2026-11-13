@@ -71,10 +71,10 @@ Rules:
 | `xdl-gnc-actuators` | 3 | First-order scalar actuator only |
 | `xdl-gnc-integration` | 3 | Deterministic scenario plus typed replay runner; telemetry wiring remains separate |
 | `xdl-gnc-telemetry` | 2 | JSON-lines export; product-specific sinks remain pending |
-| `xdl-model` | 17 | Graph, typed subsystem-boundary contract, delay-safe feedback validation, serializable layout, deterministic auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, and editor events |
-| `xdl-sim` | 12 | Scheduler, block executor, delay/hold, subsystem runtime, bounded Euler/RK4 solvers, adaptive RK4 control with bounded retry, and continuous runtime integration |
+| `xdl-model` | 18 | Graph, typed subsystem-boundary contract, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, and editor events |
+| `xdl-sim` | 16 | Scheduler, block executor, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines execution tracing, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
-Counts from the targeted GNC/model/scheduler test runs on 2026-11-12. Eleven crates, 81 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
+Counts from the targeted GNC/model/scheduler test runs on 2026-11-12. Eleven crates, 86 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
 
 ## Build and test
 

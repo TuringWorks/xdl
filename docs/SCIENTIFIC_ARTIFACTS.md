@@ -47,10 +47,37 @@ Example shape:
 - `experimental` — useful for evaluation, not yet generally validated;
 - `delegated` — provided by a configured external runtime/tool;
 - `unsupported` — explicitly unavailable.
+- `failed` — an attempted check produced evidence that did not match.
 
 Every entry must identify its surface, capability, evidence, and optional notes.
 This is intended to become the generated source for MATLAB/Octave, IDL/GDL,
 scientific-I/O, GPU, and model-runtime status reports.
+
+The current CLI exposes a curated baseline:
+
+```bash
+xdl compatibility-report
+xdl compatibility-report --format json
+xdl compatibility-report --corpus examples/matlab --format json
+xdl compatibility-report --corpus examples/matlab --execute --format json
+```
+
+This baseline is intentionally not generated from the full corpus yet. Its
+purpose is to make current claims explicit and machine-readable while the
+conformance harness is built. Corpus mode measures transpilation only unless
+`--execute` is supplied. Even with `--execute`, a successful entry remains
+`partial` until independent numerical equivalence tests are attached.
+
+For a narrow observed-output reference, place a sidecar next to a corpus file:
+
+```text
+example.m
+example.m.expected
+```
+
+With `--execute`, matching normalized stdout is reported as `verified` for
+that observed-output case. A mismatch is reported as `failed`; this does not
+prove or disprove broader array, runtime, or numerical equivalence.
 
 ## Current boundary
 
@@ -59,7 +86,8 @@ The first implementation is intentionally small:
 - serialization is JSON;
 - schema version is currently `1`;
 - validation checks identity, status-entry, artifact, and schema fields;
-- no CLI command consumes manifests yet;
+- `xdl test --manifest PATH` emits test counts and status;
+- the compatibility report is a curated baseline, not corpus-generated;
 - no VibeCoder panel consumes manifests yet;
 - no file hashing or clean-machine replay is implemented yet.
 
