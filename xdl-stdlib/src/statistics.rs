@@ -201,7 +201,12 @@ pub fn median(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    // NaN is a value: a median over data containing NaN is NaN, not a finite
+    // neighbour that the sort happened to place in the middle.
+    if values.iter().any(|v| v.is_nan()) {
+        return Ok(XdlValue::Double(f64::NAN));
+    }
+    values.sort_by(|a, b| a.total_cmp(b));
 
     let n = values.len();
     let median = if n % 2 == 0 {
@@ -843,7 +848,7 @@ pub fn r_correlate(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Compute ranks for x
     let mut x_indexed: Vec<(usize, f64)> = x.iter().enumerate().map(|(i, &v)| (i, v)).collect();
-    x_indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    x_indexed.sort_by(|a, b| a.1.total_cmp(&b.1));
     let mut rank_x = vec![0.0; n];
     for (rank, (idx, _)) in x_indexed.iter().enumerate() {
         rank_x[*idx] = (rank + 1) as f64;
@@ -851,7 +856,7 @@ pub fn r_correlate(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Compute ranks for y
     let mut y_indexed: Vec<(usize, f64)> = y.iter().enumerate().map(|(i, &v)| (i, v)).collect();
-    y_indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    y_indexed.sort_by(|a, b| a.1.total_cmp(&b.1));
     let mut rank_y = vec![0.0; n];
     for (rank, (idx, _)) in y_indexed.iter().enumerate() {
         rank_y[*idx] = (rank + 1) as f64;
@@ -1190,7 +1195,7 @@ pub fn percentiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     // Sort data
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    data.sort_by(|a, b| a.total_cmp(b));
     let n = data.len();
 
     // Get percentile values
@@ -1267,7 +1272,7 @@ pub fn robust_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if filtered_data.is_empty() {
         // Fall back to median if all points rejected
         let mut sorted = data.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.total_cmp(b));
         let median = sorted[sorted.len() / 2];
         Ok(XdlValue::Double(median))
     } else {
@@ -1298,7 +1303,7 @@ pub fn trimmed_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
         5.0 // Default 5% trimmed mean
     };
 
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    data.sort_by(|a, b| a.total_cmp(b));
 
     let n = data.len();
     let trim_count = ((percent / 100.0) * n as f64).ceil() as usize;
@@ -1330,12 +1335,12 @@ pub fn resistant_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     // Compute biweight mean (Tukey's biweight)
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    data.sort_by(|a, b| a.total_cmp(b));
     let median = data[data.len() / 2];
 
     // Compute MAD (median absolute deviation)
     let mut abs_devs: Vec<f64> = data.iter().map(|x| (x - median).abs()).collect();
-    abs_devs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    abs_devs.sort_by(|a, b| a.total_cmp(b));
     let mad = abs_devs[abs_devs.len() / 2];
 
     if mad < 1e-15 {
@@ -1644,5 +1649,14 @@ mod tests {
             }
             _ => panic!("Expected array result"),
         }
+    }
+
+    #[test]
+    fn test_median_with_nan_propagates_and_does_not_panic() {
+        let args = vec![XdlValue::Array(vec![1.0, f64::NAN, 2.0])];
+        assert!(matches!(
+            median(&args),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
     }
 }

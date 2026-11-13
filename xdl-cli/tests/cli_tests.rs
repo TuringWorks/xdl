@@ -249,7 +249,10 @@ fn test_cli_runs_mars_helicopter_results_after_simulation() {
     assert_eq!(stdout.matches("Data points: 60 values").count(), 2);
     assert!(stdout.contains("from 0.00 to 1.46"));
     assert!(stdout.contains("from -37.50 to 11.98"));
-    for artifact in ["mars_helicopter_altitude.png", "mars_helicopter_temperature.png"] {
+    for artifact in [
+        "mars_helicopter_altitude.png",
+        "mars_helicopter_temperature.png",
+    ] {
         let artifact_path = output_root.join(artifact);
         let metadata = fs::metadata(&artifact_path)
             .unwrap_or_else(|error| panic!("missing plot artifact {artifact}: {error}"));

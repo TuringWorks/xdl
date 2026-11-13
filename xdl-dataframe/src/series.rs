@@ -83,7 +83,7 @@ impl Series {
         stats.insert("mean".to_string(), mean);
 
         let mut sorted = nums.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.total_cmp(b));
 
         stats.insert("min".to_string(), sorted[0]);
         stats.insert("max".to_string(), sorted[sorted.len() - 1]);

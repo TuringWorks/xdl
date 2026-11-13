@@ -10,10 +10,3 @@
 # its entry from xdl-lsp/src/symbols.rs. Do not remove a line any other way.
 #
 # Recorded 2026-08-27.
-
-# IDL file-reading functions the LSP documents but xdl-stdlib never implemented.
-# READF and READU exist; these three do not. DF_READ_CSV (feature: dataframes)
-# is a different function with a different signature.
-READ_ASCII
-READ_BINARY
-READ_CSV

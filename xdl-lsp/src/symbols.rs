@@ -385,24 +385,6 @@ impl SymbolTable {
         // I/O functions
         let io_funcs = vec![
             (
-                "READ_ASCII",
-                "read_ascii(file) - Read ASCII data file",
-                "STRUCT",
-                "READ_ASCII(file)",
-            ),
-            (
-                "READ_CSV",
-                "read_csv(file) - Read CSV file",
-                "STRUCT",
-                "READ_CSV(file)",
-            ),
-            (
-                "READ_BINARY",
-                "read_binary(file) - Read binary file",
-                "ARRAY",
-                "READ_BINARY(file)",
-            ),
-            (
                 "READF",
                 "readf(unit, vars...) - Formatted read",
                 "VOID",
