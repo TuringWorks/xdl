@@ -586,6 +586,7 @@ the native GNC crates retain typed frames, timestamps, and error semantics.
 | `GNC_VEC3` | `GNC_VEC3(x, y, z)` | Three-element numeric array |
 | `GNC_WAYPOINT` | `GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)` | Structure with `DESIRED_VELOCITY`, `DISTANCE`, `REACHED`, and `DEGRADED` |
 | `GNC_PID_STEP` | `GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)` | Structure with `COMMAND`, `ERROR`, `DERIVATIVE`, `INTEGRAL`, and `SATURATED` |
+| `GNC_STATE_SPACE_STEP` | `GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)` | Explicit-state discrete state-space update using row-major flattened matrices; returns `OUTPUT` and next `STATE` |
 | `GNC_ACTUATOR_STEP` | `GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min, output_max, rate_limit, previous_timestamp_ns, previous_output)` | Structure with `OUTPUT`, `SATURATED`, and `RATE_LIMITED` |
 | `GNC_ALPHA_BETA_STEP` | `GNC_ALPHA_BETA_STEP(timestamp_ns, initial_timestamp_ns, position, velocity, acceleration, gnss_position, gnss_velocity, position_gain, velocity_gain)` | Structure with updated `POSITION`, `VELOCITY`, and residual fields |
 | `GNC_TELEMETRY_JSON` | `GNC_TELEMETRY_JSON(timestamp_ns, sequence, source, position, velocity, command)` | Newline-terminated JSON telemetry record |

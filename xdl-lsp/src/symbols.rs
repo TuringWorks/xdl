@@ -479,6 +479,12 @@ impl SymbolTable {
                 "GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)",
             ),
             (
+                "GNC_STATE_SPACE_STEP",
+                "gnc_state_space_step(...) - Perform an explicit-state discrete state-space update",
+                "STRUCT",
+                "GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)",
+            ),
+            (
                 "GNC_ACTUATOR_STEP",
                 "gnc_actuator_step(...) - Perform an explicit-state actuator update",
                 "STRUCT",

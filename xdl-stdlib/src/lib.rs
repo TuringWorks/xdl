@@ -314,6 +314,7 @@ impl StandardLibrary {
             "GNC_VEC3" => gnc::vec3(args),
             "GNC_WAYPOINT" => gnc::waypoint(args),
             "GNC_PID_STEP" => gnc::pid_step(args),
+            "GNC_STATE_SPACE_STEP" => gnc::state_space_step(args),
             "GNC_ACTUATOR_STEP" => gnc::actuator_step(args),
             "GNC_ALPHA_BETA_STEP" => gnc::alpha_beta_step(args),
             "GNC_TELEMETRY_JSON" => gnc::telemetry_json(args),
@@ -1175,5 +1176,26 @@ mod gnc_dispatch_tests {
             )
             .expect("GNC_VEC3 should be registered");
         assert_eq!(value, XdlValue::Array(vec![1.0, 2.0, 3.0]));
+
+        let state_space = library
+            .call_function(
+                "gnc_state_space_step",
+                &[
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![0.0]),
+                    XdlValue::Array(vec![0.0]),
+                    XdlValue::Array(vec![2.0]),
+                    XdlValue::Long(1),
+                    XdlValue::Long(1),
+                    XdlValue::Long(1),
+                ],
+            )
+            .expect("GNC_STATE_SPACE_STEP should be registered");
+        let XdlValue::Struct(fields) = state_space else {
+            panic!("expected state-space structure");
+        };
+        assert_eq!(fields.get("STATE"), Some(&XdlValue::Array(vec![2.0])));
     }
 }

@@ -44,9 +44,11 @@ impl MySQLConnection {
         })?;
 
         // Verify connection with a simple query
-        conn.query_drop("SELECT 1").await.map_err(|e| {
-            DatabaseError::connection_error(format!("MySQL connection test failed: {}", e))
-        })?;
+        conn.query_drop(crate::HEALTH_PROBE_SQL)
+            .await
+            .map_err(|e| {
+                DatabaseError::connection_error(format!("MySQL connection test failed: {}", e))
+            })?;
 
         Ok(Self {
             pool: Some(pool),
@@ -149,7 +151,10 @@ impl MySQLConnection {
     pub async fn is_connected(&self) -> bool {
         if let Some(conn) = &self.conn {
             // Try a simple query
-            conn.clone().query_drop("SELECT 1").await.is_ok()
+            conn.clone()
+                .query_drop(crate::HEALTH_PROBE_SQL)
+                .await
+                .is_ok()
         } else {
             false
         }

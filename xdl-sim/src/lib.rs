@@ -23,10 +23,12 @@ pub use blocks::{
     VectorNorm, VectorNormalize, VectorScale, VectorSum,
 };
 pub mod solver;
+pub mod state_machine;
 pub use solver::{
     euler_step, rk4_adaptive_step, rk4_step, AdaptiveConfig, AdaptiveStep, DerivativeFn,
     SolverError,
 };
+pub use state_machine::StateMachineRuntime;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TaskId(u32);

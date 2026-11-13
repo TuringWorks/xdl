@@ -72,7 +72,7 @@ Rules:
 | `xdl-gnc-integration` | 9 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, ordered telemetry output, and vertical-slice replay tests |
 | `xdl-gnc-telemetry` | 3 | Ordered telemetry samples with buffered and streaming JSON-lines export; product-specific sinks remain pending |
 | `xdl-model` | 26 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, editor events, Mars system-model validation, structural SVG rendering, and state/event contracts |
-| `xdl-sim` | 21 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, typed model-graph execution, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
+| `xdl-sim` | 25 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, typed model-graph execution, deterministic state-machine runtime, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
 `xdl-model` also exposes a typed `StateMachine` contract with explicit states,
 initial-state validation, deterministic event transitions, and duplicate-event
@@ -80,7 +80,7 @@ rejection. It is the semantic foundation for Stateflow/Xcos-style state/event
 subsystems; a scheduler-integrated runtime, timed events, guards, and graphical
 state-machine editing remain open work.
 
-Counts from the targeted GNC/model/scheduler test run on 2026-11-13. Ten crates, 116 tests, all passing. The same targeted crate set also passes Clippy
+Counts from the targeted GNC/model/scheduler test run on 2026-11-13. Ten crates, 120 tests, all passing. The same targeted crate set also passes Clippy
 with `-D warnings`; Clippy is not yet a repository-wide gate.
 
 ## Standard block library

@@ -67,6 +67,41 @@ fn vector(value: &XdlValue, name: &str) -> XdlResult<Vec3> {
     Ok(Vec3::new(values[0], values[1], values[2]))
 }
 
+fn numeric_array(value: &XdlValue, name: &str) -> XdlResult<Vec<f64>> {
+    let values = match value {
+        XdlValue::Array(values) => values.clone(),
+        XdlValue::MultiDimArray { data, .. } => data.clone(),
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric array".to_string(),
+                actual: format!("{name}: {:?}", value.gdl_type()),
+            })
+        }
+    };
+    if values.iter().all(|value| value.is_finite()) {
+        Ok(values)
+    } else {
+        Err(XdlError::InvalidArgument(format!(
+            "{name}: values must be finite"
+        )))
+    }
+}
+
+fn dimension(value: &XdlValue, name: &str) -> XdlResult<usize> {
+    let value = scalar(value, name)?;
+    if value.fract() != 0.0 || value <= 0.0 || value > usize::MAX as f64 {
+        return Err(XdlError::InvalidArgument(format!(
+            "{name}: expected a positive integer dimension"
+        )));
+    }
+    Ok(value as usize)
+}
+
+fn matrix_length(rows: usize, columns: usize, name: &str) -> XdlResult<usize> {
+    rows.checked_mul(columns)
+        .ok_or_else(|| XdlError::InvalidArgument(format!("{name}: matrix dimensions overflow")))
+}
+
 fn timestamp(value: &XdlValue) -> XdlResult<Timestamp> {
     let value = scalar(value, "GNC_WAYPOINT timestamp")?;
     if value.fract() != 0.0 || value < i64::MIN as f64 || value >= 9_223_372_036_854_775_808.0 {
@@ -216,6 +251,83 @@ pub fn pid_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
 /// `GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min,
 /// output_max, rate_limit, previous_timestamp_ns, previous_output)` performs
 /// one explicit-state first-order actuator update.
+/// GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)
+/// performs one explicit-state discrete state-space update using row-major
+/// flattened matrices. It returns OUTPUT from the current state and STATE for
+/// the next call.
+pub fn state_space_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 9 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_STATE_SPACE_STEP: expected 9 arguments, got {}",
+            args.len()
+        )));
+    }
+    let states = dimension(&args[6], "GNC_STATE_SPACE_STEP states")?;
+    let inputs = dimension(&args[7], "GNC_STATE_SPACE_STEP inputs")?;
+    let outputs = dimension(&args[8], "GNC_STATE_SPACE_STEP outputs")?;
+    let a = numeric_array(&args[0], "GNC_STATE_SPACE_STEP A")?;
+    let b = numeric_array(&args[1], "GNC_STATE_SPACE_STEP B")?;
+    let c = numeric_array(&args[2], "GNC_STATE_SPACE_STEP C")?;
+    let d = numeric_array(&args[3], "GNC_STATE_SPACE_STEP D")?;
+    let state = numeric_array(&args[4], "GNC_STATE_SPACE_STEP state")?;
+    let input = numeric_array(&args[5], "GNC_STATE_SPACE_STEP input")?;
+    let expected = [
+        (states, states, &a, "A"),
+        (states, inputs, &b, "B"),
+        (outputs, states, &c, "C"),
+        (outputs, inputs, &d, "D"),
+    ];
+    for (rows, columns, matrix, name) in expected {
+        let length = matrix_length(rows, columns, &format!("GNC_STATE_SPACE_STEP {name}"))?;
+        if matrix.len() != length {
+            return Err(XdlError::InvalidArgument(format!(
+                "GNC_STATE_SPACE_STEP {name}: expected {length} elements, got {}",
+                matrix.len()
+            )));
+        }
+    }
+    if state.len() != states || input.len() != inputs {
+        return Err(XdlError::InvalidArgument(
+            "GNC_STATE_SPACE_STEP: state or input length does not match dimensions".to_string(),
+        ));
+    }
+    let output = (0..outputs)
+        .map(|row| {
+            let state_term = (0..states)
+                .map(|column| c[row * states + column] * state[column])
+                .sum::<f64>();
+            let input_term = (0..inputs)
+                .map(|column| d[row * inputs + column] * input[column])
+                .sum::<f64>();
+            state_term + input_term
+        })
+        .collect::<Vec<_>>();
+    let next_state = (0..states)
+        .map(|row| {
+            let state_term = (0..states)
+                .map(|column| a[row * states + column] * state[column])
+                .sum::<f64>();
+            let input_term = (0..inputs)
+                .map(|column| b[row * inputs + column] * input[column])
+                .sum::<f64>();
+            state_term + input_term
+        })
+        .collect::<Vec<_>>();
+    if output
+        .iter()
+        .chain(next_state.iter())
+        .any(|value| !value.is_finite())
+    {
+        return Err(XdlError::RuntimeError(
+            "GNC_STATE_SPACE_STEP: output must be finite".to_string(),
+        ));
+    }
+    Ok(XdlValue::Struct(HashMap::from([
+        ("OUTPUT".to_string(), XdlValue::Array(output)),
+        ("STATE".to_string(), XdlValue::Array(next_state)),
+    ])))
+}
+
 pub fn actuator_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if args.len() != 8 {
         return Err(XdlError::InvalidArgument(format!(
@@ -430,6 +542,27 @@ mod tests {
         };
         assert_eq!(fields.get("COMMAND"), Some(&XdlValue::Double(1.0)));
         assert_eq!(fields.get("ERROR"), Some(&XdlValue::Double(1.0)));
+    }
+
+    #[test]
+    fn state_space_binding_returns_current_output_and_next_state() {
+        let result = state_space_step(&[
+            XdlValue::Array(vec![1.0]),
+            XdlValue::Array(vec![1.0]),
+            XdlValue::Array(vec![1.0]),
+            XdlValue::Array(vec![0.0]),
+            XdlValue::Array(vec![0.0]),
+            XdlValue::Array(vec![2.0]),
+            XdlValue::Long(1),
+            XdlValue::Long(1),
+            XdlValue::Long(1),
+        ])
+        .expect("valid state-space step");
+        let XdlValue::Struct(fields) = result else {
+            panic!("expected state-space structure");
+        };
+        assert_eq!(fields.get("OUTPUT"), Some(&XdlValue::Array(vec![0.0])));
+        assert_eq!(fields.get("STATE"), Some(&XdlValue::Array(vec![2.0])));
     }
 
     #[test]
