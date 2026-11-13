@@ -129,6 +129,11 @@ It creates a vector, computes waypoint guidance, performs an explicit-state PID
 step, and applies a first-order actuator update with saturation/rate-limit
 reporting.
 
+The XDL binding `GNC_STATE_SPACE_STEP` extends the slice with a deterministic
+discrete state-space update. It accepts row-major flattened A/B/C/D matrices,
+explicit dimensions, and explicit state, returning the current output and next
+state for script-level closed loops.
+
 Verified on 2026-11-13 with `cargo run -p xdl-cli -- -q
 examples/gnc_guidance_control.xdl`: the example exited successfully and
 reported the expected distance, desired velocity, PID command, and actuator

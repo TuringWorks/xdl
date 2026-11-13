@@ -309,16 +309,18 @@ fn run_tests_with_expectations(
         write_test_manifest(
             path,
             directory,
-            status,
-            &files,
-            &successful_outputs,
-            &failures,
-            run_started_at,
-            run_started
-                .elapsed()
-                .as_millis()
-                .try_into()
-                .unwrap_or(u64::MAX),
+            TestManifestData {
+                status,
+                files: &files,
+                successful_outputs: &successful_outputs,
+                failures: &failures,
+                started_at: run_started_at,
+                duration_ms: run_started
+                    .elapsed()
+                    .as_millis()
+                    .try_into()
+                    .unwrap_or(u64::MAX),
+            },
         )?;
     }
 
@@ -449,21 +451,29 @@ fn replay_manifest(path: &Path) -> Result<()> {
     }
 }
 
-fn write_test_manifest(
-    path: &Path,
-    directory: &Path,
+struct TestManifestData<'a> {
     status: RunStatus,
-    files: &[PathBuf],
-    successful_outputs: &[(PathBuf, String)],
-    failures: &[(String, String)],
+    files: &'a [PathBuf],
+    successful_outputs: &'a [(PathBuf, String)],
+    failures: &'a [(String, String)],
     started_at: u64,
     duration_ms: u64,
-) -> Result<()> {
+}
+
+fn write_test_manifest(path: &Path, directory: &Path, data: TestManifestData<'_>) -> Result<()> {
+    let TestManifestData {
+        status,
+        files,
+        successful_outputs,
+        failures,
+        started_at,
+        duration_ms,
+    } = data;
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?;
     let run_id = format!("xdl-test-{}-{}", process::id(), now.as_nanos());
-    let mut manifest = RunManifest::new(run_id, "xdl", &directory.display().to_string());
+    let mut manifest = RunManifest::new(run_id, "xdl", directory.display().to_string());
     let source_root = if directory.is_file() {
         directory.parent().unwrap_or_else(|| Path::new("."))
     } else {

@@ -201,7 +201,7 @@
         "correctness",
         "warning"
       ],
-      "column": "To Do",
+      "column": "In Progress",
       "acceptanceCriteria": [
         "Fix issue identified in docs/MATLAB_LIMITATIONS.md:38",
         "Ensure changes satisfy security, performance, and correctness standards",

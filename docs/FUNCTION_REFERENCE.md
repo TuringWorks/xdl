@@ -584,6 +584,7 @@ the native GNC crates retain typed frames, timestamps, and error semantics.
 | Function | Signature | Result |
 |---|---|---|
 | `GNC_VEC3` | `GNC_VEC3(x, y, z)` | Three-element numeric array |
+| `GNC_FLIGHT_READINESS_STEP` | `GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)` | Explicit-state readiness transition; returns `STATE`, `STATE_NAME`, `READY`, and `FLYING` |
 | `GNC_WAYPOINT` | `GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)` | Structure with `DESIRED_VELOCITY`, `DISTANCE`, `REACHED`, and `DEGRADED` |
 | `GNC_PID_STEP` | `GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)` | Structure with `COMMAND`, `ERROR`, `DERIVATIVE`, `INTEGRAL`, and `SATURATED` |
 | `GNC_STATE_SPACE_STEP` | `GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)` | Explicit-state discrete state-space update using row-major flattened matrices; returns `OUTPUT` and next `STATE` |
@@ -594,3 +595,10 @@ the native GNC crates retain typed frames, timestamps, and error semantics.
 `timestamp_ns` is an integer nanosecond timestamp. `position` and `waypoint`
 must be three-element finite arrays; speed and radius must be finite and obey
 the guidance configuration limits.
+
+`GNC_FLIGHT_READINESS_STEP` uses explicit states `0=COLD`, `1=READY`, and
+`2=FLYING`. A cold vehicle becomes ready when `temperature_c > 10` and
+`soc > 0.30`; a ready vehicle launches when `launch_requested` is nonzero; a
+flying vehicle returns to ready when either readiness condition is lost. The
+caller owns and passes the state on every step, so the function has no hidden
+process-global state.
