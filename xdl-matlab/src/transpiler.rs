@@ -1058,18 +1058,14 @@ impl Transpiler {
                             }
                             check_pos += 1;
                         }
-                        eprintln!("DEBUG: LeftBracket at expr.is_empty()={}, found_ids={}, found_bracket={}, found_assign={}",
-                            expr.trim().is_empty(), found_ids, found_bracket, found_assign);
                         found_assign
                     } else {
-                        eprintln!("DEBUG: LeftBracket but expr not empty: '{}'", expr.trim());
                         false
                     };
 
                     if is_multiple_output {
                         // Handle multiple output assignment: [X, Y] = func(...)
                         // Just output the bracket and let normal processing continue
-                        eprintln!("DEBUG: Adding opening bracket for multiple output");
                         expr.push('[');
                         self.advance();
                         continue;
