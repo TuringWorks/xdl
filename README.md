@@ -106,7 +106,7 @@ complete or uniformly production-ready:
 - **Canonical numerics**: Sparse, chunked, units-aware, frame-aware, and distributed data types are incomplete
 
 ### Testing & Quality
-- **Test runner**: `xdl test` now discovers and executes `.xdl` scripts recursively; golden vectors, numerical tolerances, manifests, timeouts, and artifact capture are not yet implemented
+- **Test runner**: `xdl test` discovers and executes `.xdl` scripts recursively; `--manifest` emits a test-count summary, while golden vectors, numerical tolerances, file hashes, timeouts, and artifact capture are not yet implemented
 - **Edge cases**: Various edge cases in control flow, type conversions, and array operations
 - **Error messages**: Could be more helpful in some scenarios
 

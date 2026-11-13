@@ -20,6 +20,7 @@ xdl-interpreter = { version = "0.1.1", path = "../xdl-interpreter" }
 xdl-stdlib = { version = "0.1.1", path = "../xdl-stdlib" }
 xdl-matlab = { version = "0.1.1", path = "../xdl-matlab" }
 xdl-model = { version = "0.1.1", path = "../xdl-model" }
+xdl-artifacts = { version = "0.1.1", path = "../xdl-artifacts" }
 
 clap = { workspace = true }
 anyhow = { workspace = true }

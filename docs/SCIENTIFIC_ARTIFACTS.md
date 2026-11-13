@@ -63,8 +63,15 @@ The first implementation is intentionally small:
 - no VibeCoder panel consumes manifests yet;
 - no file hashing or clean-machine replay is implemented yet.
 
-The next step is to make `xdl test` produce these manifests from an explicit,
-reviewable collection policy, then expose them through VibeCoder artifacts.
+The basic runner can now emit a truthful summary manifest:
+
+```bash
+xdl test tests --manifest runs/test-summary.json
+```
+
+The next step is to add an explicit, reviewable collection policy for file
+hashes, outputs, timeouts, numerical evidence, and clean-machine replay, then
+expose those richer artifacts through VibeCoder.
 
 ## Verification
 
@@ -79,4 +86,5 @@ Run:
 
 ```bash
 cargo test -p xdl-artifacts
+cargo test -p xdl-cli --test cli_tests
 ```
