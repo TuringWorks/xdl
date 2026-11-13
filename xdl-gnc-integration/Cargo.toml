@@ -13,3 +13,4 @@ xdl-gnc-core = { path = "../xdl-gnc-core" }
 xdl-gnc-guidance = { path = "../xdl-gnc-guidance" }
 xdl-gnc-navigation = { path = "../xdl-gnc-navigation" }
 xdl-gnc-simulation = { path = "../xdl-gnc-simulation" }
+xdl-gnc-telemetry = { path = "../xdl-gnc-telemetry" }

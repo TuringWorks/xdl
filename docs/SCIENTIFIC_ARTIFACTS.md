@@ -3,7 +3,8 @@
 `xdl-artifacts` is the first P0 foundation for reproducible scientific
 workflows. It defines data contracts; it does not execute tests, collect plots,
 or guarantee reproducibility by itself. The `xdl test --manifest` workflow now
-records SHA-256 hashes for discovered XDL source files.
+records SHA-256 hashes for discovered XDL source files, successful stdout
+artifacts, and failure diagnostics.
 
 ## Run manifests
 
@@ -100,7 +101,9 @@ The JSON sidecar can additionally verify named numeric variables:
 
 Supported values are numeric scalars, flat arrays, nested numeric arrays, and
 multi-dimensional numeric arrays. Unsupported values or mismatched lengths are
-reported as `failed`; no coercion is performed.
+reported as `failed`; no coercion is performed. Numeric reference sidecars may
+include a non-empty `provenance` string, which is emitted in the evidence so a
+declared reference is not mistaken for an independent oracle.
 
 ## Current boundary
 
@@ -109,10 +112,11 @@ The first implementation is intentionally small:
 - serialization is JSON;
 - schema version is currently `1`;
 - validation checks identity, status-entry, artifact, and schema fields;
-- `xdl test --manifest PATH` emits test counts and status;
-- the compatibility report is a curated baseline, not corpus-generated;
+- `xdl test --manifest PATH` emits test counts, source hashes, successful
+  stdout artifacts, and failure diagnostics;
+- the compatibility report includes both a curated baseline and corpus mode;
 - no VibeCoder panel consumes manifests yet;
-- no file hashing or clean-machine replay is implemented yet.
+- no clean-machine replay or numerical evidence collection is implemented yet.
 
 The basic runner can now emit a truthful summary manifest:
 
@@ -120,8 +124,8 @@ The basic runner can now emit a truthful summary manifest:
 xdl test tests --manifest runs/test-summary.json
 ```
 
-The next step is to add an explicit, reviewable collection policy for outputs,
-timeouts, numerical evidence, and clean-machine replay, then
+The next step is to add an explicit, reviewable collection policy for timeouts,
+numerical evidence, and clean-machine replay, then
 expose those richer artifacts through VibeCoder.
 
 ## Verification

@@ -143,7 +143,21 @@ pub struct RunArtifact {
 impl RunArtifact {
     pub fn validate(&self) -> Result<(), ArtifactError> {
         require_non_empty("artifact kind", &self.kind)?;
-        require_non_empty("artifact path", &self.path)
+        require_non_empty("artifact path", &self.path)?;
+        if let Some(sha256) = &self.sha256 {
+            let digest =
+                sha256
+                    .strip_prefix("sha256:")
+                    .ok_or_else(|| ArtifactError::InvalidSha256 {
+                        path: self.path.clone(),
+                    })?;
+            if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                return Err(ArtifactError::InvalidSha256 {
+                    path: self.path.clone(),
+                });
+            }
+        }
+        Ok(())
     }
 }
 
@@ -158,6 +172,10 @@ pub struct RunManifest {
     pub entrypoint: String,
     #[serde(default)]
     pub started_at: Option<String>,
+    #[serde(default)]
+    pub completed_at: Option<String>,
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
     #[serde(default)]
     pub source_hash: Option<String>,
     #[serde(default)]
@@ -199,6 +217,8 @@ impl RunManifest {
             project: project.into(),
             entrypoint: entrypoint.into(),
             started_at: None,
+            completed_at: None,
+            duration_ms: None,
             source_hash: None,
             model_hash: None,
             input_hashes: BTreeMap::new(),
@@ -266,6 +286,8 @@ pub enum ArtifactError {
     },
     #[error("run status does not agree with its test summary")]
     InvalidStatusForTestSummary,
+    #[error("artifact {path} has an invalid sha256 digest")]
+    InvalidSha256 { path: String },
     #[error("artifact serialization failed: {0}")]
     Serialization(#[from] serde_json::Error),
 }
@@ -295,7 +317,9 @@ mod tests {
         manifest.outputs.push(RunArtifact {
             kind: "plot".into(),
             path: "runs/run-001/trajectory.png".into(),
-            sha256: Some("abc123".into()),
+            sha256: Some(
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000".into(),
+            ),
         });
 
         let json = manifest
@@ -353,6 +377,21 @@ mod tests {
                 kind: "run manifest",
                 ..
             })
+        ));
+    }
+
+    #[test]
+    fn malformed_artifact_hashes_are_rejected() {
+        let mut manifest = RunManifest::new("run-001", "project", "entrypoint.xdl");
+        manifest.outputs.push(RunArtifact {
+            kind: "plot".into(),
+            path: "plot.png".into(),
+            sha256: Some("abc123".into()),
+        });
+
+        assert!(matches!(
+            manifest.validate(),
+            Err(ArtifactError::InvalidSha256 { .. })
         ));
     }
 

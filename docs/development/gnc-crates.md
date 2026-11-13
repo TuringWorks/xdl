@@ -46,7 +46,7 @@ Rules:
 | `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 | `xdl-gnc-telemetry` | Ordered telemetry samples with finite-value validation and JSON-lines import/export |
 | `xdl-model` | Serializable block/port/signal graph with connection, bus, subsystem-boundary, and cycle validation |
-| `xdl-sim` | Bounded deterministic periodic-task scheduler, block executor, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
+| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Saturation blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
 
 ### Step events
 
@@ -64,17 +64,17 @@ Rules:
 | Crate | Unit tests | Known limits |
 |---|---|---|
 | `xdl-gnc-core` | 9 | Foundation only |
-| `xdl-gnc-simulation` | 14 | Truth and replay primitives plus deterministic frame-aware constant sensor bias; stochastic noise and Monte Carlo remain pending |
+| `xdl-gnc-simulation` | 16 | Truth and replay primitives, frame-aware constant bias, seeded Gaussian sensor noise, and deterministic Monte Carlo summaries |
 | `xdl-gnc-navigation` | 14 | Alpha-beta is a baseline, not a production estimator |
 | `xdl-gnc-guidance` | 2 | Waypoint only |
 | `xdl-gnc-control` | 6 | Single-axis PID plus state-space and gain-scheduled state feedback |
 | `xdl-gnc-actuators` | 3 | First-order scalar actuator only |
-| `xdl-gnc-integration` | 3 | Deterministic scenario plus typed replay runner; telemetry wiring remains separate |
-| `xdl-gnc-telemetry` | 2 | JSON-lines export; product-specific sinks remain pending |
+| `xdl-gnc-integration` | 4 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, and ordered telemetry output |
+| `xdl-gnc-telemetry` | 3 | Ordered telemetry samples with buffered and streaming JSON-lines export; product-specific sinks remain pending |
 | `xdl-model` | 19 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, and editor events |
-| `xdl-sim` | 16 | Scheduler, parameterized block executor, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
+| `xdl-sim` | 19 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Saturation block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
-Counts from the targeted GNC/model/scheduler test runs on 2026-11-12. Eleven crates, 88 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
+Counts from the targeted GNC/model/scheduler test runs on 2026-11-12. Eleven crates, 96 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
 
 ## Build and test
 

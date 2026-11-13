@@ -17,6 +17,6 @@ The sidecars demonstrate two narrow reference types:
 
 - `scalar_output.m.expected` checks normalized observed stdout;
 - `vector_values.m.expected.json` checks named numeric values with an absolute
-  tolerance.
+  tolerance and records their provenance.
 
 `no_reference.m` is intentionally expected to remain `partial`.

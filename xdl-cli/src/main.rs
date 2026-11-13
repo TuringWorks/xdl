@@ -6,7 +6,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 use anyhow::{Context, Result};
@@ -220,6 +220,7 @@ fn check_file(file: &Path) -> Result<()> {
 
 fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
     info!("Running tests in directory: {}", directory.display());
+    let run_started = Instant::now();
 
     let mut files = Vec::new();
     collect_xdl_files(directory, &mut files)
@@ -233,10 +234,23 @@ fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
         ));
     }
 
+    let capture_output = manifest_path.is_some();
     let mut failures = Vec::new();
+    let mut successful_outputs = Vec::new();
     for file in &files {
-        match execute_file(file) {
-            Ok(()) => println!("✓ {}", file.display()),
+        let result = if capture_output {
+            execute_file_with_output(file)
+        } else {
+            execute_file(file).map(|()| String::new())
+        };
+        match result {
+            Ok(output) => {
+                if capture_output {
+                    print!("{output}");
+                    successful_outputs.push((file.clone(), output));
+                }
+                println!("✓ {}", file.display());
+            }
             Err(error) => {
                 println!("✗ {}: {error:#}", file.display());
                 failures.push((file.display().to_string(), error.to_string()));
@@ -257,7 +271,19 @@ fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
     };
 
     if let Some(path) = manifest_path {
-        write_test_manifest(path, directory, status, &files, failures.len())?;
+        write_test_manifest(
+            path,
+            directory,
+            status,
+            &files,
+            &successful_outputs,
+            &failures,
+            run_started
+                .elapsed()
+                .as_millis()
+                .try_into()
+                .unwrap_or(u64::MAX),
+        )?;
     }
 
     if failures.is_empty() {
@@ -272,7 +298,9 @@ fn write_test_manifest(
     directory: &Path,
     status: RunStatus,
     files: &[PathBuf],
-    failed: usize,
+    successful_outputs: &[(PathBuf, String)],
+    failures: &[(String, String)],
+    duration_ms: u64,
 ) -> Result<()> {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -281,6 +309,8 @@ fn write_test_manifest(
     let mut manifest = RunManifest::new(run_id, "xdl", &directory.display().to_string());
     manifest.status = status;
     manifest.started_at = Some(format!("unix:{}", now.as_secs()));
+    manifest.completed_at = Some(format!("unix:{}", now.as_secs()));
+    manifest.duration_ms = Some(duration_ms);
     manifest.configuration.insert(
         "test_directory".to_string(),
         directory.display().to_string(),
@@ -295,8 +325,8 @@ fn write_test_manifest(
     );
     manifest.test_summary = Some(TestSummary {
         discovered: files.len(),
-        passed: files.len() - failed,
-        failed,
+        passed: files.len() - failures.len(),
+        failed: failures.len(),
     });
     manifest.inputs = files
         .iter()
@@ -308,8 +338,59 @@ fn write_test_manifest(
             })
         })
         .collect::<Result<Vec<_>>>()?;
+    let artifact_root = path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join("artifacts");
+    for (file, output) in successful_outputs {
+        let relative = file.strip_prefix(directory).unwrap_or(file);
+        let artifact_path = artifact_root.join(relative).with_extension("stdout");
+        if let Some(parent) = artifact_path.parent() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "failed to create output artifact directory: {}",
+                    parent.display()
+                )
+            })?;
+        }
+        fs::write(&artifact_path, output).with_context(|| {
+            format!(
+                "failed to write output artifact: {}",
+                artifact_path.display()
+            )
+        })?;
+        manifest.outputs.push(xdl_artifacts::RunArtifact {
+            kind: "xdl-test-stdout".to_string(),
+            path: artifact_path.display().to_string(),
+            sha256: Some(sha256_file(&artifact_path)?),
+        });
+    }
+    for (file, diagnostic) in failures {
+        let source = Path::new(file);
+        let relative = source.strip_prefix(directory).unwrap_or(source);
+        let artifact_path = artifact_root.join(relative).with_extension("failure.txt");
+        if let Some(parent) = artifact_path.parent() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "failed to create failure artifact directory: {}",
+                    parent.display()
+                )
+            })?;
+        }
+        fs::write(&artifact_path, diagnostic).with_context(|| {
+            format!(
+                "failed to write failure artifact: {}",
+                artifact_path.display()
+            )
+        })?;
+        manifest.outputs.push(xdl_artifacts::RunArtifact {
+            kind: "xdl-test-failure".to_string(),
+            path: artifact_path.display().to_string(),
+            sha256: Some(sha256_file(&artifact_path)?),
+        });
+    }
     manifest.warnings.push(
-        "This runner records source hashes and test counts; output artifacts, timeouts, and numerical evidence are not collected yet.".to_string(),
+        "This runner records source hashes, successful stdout artifacts, failure diagnostics, and test counts; timeouts and numerical evidence are not collected yet.".to_string(),
     );
 
     let json = manifest
@@ -530,6 +611,8 @@ fn execute_transpiled_source(source: &str) -> Result<(String, BTreeMap<String, X
 struct NumericReference {
     #[serde(default = "default_numeric_tolerance")]
     abs_tolerance: f64,
+    #[serde(default)]
+    provenance: Option<String>,
     values: BTreeMap<String, Vec<f64>>,
 }
 
@@ -575,8 +658,18 @@ fn corpus_reference_result(
             .and_then(|json| {
                 serde_json::from_str::<NumericReference>(&json).map_err(|error| error.to_string())
             })
-            .and_then(|reference| compare_numeric_reference(&reference, variables))
-        {
+            .and_then(|reference| {
+                if let Some(provenance) = reference.provenance.as_deref() {
+                    if provenance.trim().is_empty() {
+                        return Err("numeric reference provenance must not be empty".to_string());
+                    }
+                    evidence.push(format!(
+                        "numeric-reference-provenance: {}",
+                        provenance.trim()
+                    ));
+                }
+                compare_numeric_reference(&reference, variables)
+            }) {
             Ok(()) => {}
             Err(error) => failures.push(format!("numeric reference failed: {error}")),
         }
@@ -875,6 +968,10 @@ fn execute_command(command: &str) -> Result<()> {
 }
 
 fn execute_file(file: &Path) -> Result<()> {
+    execute_file_with_output(file).map(|_| ())
+}
+
+fn execute_file_with_output(file: &Path) -> Result<String> {
     info!("Executing file: {}", file.display());
 
     let content = fs::read_to_string(file)
@@ -891,12 +988,17 @@ fn execute_file(file: &Path) -> Result<()> {
 
     let program = xdl_parser::parse_xdl(&xdl_code).with_context(|| "Failed to parse XDL code")?;
 
-    let mut interpreter = Interpreter::new();
+    let buffer = Rc::new(RefCell::new(Vec::<u8>::new()));
+    let output: Rc<RefCell<dyn std::io::Write>> =
+        Rc::new(RefCell::new(SharedOutput(buffer.clone())));
+    let mut interpreter = Interpreter::with_output(output);
     interpreter
         .execute_program(&program)
         .with_context(|| "Failed to execute program")?;
 
-    Ok(())
+    let bytes = buffer.borrow().clone();
+    String::from_utf8(bytes)
+        .with_context(|| format!("output from {} was not UTF-8", file.display()))
 }
 
 /// Format a XdlValue for display

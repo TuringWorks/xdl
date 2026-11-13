@@ -150,13 +150,24 @@ fn test_cli_test_command_writes_truthful_manifest() {
         String::from_utf8_lossy(&output.stderr)
     );
     let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
-    let _ = fs::remove_dir_all(&directory);
     assert!(manifest_json.contains("\"status\": \"passed\""));
     assert!(manifest_json.contains("\"discovered\": 1"));
+    assert!(manifest_json.contains("\"completed_at\": \"unix:"));
+    assert!(manifest_json.contains("\"duration_ms\":"));
     assert!(manifest_json.contains("\"kind\": \"xdl-test-source\""));
     assert!(manifest_json.contains(
         "\"sha256\": \"sha256:94ba589944019a00e78f1f53fe6e035e0d6850347c538b370145d4b4c6b80582\""
     ));
+    assert!(manifest_json.contains("\"kind\": \"xdl-test-stdout\""));
+    assert!(manifest_json.contains(
+        "\"sha256\": \"sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22\""
+    ));
+    let stdout_artifact = directory.join("artifacts/pass.stdout");
+    assert_eq!(
+        fs::read_to_string(stdout_artifact).expect("read stdout artifact"),
+        "ok\n"
+    );
+    let _ = fs::remove_dir_all(&directory);
 }
 
 #[test]
@@ -175,6 +186,33 @@ fn test_cli_test_command_fails_for_invalid_xdl() {
     assert!(!output.status.success(), "invalid test must fail");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("0 passed, 1 failed"), "stdout: {stdout}");
+}
+
+#[test]
+fn test_cli_test_command_writes_failure_artifact() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("failing-manifest");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("fail.xdl"), "not valid xdl syntax").expect("write failing test");
+    let manifest = directory.join("run.json");
+
+    let output = Command::new(&binary)
+        .args([
+            "test",
+            directory.to_str().expect("utf-8 test path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run xdl test command");
+
+    assert!(!output.status.success(), "invalid test must fail");
+    let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
+    assert!(manifest_json.contains("\"kind\": \"xdl-test-failure\""));
+    let diagnostic = fs::read_to_string(directory.join("artifacts/fail.failure.txt"))
+        .expect("read failure artifact");
+    assert!(diagnostic.contains("Failed to execute program"));
+    let _ = fs::remove_dir_all(&directory);
 }
 
 #[test]
@@ -221,7 +259,7 @@ fn test_cli_compatibility_report_scans_matlab_corpus() {
     fs::write(directory.join("matrix.m"), "y = [1 2; 3 4];\n").expect("write matrix MATLAB file");
     fs::write(
         directory.join("matrix.m.expected.json"),
-        r#"{"abs_tolerance": 0.0, "values": {"y": [1.0, 2.0, 3.0, 4.0]}}"#,
+        r#"{"abs_tolerance": 0.0, "provenance": "test fixture", "values": {"y": [1.0, 2.0, 3.0, 4.0]}}"#,
     )
     .expect("write MATLAB numeric reference");
 
@@ -248,6 +286,7 @@ fn test_cli_compatibility_report_scans_matlab_corpus() {
     assert!(stdout.contains("matrix.m"));
     assert!(stdout.contains("stdout-reference"));
     assert!(stdout.contains("numeric-reference"));
+    assert!(stdout.contains("numeric-reference-provenance"));
     assert!(stdout.contains("verified"));
 }
 
