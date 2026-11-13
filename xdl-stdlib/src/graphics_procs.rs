@@ -56,6 +56,42 @@ impl Default for GraphicsFunctions {
 
 /// Plot procedure - creates an interactive line plot in a GUI window
 /// Routes to ECharts or XDLPlot backend based on current setting
+/// SET_PLOT_BACKEND procedure - switch between ECharts and XDLPlot backends
+/// Usage: SET_PLOT_BACKEND, 'ECHARTS' or SET_PLOT_BACKEND, 'XDLPLOT'
+pub fn set_plot_backend_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.is_empty() {
+        // No argument - print current backend
+        let current = get_plot_backend();
+        println!("Current plot backend: {:?}", current);
+        println!("Available backends: ECHARTS, XDLPLOT");
+        return Ok(XdlValue::Undefined);
+    }
+
+    // Parse backend name from argument
+    let backend_name = match &args[0] {
+        XdlValue::String(s) => s.to_uppercase(),
+        _ => {
+            return Err(XdlError::RuntimeError(
+                "SET_PLOT_BACKEND requires a string argument ('ECHARTS' or 'XDLPLOT')".to_string(),
+            ))
+        }
+    };
+
+    let backend = match backend_name.as_str() {
+        "ECHARTS" => PlotBackend::ECharts,
+        "XDLPLOT" | "PLOTTERS" => PlotBackend::XDLPlot,
+        _ => {
+            return Err(XdlError::RuntimeError(format!(
+                "Unknown plot backend: '{}'. Use 'ECHARTS' or 'XDLPLOT'",
+                backend_name
+            )))
+        }
+    };
+
+    set_plot_backend(backend);
+    Ok(XdlValue::Undefined)
+}
+
 /// Resolve PLOT's arguments to `(x, y)` in IDL order.
 ///
 /// IDL: `PLOT, Y` plots Y against its index; `PLOT, X, Y` plots Y against X.
