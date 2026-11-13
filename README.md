@@ -38,11 +38,11 @@ The project is structured as a Cargo workspace with the following crates:
 - **`xdl-chart-viewer`**: Interactive chart viewer application
 - **`xdl-amp`**: Accelerated Math Processing
 - **`xdl-lsp`**: Language Server Protocol implementation for IDE support
+- **`xdl-matlab`**: MATLAB/Octave transpiler for a tested basic-to-moderate `.m` subset (~2,950 lines; 28 unit tests)
 - **`xdl-artifacts`**: Versioned run-manifest and compatibility-status contracts
 - **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**: Typed guidance, navigation, and control libraries (in development; no XDL built-ins yet). See [GNC Crates](docs/development/gnc-crates.md)
 
 **Additional Modules (not in workspace):**
-- **`xdl-matlab`**: MATLAB transpilation support (~83,000 line transpiler)
 - **`xdl-desktop-viewer`**: Desktop visualization viewer
 
 ## Features
