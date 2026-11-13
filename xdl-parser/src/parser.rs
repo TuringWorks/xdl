@@ -1616,8 +1616,8 @@ impl<'a> Parser<'a> {
                             // Check for /FLAG keyword (e.g., /INDEX)
                             if self.check(&Token::Divide) {
                                 self.advance(); // consume '/'
-                                // CONTINUE lexes as the loop keyword, but `/CONTINUE`
-                                // is a keyword argument (MESSAGE, /CONTINUE).
+                                                // CONTINUE lexes as the loop keyword, but `/CONTINUE`
+                                                // is a keyword argument (MESSAGE, /CONTINUE).
                                 let flag_name = match self.peek() {
                                     Token::Identifier(name) => Some(name.clone()),
                                     Token::Continue => Some("CONTINUE".to_string()),

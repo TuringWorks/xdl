@@ -148,6 +148,18 @@ impl ModelDocument {
                 geometry.y + 20.0,
                 escape_xml(&block.name)
             );
+            for port in block.ports.values() {
+                let position = self.port_position(port.id)?;
+                let _ = writeln!(
+                    svg,
+                    "<circle cx=\"{}\" cy=\"{}\" r=\"4\" /><text x=\"{}\" y=\"{}\">{}</text>",
+                    position.0,
+                    position.1,
+                    position.0 + 6.0,
+                    position.1 - 6.0,
+                    escape_xml(&port.name)
+                );
+            }
         }
         let _ = writeln!(svg, "</g></svg>");
         Ok(svg)
@@ -414,6 +426,8 @@ mod tests {
         assert!(svg.starts_with("<svg "));
         assert!(svg.contains("class=\"connections\""));
         assert!(svg.contains("<line "));
+        assert!(svg.contains("<circle "));
+        assert!(svg.contains("out"));
         assert!(svg.contains("source"));
     }
 
