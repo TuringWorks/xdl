@@ -48,6 +48,15 @@ fn launch_chart(html: String, title: &str) -> XdlResult<()> {
     use std::fs;
     use std::io::Write;
 
+    // Headless: no display to open a window on. Write the chart beside the script.
+    if xdl_core::headless::is_headless() {
+        let name = xdl_core::headless::next_export_name("xdl_chart", "html");
+        fs::write(&name, html)
+            .map_err(|e| XdlError::RuntimeError(format!("Failed to write {}: {}", name, e)))?;
+        println!("Chart '{}' saved to {} (headless)", title, name);
+        return Ok(());
+    }
+
     let exe_dir = std::env::current_exe()
         .map_err(|e| XdlError::RuntimeError(format!("Cannot find exe: {}", e)))?
         .parent()

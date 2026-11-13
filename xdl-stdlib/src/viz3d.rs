@@ -354,6 +354,35 @@ pub fn viz3d_render(
     let backend = Viz3DBackend::from_env().resolve();
     println!("  Backend: {:?}", backend);
 
+    // Headless: write the Three.js volume as a self-contained HTML file.
+    if interactive && xdl_core::headless::is_headless() {
+        let (Some(data), Some(dims)) = (state.volume_data.clone(), state.volume_dims) else {
+            return Err(XdlError::RuntimeError(
+                "VIZ3D_RENDER: no volume loaded; call VIZ3D_VOLUME first".to_string(),
+            ));
+        };
+        return match backend {
+            Viz3DBackend::ThreeJS => {
+                let html = xdl_viz3d_threejs::generate_html(
+                    data,
+                    dims,
+                    &state.colormap,
+                    title.unwrap_or("3D Volume Visualization"),
+                );
+                let name = xdl_core::headless::next_export_name("xdl_viz3d", "html");
+                std::fs::write(&name, html).map_err(|e| {
+                    XdlError::RuntimeError(format!("Failed to write {}: {}", name, e))
+                })?;
+                println!("Volume saved to {} (headless)", name);
+                Ok(XdlValue::Undefined)
+            }
+            other => Err(XdlError::RuntimeError(format!(
+                "VIZ3D_RENDER: backend {:?} has no headless export; the Three.js backend does",
+                other
+            ))),
+        };
+    }
+
     // Route to appropriate backend
     if interactive && backend == Viz3DBackend::ThreeJS {
         // Three.js WebGL rendering (Tauri-based)

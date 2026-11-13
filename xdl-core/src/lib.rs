@@ -6,6 +6,7 @@
 pub mod array;
 pub mod dimension;
 pub mod error;
+pub mod headless;
 pub mod types;
 
 use serde::{Deserialize, Serialize};

@@ -39,6 +39,10 @@ struct Cli {
     #[arg(short = 'q', long)]
     quiet: bool,
 
+    /// Write visualizations to HTML files in the working directory instead of opening windows
+    #[arg(long)]
+    headless: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -70,6 +74,7 @@ enum Commands {
 
 fn main() {
     let cli = Cli::parse();
+    xdl_core::headless::set_headless(cli.headless);
 
     // Initialize tracing
     let subscriber = tracing_subscriber::fmt().finish();
