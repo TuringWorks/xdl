@@ -233,6 +233,40 @@ impl PidController {
         }
     }
 
+    /// Rehydrates a controller for a stateless host boundary such as XDL.
+    /// The previous error and timestamp must be supplied together or omitted
+    /// together; the integral state must already satisfy the configured limit.
+    pub fn with_state(
+        config: PidConfig,
+        integral: f64,
+        previous_error: Option<f64>,
+        previous_timestamp: Option<Timestamp>,
+    ) -> Result<Self, GncError> {
+        if !integral.is_finite() || previous_error.is_some_and(|value| !value.is_finite()) {
+            return Err(GncError::NonFinite {
+                context: "PID state".to_string(),
+            });
+        }
+        if previous_error.is_some() != previous_timestamp.is_some() {
+            return Err(GncError::InvalidValue {
+                context: "PID state".to_string(),
+                reason: "previous error and timestamp must be supplied together".to_string(),
+            });
+        }
+        if config.integral_limit.apply(integral)?.saturated {
+            return Err(GncError::InvalidValue {
+                context: "PID state".to_string(),
+                reason: "integral state is outside its configured limit".to_string(),
+            });
+        }
+        Ok(Self {
+            config,
+            integral,
+            previous_error,
+            previous_timestamp,
+        })
+    }
+
     pub fn reset(&mut self) {
         self.integral = 0.0;
         self.previous_error = None;

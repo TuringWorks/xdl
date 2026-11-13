@@ -459,6 +459,37 @@ impl SymbolTable {
             );
         }
 
+        for (name, doc, ret, sig) in [
+            (
+                "GNC_VEC3",
+                "gnc_vec3(x, y, z) - Create a GNC three-vector",
+                "ARRAY",
+                "GNC_VEC3(x, y, z)",
+            ),
+            (
+                "GNC_WAYPOINT",
+                "gnc_waypoint(position, waypoint, timestamp_ns, cruise_speed, radius) - Compute waypoint guidance",
+                "STRUCT",
+                "GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)",
+            ),
+            (
+                "GNC_PID_STEP",
+                "gnc_pid_step(...) - Perform an explicit-state PID update",
+                "STRUCT",
+                "GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)",
+            ),
+        ] {
+            self.builtin_functions.insert(
+                name.to_string(),
+                BuiltinInfo {
+                    name: name.to_string(),
+                    documentation: doc.to_string(),
+                    return_type: ret.to_string(),
+                    signature: sig.to_string(),
+                },
+            );
+        }
+
         // Procedures
         let procedures = vec![
             (

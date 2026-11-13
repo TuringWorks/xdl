@@ -8,6 +8,7 @@ mod charting_procs; // ECharts charting procedures
 pub mod complex;
 pub mod data_structures; // Pointers, objects, lists, hashes
 pub mod dialog; // Dialog functions for user interaction
+pub mod gnc; // Guidance, navigation, and control bindings
 pub mod gpu_array; // GPU-accelerated array operations
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
@@ -309,6 +310,11 @@ impl StandardLibrary {
         keywords: &HashMap<String, XdlValue>,
     ) -> XdlResult<XdlValue> {
         match name.to_uppercase().as_str() {
+            // Guidance, navigation, and control bindings
+            "GNC_VEC3" => gnc::vec3(args),
+            "GNC_WAYPOINT" => gnc::waypoint(args),
+            "GNC_PID_STEP" => gnc::pid_step(args),
+
             // Trigonometric functions
             "SIN" => math::sin(args),
             "COS" => math::cos(args),
@@ -1145,5 +1151,26 @@ fn create_hash(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
         result.push('}');
         Ok(XdlValue::String(result))
+    }
+}
+
+#[cfg(test)]
+mod gnc_dispatch_tests {
+    use super::*;
+
+    #[test]
+    fn gnc_functions_are_reachable_through_case_insensitive_dispatch() {
+        let library = StandardLibrary::new();
+        let value = library
+            .call_function(
+                "gnc_vec3",
+                &[
+                    XdlValue::Double(1.0),
+                    XdlValue::Double(2.0),
+                    XdlValue::Double(3.0),
+                ],
+            )
+            .expect("GNC_VEC3 should be registered");
+        assert_eq!(value, XdlValue::Array(vec![1.0, 2.0, 3.0]));
     }
 }

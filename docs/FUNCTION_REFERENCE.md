@@ -21,6 +21,7 @@
 11. [Signal Processing](#signal-processing)
 12. [Image Processing](#image-processing)
 13. [System Functions](#system-functions)
+14. [GNC Bindings](#gnc-bindings)
 
 ---
 
@@ -574,3 +575,18 @@ Build with flags:
 ```bash
 cargo build --features "python,dataframes,ml"
 ```
+# GNC bindings
+
+The first XDL-facing guidance binding is available through the standard
+library. These functions use numeric arrays and return an XDL structure, while
+the native GNC crates retain typed frames, timestamps, and error semantics.
+
+| Function | Signature | Result |
+|---|---|---|
+| `GNC_VEC3` | `GNC_VEC3(x, y, z)` | Three-element numeric array |
+| `GNC_WAYPOINT` | `GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)` | Structure with `DESIRED_VELOCITY`, `DISTANCE`, `REACHED`, and `DEGRADED` |
+| `GNC_PID_STEP` | `GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)` | Structure with `COMMAND`, `ERROR`, `DERIVATIVE`, `INTEGRAL`, and `SATURATED` |
+
+`timestamp_ns` is an integer nanosecond timestamp. `position` and `waypoint`
+must be three-element finite arrays; speed and radius must be finite and obey
+the guidance configuration limits.
