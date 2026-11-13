@@ -225,6 +225,14 @@ fn check_file(file: &Path) -> Result<()> {
 }
 
 fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
+    run_tests_with_expectations(directory, manifest_path, None)
+}
+
+fn run_tests_with_expectations(
+    directory: &Path,
+    manifest_path: Option<&Path>,
+    expected_stdout: Option<&BTreeMap<PathBuf, String>>,
+) -> Result<()> {
     info!("Running tests in directory: {}", directory.display());
     let run_started = Instant::now();
     let run_started_at = SystemTime::now()
@@ -244,7 +252,7 @@ fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
         ));
     }
 
-    let capture_output = manifest_path.is_some();
+    let capture_output = manifest_path.is_some() || expected_stdout.is_some();
     let mut failures = Vec::new();
     let mut successful_outputs = Vec::new();
     for file in &files {
@@ -257,9 +265,26 @@ fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
             Ok(output) => {
                 if capture_output {
                     print!("{output}");
-                    successful_outputs.push((file.clone(), output));
                 }
-                println!("✓ {}", file.display());
+                let output_mismatch = expected_stdout
+                    .and_then(|expected| expected.get(file))
+                    .filter(|expected| expected.trim_end() != output.trim_end())
+                    .map(|expected| {
+                        format!(
+                            "stdout mismatch: expected {:?}, got {:?}",
+                            expected.trim_end(),
+                            output.trim_end()
+                        )
+                    });
+                if let Some(error) = output_mismatch {
+                    println!("✗ {}: {error}", file.display());
+                    failures.push((file.display().to_string(), error));
+                } else {
+                    if manifest_path.is_some() {
+                        successful_outputs.push((file.clone(), output));
+                    }
+                    println!("✓ {}", file.display());
+                }
             }
             Err(error) => {
                 println!("✗ {}: {error:#}", file.display());
@@ -319,20 +344,104 @@ fn replay_manifest(path: &Path) -> Result<()> {
             "manifest runner '{runner}' is not replayable by xdl"
         ));
     }
-    let directory = manifest
+    let recorded_directory = manifest
         .configuration
         .get("test_directory")
         .ok_or_else(|| anyhow::anyhow!("manifest does not record a test directory"))?;
-    let directory = Path::new(directory);
+    let recorded_directory = Path::new(recorded_directory);
+    let directory = if recorded_directory.is_absolute() {
+        recorded_directory.to_path_buf()
+    } else {
+        path.parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(recorded_directory)
+    };
     if !directory.is_dir() {
         return Err(anyhow::anyhow!(
             "recorded test directory does not exist: {}",
             directory.display()
         ));
     }
+    for artifact in &manifest.inputs {
+        if artifact.kind != "xdl-test-source" {
+            continue;
+        }
+        let recorded_path = Path::new(&artifact.path);
+        let source = if recorded_path.is_absolute() {
+            recorded_path.to_path_buf()
+        } else {
+            directory.join(recorded_path)
+        };
+        let expected_hash = artifact.sha256.as_deref().ok_or_else(|| {
+            anyhow::anyhow!("source artifact has no recorded sha256: {}", artifact.path)
+        })?;
+        let actual_hash = sha256_file(&source)?;
+        if actual_hash != expected_hash {
+            return Err(anyhow::anyhow!(
+                "source hash mismatch for {}: expected {expected_hash}, got {actual_hash}",
+                source.display()
+            ));
+        }
+    }
+    let manifest_root = path.parent().unwrap_or_else(|| Path::new("."));
+    for artifact in &manifest.outputs {
+        let recorded_path = Path::new(&artifact.path);
+        let output = if recorded_path.is_absolute() {
+            recorded_path.to_path_buf()
+        } else {
+            manifest_root.join(recorded_path)
+        };
+        let expected_hash = artifact.sha256.as_deref().ok_or_else(|| {
+            anyhow::anyhow!("output artifact has no recorded sha256: {}", artifact.path)
+        })?;
+        let actual_hash = sha256_file(&output)?;
+        if actual_hash != expected_hash {
+            return Err(anyhow::anyhow!(
+                "output artifact hash mismatch for {}: expected {expected_hash}, got {actual_hash}",
+                output.display()
+            ));
+        }
+    }
+    let mut expected_stdout = BTreeMap::new();
+    for artifact in &manifest.outputs {
+        if artifact.kind != "xdl-test-stdout" {
+            continue;
+        }
+        let artifact_path = Path::new(&artifact.path);
+        let relative = artifact_path
+            .strip_prefix("artifacts")
+            .unwrap_or(artifact_path)
+            .with_extension("xdl");
+        let output_path = if artifact_path.is_absolute() {
+            artifact_path.to_path_buf()
+        } else {
+            manifest_root.join(artifact_path)
+        };
+        let expected = fs::read_to_string(&output_path).with_context(|| {
+            format!(
+                "failed to read recorded stdout artifact: {}",
+                output_path.display()
+            )
+        })?;
+        expected_stdout.insert(directory.join(relative), expected);
+    }
     println!("Replaying manifest: {}", path.display());
     println!("Test directory: {}", directory.display());
-    run_tests(directory, None)
+    let replay_result = run_tests_with_expectations(&directory, None, Some(&expected_stdout));
+    match (manifest.status, replay_result) {
+        (RunStatus::Passed, Ok(())) => Ok(()),
+        (RunStatus::Passed, Err(error)) => Err(error),
+        (RunStatus::Failed, Err(_)) => {
+            println!("Replay matched the recorded failed status.");
+            Ok(())
+        }
+        (RunStatus::Failed, Ok(())) => Err(anyhow::anyhow!(
+            "replay passed but manifest recorded a failed run"
+        )),
+        (RunStatus::InProgress, _) => Err(anyhow::anyhow!(
+            "cannot replay a manifest with in_progress status"
+        )),
+    }
 }
 
 fn write_test_manifest(
@@ -350,14 +459,19 @@ fn write_test_manifest(
         .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?;
     let run_id = format!("xdl-test-{}-{}", process::id(), now.as_nanos());
     let mut manifest = RunManifest::new(run_id, "xdl", &directory.display().to_string());
+    let manifest_root = path.parent().unwrap_or_else(|| Path::new("."));
+    let recorded_directory = match directory.strip_prefix(manifest_root) {
+        Ok(relative) if !relative.as_os_str().is_empty() => relative.display().to_string(),
+        Ok(_) => ".".to_string(),
+        Err(_) => directory.display().to_string(),
+    };
     manifest.status = status;
     manifest.started_at = Some(format!("unix:{started_at}"));
     manifest.completed_at = Some(format!("unix:{}", now.as_secs()));
     manifest.duration_ms = Some(duration_ms);
-    manifest.configuration.insert(
-        "test_directory".to_string(),
-        directory.display().to_string(),
-    );
+    manifest
+        .configuration
+        .insert("test_directory".to_string(), recorded_directory);
     manifest.configuration.insert(
         "runner".to_string(),
         "recursive-xdl-script-runner".to_string(),
@@ -386,7 +500,6 @@ fn write_test_manifest(
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .join("artifacts");
-    let manifest_root = path.parent().unwrap_or_else(|| Path::new("."));
     for (file, output) in successful_outputs {
         let relative = file.strip_prefix(directory).unwrap_or(file);
         let artifact_path = artifact_root.join(relative).with_extension("stdout");
@@ -1021,7 +1134,14 @@ fn execute_command(command: &str) -> Result<()> {
 }
 
 fn execute_file(file: &Path) -> Result<()> {
-    execute_file_with_output(file).map(|_| ())
+    // Print what the program printed. Dropping this string silently discarded
+    // every PRINT, so `xdl script.xdl` and the daemon's /xdl/run showed no output.
+    let output = execute_file_with_output(file)?;
+    use std::io::Write;
+    let mut stdout = std::io::stdout().lock();
+    stdout.write_all(output.as_bytes())?;
+    stdout.flush()?;
+    Ok(())
 }
 
 fn execute_file_with_output(file: &Path) -> Result<String> {

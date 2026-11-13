@@ -14,7 +14,12 @@ use xdl_gnc_core::{DurationNs, GncError, Timestamp};
 use xdl_model::{BlockId, Model, ModelError, PortId, SignalShape, Subsystem};
 
 pub mod blocks;
-pub use blocks::{Constant, Gain, Integrator, Product, RateLimiter, Saturation, Sum, Switch};
+pub use blocks::{
+    BusCreator, BusSelector, Constant, CrossProduct, Deadzone, Demux, Derivative, Gain, Integrator,
+    LookupTable1D, MatrixGain, Mux, Pid, PidBlockConfig, Product, QuaternionConjugate,
+    QuaternionMultiply, QuaternionNormalize, QuaternionRotate, RateLimiter, Saturation, Sum,
+    Switch, VectorNorm, VectorNormalize, VectorScale, VectorSum,
+};
 pub mod solver;
 pub use solver::{
     euler_step, rk4_adaptive_step, rk4_step, AdaptiveConfig, AdaptiveStep, DerivativeFn,

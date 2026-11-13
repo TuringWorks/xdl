@@ -25,6 +25,10 @@ The contract validates required identity fields and rejects unknown future schem
 versions. Callers remain responsible for calculating hashes, capturing the
 environment, and verifying that referenced files exist.
 
+The language-independent JSON Schema is checked in at
+`xdl-artifacts/schema/run-manifest.schema.json` for VibeCoder, CI, and other
+consumers that do not link the Rust crate.
+
 Example shape:
 
 ```json
@@ -57,6 +61,9 @@ Example shape:
 Every entry must identify its surface, capability, evidence, and optional notes.
 This is intended to become the generated source for MATLAB/Octave, IDL/GDL,
 scientific-I/O, GPU, and model-runtime status reports.
+
+The corresponding language-independent inventory schema is
+`xdl-artifacts/schema/compatibility-inventory.schema.json`.
 
 The current CLI exposes a curated baseline:
 
@@ -128,9 +135,11 @@ xdl test tests --manifest runs/test-summary.json
 xdl replay runs/test-summary.json
 ```
 
-`xdl replay` validates the manifest and reruns its recorded test directory. It
-is local replay evidence, not a clean-machine guarantee; environment locking,
-data locking, numerical comparisons, and timeout enforcement remain open.
+`xdl replay` validates the manifest, verifies recorded source and artifact
+hashes, and reruns its recorded test directory. It is local replay evidence,
+including matching a recorded failed status. It is not a clean-machine
+guarantee; environment locking, data locking, numerical comparisons, failure
+diagnostic comparison, and timeout enforcement remain open.
 
 The next step is to add an explicit, reviewable collection policy for timeouts,
 numerical evidence, and clean-machine replay, then

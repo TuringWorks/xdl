@@ -1168,7 +1168,11 @@ impl Transpiler {
                     {
                         // randn is normal (RANDOMN); rand is uniform (RANDOMU).
                         // Mapping both to RANDOMU gave randn uniform statistics.
-                        let xdl_func = if mapped_name == "randn" { "RANDOMN" } else { "RANDOMU" };
+                        let xdl_func = if mapped_name == "randn" {
+                            "RANDOMN"
+                        } else {
+                            "RANDOMU"
+                        };
                         self.advance(); // skip 'randn'/'rand'
                         self.advance(); // skip '('
 
@@ -2295,6 +2299,9 @@ mod loop_and_random_regression_tests {
     fn randn_maps_to_normal_generator() {
         let result = transpile_matlab_to_xdl("y = randn(size(x));").unwrap();
         assert!(result.contains("RANDOMN"), "got: {result}");
-        assert!(!result.contains("RANDOMU"), "randn must not be uniform: {result}");
+        assert!(
+            !result.contains("RANDOMU"),
+            "randn must not be uniform: {result}"
+        );
     }
 }

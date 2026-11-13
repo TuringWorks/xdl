@@ -6,7 +6,8 @@
 use crate::{BlockRuntime, ExecutionError, SignalValue};
 use serde_json::Value;
 use std::collections::BTreeMap;
-use xdl_gnc_core::Timestamp;
+use xdl_gnc_control::{PidConfig as GncPidConfig, PidController};
+use xdl_gnc_core::{Quaternion, ScalarLimit, Timestamp};
 use xdl_model::PortId;
 
 pub struct Constant {
@@ -269,6 +270,783 @@ pub struct RateLimiter {
     last_timestamp: Option<Timestamp>,
 }
 
+pub struct Deadzone {
+    pub input: PortId,
+    pub output: PortId,
+    pub lower: f64,
+    pub upper: f64,
+}
+
+pub struct LookupTable1D {
+    pub input: PortId,
+    pub output: PortId,
+    pub breakpoints: Vec<f64>,
+    pub values: Vec<f64>,
+}
+
+pub struct Derivative {
+    pub input: PortId,
+    pub output: PortId,
+    previous_value: Option<f64>,
+    previous_timestamp: Option<Timestamp>,
+}
+
+pub struct Pid {
+    pub setpoint: PortId,
+    pub measurement: PortId,
+    pub output: PortId,
+    controller: PidController,
+}
+
+pub struct Mux {
+    pub inputs: Vec<PortId>,
+    pub output: PortId,
+}
+
+impl Mux {
+    pub fn new(inputs: Vec<PortId>, output: PortId) -> Result<Self, ExecutionError> {
+        if inputs.is_empty() {
+            return Err(ExecutionError::Runtime(
+                "mux requires at least one input".to_string(),
+            ));
+        }
+        Ok(Self { inputs, output })
+    }
+}
+
+impl BlockRuntime for Mux {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let values = self
+            .inputs
+            .iter()
+            .map(|port| scalar_input(inputs, *port, "mux"))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(BTreeMap::from([(self.output, SignalValue::Vector(values))]))
+    }
+}
+
+pub struct Demux {
+    pub input: PortId,
+    pub outputs: Vec<PortId>,
+}
+
+impl Demux {
+    pub fn new(input: PortId, outputs: Vec<PortId>) -> Result<Self, ExecutionError> {
+        if outputs.is_empty() {
+            return Err(ExecutionError::Runtime(
+                "demux requires at least one output".to_string(),
+            ));
+        }
+        Ok(Self { input, outputs })
+    }
+}
+
+impl BlockRuntime for Demux {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(values)) = inputs.get(&self.input) else {
+            return Err(ExecutionError::Runtime(
+                "demux input must be a vector".to_string(),
+            ));
+        };
+        if values.len() != self.outputs.len() {
+            return Err(ExecutionError::Runtime(
+                "demux vector length must match output count".to_string(),
+            ));
+        }
+        Ok(self
+            .outputs
+            .iter()
+            .copied()
+            .zip(values.iter().copied())
+            .map(|(port, value)| (port, SignalValue::Scalar(value)))
+            .collect())
+    }
+}
+
+pub struct MatrixGain {
+    pub input: PortId,
+    pub output: PortId,
+    pub rows: usize,
+    pub columns: usize,
+    pub values: Vec<f64>,
+}
+
+pub struct VectorSum {
+    pub left: PortId,
+    pub right: PortId,
+    pub output: PortId,
+}
+
+pub struct VectorScale {
+    pub vector: PortId,
+    pub scale: PortId,
+    pub output: PortId,
+}
+
+impl VectorScale {
+    pub const fn new(vector: PortId, scale: PortId, output: PortId) -> Self {
+        Self {
+            vector,
+            scale,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for VectorScale {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(vector)) = inputs.get(&self.vector) else {
+            return Err(ExecutionError::Runtime(
+                "vector scale input must be a vector".to_string(),
+            ));
+        };
+        let scale = scalar_input(inputs, self.scale, "vector scale")?;
+        let values = vector.iter().map(|value| value * scale).collect::<Vec<_>>();
+        if values.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "vector scale output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(self.output, SignalValue::Vector(values))]))
+    }
+}
+
+pub struct VectorNorm {
+    pub input: PortId,
+    pub output: PortId,
+}
+
+pub struct VectorNormalize {
+    pub input: PortId,
+    pub output: PortId,
+}
+
+impl VectorNormalize {
+    pub const fn new(input: PortId, output: PortId) -> Self {
+        Self { input, output }
+    }
+}
+
+impl BlockRuntime for VectorNormalize {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(vector)) = inputs.get(&self.input) else {
+            return Err(ExecutionError::Runtime(
+                "vector normalize input must be a vector".to_string(),
+            ));
+        };
+        let norm = vector.iter().try_fold(0.0_f64, |norm, value| {
+            if !value.is_finite() {
+                Err(ExecutionError::Runtime(
+                    "vector normalize input must be finite".to_string(),
+                ))
+            } else {
+                Ok(norm.hypot(*value))
+            }
+        })?;
+        if norm == 0.0 {
+            return Err(ExecutionError::Runtime(
+                "cannot normalize a zero-length vector".to_string(),
+            ));
+        }
+        let normalized = vector.iter().map(|value| value / norm).collect::<Vec<_>>();
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Vector(normalized),
+        )]))
+    }
+}
+
+pub struct BusCreator {
+    pub inputs: BTreeMap<String, PortId>,
+    pub output: PortId,
+}
+
+impl BusCreator {
+    pub fn new(inputs: BTreeMap<String, PortId>, output: PortId) -> Result<Self, ExecutionError> {
+        if inputs.is_empty() || inputs.keys().any(|name| name.trim().is_empty()) {
+            return Err(ExecutionError::Runtime(
+                "bus creator requires named inputs".to_string(),
+            ));
+        }
+        Ok(Self { inputs, output })
+    }
+}
+
+impl BlockRuntime for BusCreator {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let fields = self
+            .inputs
+            .iter()
+            .map(|(name, port)| {
+                inputs
+                    .get(port)
+                    .cloned()
+                    .map(|value| (name.clone(), value))
+                    .ok_or(ExecutionError::MissingInput(*port))
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+        Ok(BTreeMap::from([(self.output, SignalValue::Bus(fields))]))
+    }
+}
+
+pub struct BusSelector {
+    pub input: PortId,
+    pub outputs: BTreeMap<String, PortId>,
+}
+
+impl BusSelector {
+    pub fn new(input: PortId, outputs: BTreeMap<String, PortId>) -> Result<Self, ExecutionError> {
+        if outputs.is_empty() || outputs.keys().any(|name| name.trim().is_empty()) {
+            return Err(ExecutionError::Runtime(
+                "bus selector requires named outputs".to_string(),
+            ));
+        }
+        Ok(Self { input, outputs })
+    }
+}
+
+impl BlockRuntime for BusSelector {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Bus(fields)) = inputs.get(&self.input) else {
+            return Err(ExecutionError::Runtime(
+                "bus selector input must be a bus".to_string(),
+            ));
+        };
+        self.outputs
+            .iter()
+            .map(|(name, port)| {
+                fields
+                    .get(name)
+                    .cloned()
+                    .map(|value| (*port, value))
+                    .ok_or_else(|| {
+                        ExecutionError::Runtime(format!("bus field {name} is not present"))
+                    })
+            })
+            .collect()
+    }
+}
+
+pub struct CrossProduct {
+    pub left: PortId,
+    pub right: PortId,
+    pub output: PortId,
+}
+
+pub struct QuaternionNormalize {
+    pub input: PortId,
+    pub output: PortId,
+}
+
+impl QuaternionNormalize {
+    pub const fn new(input: PortId, output: PortId) -> Self {
+        Self { input, output }
+    }
+}
+
+impl BlockRuntime for QuaternionNormalize {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let [w, x, y, z] = vector4_input(inputs, self.input, "quaternion normalize")?;
+        let quaternion = Quaternion::new(w, x, y, z);
+        let normalized = quaternion
+            .try_normalize()
+            .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Vector(vec![normalized.w, normalized.x, normalized.y, normalized.z]),
+        )]))
+    }
+}
+
+pub struct QuaternionMultiply {
+    pub left: PortId,
+    pub right: PortId,
+    pub output: PortId,
+}
+
+impl QuaternionMultiply {
+    pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
+        Self {
+            left,
+            right,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for QuaternionMultiply {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let [left_w, left_x, left_y, left_z] =
+            vector4_input(inputs, self.left, "quaternion multiply")?;
+        let [right_w, right_x, right_y, right_z] =
+            vector4_input(inputs, self.right, "quaternion multiply")?;
+        let left = Quaternion::new(left_w, left_x, left_y, left_z);
+        let right = Quaternion::new(right_w, right_x, right_y, right_z);
+        let product = left * right;
+        if !product.w.is_finite()
+            || !product.x.is_finite()
+            || !product.y.is_finite()
+            || !product.z.is_finite()
+        {
+            return Err(ExecutionError::Runtime(
+                "quaternion product must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Vector(vec![product.w, product.x, product.y, product.z]),
+        )]))
+    }
+}
+
+pub struct QuaternionRotate {
+    pub quaternion: PortId,
+    pub vector: PortId,
+    pub output: PortId,
+}
+
+impl QuaternionRotate {
+    pub const fn new(quaternion: PortId, vector: PortId, output: PortId) -> Self {
+        Self {
+            quaternion,
+            vector,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for QuaternionRotate {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let [w, x, y, z] = vector4_input(inputs, self.quaternion, "quaternion rotate")?;
+        let [vx, vy, vz] = vector3_input(inputs, self.vector, "quaternion rotate")?;
+        let rotated = Quaternion::new(w, x, y, z)
+            .rotate_vector(xdl_gnc_core::Vec3::new(vx, vy, vz))
+            .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Vector(vec![rotated.x, rotated.y, rotated.z]),
+        )]))
+    }
+}
+
+pub struct QuaternionConjugate {
+    pub input: PortId,
+    pub output: PortId,
+}
+
+impl QuaternionConjugate {
+    pub const fn new(input: PortId, output: PortId) -> Self {
+        Self { input, output }
+    }
+}
+
+impl BlockRuntime for QuaternionConjugate {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let [w, x, y, z] = vector4_input(inputs, self.input, "quaternion conjugate")?;
+        let conjugate = Quaternion::new(w, x, y, z).conjugate();
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Vector(vec![conjugate.w, conjugate.x, conjugate.y, conjugate.z]),
+        )]))
+    }
+}
+
+impl CrossProduct {
+    pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
+        Self {
+            left,
+            right,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for CrossProduct {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let left = vector3_input(inputs, self.left, "cross product")?;
+        let right = vector3_input(inputs, self.right, "cross product")?;
+        let value = vec![
+            left[1] * right[2] - left[2] * right[1],
+            left[2] * right[0] - left[0] * right[2],
+            left[0] * right[1] - left[1] * right[0],
+        ];
+        Ok(BTreeMap::from([(self.output, SignalValue::Vector(value))]))
+    }
+}
+
+impl VectorNorm {
+    pub const fn new(input: PortId, output: PortId) -> Self {
+        Self { input, output }
+    }
+}
+
+impl BlockRuntime for VectorNorm {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(vector)) = inputs.get(&self.input) else {
+            return Err(ExecutionError::Runtime(
+                "vector norm input must be a vector".to_string(),
+            ));
+        };
+        let norm = vector.iter().try_fold(0.0_f64, |norm, value| {
+            if !value.is_finite() {
+                Err(ExecutionError::Runtime(
+                    "vector norm input must be finite".to_string(),
+                ))
+            } else {
+                Ok(norm.hypot(*value))
+            }
+        })?;
+        Ok(BTreeMap::from([(self.output, SignalValue::Scalar(norm))]))
+    }
+}
+
+impl VectorSum {
+    pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
+        Self {
+            left,
+            right,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for VectorSum {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(left)) = inputs.get(&self.left) else {
+            return Err(ExecutionError::Runtime(
+                "vector sum left input must be a vector".to_string(),
+            ));
+        };
+        let Some(SignalValue::Vector(right)) = inputs.get(&self.right) else {
+            return Err(ExecutionError::Runtime(
+                "vector sum right input must be a vector".to_string(),
+            ));
+        };
+        if left.len() != right.len() {
+            return Err(ExecutionError::Runtime(
+                "vector sum inputs must have equal length".to_string(),
+            ));
+        }
+        let values = left
+            .iter()
+            .zip(right)
+            .map(|(left, right)| left + right)
+            .collect::<Vec<_>>();
+        if values.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "vector sum output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(self.output, SignalValue::Vector(values))]))
+    }
+}
+
+impl MatrixGain {
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        rows: usize,
+        columns: usize,
+        values: Vec<f64>,
+    ) -> Result<Self, ExecutionError> {
+        if rows == 0
+            || columns == 0
+            || values.len() != rows.saturating_mul(columns)
+            || values.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "matrix gain requires non-zero dimensions and a finite matrix of matching size"
+                    .to_string(),
+            ));
+        }
+        Ok(Self {
+            input,
+            output,
+            rows,
+            columns,
+            values,
+        })
+    }
+}
+
+impl BlockRuntime for MatrixGain {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(vector)) = inputs.get(&self.input) else {
+            return Err(ExecutionError::Runtime(
+                "matrix gain input must be a vector".to_string(),
+            ));
+        };
+        if vector.len() != self.columns {
+            return Err(ExecutionError::Runtime(
+                "matrix gain input length must match matrix columns".to_string(),
+            ));
+        }
+        let result = self
+            .values
+            .chunks_exact(self.columns)
+            .map(|row| row.iter().zip(vector).map(|(a, b)| a * b).sum::<f64>())
+            .collect::<Vec<_>>();
+        if result.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "matrix gain output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(self.output, SignalValue::Vector(result))]))
+    }
+}
+
+pub struct PidBlockConfig {
+    pub proportional_gain: f64,
+    pub integral_gain: f64,
+    pub derivative_gain: f64,
+    pub output_minimum: f64,
+    pub output_maximum: f64,
+    pub integral_minimum: f64,
+    pub integral_maximum: f64,
+}
+
+impl Pid {
+    pub fn new(
+        setpoint: PortId,
+        measurement: PortId,
+        output: PortId,
+        block_config: PidBlockConfig,
+    ) -> Result<Self, ExecutionError> {
+        let output_limit =
+            ScalarLimit::new(block_config.output_minimum, block_config.output_maximum)
+                .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+        let integral_limit =
+            ScalarLimit::new(block_config.integral_minimum, block_config.integral_maximum)
+                .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+        let config = GncPidConfig::new(
+            block_config.proportional_gain,
+            block_config.integral_gain,
+            block_config.derivative_gain,
+            output_limit,
+            integral_limit,
+        )
+        .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+        Ok(Self {
+            setpoint,
+            measurement,
+            output,
+            controller: PidController::new(config),
+        })
+    }
+}
+
+impl BlockRuntime for Pid {
+    fn step(
+        &mut self,
+        timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let setpoint = scalar_input(inputs, self.setpoint, "PID")?;
+        let measurement = scalar_input(inputs, self.measurement, "PID")?;
+        let command = self
+            .controller
+            .step(timestamp, setpoint, measurement)
+            .map_err(|error| ExecutionError::Runtime(error.to_string()))?
+            .value
+            .command;
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Scalar(command),
+        )]))
+    }
+}
+
+impl Derivative {
+    pub const fn new(input: PortId, output: PortId) -> Self {
+        Self {
+            input,
+            output,
+            previous_value: None,
+            previous_timestamp: None,
+        }
+    }
+}
+
+impl BlockRuntime for Derivative {
+    fn step(
+        &mut self,
+        timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let value = scalar_input(inputs, self.input, "derivative")?;
+        let derivative = match (self.previous_value, self.previous_timestamp) {
+            (Some(previous_value), Some(previous_timestamp)) => {
+                let seconds = timestamp
+                    .duration_since(previous_timestamp)
+                    .map_err(|error| ExecutionError::Runtime(error.to_string()))?
+                    .as_seconds();
+                if seconds <= 0.0 {
+                    return Err(ExecutionError::Runtime(
+                        "derivative timestamps must increase".to_string(),
+                    ));
+                }
+                (value - previous_value) / seconds
+            }
+            _ => 0.0,
+        };
+        self.previous_value = Some(value);
+        self.previous_timestamp = Some(timestamp);
+        if !derivative.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "derivative output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Scalar(derivative),
+        )]))
+    }
+}
+
+impl LookupTable1D {
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        breakpoints: Vec<f64>,
+        values: Vec<f64>,
+    ) -> Result<Self, ExecutionError> {
+        validate_lookup_table(&breakpoints, &values)?;
+        Ok(Self {
+            input,
+            output,
+            breakpoints,
+            values,
+        })
+    }
+}
+
+impl BlockRuntime for LookupTable1D {
+    fn configure(&mut self, parameters: &BTreeMap<String, Value>) -> Result<(), ExecutionError> {
+        if let Some(breakpoints) = parameters.get("breakpoints") {
+            self.breakpoints = finite_array_parameter(breakpoints, "lookup breakpoints")?;
+        }
+        if let Some(values) = parameters.get("values") {
+            self.values = finite_array_parameter(values, "lookup values")?;
+        }
+        validate_lookup_table(&self.breakpoints, &self.values)
+    }
+
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let input = scalar_input(inputs, self.input, "lookup")?;
+        let value = lookup_linear(&self.breakpoints, &self.values, input);
+        Ok(BTreeMap::from([(self.output, SignalValue::Scalar(value))]))
+    }
+}
+
+impl Deadzone {
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        lower: f64,
+        upper: f64,
+    ) -> Result<Self, ExecutionError> {
+        validate_deadzone(lower, upper)?;
+        Ok(Self {
+            input,
+            output,
+            lower,
+            upper,
+        })
+    }
+}
+
+impl BlockRuntime for Deadzone {
+    fn configure(&mut self, parameters: &BTreeMap<String, Value>) -> Result<(), ExecutionError> {
+        if let Some(lower) = parameters.get("lower") {
+            self.lower = lower.as_f64().ok_or_else(|| {
+                ExecutionError::Runtime("deadzone lower limit must be numeric".to_string())
+            })?;
+        }
+        if let Some(upper) = parameters.get("upper") {
+            self.upper = upper.as_f64().ok_or_else(|| {
+                ExecutionError::Runtime("deadzone upper limit must be numeric".to_string())
+            })?;
+        }
+        validate_deadzone(self.lower, self.upper)
+    }
+
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let value = scalar_input(inputs, self.input, "deadzone")?;
+        let output = if value > self.upper {
+            value - self.upper
+        } else if value < self.lower {
+            value - self.lower
+        } else {
+            0.0
+        };
+        Ok(BTreeMap::from([(self.output, SignalValue::Scalar(output))]))
+    }
+}
+
 impl RateLimiter {
     pub fn new(
         input: PortId,
@@ -436,6 +1214,48 @@ fn scalar_input(
     }
 }
 
+fn vector3_input(
+    inputs: &BTreeMap<PortId, SignalValue>,
+    port: PortId,
+    block: &str,
+) -> Result<[f64; 3], ExecutionError> {
+    let Some(SignalValue::Vector(values)) = inputs.get(&port) else {
+        return Err(ExecutionError::Runtime(format!(
+            "{block} input {port:?} must be a vector"
+        )));
+    };
+    let values: [f64; 3] = values.as_slice().try_into().map_err(|_| {
+        ExecutionError::Runtime(format!("{block} input {port:?} must have length 3"))
+    })?;
+    if values.iter().any(|value| !value.is_finite()) {
+        return Err(ExecutionError::Runtime(format!(
+            "{block} input {port:?} must be finite"
+        )));
+    }
+    Ok(values)
+}
+
+fn vector4_input(
+    inputs: &BTreeMap<PortId, SignalValue>,
+    port: PortId,
+    block: &str,
+) -> Result<[f64; 4], ExecutionError> {
+    let Some(SignalValue::Vector(values)) = inputs.get(&port) else {
+        return Err(ExecutionError::Runtime(format!(
+            "{block} input {port:?} must be a vector"
+        )));
+    };
+    let values: [f64; 4] = values.as_slice().try_into().map_err(|_| {
+        ExecutionError::Runtime(format!("{block} input {port:?} must have length 4"))
+    })?;
+    if values.iter().any(|value| !value.is_finite()) {
+        return Err(ExecutionError::Runtime(format!(
+            "{block} input {port:?} must be finite"
+        )));
+    }
+    Ok(values)
+}
+
 fn validate_limits(minimum: f64, maximum: f64, block: &str) -> Result<(), ExecutionError> {
     if !minimum.is_finite() || !maximum.is_finite() || minimum > maximum {
         return Err(ExecutionError::Runtime(format!(
@@ -443,6 +1263,62 @@ fn validate_limits(minimum: f64, maximum: f64, block: &str) -> Result<(), Execut
         )));
     }
     Ok(())
+}
+
+fn validate_deadzone(lower: f64, upper: f64) -> Result<(), ExecutionError> {
+    if !lower.is_finite() || !upper.is_finite() || lower > 0.0 || upper < 0.0 || lower > upper {
+        return Err(ExecutionError::Runtime(
+            "deadzone limits must be finite, ordered, and contain zero".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_lookup_table(breakpoints: &[f64], values: &[f64]) -> Result<(), ExecutionError> {
+    if breakpoints.len() < 2
+        || breakpoints.len() != values.len()
+        || breakpoints.iter().any(|value| !value.is_finite())
+        || values.iter().any(|value| !value.is_finite())
+        || breakpoints.windows(2).any(|pair| pair[0] >= pair[1])
+    {
+        return Err(ExecutionError::Runtime(
+            "lookup table requires equal finite arrays with at least two strictly increasing breakpoints"
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn finite_array_parameter(value: &Value, name: &str) -> Result<Vec<f64>, ExecutionError> {
+    value
+        .as_array()
+        .ok_or_else(|| ExecutionError::Runtime(format!("{name} parameter must be an array")))?
+        .iter()
+        .map(|value| {
+            let number = value.as_f64().ok_or_else(|| {
+                ExecutionError::Runtime(format!("{name} parameter must be numeric"))
+            })?;
+            if !number.is_finite() {
+                return Err(ExecutionError::Runtime(format!(
+                    "{name} parameter must contain finite values"
+                )));
+            }
+            Ok(number)
+        })
+        .collect()
+}
+
+fn lookup_linear(breakpoints: &[f64], values: &[f64], input: f64) -> f64 {
+    if input <= breakpoints[0] {
+        return values[0];
+    }
+    if input >= breakpoints[breakpoints.len() - 1] {
+        return values[values.len() - 1];
+    }
+    let upper = breakpoints.partition_point(|breakpoint| *breakpoint < input);
+    let lower = upper - 1;
+    let fraction = (input - breakpoints[lower]) / (breakpoints[upper] - breakpoints[lower]);
+    values[lower] + fraction * (values[upper] - values[lower])
 }
 
 #[cfg(test)]
@@ -491,6 +1367,41 @@ mod tests {
             .is_err());
         assert!(Saturation::new(PortId::new(1), PortId::new(2), 1.0, -1.0).is_err());
         assert!(Integrator::new(PortId::new(1), PortId::new(2), f64::INFINITY).is_err());
+        assert!(Deadzone::new(PortId::new(1), PortId::new(2), 1.0, 2.0).is_err());
+        assert!(LookupTable1D::new(
+            PortId::new(1),
+            PortId::new(2),
+            vec![0.0, 0.0],
+            vec![1.0, 2.0]
+        )
+        .is_err());
+        assert!(Pid::new(
+            PortId::new(1),
+            PortId::new(2),
+            PortId::new(3),
+            PidBlockConfig {
+                proportional_gain: 1.0,
+                integral_gain: 0.0,
+                derivative_gain: 0.0,
+                output_minimum: 1.0,
+                output_maximum: -1.0,
+                integral_minimum: -1.0,
+                integral_maximum: 1.0,
+            },
+        )
+        .is_err());
+        assert!(Mux::new(Vec::new(), PortId::new(2)).is_err());
+        assert!(Demux::new(PortId::new(1), Vec::new()).is_err());
+        assert!(MatrixGain::new(PortId::new(1), PortId::new(2), 2, 2, vec![1.0]).is_err());
+        assert!(BusCreator::new(BTreeMap::new(), PortId::new(2)).is_err());
+        assert!(BusSelector::new(PortId::new(1), BTreeMap::new()).is_err());
+        let mut cross = CrossProduct::new(PortId::new(1), PortId::new(2), PortId::new(3));
+        assert!(cross
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(1), SignalValue::Vector(vec![1.0, 2.0]))])
+            )
+            .is_err());
     }
 
     #[test]
@@ -570,6 +1481,312 @@ mod tests {
                 )
                 .expect("limited rate limiter step")[&output],
             SignalValue::Scalar(1.0)
+        );
+
+        let mut deadzone = Deadzone::new(input, output, -1.0, 1.0).expect("deadzone");
+        assert_eq!(
+            deadzone
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([(input, SignalValue::Scalar(0.5))]),
+                )
+                .expect("deadzone interior")[&output],
+            SignalValue::Scalar(0.0)
+        );
+        assert_eq!(
+            deadzone
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([(input, SignalValue::Scalar(3.0))]),
+                )
+                .expect("deadzone exterior")[&output],
+            SignalValue::Scalar(2.0)
+        );
+
+        let mut lookup = LookupTable1D::new(
+            input,
+            output,
+            vec![0.0, 10.0, 20.0],
+            vec![0.0, 100.0, 200.0],
+        )
+        .expect("lookup table");
+        assert_eq!(
+            lookup
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([(input, SignalValue::Scalar(15.0))]),
+                )
+                .expect("interpolated lookup")[&output],
+            SignalValue::Scalar(150.0)
+        );
+        assert_eq!(
+            lookup
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([(input, SignalValue::Scalar(-1.0))]),
+                )
+                .expect("clamped lookup")[&output],
+            SignalValue::Scalar(0.0)
+        );
+
+        let mut derivative = Derivative::new(input, output);
+        assert_eq!(
+            derivative
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([(input, SignalValue::Scalar(1.0))]),
+                )
+                .expect("initial derivative")[&output],
+            SignalValue::Scalar(0.0)
+        );
+        assert_eq!(
+            derivative
+                .step(
+                    Timestamp::from_nanoseconds(500_000_000),
+                    &BTreeMap::from([(input, SignalValue::Scalar(2.0))]),
+                )
+                .expect("derivative step")[&output],
+            SignalValue::Scalar(2.0)
+        );
+
+        let mut pid = Pid::new(
+            input,
+            output,
+            PortId::new(6),
+            PidBlockConfig {
+                proportional_gain: 2.0,
+                integral_gain: 0.0,
+                derivative_gain: 0.0,
+                output_minimum: -10.0,
+                output_maximum: 10.0,
+                integral_minimum: -5.0,
+                integral_maximum: 5.0,
+            },
+        )
+        .expect("PID block");
+        assert_eq!(
+            pid.step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (input, SignalValue::Scalar(3.0)),
+                    (output, SignalValue::Scalar(1.0)),
+                ]),
+            )
+            .expect("PID step")[&PortId::new(6)],
+            SignalValue::Scalar(4.0)
+        );
+
+        let mux_output = PortId::new(7);
+        let mut mux = Mux::new(vec![input, output], mux_output).expect("mux");
+        let vector = mux
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (input, SignalValue::Scalar(2.0)),
+                    (output, SignalValue::Scalar(3.0)),
+                ]),
+            )
+            .expect("mux step");
+        assert_eq!(
+            vector.get(&mux_output),
+            Some(&SignalValue::Vector(vec![2.0, 3.0]))
+        );
+
+        let mut demux =
+            Demux::new(mux_output, vec![PortId::new(8), PortId::new(9)]).expect("demux");
+        let outputs = demux.step(Timestamp::ZERO, &vector).expect("demux step");
+        assert_eq!(
+            outputs.get(&PortId::new(8)),
+            Some(&SignalValue::Scalar(2.0))
+        );
+        assert_eq!(
+            outputs.get(&PortId::new(9)),
+            Some(&SignalValue::Scalar(3.0))
+        );
+
+        let mut matrix_gain =
+            MatrixGain::new(mux_output, PortId::new(10), 2, 2, vec![1.0, 2.0, 3.0, 4.0])
+                .expect("matrix gain");
+        let matrix_output = matrix_gain
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(mux_output, SignalValue::Vector(vec![2.0, 3.0]))]),
+            )
+            .expect("matrix gain step");
+        assert_eq!(
+            matrix_output.get(&PortId::new(10)),
+            Some(&SignalValue::Vector(vec![8.0, 18.0]))
+        );
+
+        let mut vector_sum = VectorSum::new(mux_output, PortId::new(10), PortId::new(11));
+        let vector_sum_output = vector_sum
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (mux_output, SignalValue::Vector(vec![2.0, 3.0])),
+                    (PortId::new(10), SignalValue::Vector(vec![8.0, 18.0])),
+                ]),
+            )
+            .expect("vector sum step");
+        assert_eq!(
+            vector_sum_output.get(&PortId::new(11)),
+            Some(&SignalValue::Vector(vec![10.0, 21.0]))
+        );
+
+        let mut scale = VectorScale::new(mux_output, input, PortId::new(12));
+        let scaled = scale
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (mux_output, SignalValue::Vector(vec![2.0, 3.0])),
+                    (input, SignalValue::Scalar(2.0)),
+                ]),
+            )
+            .expect("vector scale step");
+        assert_eq!(
+            scaled.get(&PortId::new(12)),
+            Some(&SignalValue::Vector(vec![4.0, 6.0]))
+        );
+
+        let mut norm = VectorNorm::new(PortId::new(12), PortId::new(13));
+        let norm_output = norm
+            .step(Timestamp::ZERO, &scaled)
+            .expect("vector norm step");
+        assert_eq!(
+            norm_output.get(&PortId::new(13)),
+            Some(&SignalValue::Scalar(52.0_f64.sqrt()))
+        );
+
+        let mut normalize = VectorNormalize::new(PortId::new(12), PortId::new(18));
+        let normalized = normalize
+            .step(Timestamp::ZERO, &scaled)
+            .expect("vector normalize step");
+        assert_eq!(
+            normalized.get(&PortId::new(18)),
+            Some(&SignalValue::Vector(vec![
+                4.0 / 52.0_f64.sqrt(),
+                6.0 / 52.0_f64.sqrt()
+            ]))
+        );
+        assert!(normalize
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(12), SignalValue::Vector(vec![0.0, 0.0]))])
+            )
+            .is_err());
+
+        let bus_output = PortId::new(14);
+        let mut creator = BusCreator::new(
+            BTreeMap::from([
+                (String::from("position"), input),
+                (String::from("velocity"), output),
+            ]),
+            bus_output,
+        )
+        .expect("bus creator");
+        let bus = creator
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (input, SignalValue::Scalar(2.0)),
+                    (output, SignalValue::Scalar(3.0)),
+                ]),
+            )
+            .expect("bus creator step");
+        let mut selector = BusSelector::new(
+            bus_output,
+            BTreeMap::from([
+                (String::from("position"), PortId::new(15)),
+                (String::from("velocity"), PortId::new(16)),
+            ]),
+        )
+        .expect("bus selector");
+        let selected = selector
+            .step(Timestamp::ZERO, &bus)
+            .expect("bus selector step");
+        assert_eq!(
+            selected.get(&PortId::new(15)),
+            Some(&SignalValue::Scalar(2.0))
+        );
+        assert_eq!(
+            selected.get(&PortId::new(16)),
+            Some(&SignalValue::Scalar(3.0))
+        );
+
+        let mut cross = CrossProduct::new(input, output, PortId::new(17));
+        let cross_output = cross
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (input, SignalValue::Vector(vec![1.0, 0.0, 0.0])),
+                    (output, SignalValue::Vector(vec![0.0, 1.0, 0.0])),
+                ]),
+            )
+            .expect("cross product step");
+        assert_eq!(
+            cross_output.get(&PortId::new(17)),
+            Some(&SignalValue::Vector(vec![0.0, 0.0, 1.0]))
+        );
+
+        let mut quaternion_normalize = QuaternionNormalize::new(input, PortId::new(19));
+        assert!(quaternion_normalize
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(input, SignalValue::Vector(vec![0.0, 0.0, 0.0, 0.0]))])
+            )
+            .is_err());
+
+        let mut quaternion_multiply = QuaternionMultiply::new(input, output, PortId::new(20));
+        let quaternion_output = quaternion_multiply
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (input, SignalValue::Vector(vec![1.0, 0.0, 0.0, 0.0])),
+                    (output, SignalValue::Vector(vec![0.0, 1.0, 0.0, 0.0])),
+                ]),
+            )
+            .expect("quaternion multiply step");
+        assert_eq!(
+            quaternion_output.get(&PortId::new(20)),
+            Some(&SignalValue::Vector(vec![0.0, 1.0, 0.0, 0.0]))
+        );
+
+        let mut quaternion_rotate = QuaternionRotate::new(input, output, PortId::new(21));
+        let rotated = quaternion_rotate
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (
+                        input,
+                        SignalValue::Vector(vec![
+                            (std::f64::consts::FRAC_PI_4).cos(),
+                            0.0,
+                            0.0,
+                            (std::f64::consts::FRAC_PI_4).sin(),
+                        ]),
+                    ),
+                    (output, SignalValue::Vector(vec![1.0, 0.0, 0.0])),
+                ]),
+            )
+            .expect("quaternion rotate step");
+        let SignalValue::Vector(rotated) = rotated.get(&PortId::new(21)).expect("rotated vector")
+        else {
+            panic!("quaternion rotation must return a vector");
+        };
+        assert!((rotated[0]).abs() < 1.0e-12);
+        assert!((rotated[1] - 1.0).abs() < 1.0e-12);
+        assert!((rotated[2]).abs() < 1.0e-12);
+
+        let mut conjugate = QuaternionConjugate::new(input, PortId::new(22));
+        let conjugated = conjugate
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(input, SignalValue::Vector(vec![1.0, 2.0, 3.0, 4.0]))]),
+            )
+            .expect("quaternion conjugate step");
+        assert_eq!(
+            conjugated.get(&PortId::new(22)),
+            Some(&SignalValue::Vector(vec![1.0, -2.0, -3.0, -4.0]))
         );
     }
 }

@@ -11,4 +11,5 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 xdl-gnc-core = { path = "../xdl-gnc-core" }
+xdl-gnc-control = { path = "../xdl-gnc-control" }
 xdl-model = { path = "../xdl-model" }

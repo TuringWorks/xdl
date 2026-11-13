@@ -208,6 +208,10 @@ xdl parse script.pro
 # Check syntax
 xdl check script.pro
 
+# Run the recursive XDL test suite and emit a replayable manifest
+xdl test tests --manifest runs/test-summary.json
+xdl replay runs/test-summary.json
+
 # Inspect the current compatibility baseline
 xdl compatibility-report --format json
 
@@ -431,7 +435,9 @@ the summary is in [CLAUDE.md](./CLAUDE.md).
 - [ ] Publish generated IDL/GDL and MATLAB/Octave conformance reports
 - [ ] Replace placeholder scientific-I/O paths with tested readers/writers
 - [x] Basic recursive `.xdl` script test runner with pass/fail exit status
-- [ ] Scientific test evidence, replayable run manifests, and artifact capture
+- [partial] Scientific test evidence, replayable run manifests, and artifact
+  capture (source hashes, stdout/failure artifacts, timing, and local replay
+  exist; numerical, plot, timeout, and clean-machine evidence remain open)
 - [x] Legacy code migration foundation
 - [x] Documentation and examples
 - [x] User-defined procedures (PRO/ENDPRO) ✅

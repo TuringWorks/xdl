@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://turingworks.github.io/xdl/schemas/run-manifest.v1.json",
+  "title": "XDL Run Manifest v1",
+  "type": "object",
+  "required": ["schema_version", "status", "run_id", "project", "entrypoint"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["in_progress", "passed", "failed"]},
+    "run_id": {"type": "string", "minLength": 1},
+    "project": {"type": "string", "minLength": 1},
+    "entrypoint": {"type": "string", "minLength": 1},
+    "started_at": {"type": ["string", "null"]},
+    "completed_at": {"type": ["string", "null"]},
+    "duration_ms": {"type": ["integer", "null"], "minimum": 0},
+    "source_hash": {"type": ["string", "null"]},
+    "model_hash": {"type": ["string", "null"]},
+    "input_hashes": {"$ref": "#/$defs/stringMap"},
+    "configuration": {"$ref": "#/$defs/stringMap"},
+    "seed": {"type": ["integer", "null"], "minimum": 0},
+    "backend": {"type": ["string", "null"]},
+    "environment": {"$ref": "#/$defs/stringMap"},
+    "solver": {"type": ["string", "null"]},
+    "tolerances": {"$ref": "#/$defs/numberMap"},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "test_summary": {"$ref": "#/$defs/testSummary"},
+    "inputs": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "outputs": {"type": "array", "items": {"$ref": "#/$defs/artifact"}}
+  },
+  "$defs": {
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "numberMap": {
+      "type": "object",
+      "additionalProperties": {"type": "number"}
+    },
+    "testSummary": {
+      "type": "object",
+      "required": ["discovered", "passed", "failed"],
+      "properties": {
+        "discovered": {"type": "integer", "minimum": 0},
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["kind", "path"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-fA-F]{64}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

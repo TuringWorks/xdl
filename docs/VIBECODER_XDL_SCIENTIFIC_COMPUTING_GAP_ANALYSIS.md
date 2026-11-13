@@ -1,6 +1,6 @@
 # VibeCoder + XDL Scientific Computing Platform Gap Analysis
 
-**Date:** 2026-11-12  
+**Date:** 2026-11-13
 **Scope:** MATLAB, GNU Octave, Scilab/Xcos, and MATLAB/Simulink-class scientific and engineering workflows  
 **North star:** make VibeCoder + XDL the most productive, reproducible, extensible, and deployable open scientific-computing platform for research and industry engineering.
 
@@ -71,9 +71,9 @@ The competitor baseline is based on the current official product descriptions: M
 | Project/package management | MATLAB projects, paths, add-ons, toolbox packaging | Cargo workspace, docs, scripts | Multi-workspace, Git, extensions | `xdl.toml`, lockfile, package registry, environment capture, domain bundles | **B → A; P0** |
 | Language tooling | Editor, completion, diagnostics, refactor, help | XDL LSP + VS Code extension | Monaco, LSP client, command palette | Native XDL language experience inside VibeCoder with symbol-aware agent context | **B → A; P0** |
 | AI assistance | MATLAB Copilot/agent integrations are now product features | No integrated product agent | Strong multi-provider agent loop, MCP, hooks, memory, traces | Scientific agent that can plan/run/compare/verify and cite artifacts | **B → A; P0** |
-| Reproducibility | Scripts, projects, Live Editor, CI, artifacts | Tests/examples but no universal run manifest | Traces/checkpoints/artifacts | Content-addressed run ledger: code/data/model/config/env/seed/output hashes | **C → A; P0** |
+| Reproducibility | Scripts, projects, Live Editor, CI, artifacts | Versioned manifest with source hashes, timing, stdout/failure artifacts, and local replay; numerical/clean-machine evidence incomplete | Traces/checkpoints/artifacts | Content-addressed run ledger: code/data/model/config/env/seed/output hashes | **C → A; P0** |
 | Version control / review | Git integrations, project diffing | Git repository and scripts | Mature Git/diff/agent review surface | Numerical diff review: data, plots, model graphs, metrics, not only text | **B → A; P1** |
-| Continuous integration | MATLAB Test, projects, code quality, coverage | Basic recursive `.xdl` runner; no evidence artifacts yet | Hooks/jobs/agent orchestration | `xdl test`, golden vectors, property tests, benchmark gates, report artifacts | **C → A; P0** |
+| Continuous integration | MATLAB Test, projects, code quality, coverage | Recursive `.xdl` runner with manifest, source/artifact hashes, diagnostics, and local replay; golden/numerical/timeout gates incomplete | Hooks/jobs/agent orchestration | `xdl test`, golden vectors, property tests, benchmark gates, report artifacts | **C → A; P0** |
 | Control design | PID, state space, LQR/LQG, frequency response, robust/MPC/fuzzy | GNC crates and linalg; no complete control toolbox | Workflow shell | Control toolbox with typed systems, trim, linearization, tuning, margins, MPC | **C → A; P1** |
 | Model identification | Parameter estimation and system identification | Not a demonstrated complete package | Experiment orchestration possible | Identification pipelines with uncertainty and validation datasets | **D → B; P2** |
 | Dynamic simulation | ODE/DAE solvers, events, hybrid systems | `xdl-sim` emerging, fixed-step/multi-rate intent | Run orchestration | Deterministic discrete + continuous + hybrid engine | **C → A; P0** |
@@ -208,7 +208,10 @@ Goal: a scientist can install the platform, import a real dataset, write MATLAB-
 - Replace compatibility claims with a generated function/syntax coverage report,
   then add runtime and numerical reference evidence to corpus entries.
 - Promote scientific I/O from placeholders to tested readers/writers; prioritize HDF5, NetCDF, FITS, MAT, Arrow/Parquet, Zarr, CSV.
-- Implement `xdl test` with unit, script, golden-vector, property, and numerical-tolerance modes.
+- [partial] Implement `xdl test` with unit, script, golden-vector, property,
+  and numerical-tolerance modes. Recursive script execution, manifests,
+  hashes, artifacts, and local replay exist; golden/property/numerical modes
+  remain open.
 - Build numerical diff views: array summary, histogram/delta, plot image diff, table diff, model graph diff.
 - Stabilize array shape/type diagnostics and error spans.
 - Create the first 20 end-to-end examples: signal analysis, imaging, tabular science, GNC, Monte Carlo, and a model simulation.
@@ -407,7 +410,7 @@ Track product outcomes, not just crate counts:
 9. Develop one end-to-end industry story—GNC/robotics is the strongest initial candidate—from data ingestion through model simulation, test evidence, and native deployment.
 10. Reassess every quarter using the capability matrix and measured user outcomes.
 
-## Verified local baseline (2026-11-12)
+## Verified local baseline (2026-11-13)
 
 The current repository checkpoint provides executable evidence for the first
 model-based foundation:
@@ -415,8 +418,10 @@ model-based foundation:
 | Surface | Verification | Result | Interpretation |
 |---|---|---:|---|
 | MATLAB transpiler | `cargo test -p xdl-matlab` | 28 passed | Tested syntax/function subset; not MATLAB/Octave parity |
-| Typed model graph/editor | `cargo test -p xdl-model` | 16 passed | Schema, typed connections, validation, layout, and editor serialization foundation |
-| Deterministic simulation | `cargo test -p xdl-sim` | 12 passed | Scheduler, multi-rate ordering, delays, continuous integration, and solver error paths foundation |
+| Typed model graph/editor | `cargo test -p xdl-model` | 19 passed | Schema, typed connections, validation, layout, and editor serialization foundation |
+| Deterministic simulation | `cargo test -p xdl-sim` | 19 passed | Scheduler, multi-rate ordering, delays, continuous integration, and solver error paths foundation |
+| Artifact contracts | `cargo test -p xdl-artifacts` | 6 passed | Versioned manifests, compatibility statuses, artifact hashes, and fail-closed validation |
+| CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 13 passed | Recursive tests, manifests, source/artifact hashes, stdout/failure artifacts, local replay, and reference gates |
 
 These tests are useful exit-criteria evidence, but they do not establish
 production readiness. The next validation layer must add real XDL programs,

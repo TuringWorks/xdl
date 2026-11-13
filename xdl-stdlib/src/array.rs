@@ -234,6 +234,9 @@ pub fn n_elements(args: &[XdlValue]) -> XdlResult<XdlValue> {
     match &args[0] {
         XdlValue::Undefined => Ok(XdlValue::Long(0)),
         XdlValue::Array(arr) => Ok(XdlValue::Long(arr.len() as i32)),
+        // A shaped array has data.len() elements. Falling through to the scalar
+        // arm made N_ELEMENTS(FLTARR(3,2)) and N_ELEMENTS(RANDOMN(1,4,500)) = 1.
+        XdlValue::MultiDimArray { data, .. } => Ok(XdlValue::Long(data.len() as i32)),
         _ => Ok(XdlValue::Long(1)), // Scalar values have 1 element
     }
 }
@@ -2479,4 +2482,18 @@ pub fn tile_func(
     }
 
     Ok(XdlValue::Array(result))
+}
+
+#[cfg(test)]
+mod n_elements_shape_tests {
+    use super::*;
+
+    #[test]
+    fn n_elements_counts_every_element_of_a_shaped_array() {
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![0.0; 6],
+            shape: vec![3, 2],
+        };
+        assert_eq!(n_elements(&[shaped]).unwrap(), XdlValue::Long(6));
+    }
 }

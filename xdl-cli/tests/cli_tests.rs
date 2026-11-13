@@ -152,6 +152,7 @@ fn test_cli_test_command_writes_truthful_manifest() {
     let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
     assert!(manifest_json.contains("\"status\": \"passed\""));
     assert!(manifest_json.contains("\"discovered\": 1"));
+    assert!(manifest_json.contains("\"test_directory\": \".\""));
     assert!(manifest_json.contains("\"path\": \"pass.xdl\""));
     assert!(manifest_json.contains("\"completed_at\": \"unix:"));
     assert!(manifest_json.contains("\"duration_ms\":"));
@@ -179,6 +180,18 @@ fn test_cli_test_command_writes_truthful_manifest() {
         String::from_utf8_lossy(&replay.stderr)
     );
     assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    fs::write(directory.join("pass.xdl"), "PRINT, 'changed'\n").expect("change test source");
+    let changed_replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay changed xdl test manifest");
+    assert!(!changed_replay.status.success());
+    let changed_diagnostic = format!(
+        "{}{}",
+        String::from_utf8_lossy(&changed_replay.stdout),
+        String::from_utf8_lossy(&changed_replay.stderr)
+    );
+    assert!(changed_diagnostic.contains("source hash mismatch"));
     let _ = fs::remove_dir_all(&directory);
 }
 
@@ -198,6 +211,38 @@ fn test_cli_test_command_fails_for_invalid_xdl() {
     assert!(!output.status.success(), "invalid test must fail");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("0 passed, 1 failed"), "stdout: {stdout}");
+}
+
+#[test]
+fn test_cli_replay_matches_recorded_failed_status() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("replay-failed");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("fail.xdl"), "not valid xdl syntax").expect("write failing test");
+    let manifest = directory.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            directory.to_str().expect("utf-8 test path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run failing xdl test command");
+    assert!(!run.status.success());
+
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay failed xdl test manifest");
+    assert!(
+        replay.status.success(),
+        "matching failed replay should succeed, stderr: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("matched the recorded failed status"));
+    let _ = fs::remove_dir_all(&directory);
 }
 
 #[test]
@@ -330,6 +375,37 @@ fn test_cli_compatibility_report_can_require_references() {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(diagnostic.contains("lack passing declared references"));
+}
+
+#[test]
+fn test_cli_compatibility_report_rejects_empty_numeric_provenance() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("empty-provenance");
+    fs::create_dir_all(&directory).expect("create corpus directory");
+    fs::write(directory.join("case.m"), "x = 3;\n").expect("write MATLAB case");
+    fs::write(
+        directory.join("case.m.expected.json"),
+        r#"{"provenance":" ","values":{"x":[3.0]}}"#,
+    )
+    .expect("write invalid provenance reference");
+
+    let output = Command::new(&binary)
+        .args([
+            "compatibility-report",
+            "--corpus",
+            directory.to_str().expect("utf-8 corpus path"),
+            "--execute",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run invalid provenance report");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("failed"));
+    assert!(stdout.contains("provenance must not be empty"));
 }
 
 fn test_directory(label: &str) -> PathBuf {
