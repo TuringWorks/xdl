@@ -20,7 +20,7 @@ XDL provides compatibility layers and migration tooling for:
 
 These are compatibility targets, not claims of full language, toolbox, file
 format, numerical, or model-based-design parity. See the [current gap
-analysis](../VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS) for scope and
+analysis](../VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS.md) for scope and
 priorities.
 
 ## IDL/GDL Compatibility
