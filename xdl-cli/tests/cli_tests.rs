@@ -174,6 +174,38 @@ fn test_cli_test_command_fails_for_invalid_xdl() {
     assert!(stdout.contains("0 passed, 1 failed"), "stdout: {stdout}");
 }
 
+#[test]
+fn test_cli_compatibility_report_json_is_explicit_about_scope() {
+    let binary = get_xdl_binary();
+    let output = Command::new(&binary)
+        .args(["compatibility-report", "--format", "json"])
+        .output()
+        .expect("run compatibility report");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("xdl-cli-baseline-2026-11-12"));
+    assert!(stdout.contains("array literals and basic matrix literals"));
+    assert!(stdout.contains("unsupported"));
+}
+
+#[test]
+fn test_cli_compatibility_report_rejects_unknown_format() {
+    let binary = get_xdl_binary();
+    let output = Command::new(&binary)
+        .args(["compatibility-report", "--format", "yaml"])
+        .output()
+        .expect("run compatibility report");
+
+    assert!(!output.status.success());
+    let diagnostic = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(diagnostic.contains("unsupported compatibility report format"));
+}
+
 fn test_directory(label: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)

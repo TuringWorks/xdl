@@ -19,6 +19,14 @@ pub enum HitTarget {
     Connection(Connection),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EditorEvent {
+    Select(HitTarget),
+    ClearSelection,
+    MoveSelected { dx: f64, dy: f64 },
+    Reconnect { output: PortId, input: PortId },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum EditorError {
     #[error("model error: {0}")]
@@ -31,6 +39,8 @@ pub enum EditorError {
     Serialization(String),
     #[error("model document deserialization failed: {0}")]
     Deserialization(String),
+    #[error("invalid editor interaction: {0}")]
+    InvalidInteraction(String),
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -39,6 +49,65 @@ pub struct ModelDocument {
     pub schema_version: u32,
     pub model: Model,
     pub layout: ModelLayout,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EditorSession {
+    pub document: ModelDocument,
+    pub selection: Option<HitTarget>,
+}
+
+impl EditorSession {
+    pub fn new(document: ModelDocument) -> Self {
+        Self {
+            document,
+            selection: None,
+        }
+    }
+
+    pub fn select_at(
+        &mut self,
+        x: f64,
+        y: f64,
+        tolerance: f64,
+    ) -> Result<Option<HitTarget>, EditorError> {
+        let selection = self.document.hit_test(x, y, tolerance)?;
+        self.selection = selection;
+        Ok(selection)
+    }
+
+    pub fn apply(&mut self, event: EditorEvent) -> Result<(), EditorError> {
+        match event {
+            EditorEvent::Select(selection) => {
+                self.selection = Some(selection);
+                Ok(())
+            }
+            EditorEvent::ClearSelection => {
+                self.selection = None;
+                Ok(())
+            }
+            EditorEvent::MoveSelected { dx, dy } => {
+                if !dx.is_finite() || !dy.is_finite() {
+                    return Err(EditorError::InvalidInteraction(
+                        "movement delta must be finite".to_string(),
+                    ));
+                }
+                let Some(HitTarget::Block(block)) = self.selection else {
+                    return Err(EditorError::InvalidInteraction(
+                        "a block must be selected before moving".to_string(),
+                    ));
+                };
+                let geometry = self.document.block_layout(block)?;
+                self.document
+                    .move_block(block, geometry.x + dx, geometry.y + dy)
+            }
+            EditorEvent::Reconnect { output, input } => {
+                self.document.reconnect(output, input)?;
+                self.selection = Some(HitTarget::Port(input));
+                Ok(())
+            }
+        }
+    }
 }
 
 const fn current_schema_version() -> u32 {
@@ -449,5 +518,28 @@ mod tests {
                 input: sink_in,
             }))
         );
+    }
+
+    #[test]
+    fn editor_session_applies_selection_drag_and_reconnect_events() {
+        let (document, source, source_out, _, alternate_in) = document();
+        let mut session = EditorSession::new(document);
+        session
+            .apply(EditorEvent::Select(HitTarget::Block(source)))
+            .expect("select");
+        session
+            .apply(EditorEvent::MoveSelected { dx: 10.0, dy: 20.0 })
+            .expect("move");
+        assert_eq!(
+            session.document.block_layout(source).expect("layout").x,
+            10.0
+        );
+        session
+            .apply(EditorEvent::Reconnect {
+                output: source_out,
+                input: alternate_in,
+            })
+            .expect("reconnect");
+        assert_eq!(session.selection, Some(HitTarget::Port(alternate_in)));
     }
 }

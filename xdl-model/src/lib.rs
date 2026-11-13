@@ -14,7 +14,7 @@ use xdl_gnc_core::{DurationNs, FrameId, Unit};
 pub mod layout;
 pub use layout::{BlockLayout, LayoutError, ModelLayout, PortLayout, PortSide};
 pub mod editor;
-pub use editor::{EditorError, HitTarget, ModelDocument};
+pub use editor::{EditorError, EditorEvent, EditorSession, HitTarget, ModelDocument};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BlockId(u32);
