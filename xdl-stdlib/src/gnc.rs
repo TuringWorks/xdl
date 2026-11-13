@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use xdl_core::{XdlError, XdlResult, XdlValue};
+use xdl_gnc_actuators::{FirstOrderActuator, FirstOrderActuatorConfig};
 use xdl_gnc_control::{PidConfig, PidController};
 use xdl_gnc_core::{ScalarLimit, StepEvent, Timestamp, Vec3};
 use xdl_gnc_guidance::{WaypointGuidance, WaypointGuidanceConfig};
@@ -209,6 +210,51 @@ pub fn pid_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Struct(output))
 }
 
+/// `GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min,
+/// output_max, rate_limit, previous_timestamp_ns, previous_output)` performs
+/// one explicit-state first-order actuator update.
+pub fn actuator_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 8 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_ACTUATOR_STEP: expected 8 arguments, got {}",
+            args.len()
+        )));
+    }
+    let config = FirstOrderActuatorConfig::new(
+        scalar(&args[2], "GNC_ACTUATOR_STEP time constant")?,
+        ScalarLimit::new(
+            scalar(&args[3], "GNC_ACTUATOR_STEP output minimum")?,
+            scalar(&args[4], "GNC_ACTUATOR_STEP output maximum")?,
+        )
+        .map_err(|error| XdlError::RuntimeError(error.to_string()))?,
+        scalar(&args[5], "GNC_ACTUATOR_STEP rate limit")?,
+    )
+    .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    let mut actuator = FirstOrderActuator::with_state(
+        config,
+        timestamp(&args[6])?,
+        scalar(&args[7], "GNC_ACTUATOR_STEP previous output")?,
+    )
+    .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    let result = actuator
+        .step(
+            timestamp(&args[0])?,
+            scalar(&args[1], "GNC_ACTUATOR_STEP command")?,
+        )
+        .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    let mut output = HashMap::new();
+    output.insert("OUTPUT".to_string(), XdlValue::Double(result.value));
+    output.insert(
+        "SATURATED".to_string(),
+        XdlValue::Long(i32::from(result.events.contains(&StepEvent::Saturated))),
+    );
+    output.insert(
+        "RATE_LIMITED".to_string(),
+        XdlValue::Long(i32::from(result.events.contains(&StepEvent::RateLimited))),
+    );
+    Ok(XdlValue::Struct(output))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,5 +314,24 @@ mod tests {
         };
         assert_eq!(fields.get("COMMAND"), Some(&XdlValue::Double(1.0)));
         assert_eq!(fields.get("ERROR"), Some(&XdlValue::Double(1.0)));
+    }
+
+    #[test]
+    fn actuator_binding_reports_rate_limiting() {
+        let result = actuator_step(&[
+            XdlValue::Long64(1_000_000_000),
+            XdlValue::Double(1.0),
+            XdlValue::Double(1.0),
+            XdlValue::Double(-1.0),
+            XdlValue::Double(1.0),
+            XdlValue::Double(0.25),
+            XdlValue::Long64(0),
+            XdlValue::Double(0.0),
+        ])
+        .expect("valid actuator step");
+        let XdlValue::Struct(fields) = result else {
+            panic!("expected actuator structure");
+        };
+        assert_eq!(fields.get("RATE_LIMITED"), Some(&XdlValue::Long(1)));
     }
 }

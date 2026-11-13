@@ -586,6 +586,7 @@ the native GNC crates retain typed frames, timestamps, and error semantics.
 | `GNC_VEC3` | `GNC_VEC3(x, y, z)` | Three-element numeric array |
 | `GNC_WAYPOINT` | `GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)` | Structure with `DESIRED_VELOCITY`, `DISTANCE`, `REACHED`, and `DEGRADED` |
 | `GNC_PID_STEP` | `GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)` | Structure with `COMMAND`, `ERROR`, `DERIVATIVE`, `INTEGRAL`, and `SATURATED` |
+| `GNC_ACTUATOR_STEP` | `GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min, output_max, rate_limit, previous_timestamp_ns, previous_output)` | Structure with `OUTPUT`, `SATURATED`, and `RATE_LIMITED` |
 
 `timestamp_ns` is an integer nanosecond timestamp. `position` and `waypoint`
 must be three-element finite arrays; speed and radius must be finite and obey

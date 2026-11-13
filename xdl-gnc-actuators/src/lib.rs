@@ -64,6 +64,15 @@ impl FirstOrderActuator {
         })
     }
 
+    /// Rehydrates an actuator for a stateless host boundary such as XDL.
+    pub fn with_state(
+        config: FirstOrderActuatorConfig,
+        timestamp: Timestamp,
+        output: f64,
+    ) -> Result<Self, GncError> {
+        Self::new(config, timestamp, output)
+    }
+
     pub fn output(&self) -> f64 {
         self.output
     }

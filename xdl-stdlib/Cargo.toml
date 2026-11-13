@@ -19,6 +19,7 @@ xdl-amp = { version = "0.1.1", path = "../xdl-amp" }
 xdl-gnc-core = { version = "0.1.1", path = "../xdl-gnc-core" }
 xdl-gnc-guidance = { version = "0.1.1", path = "../xdl-gnc-guidance" }
 xdl-gnc-control = { version = "0.1.1", path = "../xdl-gnc-control" }
+xdl-gnc-actuators = { version = "0.1.1", path = "../xdl-gnc-actuators" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

@@ -314,6 +314,7 @@ impl StandardLibrary {
             "GNC_VEC3" => gnc::vec3(args),
             "GNC_WAYPOINT" => gnc::waypoint(args),
             "GNC_PID_STEP" => gnc::pid_step(args),
+            "GNC_ACTUATOR_STEP" => gnc::actuator_step(args),
 
             // Trigonometric functions
             "SIN" => math::sin(args),
