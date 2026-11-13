@@ -36,6 +36,12 @@ fn array_to_floats(arr: &[XdlValue]) -> XdlResult<Vec<f64>> {
 }
 
 /// Extract array data from XdlValue
+/// NaN is a value: a statistic over data containing NaN is NaN, never a
+/// finite neighbour that a sort happened to place in the middle.
+fn contains_nan(data: &[f64]) -> bool {
+    data.iter().any(|v| v.is_nan())
+}
+
 fn extract_array(value: &XdlValue) -> XdlResult<Vec<f64>> {
     match value {
         XdlValue::Array(arr) => Ok(arr.clone()),
@@ -839,6 +845,10 @@ pub fn r_correlate(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    if contains_nan(&x) || contains_nan(&y) {
+        return Ok(XdlValue::Double(f64::NAN));
+    }
+
     let n = x.len();
     if n < 2 {
         return Err(XdlError::InvalidArgument(
@@ -1194,6 +1204,7 @@ pub fn percentiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    let has_nan = contains_nan(&data);
     // Sort data
     data.sort_by(|a, b| a.total_cmp(b));
     let n = data.len();
@@ -1210,7 +1221,11 @@ pub fn percentiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let upper = (lower + 1).min(n - 1);
         let frac = idx - lower as f64;
 
-        let value = data[lower] * (1.0 - frac) + data[upper] * frac;
+        let value = if has_nan {
+            f64::NAN
+        } else {
+            data[lower] * (1.0 - frac) + data[upper] * frac
+        };
         results.push(value);
     }
 
@@ -1235,6 +1250,10 @@ pub fn robust_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
         return Err(XdlError::InvalidArgument(
             "ROBUST_MEAN: Data array is empty".to_string(),
         ));
+    }
+
+    if contains_nan(&data) {
+        return Ok(XdlValue::Double(f64::NAN));
     }
 
     let sigma_clip = if args.len() > 1 {
@@ -1303,6 +1322,9 @@ pub fn trimmed_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
         5.0 // Default 5% trimmed mean
     };
 
+    if contains_nan(&data) {
+        return Ok(XdlValue::Double(f64::NAN));
+    }
     data.sort_by(|a, b| a.total_cmp(b));
 
     let n = data.len();
@@ -1332,6 +1354,10 @@ pub fn resistant_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
         return Err(XdlError::InvalidArgument(
             "RESISTANT_MEAN: Data array is empty".to_string(),
         ));
+    }
+
+    if contains_nan(&data) {
+        return Ok(XdlValue::Double(f64::NAN));
     }
 
     // Compute biweight mean (Tukey's biweight)
@@ -1656,6 +1682,33 @@ mod tests {
         let args = vec![XdlValue::Array(vec![1.0, f64::NAN, 2.0])];
         assert!(matches!(
             median(&args),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+    }
+
+    #[test]
+    fn test_nan_propagates_through_order_and_robust_statistics() {
+        let with_nan = XdlValue::Array(vec![1.0, f64::NAN, 2.0, 3.0]);
+        assert!(matches!(
+            percentiles(&[with_nan.clone(), XdlValue::Array(vec![0.0])]),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        assert!(matches!(
+            trimmed_mean(std::slice::from_ref(&with_nan)),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        assert!(matches!(
+            resistant_mean(std::slice::from_ref(&with_nan)),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        assert!(matches!(
+            robust_mean(std::slice::from_ref(&with_nan)),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        let x = XdlValue::Array(vec![1.0, 2.0, f64::NAN]);
+        let y = XdlValue::Array(vec![1.0, 2.0, 3.0]);
+        assert!(matches!(
+            r_correlate(&[x, y]),
             Ok(XdlValue::Double(v)) if v.is_nan()
         ));
     }

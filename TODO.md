@@ -1,6 +1,6 @@
 # XDL Implementation TODO
 
-**Last Updated:** 2026-11-12
+**Last Updated:** 2026-11-13
 
 > This is an implementation TODO, not a compatibility certification. The
 > historical coverage percentages below are estimates and should be replaced
@@ -204,15 +204,15 @@ Full GUI support requires native windowing backend (xdl-gui crate).
 - [x] Tests in examples/tests/viz3d_advanced_test.xdl
 
 ### 8. Additional String Functions
-**Status**: Most implemented, some edge cases remain
+**Status**: Mostly implemented; two items open
 **Effort**: Low
 **Files**: `xdl-stdlib/src/string.rs`
 
 **Tasks**:
-- [ ] Enhance STREGEX with all IDL options
-- [ ] Add READS (read from string)
-- [ ] Improve FORMAT string handling
-- [ ] Add tests
+- [x] READS (read from string) — dispatched and implemented (`string::reads`)
+- [ ] Enhance STREGEX with all IDL options — dispatched (`string::stregex`); the missing options are not yet enumerated, so audit against the IDL reference first
+- [ ] FORMAT string handling — `FORMAT` is a keyword (`PRINT`/`PRINTF`), not a builtin function; this item needs a concrete spec before it can be scheduled
+- [ ] Add tests for the above
 
 ---
 
@@ -324,25 +324,10 @@ The following features have been implemented and are no longer pending:
 
 ## Implementation Recommendations
 
-### Phase 1: Critical Language Features
-1. User-defined procedures (PRO/ENDPRO) - **Highest priority**
-2. Complete CASE/SWITCH statements
-3. GOTO statements (if needed for legacy code)
-
-### Phase 2: Scientific Data Formats
-4. FITS file support
-5. HDF5 file support
-6. NetCDF file support
-
-### Phase 3: Advanced Visualization
-7. Map projections
-8. Isosurface rendering
-9. Volume visualization
-
-### Phase 4: GUI and Dialogs
-10. Widget system enhancements
-11. Dialog functions
-12. Advanced scope functions
+The phases below were the plan when this file was written. Every item they
+name is marked done in the sections above, except the String Functions items.
+Scientific formats (FITS, HDF5, NetCDF) and widgets remain placeholder-backed
+(see the Status table) and are not production-complete.
 
 ---
 
@@ -358,7 +343,7 @@ For each feature:
 
 ## Notes
 
-- PRO/ENDPRO is the most critical missing feature for real-world IDL code compatibility
+- PRO/ENDPRO and FUNCTION/ENDFUNCTION are implemented (see sections 1–2)
 - Scientific data formats (FITS, HDF5, NetCDF) are important for astronomy/science users
 - Widget system is extensive - prioritize based on user needs
 - Consider SIMD optimizations for any new array operations
