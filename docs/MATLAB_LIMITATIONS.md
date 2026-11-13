@@ -35,7 +35,7 @@ The XDL MATLAB transpiler provides basic MATLAB compatibility but has several li
 ### Array/Matrix Operations
 - ❌ Array literals: `[1, 2, 3, 4]`
 - ❌ Matrix literals: `[1 2; 3 4]`
-- ❌ Element-wise operations on arrays: `y = sin(x)` where x is array
+- ✅ Element-wise operations on arrays: `y = sin(x)` where x is array (verified against the xdl binary: `sin` on `findgen` and `linspace` arrays returns per-element values)
 - ❌ Array indexing with 1-based indexing
 - ❌ Colon operator: `1:10`, `1:2:10`
 
