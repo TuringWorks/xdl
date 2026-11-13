@@ -46,7 +46,7 @@ Rules:
 | `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 | `xdl-gnc-telemetry` | Ordered telemetry samples with finite-value validation and JSON-lines import/export |
 | `xdl-model` | Serializable block/port/signal graph with connection, bus, subsystem-boundary, and cycle validation |
-| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
+| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixMatrixProduct/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
 
 ### Step events
 
@@ -72,7 +72,7 @@ Rules:
 | `xdl-gnc-integration` | 4 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, and ordered telemetry output |
 | `xdl-gnc-telemetry` | 3 | Ordered telemetry samples with buffered and streaming JSON-lines export; product-specific sinks remain pending |
 | `xdl-model` | 19 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, and editor events |
-| `xdl-sim` | 19 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
+| `xdl-sim` | 19 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixMatrixProduct/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
 Counts from the targeted GNC/model/scheduler test runs on 2026-11-13. Eleven crates, 96 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
 
@@ -98,11 +98,19 @@ It creates a vector, computes waypoint guidance, performs an explicit-state PID
 step, and applies a first-order actuator update with saturation/rate-limit
 reporting.
 
+Verified on 2026-11-13 with `cargo run -p xdl-cli -- -q
+examples/gnc_guidance_control.xdl`: the example exited successfully and
+reported the expected distance, desired velocity, PID command, and actuator
+status. This verifies the XDL-facing slice only; it does not establish a
+closed-loop model, hardware equivalence, or flight readiness.
+
 [`examples/gnc_closed_loop.xdl`](../../examples/gnc_closed_loop.xdl) extends
 that slice to ten deterministic control ticks and makes the plant update
 explicit: navigation → guidance → PID → actuator → position/velocity update.
 Each tick also produces a JSON-lines telemetry record with
-`GNC_TELEMETRY_JSON`.
+`GNC_TELEMETRY_JSON`, and the example now prints each record so the telemetry
+is observable and capturable by the test/artifact workflow. This remains an
+example-level closed loop, not a validated Simulink-equivalent runtime.
 
 ## License
 

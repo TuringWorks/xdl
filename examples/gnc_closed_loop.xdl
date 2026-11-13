@@ -46,6 +46,7 @@ FOR tick = 1, 10 DO BEGIN
     telemetry = GNC_TELEMETRY_JSON(timestamp, tick, 'closed_loop', $
                                    GNC_VEC3(position_x, 0.0, 0.0), $
                                    GNC_VEC3(velocity_x, 0.0, 0.0), actuator.OUTPUT)
+    PRINT, telemetry
 ENDFOR
 
 PRINT, 'Final position (m): ', position_x
