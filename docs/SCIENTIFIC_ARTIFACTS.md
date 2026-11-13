@@ -12,6 +12,7 @@ A `RunManifest` records the metadata needed to reproduce and review one run:
 
 - versioned schema and run ID;
 - project and entrypoint;
+- observed start/completion timestamps and elapsed duration;
 - optional source and model hashes;
 - input hashes and named configuration;
 - random seed, backend, environment, and solver;
