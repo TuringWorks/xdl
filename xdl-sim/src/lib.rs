@@ -16,10 +16,10 @@ use xdl_model::{BlockId, Model, ModelError, PortId, SignalShape, Subsystem};
 pub mod blocks;
 pub use blocks::{
     BusCreator, BusSelector, Constant, CrossProduct, Deadzone, Demux, Derivative, DotProduct, Gain,
-    Integrator, LookupTable1D, MatrixGain, MatrixMatrixProduct, MatrixTranspose,
-    MatrixVectorProduct, Mux, Pid, PidBlockConfig, Product, QuaternionConjugate, QuaternionInverse,
-    QuaternionMultiply, QuaternionNormalize, QuaternionRotate, RateLimiter, Saturation, Sum,
-    Switch, VectorNorm, VectorNormalize, VectorScale, VectorSum,
+    Integrator, LookupTable1D, MatrixGain, MatrixMatrixProduct, MatrixScale, MatrixSum,
+    MatrixTranspose, MatrixVectorProduct, Mux, Pid, PidBlockConfig, Product, QuaternionConjugate,
+    QuaternionInverse, QuaternionMultiply, QuaternionNormalize, QuaternionRotate, RateLimiter,
+    Saturation, Sum, Switch, VectorNorm, VectorNormalize, VectorScale, VectorSum,
 };
 pub mod solver;
 pub use solver::{
@@ -1104,59 +1104,6 @@ mod tests {
         ));
     }
 
-    struct Constant {
-        output: PortId,
-        value: f64,
-    }
-
-    impl BlockRuntime for Constant {
-        fn configure(
-            &mut self,
-            parameters: &BTreeMap<String, serde_json::Value>,
-        ) -> Result<(), ExecutionError> {
-            if let Some(value) = parameters.get("value") {
-                self.value = value.as_f64().ok_or_else(|| {
-                    ExecutionError::Runtime("constant value parameter must be numeric".to_string())
-                })?;
-            }
-            Ok(())
-        }
-
-        fn step(
-            &mut self,
-            _timestamp: Timestamp,
-            _inputs: &BTreeMap<PortId, SignalValue>,
-        ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
-            Ok(BTreeMap::from([(
-                self.output,
-                SignalValue::Scalar(self.value),
-            )]))
-        }
-    }
-
-    struct Gain {
-        input: PortId,
-        output: PortId,
-    }
-
-    impl BlockRuntime for Gain {
-        fn step(
-            &mut self,
-            _timestamp: Timestamp,
-            inputs: &BTreeMap<PortId, SignalValue>,
-        ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
-            let Some(SignalValue::Scalar(value)) = inputs.get(&self.input) else {
-                return Err(ExecutionError::Runtime(
-                    "gain input is not scalar".to_string(),
-                ));
-            };
-            Ok(BTreeMap::from([(
-                self.output,
-                SignalValue::Scalar(value * 2.0),
-            )]))
-        }
-    }
-
     struct Decay {
         output: PortId,
     }
@@ -1281,20 +1228,14 @@ mod tests {
             .register_task(
                 source_task,
                 source,
-                Box::new(Constant {
-                    output: source_output,
-                    value: 3.0,
-                }),
+                Box::new(Constant::new(source_output, 3.0).expect("constant runtime")),
             )
             .expect("source runtime");
         engine
             .register_task(
                 gain_task,
                 gain,
-                Box::new(Gain {
-                    input: gain_input,
-                    output: gain_output,
-                }),
+                Box::new(Gain::new(gain_input, gain_output, 2.0).expect("gain runtime")),
             )
             .expect("gain runtime");
 
@@ -1519,10 +1460,7 @@ mod tests {
             .register_task(
                 task,
                 block,
-                Box::new(Gain {
-                    input: internal_input,
-                    output: internal_output,
-                }),
+                Box::new(Gain::new(internal_input, internal_output, 2.0).expect("gain runtime")),
             )
             .expect("register internal block");
         let output = runtime

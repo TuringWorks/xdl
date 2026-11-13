@@ -40,12 +40,27 @@ The project is structured as a Cargo workspace with the following crates:
 - **`xdl-lsp`**: Language Server Protocol implementation for IDE support
 - **`xdl-matlab`**: MATLAB/Octave transpiler for a tested basic-to-moderate `.m` subset (~2,950 lines; 28 unit tests)
 - **`xdl-artifacts`**: Versioned run-manifest and compatibility-status contracts
-- **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**: Typed guidance, navigation, and control libraries (in development; no XDL built-ins yet). See [GNC Crates](docs/development/gnc-crates.md)
+- **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**, **`xdl-gnc-actuators`**, **`xdl-gnc-integration`**, **`xdl-gnc-telemetry`**: Typed guidance, navigation, control, actuator, integration, and telemetry libraries with an XDL-facing `GNC_*` slice. The physical-model and full block-diagram gaps remain under development; see [GNC Crates](docs/development/gnc-crates.md)
 
 **Additional Modules (not in workspace):**
 - **`xdl-desktop-viewer`**: Desktop visualization viewer
 
 ## Features
+
+### Runnable system-level example
+
+XDL includes an executable reduced-order Mars-helicopter system-level example
+covering thermal/SOC readiness, Mars gravity, guidance, PID control, actuator
+dynamics, ground contact, and JSON-lines telemetry:
+
+```bash
+cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl
+```
+
+This is an evidence-bearing starting point for the MATLAB/Aerospace
+Blockset/Simscape compatibility track, not a claim of drop-in Simulink parity.
+See [the GNC documentation](docs/development/gnc-crates.md) for the current
+scope and remaining physical-model gaps.
 
 ### Core Data Types
 - All XDL/IDL numeric types (BYTE, INT, LONG, FLOAT, DOUBLE, COMPLEX, etc.)
@@ -211,6 +226,10 @@ xdl check script.pro
 # Run the recursive XDL test suite and emit a replayable manifest
 xdl test tests --manifest runs/test-summary.json
 xdl replay runs/test-summary.json
+
+# Test and replay one scientific example
+xdl test examples/gnc_closed_loop.xdl --manifest runs/gnc-closed-loop.json
+xdl replay runs/gnc-closed-loop.json
 
 # Inspect the current compatibility baseline
 xdl compatibility-report --format json

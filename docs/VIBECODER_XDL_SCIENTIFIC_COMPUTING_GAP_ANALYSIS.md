@@ -420,8 +420,8 @@ model-based foundation:
 | MATLAB transpiler | `cargo test -p xdl-matlab` | 28 passed | Tested syntax/function subset; not MATLAB/Octave parity |
 | Typed model graph/editor | `cargo test -p xdl-model` | 19 passed | Schema, typed connections, validation, layout, and editor serialization foundation |
 | Deterministic simulation | `cargo test -p xdl-sim` | 19 passed | Scheduler, multi-rate ordering, delays, continuous integration, and solver error paths foundation |
-| Artifact contracts | `cargo test -p xdl-artifacts` | 6 passed | Versioned manifests, compatibility statuses, artifact hashes, and fail-closed validation |
-| CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 13 passed | Recursive tests, manifests, source/artifact hashes, stdout/failure artifacts, local replay, and reference gates |
+| Artifact contracts | `cargo test -p xdl-artifacts` | 7 passed | Versioned manifests, bundled JSON schemas, compatibility statuses, artifact hashes, and fail-closed validation |
+| CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 17 passed | Recursive and single-file tests, manifests, source/artifact hashes, stdout/failure artifacts, local replay, reference gates, GNC closed-loop, and Mars-helicopter execution/replay |
 
 These tests are useful exit-criteria evidence, but they do not establish
 production readiness. The next validation layer must add real XDL programs,

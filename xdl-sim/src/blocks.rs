@@ -385,9 +385,72 @@ pub struct MatrixSum {
     pub output: PortId,
 }
 
+pub struct MatrixScale {
+    pub matrix: PortId,
+    pub scale: PortId,
+    pub output: PortId,
+}
+
+impl MatrixScale {
+    pub const fn new(matrix: PortId, scale: PortId, output: PortId) -> Self {
+        Self {
+            matrix,
+            scale,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for MatrixScale {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Matrix {
+            rows,
+            columns,
+            values,
+        }) = inputs.get(&self.matrix)
+        else {
+            return Err(ExecutionError::Runtime(
+                "matrix scale input must be a matrix".to_string(),
+            ));
+        };
+        let scale = scalar_input(inputs, self.scale, "matrix scale")?;
+        if *rows == 0
+            || *columns == 0
+            || values.len() != rows.saturating_mul(*columns)
+            || values.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "matrix scale dimensions or values are invalid".to_string(),
+            ));
+        }
+        let scaled = values.iter().map(|value| value * scale).collect::<Vec<_>>();
+        if scaled.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "matrix scale output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Matrix {
+                rows: *rows,
+                columns: *columns,
+                values: scaled,
+            },
+        )]))
+    }
+}
+
 impl MatrixSum {
     pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
-        Self { left, right, output }
+        Self {
+            left,
+            right,
+            output,
+        }
     }
 }
 
@@ -1801,6 +1864,13 @@ mod tests {
                 &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
             )
             .is_err());
+        let mut matrix_scale = MatrixScale::new(PortId::new(1), PortId::new(2), PortId::new(3));
+        assert!(matrix_scale
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
+            )
+            .is_err());
     }
 
     #[test]
@@ -2127,6 +2197,32 @@ mod tests {
                 rows: 2,
                 columns: 2,
                 values: vec![6.0, 8.0, 10.0, 12.0],
+            })
+        );
+
+        let mut matrix_scale = MatrixScale::new(PortId::new(25), input, PortId::new(30));
+        let scaled_matrix = matrix_scale
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (
+                        PortId::new(25),
+                        SignalValue::Matrix {
+                            rows: 2,
+                            columns: 2,
+                            values: vec![1.0, 2.0, 3.0, 4.0],
+                        },
+                    ),
+                    (input, SignalValue::Scalar(2.0)),
+                ]),
+            )
+            .expect("matrix scale");
+        assert_eq!(
+            scaled_matrix.get(&PortId::new(30)),
+            Some(&SignalValue::Matrix {
+                rows: 2,
+                columns: 2,
+                values: vec![2.0, 4.0, 6.0, 8.0],
             })
         );
 

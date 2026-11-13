@@ -356,12 +356,17 @@ fn replay_manifest(path: &Path) -> Result<()> {
             .unwrap_or_else(|| Path::new("."))
             .join(recorded_directory)
     };
-    if !directory.is_dir() {
+    if !directory.is_dir() && !directory.is_file() {
         return Err(anyhow::anyhow!(
             "recorded test directory does not exist: {}",
             directory.display()
         ));
     }
+    let test_root = if directory.is_file() {
+        directory.parent().unwrap_or_else(|| Path::new("."))
+    } else {
+        &directory
+    };
     for artifact in &manifest.inputs {
         if artifact.kind != "xdl-test-source" {
             continue;
@@ -370,7 +375,7 @@ fn replay_manifest(path: &Path) -> Result<()> {
         let source = if recorded_path.is_absolute() {
             recorded_path.to_path_buf()
         } else {
-            directory.join(recorded_path)
+            test_root.join(recorded_path)
         };
         let expected_hash = artifact.sha256.as_deref().ok_or_else(|| {
             anyhow::anyhow!("source artifact has no recorded sha256: {}", artifact.path)
@@ -423,7 +428,7 @@ fn replay_manifest(path: &Path) -> Result<()> {
                 output_path.display()
             )
         })?;
-        expected_stdout.insert(directory.join(relative), expected);
+        expected_stdout.insert(test_root.join(relative), expected);
     }
     println!("Replaying manifest: {}", path.display());
     println!("Test directory: {}", directory.display());
@@ -459,11 +464,29 @@ fn write_test_manifest(
         .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?;
     let run_id = format!("xdl-test-{}-{}", process::id(), now.as_nanos());
     let mut manifest = RunManifest::new(run_id, "xdl", &directory.display().to_string());
+    let source_root = if directory.is_file() {
+        directory.parent().unwrap_or_else(|| Path::new("."))
+    } else {
+        directory
+    };
     let manifest_root = path.parent().unwrap_or_else(|| Path::new("."));
     let recorded_directory = match directory.strip_prefix(manifest_root) {
         Ok(relative) if !relative.as_os_str().is_empty() => relative.display().to_string(),
         Ok(_) => ".".to_string(),
-        Err(_) => directory.display().to_string(),
+        Err(_) => {
+            // A relative input such as `examples/foo.xdl` cannot be replayed
+            // relative to an unrelated absolute manifest path. Preserve an
+            // absolute source location in that case instead of creating a
+            // path that only works from the original process directory.
+            if directory.is_absolute() {
+                directory.display().to_string()
+            } else {
+                std::env::current_dir()?
+                    .join(directory)
+                    .display()
+                    .to_string()
+            }
+        }
     };
     manifest.status = status;
     manifest.started_at = Some(format!("unix:{started_at}"));
@@ -488,7 +511,7 @@ fn write_test_manifest(
     manifest.inputs = files
         .iter()
         .map(|file| {
-            let relative = file.strip_prefix(directory).unwrap_or(file);
+            let relative = file.strip_prefix(source_root).unwrap_or(file);
             Ok(xdl_artifacts::RunArtifact {
                 kind: "xdl-test-source".to_string(),
                 path: relative.display().to_string(),
@@ -501,7 +524,7 @@ fn write_test_manifest(
         .unwrap_or_else(|| Path::new("."))
         .join("artifacts");
     for (file, output) in successful_outputs {
-        let relative = file.strip_prefix(directory).unwrap_or(file);
+        let relative = file.strip_prefix(source_root).unwrap_or(file);
         let artifact_path = artifact_root.join(relative).with_extension("stdout");
         if let Some(parent) = artifact_path.parent() {
             fs::create_dir_all(parent).with_context(|| {
@@ -529,7 +552,7 @@ fn write_test_manifest(
     }
     for (file, diagnostic) in failures {
         let source = Path::new(file);
-        let relative = source.strip_prefix(directory).unwrap_or(source);
+        let relative = source.strip_prefix(source_root).unwrap_or(source);
         let artifact_path = artifact_root.join(relative).with_extension("failure.txt");
         if let Some(parent) = artifact_path.parent() {
             fs::create_dir_all(parent).with_context(|| {
@@ -586,6 +609,16 @@ fn sha256_file(path: &Path) -> Result<String> {
 }
 
 fn collect_xdl_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+    if directory.is_file() {
+        if directory.extension().and_then(|ext| ext.to_str()) == Some("xdl") {
+            files.push(directory.to_path_buf());
+            return Ok(());
+        }
+        return Err(anyhow::anyhow!(
+            "test path is a file but not an .xdl script: {}",
+            directory.display()
+        ));
+    }
     let entries = fs::read_dir(directory)
         .with_context(|| format!("Failed to read test directory: {}", directory.display()))?;
 

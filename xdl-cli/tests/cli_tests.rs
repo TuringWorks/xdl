@@ -127,6 +127,135 @@ fn test_cli_test_command_runs_nested_xdl_files_and_reports_summary() {
 }
 
 #[test]
+fn test_cli_runs_gnc_closed_loop_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_closed_loop.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run GNC closed-loop example");
+
+    assert!(
+        output.status.success(),
+        "GNC closed-loop example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("tick= 10"));
+    assert!(stdout.contains("\"timestamp\":1000000000"));
+    assert!(stdout.contains("Final position (m):"));
+}
+
+#[test]
+fn test_cli_runs_mars_helicopter_system_level_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/mars_helicopter_system_level.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run Mars helicopter system-level example");
+
+    assert!(
+        output.status.success(),
+        "Mars helicopter example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("=== XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==="));
+    assert!(stdout.contains("\"source\":\"mars_helicopter\""));
+    assert!(stdout.contains("Final state: flying= 1"));
+    assert!(stdout.contains("Final altitude (m):"));
+    assert!(stdout.contains("Final motor speed (rpm-equivalent):"));
+    assert!(stdout.contains("Final upper rotor speed (rpm-equivalent):"));
+    assert!(stdout.contains("Final lower rotor speed (rpm-equivalent):"));
+    assert!(stdout.contains("=== END XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==="));
+}
+
+#[test]
+fn test_cli_test_command_accepts_single_gnc_script_and_replays_it() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_closed_loop.xdl");
+    let run_root = test_directory("gnc-manifest");
+    fs::create_dir_all(&run_root).expect("create manifest directory");
+    let manifest = run_root.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            example.to_str().expect("utf-8 example path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run single GNC script");
+    assert!(run.status.success(), "single script test failed");
+
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay single GNC script");
+    assert!(
+        replay.status.success(),
+        "single GNC replay failed: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    let _ = fs::remove_dir_all(&run_root);
+}
+
+#[test]
+fn test_cli_tests_and_replays_mars_helicopter_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/mars_helicopter_system_level.xdl");
+    let run_root = test_directory("mars-helicopter-manifest");
+    fs::create_dir_all(&run_root).expect("create manifest directory");
+    let manifest = run_root.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            example.to_str().expect("utf-8 example path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run Mars helicopter test");
+    assert!(
+        run.status.success(),
+        "Mars helicopter test failed: {}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay Mars helicopter test");
+    assert!(
+        replay.status.success(),
+        "Mars helicopter replay failed: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    let _ = fs::remove_dir_all(&run_root);
+}
+
+#[test]
 fn test_cli_test_command_writes_truthful_manifest() {
     let binary = get_xdl_binary();
     let directory = test_directory("manifest");

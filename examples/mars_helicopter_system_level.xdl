@@ -1,0 +1,110 @@
+; XDL reduced-order equivalent of the MathWorks Mars helicopter system-level
+; design example. It is intentionally a system-level model, not a Simscape
+; physical-network or Aerospace Blockset rotor model.
+;
+; Included: Mars gravity, battery SOC, heater/thermal readiness, solar input,
+; flight gating, altitude PID, motor/gearbox/dual-rotor state, landing
+; protection, telemetry, and a deterministic parameterized mission loop.
+; Not included: six-cell electrothermal battery detail, blade-element/coaxial
+; rotor aerodynamics, Simscape physical ports, Stateflow charts, or HIL behavior.
+
+PRINT, '=== XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==='
+
+dt = 1.0
+mars_gravity = 3.71
+ambient_temperature = -40.0
+battery_temperature = -40.0
+state_of_charge = 0.97
+solar_input = 0.002
+heater_draw = 0.004
+flight_draw = 0.006
+temperature_ready = 10.0
+soc_ready = 0.30
+mission_altitude = 3.0
+position_z = 0.0
+velocity_z = 0.0
+integral_state = 0.0
+previous_error = 0.0
+previous_timestamp = 0
+previous_output = 0.0
+motor_speed = 0.0
+upper_rotor_speed = 0.0
+lower_rotor_speed = 0.0
+gear_ratio = 8.0
+motor_time_constant = 0.2
+flying = 0
+
+FOR tick = 1, 60 DO BEGIN
+    timestamp = LONG64(tick) * LONG64(1000000000)
+
+    heater_on = 0
+    IF battery_temperature LT temperature_ready THEN heater_on = 1
+
+    ; First-order thermal model: heater warms the pack while the environment
+    ; pulls it toward the Mars ambient temperature.
+    battery_temperature = battery_temperature + heater_on * 2.5 $
+                          + (ambient_temperature - battery_temperature) * 0.01
+    state_of_charge = state_of_charge + solar_input $
+                    - heater_on * heater_draw - flying * flight_draw
+
+    IF flying EQ 0 THEN BEGIN
+        IF battery_temperature GT temperature_ready AND state_of_charge GT soc_ready THEN BEGIN
+            flying = 1
+        ENDIF
+    ENDIF
+    IF flying EQ 1 THEN BEGIN
+        IF state_of_charge LT soc_ready THEN flying = 0
+    ENDIF
+
+    IF flying EQ 1 THEN BEGIN
+        position = GNC_VEC3(0.0, 0.0, position_z)
+        waypoint = GNC_VEC3(0.0, 0.0, mission_altitude)
+        guidance = GNC_WAYPOINT(position, waypoint, timestamp, 1.0, 0.05)
+        pid = GNC_PID_STEP(timestamp, guidance.DESIRED_VELOCITY[2], velocity_z, $
+                           2.0, 0.25, 0.05, -8.0, 8.0, -4.0, 4.0, $
+                           integral_state, previous_error, previous_timestamp)
+        actuator = GNC_ACTUATOR_STEP(timestamp, pid.COMMAND, 0.2, -8.0, 8.0, $
+                                     12.0, previous_timestamp, previous_output)
+        ; Reduced-order drive train: the actuator command drives a motor, the
+        ; gearbox reduces speed, and the two coaxial rotors counter-rotate at
+        ; equal speed. Rotor thrust remains a calibrated system-level map; it
+        ; is not a blade-element or CFD model.
+        rotor_command = actuator.OUTPUT
+        IF rotor_command LT 0.0 THEN rotor_command = 0.0
+        motor_speed = motor_speed + (rotor_command * 100.0 - motor_speed) * motor_time_constant
+        upper_rotor_speed = motor_speed / gear_ratio
+        lower_rotor_speed = motor_speed / gear_ratio
+        rotor_lift = (upper_rotor_speed + lower_rotor_speed) * 0.5 * 8.5 / 100.0
+        acceleration = rotor_lift - mars_gravity * 0.82 - velocity_z * 0.15
+        velocity_z = velocity_z + acceleration * dt
+        position_z = position_z + velocity_z * dt
+        IF position_z LT 0.0 THEN BEGIN
+            position_z = 0.0
+            velocity_z = 0.0
+        ENDIF
+        integral_state = pid.INTEGRAL
+        previous_error = pid.ERROR
+        previous_output = actuator.OUTPUT
+        telemetry = GNC_TELEMETRY_JSON(timestamp, tick, 'mars_helicopter', $
+                                       GNC_VEC3(0.0, 0.0, position_z), $
+                                       GNC_VEC3(0.0, 0.0, velocity_z), $
+                                       actuator.OUTPUT)
+        PRINT, telemetry
+    ENDIF
+    IF flying EQ 0 THEN BEGIN
+        position_z = 0.0
+        velocity_z = 0.0
+        PRINT, 'tick=', tick, ' state=GROUND heater=', heater_on, $
+               ' temperature=', battery_temperature, ' soc=', state_of_charge
+    ENDIF
+    previous_timestamp = timestamp
+ENDFOR
+
+PRINT, 'Final state: flying=', flying
+PRINT, 'Final altitude (m): ', position_z
+PRINT, 'Final motor speed (rpm-equivalent): ', motor_speed
+PRINT, 'Final upper rotor speed (rpm-equivalent): ', upper_rotor_speed
+PRINT, 'Final lower rotor speed (rpm-equivalent): ', lower_rotor_speed
+PRINT, 'Final battery temperature (degC): ', battery_temperature
+PRINT, 'Final battery SOC: ', state_of_charge
+PRINT, '=== END XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==='
