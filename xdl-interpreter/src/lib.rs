@@ -1140,3 +1140,72 @@ impl Default for Interpreter {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod array_element_access_tests {
+    use super::*;
+
+    /// Run a program and return the interpreter, so tests can inspect variables.
+    /// No unwrap/expect: the panic ratchet counts test code too.
+    fn run(source: &str) -> XdlResult<Interpreter> {
+        let program = xdl_parser::parse_xdl(source)
+            .map_err(|e| XdlError::RuntimeError(format!("parse: {e}")))?;
+        let mut interpreter = Interpreter::new();
+        interpreter.execute_program(&program)?;
+        Ok(interpreter)
+    }
+
+    fn variable(interpreter: &Interpreter, name: &str) -> XdlResult<XdlValue> {
+        interpreter.context.get_variable(name).cloned()
+    }
+
+    #[test]
+    fn multidim_writes_land_in_column_major_slots() -> XdlResult<()> {
+        // 2x3 array: w[i,j] is flat index i + 2*j.
+        let interpreter = run("w = FLTARR(2,3)\nw[1,2] = 7.0\nw[0,1] = 2.0\n")?;
+        assert!(matches!(
+            variable(&interpreter, "w")?,
+            XdlValue::MultiDimArray { ref data, .. }
+                if data == &[0.0, 0.0, 2.0, 0.0, 0.0, 7.0]
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn out_of_range_subscript_is_an_error_not_a_neighbouring_element() -> XdlResult<()> {
+        // x[2,0] on a 2x2 array has flat index 2, which is x[0,1]. It must be rejected.
+        let result = run("x = FLTARR(2,2)\nx[2,0] = 5.0\n");
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn single_subscript_on_multidim_reads_flat_element() -> XdlResult<()> {
+        let interpreter = run("w = FLTARR(2,3)\nw[1,2] = 7.0\nv = w[5]\n")?;
+        assert!(matches!(variable(&interpreter, "v")?, XdlValue::Double(v) if v == 7.0));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_loop_fill_counts_every_element() -> XdlResult<()> {
+        let interpreter = run("a = FLTARR(3,2,2)\n\
+             FOR i = 0, 2 DO BEGIN\n\
+               FOR j = 0, 1 DO BEGIN\n\
+                 FOR k = 0, 1 DO BEGIN\n\
+                   a[i,j,k] = 1.0\n\
+                 ENDFOR\n\
+               ENDFOR\n\
+             ENDFOR\n\
+             t = TOTAL(a)\n")?;
+        assert!(matches!(variable(&interpreter, "t")?, XdlValue::Double(v) if v == 12.0));
+        Ok(())
+    }
+
+    #[test]
+    fn element_read_matches_write_on_one_dimensional_array() -> XdlResult<()> {
+        let interpreter = run("x = FINDGEN(5)\ny = x[-1]\nz = x[0]\n")?;
+        assert!(matches!(variable(&interpreter, "y")?, XdlValue::Double(v) if v == 4.0));
+        assert!(matches!(variable(&interpreter, "z")?, XdlValue::Double(v) if v == 0.0));
+        Ok(())
+    }
+}
