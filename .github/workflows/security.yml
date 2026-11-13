@@ -65,7 +65,7 @@ jobs:
           # DOWN freely. Going up fails: a new panic in a library path kills the
           # user's whole session. See AGENTS.md -> Rules for Agents.
           declare -A max=( [xdl-core]=34 [xdl-parser]=20 [xdl-interpreter]=29 \
-                           [xdl-stdlib]=248 [xdl-amp]=130 [xdl-dataframe]=13 )
+                           [xdl-stdlib]=211 [xdl-amp]=114 [xdl-dataframe]=13 )
           fail=0
           for c in "${!max[@]}"; do
             n=$(grep -rn '\.unwrap()\|\.expect(\|panic!(' "$c/src" --include='*.rs' 2>/dev/null | wc -l | tr -d ' ')

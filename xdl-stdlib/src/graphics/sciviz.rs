@@ -101,7 +101,7 @@ pub fn render_quiver(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -276,7 +276,7 @@ pub fn render_streamlines(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -375,7 +375,7 @@ pub fn render_volume_mip(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -455,7 +455,7 @@ pub fn render_isosurface_slice(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };

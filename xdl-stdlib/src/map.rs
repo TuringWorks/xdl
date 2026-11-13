@@ -292,7 +292,7 @@ pub fn map_set(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlRe
     }
 
     // Store global projection state
-    *MAP_PROJECTION.write().unwrap() = Some(proj.clone());
+    *MAP_PROJECTION.write().unwrap_or_else(|e| e.into_inner()) = Some(proj.clone());
 
     println!(
         "MAP_SET: Initialized {:?} projection centered at ({}, {})",
@@ -308,7 +308,7 @@ pub fn map_continents(
     _args: &[XdlValue],
     keywords: &HashMap<String, XdlValue>,
 ) -> XdlResult<XdlValue> {
-    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj_guard = MAP_PROJECTION.read().unwrap_or_else(|e| e.into_inner());
     let proj = proj_guard
         .as_ref()
         .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?;
@@ -374,7 +374,7 @@ pub fn map_continents(
 /// MAP_GRID - Draw map grid lines (parallels and meridians)
 /// IDL syntax: MAP_GRID [, LATDEL=degrees] [, LONDEL=degrees] [, /LABEL] [, COLOR=color]
 pub fn map_grid(_args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
-    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj_guard = MAP_PROJECTION.read().unwrap_or_else(|e| e.into_inner());
     let proj = proj_guard
         .as_ref()
         .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?;
@@ -458,7 +458,7 @@ pub fn convert_coord(
         ));
     }
 
-    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj_guard = MAP_PROJECTION.read().unwrap_or_else(|e| e.into_inner());
     let proj = proj_guard
         .as_ref()
         .ok_or_else(|| XdlError::RuntimeError("MAP_SET must be called first".to_string()))?;
@@ -487,7 +487,7 @@ pub fn convert_coord(
 /// Get current map structure
 /// IDL syntax: map_struct = MAP_STRUCT()
 pub fn map_struct(_args: &[XdlValue]) -> XdlResult<XdlValue> {
-    let proj_guard = MAP_PROJECTION.read().unwrap();
+    let proj_guard = MAP_PROJECTION.read().unwrap_or_else(|e| e.into_inner());
     let proj = proj_guard.as_ref();
 
     if let Some(p) = proj {
