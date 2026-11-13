@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Versioned scientific run manifests and compatibility status contracts for XDL"
+homepage.workspace = true
+repository.workspace = true
+documentation.workspace = true
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }

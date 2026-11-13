@@ -46,7 +46,7 @@ Rules:
 | `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 | `xdl-gnc-telemetry` | Ordered telemetry samples with finite-value validation and JSON-lines import/export |
 | `xdl-model` | Serializable block/port/signal graph with connection, bus, subsystem-boundary, and cycle validation |
-| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/VectorSum/VectorScale/VectorNorm/VectorNormalize/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
+| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
 
 ### Step events
 
@@ -72,7 +72,7 @@ Rules:
 | `xdl-gnc-integration` | 4 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, and ordered telemetry output |
 | `xdl-gnc-telemetry` | 3 | Ordered telemetry samples with buffered and streaming JSON-lines export; product-specific sinks remain pending |
 | `xdl-model` | 19 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, and editor events |
-| `xdl-sim` | 19 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/VectorSum/VectorScale/VectorNorm/VectorNormalize/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
+| `xdl-sim` | 19 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/Mux/Demux/MatrixGain/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
 Counts from the targeted GNC/model/scheduler test runs on 2026-11-13. Eleven crates, 96 tests, all passing. Clippy `-D warnings` is not yet a repository-wide gate.
 

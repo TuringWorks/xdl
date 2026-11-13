@@ -379,6 +379,117 @@ pub struct MatrixGain {
     pub values: Vec<f64>,
 }
 
+pub struct MatrixTranspose {
+    pub input: PortId,
+    pub output: PortId,
+}
+
+impl MatrixTranspose {
+    pub const fn new(input: PortId, output: PortId) -> Self {
+        Self { input, output }
+    }
+}
+
+impl BlockRuntime for MatrixTranspose {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Matrix {
+            rows,
+            columns,
+            values,
+        }) = inputs.get(&self.input)
+        else {
+            return Err(ExecutionError::Runtime(
+                "matrix transpose input must be a matrix".to_string(),
+            ));
+        };
+        if *rows == 0
+            || *columns == 0
+            || values.len() != rows.saturating_mul(*columns)
+            || values.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "matrix transpose dimensions or values are invalid".to_string(),
+            ));
+        }
+        let transposed = (0..*columns)
+            .flat_map(|column| (0..*rows).map(move |row| values[row * *columns + column]))
+            .collect::<Vec<_>>();
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Matrix {
+                rows: *columns,
+                columns: *rows,
+                values: transposed,
+            },
+        )]))
+    }
+}
+
+pub struct MatrixVectorProduct {
+    pub matrix: PortId,
+    pub vector: PortId,
+    pub output: PortId,
+}
+
+impl MatrixVectorProduct {
+    pub const fn new(matrix: PortId, vector: PortId, output: PortId) -> Self {
+        Self {
+            matrix,
+            vector,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for MatrixVectorProduct {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Matrix {
+            rows,
+            columns,
+            values,
+        }) = inputs.get(&self.matrix)
+        else {
+            return Err(ExecutionError::Runtime(
+                "matrix-vector product matrix input must be a matrix".to_string(),
+            ));
+        };
+        let Some(SignalValue::Vector(vector)) = inputs.get(&self.vector) else {
+            return Err(ExecutionError::Runtime(
+                "matrix-vector product vector input must be a vector".to_string(),
+            ));
+        };
+        if *rows == 0
+            || *columns == 0
+            || vector.len() != *columns
+            || values.len() != rows.saturating_mul(*columns)
+            || values.iter().any(|value| !value.is_finite())
+            || vector.iter().any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "matrix-vector product dimensions or values are invalid".to_string(),
+            ));
+        }
+        let result = values
+            .chunks_exact(*columns)
+            .map(|row| row.iter().zip(vector).map(|(a, b)| a * b).sum::<f64>())
+            .collect::<Vec<_>>();
+        if result.iter().any(|value| !value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "matrix-vector product output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(self.output, SignalValue::Vector(result))]))
+    }
+}
+
 pub struct VectorSum {
     pub left: PortId,
     pub right: PortId,
@@ -670,6 +781,44 @@ pub struct QuaternionConjugate {
     pub output: PortId,
 }
 
+pub struct QuaternionInverse {
+    pub input: PortId,
+    pub output: PortId,
+}
+
+impl QuaternionInverse {
+    pub const fn new(input: PortId, output: PortId) -> Self {
+        Self { input, output }
+    }
+}
+
+impl BlockRuntime for QuaternionInverse {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let [w, x, y, z] = vector4_input(inputs, self.input, "quaternion inverse")?;
+        let quaternion = Quaternion::new(w, x, y, z);
+        let norm_squared = quaternion.norm_squared();
+        if !norm_squared.is_finite() || norm_squared <= f64::EPSILON {
+            return Err(ExecutionError::Runtime(
+                "quaternion inverse requires a non-zero finite quaternion".to_string(),
+            ));
+        }
+        let inverse = quaternion.conjugate();
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Vector(vec![
+                inverse.w / norm_squared,
+                inverse.x / norm_squared,
+                inverse.y / norm_squared,
+                inverse.z / norm_squared,
+            ]),
+        )]))
+    }
+}
+
 impl QuaternionConjugate {
     pub const fn new(input: PortId, output: PortId) -> Self {
         Self { input, output }
@@ -715,6 +864,64 @@ impl BlockRuntime for CrossProduct {
             left[0] * right[1] - left[1] * right[0],
         ];
         Ok(BTreeMap::from([(self.output, SignalValue::Vector(value))]))
+    }
+}
+
+pub struct DotProduct {
+    pub left: PortId,
+    pub right: PortId,
+    pub output: PortId,
+}
+
+impl DotProduct {
+    pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
+        Self {
+            left,
+            right,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for DotProduct {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let Some(SignalValue::Vector(left)) = inputs.get(&self.left) else {
+            return Err(ExecutionError::Runtime(
+                "dot product left input must be a vector".to_string(),
+            ));
+        };
+        let Some(SignalValue::Vector(right)) = inputs.get(&self.right) else {
+            return Err(ExecutionError::Runtime(
+                "dot product right input must be a vector".to_string(),
+            ));
+        };
+        if left.len() != right.len() {
+            return Err(ExecutionError::Runtime(
+                "dot product inputs must have equal length".to_string(),
+            ));
+        }
+        let value = left
+            .iter()
+            .zip(right)
+            .try_fold(0.0, |total, (left, right)| {
+                if !left.is_finite() || !right.is_finite() {
+                    Err(ExecutionError::Runtime(
+                        "dot product inputs must be finite".to_string(),
+                    ))
+                } else {
+                    Ok(total + left * right)
+                }
+            })?;
+        if !value.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "dot product output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(self.output, SignalValue::Scalar(value))]))
     }
 }
 
@@ -1393,6 +1600,14 @@ mod tests {
         assert!(Mux::new(Vec::new(), PortId::new(2)).is_err());
         assert!(Demux::new(PortId::new(1), Vec::new()).is_err());
         assert!(MatrixGain::new(PortId::new(1), PortId::new(2), 2, 2, vec![1.0]).is_err());
+        let mut matrix_vector =
+            MatrixVectorProduct::new(PortId::new(1), PortId::new(2), PortId::new(3));
+        assert!(matrix_vector
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
+            )
+            .is_err());
         assert!(BusCreator::new(BTreeMap::new(), PortId::new(2)).is_err());
         assert!(BusSelector::new(PortId::new(1), BTreeMap::new()).is_err());
         let mut cross = CrossProduct::new(PortId::new(1), PortId::new(2), PortId::new(3));
@@ -1400,6 +1615,21 @@ mod tests {
             .step(
                 Timestamp::ZERO,
                 &BTreeMap::from([(PortId::new(1), SignalValue::Vector(vec![1.0, 2.0]))])
+            )
+            .is_err());
+        let mut matrix_vector =
+            MatrixVectorProduct::new(PortId::new(1), PortId::new(2), PortId::new(3));
+        assert!(matrix_vector
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
+            )
+            .is_err());
+        let mut transpose = MatrixTranspose::new(PortId::new(1), PortId::new(2));
+        assert!(transpose
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
             )
             .is_err());
     }
@@ -1618,6 +1848,52 @@ mod tests {
             Some(&SignalValue::Vector(vec![8.0, 18.0]))
         );
 
+        let mut dynamic_matrix =
+            MatrixVectorProduct::new(PortId::new(25), mux_output, PortId::new(26));
+        let dynamic_output = dynamic_matrix
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (
+                        PortId::new(25),
+                        SignalValue::Matrix {
+                            rows: 2,
+                            columns: 2,
+                            values: vec![1.0, 2.0, 3.0, 4.0],
+                        },
+                    ),
+                    (mux_output, SignalValue::Vector(vec![2.0, 3.0])),
+                ]),
+            )
+            .expect("dynamic matrix-vector product");
+        assert_eq!(
+            dynamic_output.get(&PortId::new(26)),
+            Some(&SignalValue::Vector(vec![8.0, 18.0]))
+        );
+
+        let mut transpose = MatrixTranspose::new(PortId::new(25), PortId::new(27));
+        let transposed = transpose
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(
+                    PortId::new(25),
+                    SignalValue::Matrix {
+                        rows: 2,
+                        columns: 3,
+                        values: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+                    },
+                )]),
+            )
+            .expect("matrix transpose");
+        assert_eq!(
+            transposed.get(&PortId::new(27)),
+            Some(&SignalValue::Matrix {
+                rows: 3,
+                columns: 2,
+                values: vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0],
+            })
+        );
+
         let mut vector_sum = VectorSum::new(mux_output, PortId::new(10), PortId::new(11));
         let vector_sum_output = vector_sum
             .step(
@@ -1728,6 +2004,21 @@ mod tests {
             Some(&SignalValue::Vector(vec![0.0, 0.0, 1.0]))
         );
 
+        let mut dot = DotProduct::new(input, output, PortId::new(23));
+        let dot_output = dot
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([
+                    (input, SignalValue::Vector(vec![1.0, 2.0, 3.0])),
+                    (output, SignalValue::Vector(vec![4.0, 5.0, 6.0])),
+                ]),
+            )
+            .expect("dot product step");
+        assert_eq!(
+            dot_output.get(&PortId::new(23)),
+            Some(&SignalValue::Scalar(32.0))
+        );
+
         let mut quaternion_normalize = QuaternionNormalize::new(input, PortId::new(19));
         assert!(quaternion_normalize
             .step(
@@ -1787,6 +2078,18 @@ mod tests {
         assert_eq!(
             conjugated.get(&PortId::new(22)),
             Some(&SignalValue::Vector(vec![1.0, -2.0, -3.0, -4.0]))
+        );
+
+        let mut inverse = QuaternionInverse::new(input, PortId::new(24));
+        let inverted = inverse
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(input, SignalValue::Vector(vec![2.0, 0.0, 0.0, 0.0]))]),
+            )
+            .expect("quaternion inverse step");
+        assert_eq!(
+            inverted.get(&PortId::new(24)),
+            Some(&SignalValue::Vector(vec![0.5, 0.0, 0.0, 0.0]))
         );
     }
 }

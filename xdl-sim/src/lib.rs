@@ -15,10 +15,11 @@ use xdl_model::{BlockId, Model, ModelError, PortId, SignalShape, Subsystem};
 
 pub mod blocks;
 pub use blocks::{
-    BusCreator, BusSelector, Constant, CrossProduct, Deadzone, Demux, Derivative, Gain, Integrator,
-    LookupTable1D, MatrixGain, Mux, Pid, PidBlockConfig, Product, QuaternionConjugate,
-    QuaternionMultiply, QuaternionNormalize, QuaternionRotate, RateLimiter, Saturation, Sum,
-    Switch, VectorNorm, VectorNormalize, VectorScale, VectorSum,
+    BusCreator, BusSelector, Constant, CrossProduct, Deadzone, Demux, Derivative, DotProduct, Gain,
+    Integrator, LookupTable1D, MatrixGain, MatrixTranspose, MatrixVectorProduct, Mux, Pid,
+    PidBlockConfig, Product, QuaternionConjugate, QuaternionInverse, QuaternionMultiply,
+    QuaternionNormalize, QuaternionRotate, RateLimiter, Saturation, Sum, Switch, VectorNorm,
+    VectorNormalize, VectorScale, VectorSum,
 };
 pub mod solver;
 pub use solver::{

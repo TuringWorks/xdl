@@ -28,6 +28,8 @@ environment, and verifying that referenced files exist.
 The language-independent JSON Schema is checked in at
 `xdl-artifacts/schema/run-manifest.schema.json` for VibeCoder, CI, and other
 consumers that do not link the Rust crate.
+The Rust crate also exposes the bundled schema text as constants and tests that
+both schemas remain valid JSON.
 
 Example shape:
 

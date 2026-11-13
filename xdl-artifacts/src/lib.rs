@@ -18,6 +18,13 @@ pub const RUN_MANIFEST_SCHEMA_VERSION: u32 = 1;
 /// Current version of the serialized compatibility-inventory contract.
 pub const COMPATIBILITY_SCHEMA_VERSION: u32 = 1;
 
+/// Language-independent JSON Schema for [`RunManifest`].
+pub const RUN_MANIFEST_JSON_SCHEMA: &str = include_str!("../schema/run-manifest.schema.json");
+
+/// Language-independent JSON Schema for [`CompatibilityInventory`].
+pub const COMPATIBILITY_INVENTORY_JSON_SCHEMA: &str =
+    include_str!("../schema/compatibility-inventory.schema.json");
+
 /// Lifecycle/result state recorded in a run manifest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -393,6 +400,24 @@ mod tests {
             manifest.validate(),
             Err(ArtifactError::InvalidSha256 { .. })
         ));
+    }
+
+    #[test]
+    fn bundled_json_schemas_are_valid() {
+        let run_manifest: serde_json::Value =
+            serde_json::from_str(RUN_MANIFEST_JSON_SCHEMA).expect("valid run manifest schema");
+        let compatibility: serde_json::Value =
+            serde_json::from_str(COMPATIBILITY_INVENTORY_JSON_SCHEMA)
+                .expect("valid compatibility inventory schema");
+
+        assert_eq!(
+            run_manifest["$id"],
+            "https://turingworks.github.io/xdl/schemas/run-manifest.v1.json"
+        );
+        assert_eq!(
+            compatibility["$id"],
+            "https://turingworks.github.io/xdl/schemas/compatibility-inventory.v1.json"
+        );
     }
 
     #[test]
