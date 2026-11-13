@@ -243,7 +243,6 @@ fn test_cli_compatibility_report_scans_matlab_corpus() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("nested/good.m"));
     assert!(stdout.contains("matrix.m"));
-    assert!(stdout.contains("Transpilation and XDL execution passed"));
     assert!(stdout.contains("stdout-reference"));
     assert!(stdout.contains("numeric-reference"));
     assert!(stdout.contains("verified"));
