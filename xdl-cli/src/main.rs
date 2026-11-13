@@ -221,6 +221,10 @@ fn check_file(file: &Path) -> Result<()> {
 fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
     info!("Running tests in directory: {}", directory.display());
     let run_started = Instant::now();
+    let run_started_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?
+        .as_secs();
 
     let mut files = Vec::new();
     collect_xdl_files(directory, &mut files)
@@ -278,6 +282,7 @@ fn run_tests(directory: &Path, manifest_path: Option<&Path>) -> Result<()> {
             &files,
             &successful_outputs,
             &failures,
+            run_started_at,
             run_started
                 .elapsed()
                 .as_millis()
@@ -300,6 +305,7 @@ fn write_test_manifest(
     files: &[PathBuf],
     successful_outputs: &[(PathBuf, String)],
     failures: &[(String, String)],
+    started_at: u64,
     duration_ms: u64,
 ) -> Result<()> {
     let now = SystemTime::now()
@@ -308,7 +314,7 @@ fn write_test_manifest(
     let run_id = format!("xdl-test-{}-{}", process::id(), now.as_nanos());
     let mut manifest = RunManifest::new(run_id, "xdl", &directory.display().to_string());
     manifest.status = status;
-    manifest.started_at = Some(format!("unix:{}", now.as_secs()));
+    manifest.started_at = Some(format!("unix:{started_at}"));
     manifest.completed_at = Some(format!("unix:{}", now.as_secs()));
     manifest.duration_ms = Some(duration_ms);
     manifest.configuration.insert(
