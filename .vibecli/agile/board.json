@@ -201,7 +201,7 @@
         "correctness",
         "warning"
       ],
-      "column": "In Progress",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/MATLAB_LIMITATIONS.md:38",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -213,24 +213,27 @@
         {
           "id": "st1-2ad0b4ae",
           "title": "Locate docs/MATLAB_LIMITATIONS.md around line 38",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-2ad0b4ae",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-2ad0b4ae",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-2ad0b4ae",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:44:55.571284+00:00",
+      "resolutionReason": "Code updated at docs/MATLAB_LIMITATIONS.md:38"
     },
     {
       "id": "cr-9fc89772",
@@ -686,7 +689,7 @@
         "correctness",
         "warning"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/MATLAB_LIMITATIONS.md:40",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -698,24 +701,27 @@
         {
           "id": "st1-7052ca8f",
           "title": "Locate docs/MATLAB_LIMITATIONS.md around line 40",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-7052ca8f",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-7052ca8f",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-7052ca8f",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:44:55.571284+00:00",
+      "resolutionReason": "Code updated at docs/MATLAB_LIMITATIONS.md:40"
     },
     {
       "id": "cr-708c1471",
@@ -8135,7 +8141,7 @@
         "correctness",
         "warning"
       ],
-      "column": "To Do",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/MATLAB_LIMITATIONS.md:45",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -8147,24 +8153,27 @@
         {
           "id": "st1-ee604092",
           "title": "Locate docs/MATLAB_LIMITATIONS.md around line 45",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-ee604092",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-ee604092",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-ee604092",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:44:55.571284+00:00",
+      "resolutionReason": "Code updated at docs/MATLAB_LIMITATIONS.md:45"
     },
     {
       "id": "cr-a235786f",
@@ -15752,7 +15761,7 @@
         "correctness",
         "info"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/MATLAB_LIMITATIONS.md:43",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -15764,24 +15773,27 @@
         {
           "id": "st1-f1c85d3f",
           "title": "Locate docs/MATLAB_LIMITATIONS.md around line 43",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-f1c85d3f",
           "title": "Implement code fix for correctness",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-f1c85d3f",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-f1c85d3f",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:44:55.571284+00:00",
+      "resolutionReason": "Code updated at docs/MATLAB_LIMITATIONS.md:43"
     },
     {
       "id": "cr-f9afe6df",
@@ -21382,7 +21394,7 @@
         "style",
         "info"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/MATLAB_LIMITATIONS.md:33",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -21394,24 +21406,27 @@
         {
           "id": "st1-1a0f9646",
           "title": "Locate docs/MATLAB_LIMITATIONS.md around line 33",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-1a0f9646",
           "title": "Implement code fix for style",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-1a0f9646",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-1a0f9646",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:44:55.571284+00:00",
+      "resolutionReason": "Code updated at docs/MATLAB_LIMITATIONS.md:33"
     },
     {
       "id": "cr-3fe5b6fc",
@@ -31313,7 +31328,7 @@
         "style",
         "info"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Fix issue identified in docs/MATLAB_LIMITATIONS.md:43",
         "Ensure changes satisfy security, performance, and correctness standards",
@@ -31325,24 +31340,27 @@
         {
           "id": "st1-6007119c",
           "title": "Locate docs/MATLAB_LIMITATIONS.md around line 43",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-6007119c",
           "title": "Implement code fix for style",
-          "done": false
+          "done": true
         },
         {
           "id": "st3-6007119c",
           "title": "Review diff and run verification tests",
-          "done": false
+          "done": true
         },
         {
           "id": "st4-6007119c",
           "title": "Create clean conventional commit",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:44:55.571284+00:00",
+      "resolutionReason": "Code updated at docs/MATLAB_LIMITATIONS.md:43"
     },
     {
       "id": "cr-e49ebad4",
@@ -34162,7 +34180,7 @@
         "code-review",
         "suggestion"
       ],
-      "column": "Backlog",
+      "column": "Done",
       "acceptanceCriteria": [
         "Evaluate suggestion feasibility and benefits",
         "Implement improvement if beneficial",
@@ -34173,14 +34191,17 @@
         {
           "id": "st1-c1a25436",
           "title": "Analyze suggested improvement",
-          "done": false
+          "done": true
         },
         {
           "id": "st2-c1a25436",
           "title": "Apply code refinement",
-          "done": false
+          "done": true
         }
-      ]
+      ],
+      "completed": true,
+      "resolvedAt": "2026-11-13T10:44:55.571284+00:00",
+      "resolutionReason": "Code updated at docs/MATLAB_LIMITATIONS.md"
     },
     {
       "id": "cr-sugg-3a82c3b0",

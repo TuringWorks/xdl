@@ -129,49 +129,6 @@
     ]
   },
   {
-    "id": "cr-f1c85d3f",
-    "title": "[INFO] docs/MATLAB_LIMITATIONS.md:43: Says 'linspace(start, end, n)' transpiles to a LINSPACE() function, but docs/...",
-    "description": "Says 'linspace(start, end, n)' transpiles to a LINSPACE() function, but docs/MATLAB_CRITICAL_FIXES.md lines 29-41 show it is expanded to a FINDGEN expression instead.\n\n**Location:** `docs/MATLAB_LIMITATIONS.md:43`\n**Category:** `correctness`\n**Flagged by:** Ollama (glm-5.3-flash:cloud), Ollama (kimi-k2.6:cloud), Ollama (muse-spark-open:cloud)\n\n**Suggested Fix:**\n```\nDescribe the actual transpilation (FINDGEN-based expansion) or make the docs agree on which mechanism is used.\n```",
-    "assignee": "",
-    "priority": "P2",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "correctness",
-      "info"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Fix issue identified in docs/MATLAB_LIMITATIONS.md:43",
-      "Ensure changes satisfy security, performance, and correctness standards",
-      "Verify git diff and tests pass without regressions",
-      "Apply suggested fix: Describe the actual transpilation (FINDGEN-based expansion) or make the docs agree on which mechanism is used."
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-f1c85d3f",
-        "title": "Locate docs/MATLAB_LIMITATIONS.md around line 43",
-        "done": false
-      },
-      {
-        "id": "st2-f1c85d3f",
-        "title": "Implement code fix for correctness",
-        "done": false
-      },
-      {
-        "id": "st3-f1c85d3f",
-        "title": "Review diff and run verification tests",
-        "done": false
-      },
-      {
-        "id": "st4-f1c85d3f",
-        "title": "Create clean conventional commit",
-        "done": false
-      }
-    ]
-  },
-  {
     "id": "cr-f9afe6df",
     "title": "[INFO] docs/ML_COMPLETE_REFERENCE.md:354: Example 3 normalizes the test set with its own statistics ('XDLML_VARIANCE_NO...",
     "description": "Example 3 normalizes the test set with its own statistics ('XDLML_VARIANCE_NORMALIZER(X_test)'), which is data leakage; the comment even acknowledges training mean/std should be used. A reference example should demonstrate the correct practice.\n\n**Location:** `docs/ML_COMPLETE_REFERENCE.md:354`\n**Category:** `correctness`\n**Flagged by:** Ollama (glm-5.3-flash:cloud), Ollama (kimi-k2.6:cloud), Ollama (gemma4:cloud)\n\n**Suggested Fix:**\n```\nShow computing mean/std on the training set and applying them to the test set (e.g., via a normalizer that accepts explicit scale/offset like 'XDLML_LINEARNORMALIZER').\n```",
@@ -3821,49 +3778,6 @@
       },
       {
         "id": "st4-c941783e",
-        "title": "Create clean conventional commit",
-        "done": false
-      }
-    ]
-  },
-  {
-    "id": "cr-1a0f9646",
-    "title": "[INFO] docs/MATLAB_LIMITATIONS.md:33: The 'What Doesn't Work' section contains subsections of fully-supported items...",
-    "description": "The 'What Doesn't Work' section contains subsections of fully-supported items: Array Generation Functions (lines 42-47) shows mostly checkmarks, and Control Flow Limitations (lines 69-74) lists supported switch/while/break/continue, making the structure confusing.\n\n**Location:** `docs/MATLAB_LIMITATIONS.md:33`\n**Category:** `style`\n**Flagged by:** Ollama (glm-5.3-flash:cloud)\n\n**Suggested Fix:**\n```\nMove supported items out of the 'What Doesn't Work' section or rename/restructure so each section's status markers match its heading.\n```",
-    "assignee": "",
-    "priority": "P2",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "style",
-      "info"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Fix issue identified in docs/MATLAB_LIMITATIONS.md:33",
-      "Ensure changes satisfy security, performance, and correctness standards",
-      "Verify git diff and tests pass without regressions",
-      "Apply suggested fix: Move supported items out of the 'What Doesn't Work' section or rename/restructure so each section's status markers match its heading."
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-1a0f9646",
-        "title": "Locate docs/MATLAB_LIMITATIONS.md around line 33",
-        "done": false
-      },
-      {
-        "id": "st2-1a0f9646",
-        "title": "Implement code fix for style",
-        "done": false
-      },
-      {
-        "id": "st3-1a0f9646",
-        "title": "Review diff and run verification tests",
-        "done": false
-      },
-      {
-        "id": "st4-1a0f9646",
         "title": "Create clean conventional commit",
         "done": false
       }
@@ -11136,49 +11050,6 @@
     ]
   },
   {
-    "id": "cr-6007119c",
-    "title": "[INFO] docs/MATLAB_LIMITATIONS.md:43: Internal inconsistency: linspace is listed under 'What Doesn't Work' section ...",
-    "description": "Internal inconsistency: linspace is listed under 'What Doesn't Work' section but marked with a green checkmark ✅.\n\n**Location:** `docs/MATLAB_LIMITATIONS.md:43`\n**Category:** `style`\n**Flagged by:** Ollama (gemma4:cloud)\n\n**Suggested Fix:**\n```\nMove linspace and logspace to the 'What Works' section.\n```",
-    "assignee": "",
-    "priority": "P2",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "style",
-      "info"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Fix issue identified in docs/MATLAB_LIMITATIONS.md:43",
-      "Ensure changes satisfy security, performance, and correctness standards",
-      "Verify git diff and tests pass without regressions",
-      "Apply suggested fix: Move linspace and logspace to the 'What Works' section."
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-6007119c",
-        "title": "Locate docs/MATLAB_LIMITATIONS.md around line 43",
-        "done": false
-      },
-      {
-        "id": "st2-6007119c",
-        "title": "Implement code fix for style",
-        "done": false
-      },
-      {
-        "id": "st3-6007119c",
-        "title": "Review diff and run verification tests",
-        "done": false
-      },
-      {
-        "id": "st4-6007119c",
-        "title": "Create clean conventional commit",
-        "done": false
-      }
-    ]
-  },
-  {
     "id": "cr-e49ebad4",
     "title": "[INFO] docs/ML_STATUS.md:42: Phase numbering is duplicated: 'Phase ML-2' is used for both Activation Funct...",
     "description": "Phase numbering is duplicated: 'Phase ML-2' is used for both Activation Functions (line 21) and Loss Functions (line 42).\n\n**Location:** `docs/ML_STATUS.md:42`\n**Category:** `style`\n**Flagged by:** Ollama (gemma4:cloud)\n\n**Suggested Fix:**\n```\nRename Loss Functions to 'Phase ML-3' and shift subsequent phases accordingly.\n```",
@@ -12654,37 +12525,6 @@
       },
       {
         "id": "st2-7aeeb252",
-        "title": "Apply code refinement",
-        "done": false
-      }
-    ]
-  },
-  {
-    "id": "cr-sugg-c1a25436",
-    "title": "[SUGGESTION] docs/MATLAB_LIMITATIONS.md: Create a single source-of-truth compatibility matrix (one table of MATLAB fea...",
-    "description": "Create a single source-of-truth compatibility matrix (one table of MATLAB feature -> status -> mechanism) and have the other docs reference it, to prevent the drift seen between MATLAB_CRITICAL_FIXES.md and MATLAB_LIMITATIONS.md.\n\n**File:** `docs/MATLAB_LIMITATIONS.md`",
-    "assignee": "",
-    "priority": "P3",
-    "storyPoints": 1,
-    "labels": [
-      "code-review",
-      "suggestion"
-    ],
-    "column": "Backlog",
-    "acceptanceCriteria": [
-      "Evaluate suggestion feasibility and benefits",
-      "Implement improvement if beneficial",
-      "Verify no regressions introduced"
-    ],
-    "createdAt": "2026-11-13T03:17:59.595261+00:00",
-    "subtasks": [
-      {
-        "id": "st1-c1a25436",
-        "title": "Analyze suggested improvement",
-        "done": false
-      },
-      {
-        "id": "st2-c1a25436",
         "title": "Apply code refinement",
         "done": false
       }
