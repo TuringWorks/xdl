@@ -73,11 +73,27 @@ For a narrow observed-output reference, place a sidecar next to a corpus file:
 ```text
 example.m
 example.m.expected
+example.m.expected.json
 ```
 
 With `--execute`, matching normalized stdout is reported as `verified` for
 that observed-output case. A mismatch is reported as `failed`; this does not
 prove or disprove broader array, runtime, or numerical equivalence.
+
+The JSON sidecar can additionally verify named numeric variables:
+
+```json
+{
+  "abs_tolerance": 1e-9,
+  "values": {
+    "x": [1.0, 2.0, 3.0]
+  }
+}
+```
+
+Supported values are numeric scalars, flat arrays, nested numeric arrays, and
+multi-dimensional numeric arrays. Unsupported values or mismatched lengths are
+reported as `failed`; no coercion is performed.
 
 ## Current boundary
 

@@ -394,6 +394,62 @@ impl ExecutionReport {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TraceCursor {
+    updates: Vec<SignalUpdate>,
+    position: usize,
+}
+
+impl TraceCursor {
+    pub fn new(updates: Vec<SignalUpdate>) -> Result<Self, ExecutionError> {
+        if updates.iter().any(|update| !update.value.is_finite()) {
+            return Err(ExecutionError::Runtime(
+                "trace contains a non-finite signal value".to_string(),
+            ));
+        }
+        if updates
+            .windows(2)
+            .any(|pair| pair[1].timestamp < pair[0].timestamp)
+        {
+            return Err(ExecutionError::Runtime(
+                "trace timestamps must be monotonic".to_string(),
+            ));
+        }
+        Ok(Self {
+            updates,
+            position: 0,
+        })
+    }
+
+    pub fn from_json_lines(lines: &str) -> Result<Self, ExecutionError> {
+        Self::new(ExecutionReport::parse_json_lines(lines)?)
+    }
+
+    pub fn peek(&self) -> Option<&SignalUpdate> {
+        self.updates.get(self.position)
+    }
+
+    pub fn next_update(&mut self) -> Option<&SignalUpdate> {
+        let update = self.updates.get(self.position);
+        if update.is_some() {
+            self.position += 1;
+        }
+        update
+    }
+
+    pub fn is_exhausted(&self) -> bool {
+        self.position == self.updates.len()
+    }
+
+    pub fn reset(&mut self) {
+        self.position = 0;
+    }
+
+    pub fn updates(&self) -> &[SignalUpdate] {
+        &self.updates
+    }
+}
+
 impl ExecutionEngine {
     pub fn new(model: Model, scheduler: Scheduler) -> Result<Self, ExecutionError> {
         model.validate()?;
@@ -1020,6 +1076,12 @@ mod tests {
         let decoded = ExecutionReport::parse_json_lines(&trace).expect("parse trace");
         assert_eq!(decoded, report.updates);
         assert!(ExecutionReport::parse_json_lines("not json").is_err());
+        let mut cursor = TraceCursor::from_json_lines(&trace).expect("trace cursor");
+        assert_eq!(cursor.peek(), Some(&report.updates[0]));
+        assert_eq!(cursor.next_update(), Some(&report.updates[0]));
+        assert!(!cursor.is_exhausted());
+        cursor.reset();
+        assert_eq!(cursor.updates(), report.updates.as_slice());
         assert_eq!(engine.signal(gain_output), Some(&SignalValue::Scalar(6.0)));
     }
 
