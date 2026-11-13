@@ -4,7 +4,9 @@
 workflows. It defines data contracts; it does not execute tests, collect plots,
 or guarantee reproducibility by itself. The `xdl test --manifest` workflow now
 records SHA-256 hashes for discovered XDL source files, successful stdout
-artifacts, and failure diagnostics.
+artifacts, and failure diagnostics. Manifest artifact paths are relative to the
+test or manifest root where possible, so they can be reviewed after a workspace
+is moved or checked out in CI.
 
 ## Run manifests
 

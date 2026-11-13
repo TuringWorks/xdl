@@ -220,6 +220,179 @@ impl BlockRuntime for Integrator {
     }
 }
 
+pub struct Product {
+    pub left: PortId,
+    pub right: PortId,
+    pub output: PortId,
+}
+
+impl Product {
+    pub const fn new(left: PortId, right: PortId, output: PortId) -> Self {
+        Self {
+            left,
+            right,
+            output,
+        }
+    }
+}
+
+impl BlockRuntime for Product {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let value = scalar_input(inputs, self.left, "product")?
+            * scalar_input(inputs, self.right, "product")?;
+        if !value.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "product output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(self.output, SignalValue::Scalar(value))]))
+    }
+}
+
+pub struct Switch {
+    pub control: PortId,
+    pub true_input: PortId,
+    pub false_input: PortId,
+    pub output: PortId,
+    pub threshold: f64,
+}
+
+pub struct RateLimiter {
+    pub input: PortId,
+    pub output: PortId,
+    pub rate_limit: f64,
+    pub state: f64,
+    last_timestamp: Option<Timestamp>,
+}
+
+impl RateLimiter {
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        rate_limit: f64,
+        initial_state: f64,
+    ) -> Result<Self, ExecutionError> {
+        if !rate_limit.is_finite() || rate_limit < 0.0 || !initial_state.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "rate limiter requires a finite non-negative rate and finite initial state"
+                    .to_string(),
+            ));
+        }
+        Ok(Self {
+            input,
+            output,
+            rate_limit,
+            state: initial_state,
+            last_timestamp: None,
+        })
+    }
+}
+
+impl BlockRuntime for RateLimiter {
+    fn configure(&mut self, parameters: &BTreeMap<String, Value>) -> Result<(), ExecutionError> {
+        if let Some(rate_limit) = parameters.get("rate_limit") {
+            self.rate_limit = rate_limit.as_f64().ok_or_else(|| {
+                ExecutionError::Runtime("rate limiter rate must be numeric".to_string())
+            })?;
+        }
+        if let Some(initial_state) = parameters.get("initial_state") {
+            self.state = initial_state.as_f64().ok_or_else(|| {
+                ExecutionError::Runtime("rate limiter initial state must be numeric".to_string())
+            })?;
+        }
+        if !self.rate_limit.is_finite() || self.rate_limit < 0.0 || !self.state.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "rate limiter requires a finite non-negative rate and finite state".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn step(
+        &mut self,
+        timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let target = scalar_input(inputs, self.input, "rate limiter")?;
+        if let Some(previous) = self.last_timestamp {
+            let seconds = timestamp
+                .duration_since(previous)
+                .map_err(|error| ExecutionError::Runtime(error.to_string()))?
+                .as_seconds();
+            let maximum_delta = self.rate_limit * seconds;
+            self.state += (target - self.state).clamp(-maximum_delta, maximum_delta);
+        }
+        self.last_timestamp = Some(timestamp);
+        if !self.state.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "rate limiter output must be finite".to_string(),
+            ));
+        }
+        Ok(BTreeMap::from([(
+            self.output,
+            SignalValue::Scalar(self.state),
+        )]))
+    }
+}
+
+impl Switch {
+    pub fn new(
+        control: PortId,
+        true_input: PortId,
+        false_input: PortId,
+        output: PortId,
+        threshold: f64,
+    ) -> Result<Self, ExecutionError> {
+        if !threshold.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "switch threshold must be finite".to_string(),
+            ));
+        }
+        Ok(Self {
+            control,
+            true_input,
+            false_input,
+            output,
+            threshold,
+        })
+    }
+}
+
+impl BlockRuntime for Switch {
+    fn configure(&mut self, parameters: &BTreeMap<String, Value>) -> Result<(), ExecutionError> {
+        if let Some(threshold) = parameters.get("threshold") {
+            self.threshold = threshold.as_f64().ok_or_else(|| {
+                ExecutionError::Runtime("switch threshold must be numeric".to_string())
+            })?;
+            if !self.threshold.is_finite() {
+                return Err(ExecutionError::Runtime(
+                    "switch threshold must be finite".to_string(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let control = scalar_input(inputs, self.control, "switch")?;
+        let selected = if control >= self.threshold {
+            self.true_input
+        } else {
+            self.false_input
+        };
+        let value = scalar_input(inputs, selected, "switch")?;
+        Ok(BTreeMap::from([(self.output, SignalValue::Scalar(value))]))
+    }
+}
+
 impl Sum {
     pub fn new(inputs: Vec<PortId>, output: PortId) -> Result<Self, ExecutionError> {
         if inputs.is_empty() {
@@ -347,6 +520,55 @@ mod tests {
                     &BTreeMap::from([(input, SignalValue::Scalar(3.0))])
                 )
                 .expect("saturation step")[&output],
+            SignalValue::Scalar(1.0)
+        );
+
+        let product_output = PortId::new(4);
+        let mut product = Product::new(input, output, product_output);
+        assert_eq!(
+            product
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([
+                        (input, SignalValue::Scalar(2.0)),
+                        (output, SignalValue::Scalar(3.0)),
+                    ]),
+                )
+                .expect("product step")[&product_output],
+            SignalValue::Scalar(6.0)
+        );
+
+        let switch_output = PortId::new(5);
+        let mut switch =
+            Switch::new(input, output, product_output, switch_output, 0.5).expect("switch");
+        assert_eq!(
+            switch
+                .step(
+                    Timestamp::ZERO,
+                    &BTreeMap::from([
+                        (input, SignalValue::Scalar(1.0)),
+                        (output, SignalValue::Scalar(3.0)),
+                        (product_output, SignalValue::Scalar(6.0)),
+                    ]),
+                )
+                .expect("switch step")[&switch_output],
+            SignalValue::Scalar(3.0)
+        );
+
+        let mut limiter = RateLimiter::new(input, output, 2.0, 0.0).expect("rate limiter");
+        limiter
+            .step(
+                Timestamp::ZERO,
+                &BTreeMap::from([(input, SignalValue::Scalar(5.0))]),
+            )
+            .expect("initial rate limiter step");
+        assert_eq!(
+            limiter
+                .step(
+                    Timestamp::from_nanoseconds(500_000_000),
+                    &BTreeMap::from([(input, SignalValue::Scalar(5.0))]),
+                )
+                .expect("limited rate limiter step")[&output],
             SignalValue::Scalar(1.0)
         );
     }

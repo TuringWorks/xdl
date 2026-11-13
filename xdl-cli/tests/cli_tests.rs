@@ -152,6 +152,7 @@ fn test_cli_test_command_writes_truthful_manifest() {
     let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
     assert!(manifest_json.contains("\"status\": \"passed\""));
     assert!(manifest_json.contains("\"discovered\": 1"));
+    assert!(manifest_json.contains("\"path\": \"pass.xdl\""));
     assert!(manifest_json.contains("\"completed_at\": \"unix:"));
     assert!(manifest_json.contains("\"duration_ms\":"));
     assert!(manifest_json.contains("\"kind\": \"xdl-test-source\""));
@@ -159,6 +160,7 @@ fn test_cli_test_command_writes_truthful_manifest() {
         "\"sha256\": \"sha256:94ba589944019a00e78f1f53fe6e035e0d6850347c538b370145d4b4c6b80582\""
     ));
     assert!(manifest_json.contains("\"kind\": \"xdl-test-stdout\""));
+    assert!(manifest_json.contains("\"path\": \"artifacts/pass.stdout\""));
     assert!(manifest_json.contains(
         "\"sha256\": \"sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22\""
     ));
@@ -209,6 +211,7 @@ fn test_cli_test_command_writes_failure_artifact() {
     assert!(!output.status.success(), "invalid test must fail");
     let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
     assert!(manifest_json.contains("\"kind\": \"xdl-test-failure\""));
+    assert!(manifest_json.contains("\"path\": \"artifacts/fail.failure.txt\""));
     let diagnostic = fs::read_to_string(directory.join("artifacts/fail.failure.txt"))
         .expect("read failure artifact");
     assert!(diagnostic.contains("Failed to execute program"));

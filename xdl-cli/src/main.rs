@@ -331,9 +331,10 @@ fn write_test_manifest(
     manifest.inputs = files
         .iter()
         .map(|file| {
+            let relative = file.strip_prefix(directory).unwrap_or(file);
             Ok(xdl_artifacts::RunArtifact {
                 kind: "xdl-test-source".to_string(),
-                path: file.display().to_string(),
+                path: relative.display().to_string(),
                 sha256: Some(sha256_file(file)?),
             })
         })
@@ -342,6 +343,7 @@ fn write_test_manifest(
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .join("artifacts");
+    let manifest_root = path.parent().unwrap_or_else(|| Path::new("."));
     for (file, output) in successful_outputs {
         let relative = file.strip_prefix(directory).unwrap_or(file);
         let artifact_path = artifact_root.join(relative).with_extension("stdout");
@@ -361,7 +363,11 @@ fn write_test_manifest(
         })?;
         manifest.outputs.push(xdl_artifacts::RunArtifact {
             kind: "xdl-test-stdout".to_string(),
-            path: artifact_path.display().to_string(),
+            path: artifact_path
+                .strip_prefix(manifest_root)
+                .unwrap_or(&artifact_path)
+                .display()
+                .to_string(),
             sha256: Some(sha256_file(&artifact_path)?),
         });
     }
@@ -385,7 +391,11 @@ fn write_test_manifest(
         })?;
         manifest.outputs.push(xdl_artifacts::RunArtifact {
             kind: "xdl-test-failure".to_string(),
-            path: artifact_path.display().to_string(),
+            path: artifact_path
+                .strip_prefix(manifest_root)
+                .unwrap_or(&artifact_path)
+                .display()
+                .to_string(),
             sha256: Some(sha256_file(&artifact_path)?),
         });
     }
