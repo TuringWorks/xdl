@@ -385,24 +385,6 @@ impl SymbolTable {
         // I/O functions
         let io_funcs = vec![
             (
-                "READ_ASCII",
-                "read_ascii(file) - Read ASCII data file",
-                "STRUCT",
-                "READ_ASCII(file)",
-            ),
-            (
-                "READ_CSV",
-                "read_csv(file) - Read CSV file",
-                "STRUCT",
-                "READ_CSV(file)",
-            ),
-            (
-                "READ_BINARY",
-                "read_binary(file) - Read binary file",
-                "ARRAY",
-                "READ_BINARY(file)",
-            ),
-            (
                 "READF",
                 "readf(unit, vars...) - Formatted read",
                 "VOID",
@@ -448,6 +430,73 @@ impl SymbolTable {
             .chain(string_funcs)
             .chain(io_funcs)
         {
+            self.builtin_functions.insert(
+                name.to_string(),
+                BuiltinInfo {
+                    name: name.to_string(),
+                    documentation: doc.to_string(),
+                    return_type: ret.to_string(),
+                    signature: sig.to_string(),
+                },
+            );
+        }
+
+        for (name, doc, ret, sig) in [
+            (
+                "GNC_VEC3",
+                "gnc_vec3(x, y, z) - Create a GNC three-vector",
+                "ARRAY",
+                "GNC_VEC3(x, y, z)",
+            ),
+            (
+                "GNC_FLIGHT_READINESS_STEP",
+                "gnc_flight_readiness_step(state, temperature_c, soc, launch_requested) - Advance the explicit flight-readiness state machine",
+                "STRUCT",
+                "GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)",
+            ),
+            (
+                "GNC_WAYPOINT",
+                "gnc_waypoint(position, waypoint, timestamp_ns, cruise_speed, radius) - Compute waypoint guidance",
+                "STRUCT",
+                "GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)",
+            ),
+            (
+                "GNC_PID_STEP",
+                "gnc_pid_step(...) - Perform an explicit-state PID update",
+                "STRUCT",
+                "GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)",
+            ),
+            (
+                "GNC_STATE_SPACE_STEP",
+                "gnc_state_space_step(...) - Perform an explicit-state discrete state-space update",
+                "STRUCT",
+                "GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)",
+            ),
+            (
+                "GNC_SCHEDULED_FEEDBACK_STEP",
+                "gnc_scheduled_feedback_step(...) - Compute an interpolated state-feedback command",
+                "STRUCT",
+                "GNC_SCHEDULED_FEEDBACK_STEP(lower_gain, upper_gain, lower_parameter, upper_parameter, parameter, state_error, inputs, states)",
+            ),
+            (
+                "GNC_ACTUATOR_STEP",
+                "gnc_actuator_step(...) - Perform an explicit-state actuator update",
+                "STRUCT",
+                "GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min, output_max, rate_limit, previous_timestamp_ns, previous_output)",
+            ),
+            (
+                "GNC_ALPHA_BETA_STEP",
+                "gnc_alpha_beta_step(...) - Perform an explicit-state navigation update",
+                "STRUCT",
+                "GNC_ALPHA_BETA_STEP(timestamp_ns, initial_timestamp_ns, position, velocity, acceleration, gnss_position, gnss_velocity, position_gain, velocity_gain)",
+            ),
+            (
+                "GNC_TELEMETRY_JSON",
+                "gnc_telemetry_json(...) - Export one validated telemetry record as JSON Lines",
+                "STRING",
+                "GNC_TELEMETRY_JSON(timestamp_ns, sequence, source, position, velocity, command)",
+            ),
+        ] {
             self.builtin_functions.insert(
                 name.to_string(),
                 BuiltinInfo {
@@ -671,6 +720,21 @@ pub fn get_document_symbols(doc: &DocumentState) -> Vec<DocumentSymbol> {
     }
 
     symbols
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SymbolTable;
+
+    #[test]
+    fn flight_readiness_builtin_is_available_case_insensitively() {
+        let table = SymbolTable::new();
+        let info = table
+            .get_function("gnc_flight_readiness_step")
+            .expect("readiness function in LSP symbol table");
+        assert_eq!(info.return_type, "STRUCT");
+        assert!(info.signature.contains("launch_requested"));
+    }
 }
 
 fn statement_to_symbol(stmt: &Statement) -> Option<DocumentSymbol> {

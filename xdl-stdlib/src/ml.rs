@@ -5389,7 +5389,7 @@ pub fn xdlml_labelencoder(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Find unique values and assign indices
     let mut unique_labels = labels.to_vec();
-    unique_labels.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    unique_labels.sort_by(|a, b| a.total_cmp(b));
     unique_labels.dedup();
 
     // Create encoding
@@ -5564,7 +5564,7 @@ mod tests {
             assert_eq!(indices.len(), 10);
             // Check all indices 0-9 are present
             let mut sorted = indices.clone();
-            sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            sorted.sort_by(|a, b| a.total_cmp(b));
             for (i, item) in sorted.iter().enumerate().take(10) {
                 assert_eq!(*item, i as f64);
             }

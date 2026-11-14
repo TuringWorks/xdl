@@ -36,6 +36,12 @@ fn array_to_floats(arr: &[XdlValue]) -> XdlResult<Vec<f64>> {
 }
 
 /// Extract array data from XdlValue
+/// NaN is a value: a statistic over data containing NaN is NaN, never a
+/// finite neighbour that a sort happened to place in the middle.
+fn contains_nan(data: &[f64]) -> bool {
+    data.iter().any(|v| v.is_nan())
+}
+
 fn extract_array(value: &XdlValue) -> XdlResult<Vec<f64>> {
     match value {
         XdlValue::Array(arr) => Ok(arr.clone()),
@@ -73,7 +79,8 @@ pub fn moment(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "MOMENT: Input array is empty".to_string(),
@@ -140,7 +147,8 @@ pub fn variance(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "VARIANCE: Input array is empty".to_string(),
@@ -187,7 +195,8 @@ pub fn median(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let mut values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "MEDIAN: Input array is empty".to_string(),
@@ -201,7 +210,12 @@ pub fn median(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    // NaN is a value: a median over data containing NaN is NaN, not a finite
+    // neighbour that the sort happened to place in the middle.
+    if values.iter().any(|v| v.is_nan()) {
+        return Ok(XdlValue::Double(f64::NAN));
+    }
+    values.sort_by(|a, b| a.total_cmp(b));
 
     let n = values.len();
     let median = if n % 2 == 0 {
@@ -224,7 +238,8 @@ pub fn meanabsdev(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let values = match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = extract_array(v)?;
             if arr.is_empty() {
                 return Err(XdlError::InvalidArgument(
                     "MEANABSDEV: Input array is empty".to_string(),
@@ -834,6 +849,10 @@ pub fn r_correlate(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    if contains_nan(&x) || contains_nan(&y) {
+        return Ok(XdlValue::Double(f64::NAN));
+    }
+
     let n = x.len();
     if n < 2 {
         return Err(XdlError::InvalidArgument(
@@ -843,7 +862,7 @@ pub fn r_correlate(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Compute ranks for x
     let mut x_indexed: Vec<(usize, f64)> = x.iter().enumerate().map(|(i, &v)| (i, v)).collect();
-    x_indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    x_indexed.sort_by(|a, b| a.1.total_cmp(&b.1));
     let mut rank_x = vec![0.0; n];
     for (rank, (idx, _)) in x_indexed.iter().enumerate() {
         rank_x[*idx] = (rank + 1) as f64;
@@ -851,7 +870,7 @@ pub fn r_correlate(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Compute ranks for y
     let mut y_indexed: Vec<(usize, f64)> = y.iter().enumerate().map(|(i, &v)| (i, v)).collect();
-    y_indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    y_indexed.sort_by(|a, b| a.1.total_cmp(&b.1));
     let mut rank_y = vec![0.0; n];
     for (rank, (idx, _)) in y_indexed.iter().enumerate() {
         rank_y[*idx] = (rank + 1) as f64;
@@ -1189,8 +1208,9 @@ pub fn percentiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    let has_nan = contains_nan(&data);
     // Sort data
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    data.sort_by(|a, b| a.total_cmp(b));
     let n = data.len();
 
     // Get percentile values
@@ -1198,14 +1218,24 @@ pub fn percentiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let mut results = Vec::with_capacity(percentile_vals.len());
 
+    if let Some(bad) = percentile_vals.iter().find(|p| !(0.0..=100.0).contains(*p)) {
+        return Err(XdlError::InvalidArgument(format!(
+            "PERCENTILES: percentile {} is outside 0..100",
+            bad
+        )));
+    }
+
     for p in percentile_vals {
-        let p = p.clamp(0.0, 100.0);
         let idx = (p / 100.0) * (n - 1) as f64;
         let lower = idx.floor() as usize;
         let upper = (lower + 1).min(n - 1);
         let frac = idx - lower as f64;
 
-        let value = data[lower] * (1.0 - frac) + data[upper] * frac;
+        let value = if has_nan {
+            f64::NAN
+        } else {
+            data[lower] * (1.0 - frac) + data[upper] * frac
+        };
         results.push(value);
     }
 
@@ -1230,6 +1260,10 @@ pub fn robust_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
         return Err(XdlError::InvalidArgument(
             "ROBUST_MEAN: Data array is empty".to_string(),
         ));
+    }
+
+    if contains_nan(&data) {
+        return Ok(XdlValue::Double(f64::NAN));
     }
 
     let sigma_clip = if args.len() > 1 {
@@ -1267,7 +1301,7 @@ pub fn robust_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
     if filtered_data.is_empty() {
         // Fall back to median if all points rejected
         let mut sorted = data.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.total_cmp(b));
         let median = sorted[sorted.len() / 2];
         Ok(XdlValue::Double(median))
     } else {
@@ -1293,12 +1327,24 @@ pub fn trimmed_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let percent = if args.len() > 1 {
-        args[1].to_double().unwrap_or(5.0).clamp(0.0, 49.0)
+        // Out of range is an error, not a clamped trim: a clamped value is a
+        // different statistic reported as the requested one.
+        let requested = args[1].to_double()?;
+        if !(0.0..=49.0).contains(&requested) {
+            return Err(XdlError::InvalidArgument(format!(
+                "TRIMMED_MEAN: percent {} is outside 0..49",
+                requested
+            )));
+        }
+        requested
     } else {
         5.0 // Default 5% trimmed mean
     };
 
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    if contains_nan(&data) {
+        return Ok(XdlValue::Double(f64::NAN));
+    }
+    data.sort_by(|a, b| a.total_cmp(b));
 
     let n = data.len();
     let trim_count = ((percent / 100.0) * n as f64).ceil() as usize;
@@ -1329,13 +1375,17 @@ pub fn resistant_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    if contains_nan(&data) {
+        return Ok(XdlValue::Double(f64::NAN));
+    }
+
     // Compute biweight mean (Tukey's biweight)
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    data.sort_by(|a, b| a.total_cmp(b));
     let median = data[data.len() / 2];
 
     // Compute MAD (median absolute deviation)
     let mut abs_devs: Vec<f64> = data.iter().map(|x| (x - median).abs()).collect();
-    abs_devs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    abs_devs.sort_by(|a, b| a.total_cmp(b));
     let mad = abs_devs[abs_devs.len() / 2];
 
     if mad < 1e-15 {
@@ -1644,5 +1694,67 @@ mod tests {
             }
             _ => panic!("Expected array result"),
         }
+    }
+
+    #[test]
+    fn test_median_with_nan_propagates_and_does_not_panic() {
+        let args = vec![XdlValue::Array(vec![1.0, f64::NAN, 2.0])];
+        assert!(matches!(
+            median(&args),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+    }
+
+    #[test]
+    fn test_nan_propagates_through_order_and_robust_statistics() {
+        let with_nan = XdlValue::Array(vec![1.0, f64::NAN, 2.0, 3.0]);
+        assert!(matches!(
+            percentiles(&[with_nan.clone(), XdlValue::Array(vec![0.0])]),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        assert!(matches!(
+            trimmed_mean(std::slice::from_ref(&with_nan)),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        assert!(matches!(
+            resistant_mean(std::slice::from_ref(&with_nan)),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        assert!(matches!(
+            robust_mean(std::slice::from_ref(&with_nan)),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+        let x = XdlValue::Array(vec![1.0, 2.0, f64::NAN]);
+        let y = XdlValue::Array(vec![1.0, 2.0, 3.0]);
+        assert!(matches!(
+            r_correlate(&[x, y]),
+            Ok(XdlValue::Double(v)) if v.is_nan()
+        ));
+    }
+
+    #[test]
+    fn test_median_and_variance_read_multidim_arrays() {
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![3.0, 0.0, 0.0, 5.0],
+            shape: vec![2, 2],
+        };
+        let args = std::slice::from_ref(&shaped);
+        assert!(matches!(median(args), Ok(XdlValue::Double(v)) if (v - 1.5).abs() < 1e-12));
+        assert!(matches!(variance(args), Ok(XdlValue::Double(v)) if (v - 6.0).abs() < 1e-12));
+    }
+
+    #[test]
+    fn test_out_of_range_percentile_and_trim_are_errors() {
+        let data = XdlValue::Array(vec![1.0, 2.0, 3.0, 4.0]);
+        assert!(percentiles(&[data.clone(), XdlValue::Array(vec![150.0])]).is_err());
+        assert!(percentiles(&[data.clone(), XdlValue::Array(vec![-1.0])]).is_err());
+        assert!(trimmed_mean(&[data.clone(), XdlValue::Double(60.0)]).is_err());
+        assert!(trimmed_mean(&[data.clone(), XdlValue::Double(-5.0)]).is_err());
+        // In-range requests still succeed.
+        assert!(matches!(
+            percentiles(&[data.clone(), XdlValue::Array(vec![100.0])]),
+            Ok(XdlValue::Double(v)) if v == 4.0
+        ));
+        assert!(trimmed_mean(&[data, XdlValue::Double(25.0)]).is_ok());
     }
 }

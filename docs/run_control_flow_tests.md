@@ -129,10 +129,10 @@ xdl control_flow_tests.xdl
 xdl advanced_control_flow_tests.xdl
 ```
 
-### All Tests (when test runner is implemented)
+### All Tests
 
 ```bash
-# Future test runner command
+# Basic recursive XDL test runner
 xdl test control_flow
 ```
 

@@ -16,6 +16,13 @@ xdl-viz3d-web = { version = "0.1.1", path = "../xdl-viz3d-web" }
 xdl-viz3d-threejs = { version = "0.1.1", path = "../xdl-viz3d-threejs" }
 xdl-charts = { version = "0.1.1", path = "../xdl-charts" }
 xdl-amp = { version = "0.1.1", path = "../xdl-amp" }
+xdl-gnc-core = { version = "0.1.1", path = "../xdl-gnc-core" }
+xdl-gnc-guidance = { version = "0.1.1", path = "../xdl-gnc-guidance" }
+xdl-gnc-control = { version = "0.1.1", path = "../xdl-gnc-control" }
+xdl-gnc-actuators = { version = "0.1.1", path = "../xdl-gnc-actuators" }
+xdl-gnc-navigation = { version = "0.1.1", path = "../xdl-gnc-navigation" }
+xdl-gnc-simulation = { version = "0.1.1", path = "../xdl-gnc-simulation" }
+xdl-gnc-telemetry = { version = "0.1.1", path = "../xdl-gnc-telemetry" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

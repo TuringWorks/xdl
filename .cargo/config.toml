@@ -1,6 +1,6 @@
-[env]
-# Set Python interpreter for PyO3 to use Python 3.13.0
-PYO3_PYTHON = "/Users/ravindraboddipalli/.pyenv/shims/python3"
+# Repository-wide cargo settings. Machine-specific values (such as a
+# PYO3_PYTHON interpreter path) belong in ~/.cargo/config.toml, not here, so
+# this file works on every checkout.
 
 [build]
 # Optional: Add Python-related build flags if needed

@@ -24,6 +24,28 @@ pub struct Interpreter {
     output: Rc<RefCell<dyn Write>>,
 }
 
+/// An index whose expression has been evaluated.
+enum ResolvedIndex {
+    Single(i64),
+    /// A range or `*`; reported as unsupported by the write path.
+    Unsupported,
+}
+
+/// Resolve a possibly-negative index (counted from the end) against `len`.
+/// Out of range is an error, never a clamped element.
+fn resolve_position(raw: i64, len: usize) -> XdlResult<usize> {
+    let position = if raw < 0 { len as i64 + raw } else { raw };
+    usize::try_from(position)
+        .ok()
+        .filter(|&p| p < len)
+        .ok_or_else(|| {
+            XdlError::RuntimeError(format!(
+                "Index {} out of bounds for array of length {}",
+                raw, len
+            ))
+        })
+}
+
 impl Interpreter {
     pub fn new() -> Self {
         Self {
@@ -707,233 +729,123 @@ impl Interpreter {
         indices: &[xdl_parser::ArrayIndex],
         value: XdlValue,
     ) -> XdlResult<()> {
-        // For now, only support single variable array assignments like: arr[i] = value
-        // Multi-dimensional like matrix[i][j] = value would require recursive handling
-
-        if let Expression::Variable { name, .. } = array_expr {
-            // Get the current array
-            let mut array_val = self.context.get_variable(name)?.clone();
-
-            // Modify the array at the specified index
-            self.modify_array_element(&mut array_val, indices, value)?;
-
-            // Store the modified array back
-            self.context.set_variable(name.clone(), array_val);
-            Ok(())
-        } else {
-            Err(XdlError::NotImplemented(
+        let Expression::Variable { name, .. } = array_expr else {
+            return Err(XdlError::NotImplemented(
                 "Nested array element assignment".to_string(),
-            ))
-        }
+            ));
+        };
+
+        // Evaluate every index expression before borrowing the variable, so the
+        // element write mutates the stored array in place. Cloning the whole array
+        // per element write made an N-element fill cost O(N^2).
+        self.context.get_variable(name)?;
+        let resolved = self.resolve_indices(indices)?;
+        let array_val = self.context.get_variable_mut(name)?;
+        Self::write_element(array_val, &resolved, value)
     }
 
-    /// Modify an array element at the given indices
-    fn modify_array_element(
+    /// Evaluate the `Single` index expressions. Range and `*` indices are carried
+    /// through so the write path reports them as unsupported.
+    fn resolve_indices(
         &mut self,
-        array_val: &mut XdlValue,
         indices: &[xdl_parser::ArrayIndex],
+    ) -> XdlResult<Vec<ResolvedIndex>> {
+        use xdl_parser::ArrayIndex;
+        indices
+            .iter()
+            .map(|index| match index {
+                ArrayIndex::Single(expr) => {
+                    let value = self.evaluate_expression(expr)?;
+                    Ok(ResolvedIndex::Single(value.to_long()? as i64))
+                }
+                ArrayIndex::Range { .. } | ArrayIndex::All => Ok(ResolvedIndex::Unsupported),
+            })
+            .collect()
+    }
+
+    /// Write one element into an array value. Pure: no evaluation, no scope access.
+    fn write_element(
+        array_val: &mut XdlValue,
+        indices: &[ResolvedIndex],
         value: XdlValue,
     ) -> XdlResult<()> {
-        use xdl_parser::ArrayIndex;
+        let single = |index: &ResolvedIndex| match index {
+            ResolvedIndex::Single(raw) => Ok(*raw),
+            ResolvedIndex::Unsupported => Err(XdlError::NotImplemented(
+                "Range indexing in multi-dimensional assignment".to_string(),
+            )),
+        };
 
-        if indices.is_empty() {
-            return Err(XdlError::RuntimeError(
+        match indices {
+            [] => Err(XdlError::RuntimeError(
                 "No index provided for array assignment".to_string(),
-            ));
-        }
-
-        // Handle nested arrays (multi-dimensional)
-        if indices.len() > 1 {
-            // For multi-dimensional access, we need to navigate through nested arrays
-            match array_val {
+            )),
+            [only] => match array_val {
+                XdlValue::Array(arr) => {
+                    let ResolvedIndex::Single(raw) = only else {
+                        return Err(XdlError::NotImplemented(
+                            "Range assignment not supported".to_string(),
+                        ));
+                    };
+                    let position = resolve_position(*raw, arr.len())?;
+                    arr[position] = value.to_double()?;
+                    Ok(())
+                }
+                XdlValue::MultiDimArray { data, .. } => {
+                    // A single index addresses the flat, column-major element.
+                    let position = resolve_position(single(only)?, data.len())?;
+                    data[position] = value.to_double()?;
+                    Ok(())
+                }
                 XdlValue::NestedArray(rows) => {
-                    // Get the first index
-                    match &indices[0] {
-                        ArrayIndex::Single(expr) => {
-                            let index_val = self.evaluate_expression(expr)?;
-                            let raw_index = index_val.to_long()?;
-
-                            // Handle negative indices
-                            let index = if raw_index < 0 {
-                                let len = rows.len() as i32;
-                                let positive_idx = len + raw_index;
-                                if positive_idx < 0 {
-                                    return Err(XdlError::RuntimeError(format!(
-                                        "Index {} out of bounds for array of length {}",
-                                        raw_index,
-                                        rows.len()
-                                    )));
-                                }
-                                positive_idx as usize
-                            } else {
-                                raw_index as usize
-                            };
-
-                            if index >= rows.len() {
-                                return Err(XdlError::RuntimeError(format!(
-                                    "Index {} out of bounds for array of length {}",
-                                    raw_index,
-                                    rows.len()
-                                )));
-                            }
-
-                            // Recursively handle remaining indices
-                            self.modify_array_element(&mut rows[index], &indices[1..], value)?;
-                            Ok(())
-                        }
-                        _ => Err(XdlError::NotImplemented(
-                            "Range indexing in multi-dimensional assignment".to_string(),
-                        )),
-                    }
+                    let position = resolve_position(single(only)?, rows.len())?;
+                    rows[position] = value;
+                    Ok(())
+                }
+                _ => Err(XdlError::RuntimeError(
+                    "Cannot index non-array value".to_string(),
+                )),
+            },
+            [first, rest @ ..] => match array_val {
+                XdlValue::NestedArray(rows) => {
+                    let position = resolve_position(single(first)?, rows.len())?;
+                    Self::write_element(&mut rows[position], rest, value)
                 }
                 XdlValue::MultiDimArray { data, shape } => {
-                    // Handle multi-dimensional array indexing
-                    // Compute linear index from multi-dimensional indices
-                    match &indices[0] {
-                        ArrayIndex::Single(expr) => {
-                            let index_val = self.evaluate_expression(expr)?;
-                            let idx0 = index_val.to_long()? as usize;
-
-                            if indices.len() == 1 {
-                                // Single index on multi-dim array (treats as flat)
-                                if idx0 >= data.len() {
-                                    return Err(XdlError::RuntimeError(format!(
-                                        "Index {} out of bounds for array of size {}",
-                                        idx0,
-                                        data.len()
-                                    )));
-                                }
-                                data[idx0] = value.to_double()?;
-                                Ok(())
-                            } else {
-                                // Multi-dimensional indexing - compute linear index
-                                let mut linear_idx = idx0;
-                                let mut stride = 1;
-
-                                // Calculate strides (column-major order like IDL/GDL)
-                                for i in 1..indices.len() {
-                                    match &indices[i] {
-                                        ArrayIndex::Single(expr) => {
-                                            let index_val = self.evaluate_expression(expr)?;
-                                            let idx = index_val.to_long()? as usize;
-
-                                            if i >= shape.len() {
-                                                return Err(XdlError::RuntimeError(format!(
-                                                    "Too many indices: array has {} dimensions",
-                                                    shape.len()
-                                                )));
-                                            }
-
-                                            stride *= shape[i - 1];
-                                            linear_idx += idx * stride;
-                                        }
-                                        _ => {
-                                            return Err(XdlError::NotImplemented(
-                                                "Range indexing in multi-dimensional arrays"
-                                                    .to_string(),
-                                            ))
-                                        }
-                                    }
-                                }
-
-                                if linear_idx >= data.len() {
-                                    return Err(XdlError::RuntimeError(format!(
-                                        "Index out of bounds: computed linear index {} >= {}",
-                                        linear_idx,
-                                        data.len()
-                                    )));
-                                }
-
-                                data[linear_idx] = value.to_double()?;
-                                Ok(())
-                            }
-                        }
-                        _ => Err(XdlError::NotImplemented(
-                            "Range indexing in multi-dimensional assignment".to_string(),
-                        )),
+                    if indices.len() > shape.len() {
+                        return Err(XdlError::RuntimeError(format!(
+                            "Too many indices: array has {} dimensions",
+                            shape.len()
+                        )));
                     }
+                    // Column-major (IDL order). Each index is bounds-checked against
+                    // its own dimension; a flat-only check would let x[2,0] on a
+                    // 2x2 array silently write x[0,1].
+                    let mut linear = 0usize;
+                    let mut stride = 1usize;
+                    for (dim, index) in indices.iter().enumerate() {
+                        let extent = shape[dim];
+                        let raw = single(index)?;
+                        let position = usize::try_from(raw)
+                            .ok()
+                            .filter(|&p| p < extent)
+                            .ok_or_else(|| {
+                                XdlError::RuntimeError(format!(
+                                    "Index {} out of bounds for dimension {} of size {}",
+                                    raw, dim, extent
+                                ))
+                            })?;
+                        linear += position * stride;
+                        stride *= extent;
+                    }
+                    data[linear] = value.to_double()?;
+                    Ok(())
                 }
                 _ => Err(XdlError::RuntimeError(
                     "Multi-dimensional indexing requires nested array or multi-dimensional array"
                         .to_string(),
                 )),
-            }
-        } else {
-            // Single index assignment
-            match array_val {
-                XdlValue::Array(arr) => {
-                    match &indices[0] {
-                        ArrayIndex::Single(expr) => {
-                            // Get the index
-                            let index_val = self.evaluate_expression(expr)?;
-                            let raw_index = index_val.to_long()?;
-
-                            // Handle negative indices
-                            let index = if raw_index < 0 {
-                                let len = arr.len() as i32;
-                                let positive_idx = len + raw_index;
-                                if positive_idx < 0 {
-                                    return Err(XdlError::RuntimeError(format!(
-                                        "Index {} out of bounds for array of length {}",
-                                        raw_index,
-                                        arr.len()
-                                    )));
-                                }
-                                positive_idx as usize
-                            } else {
-                                raw_index as usize
-                            };
-
-                            if index >= arr.len() {
-                                return Err(XdlError::RuntimeError(format!(
-                                    "Index {} out of bounds for array of length {}",
-                                    raw_index,
-                                    arr.len()
-                                )));
-                            }
-
-                            // Set the value
-                            arr[index] = value.to_double()?;
-                            Ok(())
-                        }
-                        ArrayIndex::Range { .. } => Err(XdlError::NotImplemented(
-                            "Range assignment not supported".to_string(),
-                        )),
-                        ArrayIndex::All => Err(XdlError::NotImplemented(
-                            "All-element assignment not supported".to_string(),
-                        )),
-                    }
-                }
-                XdlValue::NestedArray(rows) => match &indices[0] {
-                    ArrayIndex::Single(expr) => {
-                        let index_val = self.evaluate_expression(expr)?;
-                        let raw_index = index_val.to_long()?;
-
-                        let index = if raw_index < 0 {
-                            let len = rows.len() as i32;
-                            (len + raw_index).max(0) as usize
-                        } else {
-                            raw_index as usize
-                        };
-
-                        if index >= rows.len() {
-                            return Err(XdlError::RuntimeError(format!(
-                                "Index out of bounds: {}",
-                                raw_index
-                            )));
-                        }
-
-                        rows[index] = value;
-                        Ok(())
-                    }
-                    _ => Err(XdlError::NotImplemented(
-                        "Range/all assignment on nested arrays".to_string(),
-                    )),
-                },
-                _ => Err(XdlError::RuntimeError(
-                    "Cannot index non-array value".to_string(),
-                )),
-            }
+            },
         }
     }
 
@@ -1226,5 +1138,74 @@ impl Interpreter {
 impl Default for Interpreter {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod array_element_access_tests {
+    use super::*;
+
+    /// Run a program and return the interpreter, so tests can inspect variables.
+    /// No unwrap/expect: the panic ratchet counts test code too.
+    fn run(source: &str) -> XdlResult<Interpreter> {
+        let program = xdl_parser::parse_xdl(source)
+            .map_err(|e| XdlError::RuntimeError(format!("parse: {e}")))?;
+        let mut interpreter = Interpreter::new();
+        interpreter.execute_program(&program)?;
+        Ok(interpreter)
+    }
+
+    fn variable(interpreter: &Interpreter, name: &str) -> XdlResult<XdlValue> {
+        interpreter.context.get_variable(name).cloned()
+    }
+
+    #[test]
+    fn multidim_writes_land_in_column_major_slots() -> XdlResult<()> {
+        // 2x3 array: w[i,j] is flat index i + 2*j.
+        let interpreter = run("w = FLTARR(2,3)\nw[1,2] = 7.0\nw[0,1] = 2.0\n")?;
+        assert!(matches!(
+            variable(&interpreter, "w")?,
+            XdlValue::MultiDimArray { ref data, .. }
+                if data == &[0.0, 0.0, 2.0, 0.0, 0.0, 7.0]
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn out_of_range_subscript_is_an_error_not_a_neighbouring_element() -> XdlResult<()> {
+        // x[2,0] on a 2x2 array has flat index 2, which is x[0,1]. It must be rejected.
+        let result = run("x = FLTARR(2,2)\nx[2,0] = 5.0\n");
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn single_subscript_on_multidim_reads_flat_element() -> XdlResult<()> {
+        let interpreter = run("w = FLTARR(2,3)\nw[1,2] = 7.0\nv = w[5]\n")?;
+        assert!(matches!(variable(&interpreter, "v")?, XdlValue::Double(v) if v == 7.0));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_loop_fill_counts_every_element() -> XdlResult<()> {
+        let interpreter = run("a = FLTARR(3,2,2)\n\
+             FOR i = 0, 2 DO BEGIN\n\
+               FOR j = 0, 1 DO BEGIN\n\
+                 FOR k = 0, 1 DO BEGIN\n\
+                   a[i,j,k] = 1.0\n\
+                 ENDFOR\n\
+               ENDFOR\n\
+             ENDFOR\n\
+             t = TOTAL(a)\n")?;
+        assert!(matches!(variable(&interpreter, "t")?, XdlValue::Double(v) if v == 12.0));
+        Ok(())
+    }
+
+    #[test]
+    fn element_read_matches_write_on_one_dimensional_array() -> XdlResult<()> {
+        let interpreter = run("x = FINDGEN(5)\ny = x[-1]\nz = x[0]\n")?;
+        assert!(matches!(variable(&interpreter, "y")?, XdlValue::Double(v) if v == 4.0));
+        assert!(matches!(variable(&interpreter, "z")?, XdlValue::Double(v) if v == 0.0));
+        Ok(())
     }
 }

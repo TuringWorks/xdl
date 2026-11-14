@@ -56,66 +56,6 @@ impl Default for GraphicsFunctions {
 
 /// Plot procedure - creates an interactive line plot in a GUI window
 /// Routes to ECharts or XDLPlot backend based on current setting
-pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if args.is_empty() {
-        return Err(XdlError::RuntimeError(
-            "PLOT requires at least one argument".to_string(),
-        ));
-    }
-
-    // Check which backend to use
-    let backend = get_plot_backend();
-
-    match backend {
-        PlotBackend::ECharts => {
-            // ECharts implementation expects (x, y) order
-            // XDL PLOT typically takes (y, x) order, so we need to reorder
-            let y_data = extract_numeric_array(&args[0])?;
-
-            let x_data = if args.len() > 1 {
-                extract_numeric_array(&args[1])?
-            } else {
-                // Generate x values from 0 to n-1
-                (0..y_data.len()).map(|i| i as f64).collect()
-            };
-
-            if x_data.len() != y_data.len() {
-                return Err(XdlError::RuntimeError(
-                    "X and Y arrays must have the same length".to_string(),
-                ));
-            }
-
-            // Create argument array in (x, y) order for ECharts
-            let echarts_args = vec![XdlValue::Array(x_data), XdlValue::Array(y_data)];
-
-            // Route to ECharts implementation with reordered arguments
-            crate::charting_procs::plot(&echarts_args)
-        }
-        PlotBackend::XDLPlot => {
-            // Use native XDL plotting
-            let y_data = extract_numeric_array(&args[0])?;
-
-            let x_data = if args.len() > 1 {
-                extract_numeric_array(&args[1])?
-            } else {
-                // Generate x values from 0 to n-1
-                (0..y_data.len()).map(|i| i as f64).collect()
-            };
-
-            if x_data.len() != y_data.len() {
-                return Err(XdlError::RuntimeError(
-                    "X and Y arrays must have the same length".to_string(),
-                ));
-            }
-
-            // Launch interactive plot window
-            launch_plot_window(x_data, y_data)?;
-
-            Ok(XdlValue::Undefined)
-        }
-    }
-}
-
 /// SET_PLOT_BACKEND procedure - switch between ECharts and XDLPlot backends
 /// Usage: SET_PLOT_BACKEND, 'ECHARTS' or SET_PLOT_BACKEND, 'XDLPLOT'
 pub fn set_plot_backend_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
@@ -152,7 +92,50 @@ pub fn set_plot_backend_proc(args: &[XdlValue]) -> XdlResult<XdlValue> {
     Ok(XdlValue::Undefined)
 }
 
-/// OPLOT procedure - overplot on existing plot
+/// Resolve PLOT's arguments to `(x, y)` in IDL order.
+///
+/// IDL: `PLOT, Y` plots Y against its index; `PLOT, X, Y` plots Y against X.
+/// The first argument is X, never Y. Reading the first argument as Y swapped
+/// the axes of every two-argument plot, so a parabola drew as a square root.
+pub fn plot_xy(args: &[XdlValue]) -> XdlResult<(Vec<f64>, Vec<f64>)> {
+    match args {
+        [] => Err(XdlError::RuntimeError(
+            "PLOT requires at least one argument".to_string(),
+        )),
+        [y] => {
+            let y = extract_numeric_array(y)?;
+            let x = (0..y.len()).map(|i| i as f64).collect();
+            Ok((x, y))
+        }
+        [x, y, ..] => {
+            let x = extract_numeric_array(x)?;
+            let y = extract_numeric_array(y)?;
+            if x.len() != y.len() {
+                return Err(XdlError::RuntimeError(
+                    "X and Y arrays must have the same length".to_string(),
+                ));
+            }
+            Ok((x, y))
+        }
+    }
+}
+
+pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let (x_data, y_data) = plot_xy(args)?;
+
+    match get_plot_backend() {
+        PlotBackend::ECharts => {
+            // charting_procs::plot takes (x, y) in that order.
+            let echarts_args = vec![XdlValue::Array(x_data), XdlValue::Array(y_data)];
+            crate::charting_procs::plot(&echarts_args)
+        }
+        PlotBackend::XDLPlot => {
+            launch_plot_window(x_data, y_data)?;
+            Ok(XdlValue::Undefined)
+        }
+    }
+}
+
 pub fn oplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For now, just call plot - in a full implementation this would overlay
     plot(args)
@@ -1562,4 +1545,46 @@ pub fn colorbar(args: &[XdlValue]) -> XdlResult<XdlValue> {
     println!("  Range: [min, max] from current color table");
 
     Ok(XdlValue::Undefined)
+}
+
+#[cfg(test)]
+mod plot_order_tests {
+    use super::*;
+
+    fn arr(v: &[f64]) -> XdlValue {
+        XdlValue::Array(v.to_vec())
+    }
+
+    #[test]
+    fn two_arguments_are_x_then_y() {
+        let (x, y) = plot_xy(&[arr(&[0.0, 1.0, 2.0]), arr(&[0.0, 1.0, 4.0])]).unwrap();
+        assert_eq!(x, vec![0.0, 1.0, 2.0]);
+        assert_eq!(y, vec![0.0, 1.0, 4.0]);
+    }
+
+    #[test]
+    fn non_square_input_keeps_axes_apart() {
+        // x is the longer axis here; a swap would show up as different lengths.
+        let (x, y) =
+            plot_xy(&[arr(&[1.0, 2.0, 3.0, 4.0]), arr(&[10.0, 20.0, 30.0, 40.0])]).unwrap();
+        assert_eq!(x, vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(y, vec![10.0, 20.0, 30.0, 40.0]);
+    }
+
+    #[test]
+    fn one_argument_plots_against_index() {
+        let (x, y) = plot_xy(&[arr(&[5.0, 6.0])]).unwrap();
+        assert_eq!(x, vec![0.0, 1.0]);
+        assert_eq!(y, vec![5.0, 6.0]);
+    }
+
+    #[test]
+    fn mismatched_lengths_are_an_error() {
+        assert!(plot_xy(&[arr(&[1.0, 2.0]), arr(&[1.0])]).is_err());
+    }
+
+    #[test]
+    fn no_arguments_is_an_error() {
+        assert!(plot_xy(&[]).is_err());
+    }
 }

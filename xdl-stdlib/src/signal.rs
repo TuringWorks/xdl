@@ -330,7 +330,7 @@ pub fn median_filter(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let end = (i + half + 1).min(n);
 
         let mut window: Vec<f64> = data[start..end].to_vec();
-        window.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        window.sort_by(|a, b| a.total_cmp(b));
 
         let mid = window.len() / 2;
         result.push(window[mid]);
@@ -837,7 +837,7 @@ pub fn leefilt(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Estimate noise variance (using median absolute deviation)
     let mut sorted = data.clone();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    sorted.sort_by(|a, b| a.total_cmp(b));
     let median = sorted[n / 2];
     let mad: f64 = sorted.iter().map(|&x| (x - median).abs()).sum::<f64>() / n as f64;
     let noise_var = (mad * 1.4826).powi(2);

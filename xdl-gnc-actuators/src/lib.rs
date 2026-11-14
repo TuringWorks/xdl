@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Deterministic actuator models with explicit saturation and rate limiting.
@@ -62,6 +62,15 @@ impl FirstOrderActuator {
             timestamp,
             output: initial_output,
         })
+    }
+
+    /// Rehydrates an actuator for a stateless host boundary such as XDL.
+    pub fn with_state(
+        config: FirstOrderActuatorConfig,
+        timestamp: Timestamp,
+        output: f64,
+    ) -> Result<Self, GncError> {
+        Self::new(config, timestamp, output)
     }
 
     pub fn output(&self) -> f64 {

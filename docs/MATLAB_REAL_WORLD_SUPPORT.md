@@ -1,6 +1,9 @@
 # Real-World MATLAB/Octave Support
 
-This document describes the comprehensive MATLAB/Octave compatibility features that have been added to the XDL transpiler to support real-world scientific computing code.
+This document describes the MATLAB/Octave compatibility subset currently
+implemented in the XDL transpiler. It supports selected real-world scripts but
+is not MATLAB or Octave language/toolbox parity. Validate each required feature
+with an executable test before production use.
 
 ## Overview
 
@@ -43,7 +46,8 @@ subset = arr(5:10);    % Get elements 5 through 10
 
 **How It Works:**
 
-- Array indexing with range expressions `arr(start:end)` is fully supported
+- Array indexing with some range expressions `arr(start:end)` is supported;
+  multidimensional, `end`, and advanced indexing cases remain incomplete
 - Automatically converts MATLAB's 1-based indexing to XDL's 0-based indexing
 - Handles both numeric indices and variable-based ranges
 
@@ -69,7 +73,8 @@ r = RANDOMU(1, 10, 20)
 
 - Special handling for `rand(size(x))` and `randn(size(x))` patterns
 - Converts `size(x)` to `N_ELEMENTS(x)` for RANDOMU/RANDOMN
-- Both `rand` and `randn` currently map to `RANDOMU` (normal distribution to be added later)
+- `rand` maps to a uniform generator; `randn` is not yet a faithful
+  normal-distribution implementation and must not be treated as equivalent
 - Seed is fixed at 1 for reproducibility
 
 ### 4. Statistical Functions
@@ -105,7 +110,8 @@ y = abs(x);      % Absolute value
 y = log(x);      % Natural logarithm
 ```
 
-All math functions work seamlessly with both scalar and array inputs.
+Many mapped math functions work with scalar and array inputs, but broadcasting,
+shape rules, and edge cases are still under conformance testing.
 
 ### 6. Advanced Plotting
 
@@ -117,7 +123,9 @@ plot(x, y, 'r--');    % Red dashed line
 plot(x, y, 'g:');     % Green dotted line
 ```
 
-Line style strings are detected and gracefully ignored (XDL doesn't support line styles yet).
+Some line-style strings are detected but may be ignored because XDL plotting
+style coverage is incomplete; ignored styling is a compatibility limitation,
+not feature parity.
 
 **Multiple Plots:**
 
@@ -262,7 +270,8 @@ z = y(10:50);           % Array slicing
 
 1. **Normal Distribution Random Numbers:**
    - Add proper `RANDOMN` function to XDL stdlib
-   - Currently both `rand` and `randn` use `RANDOMU`
+   - `randn` still requires a faithful normal-distribution implementation;
+     do not use the current compatibility path as a scientific substitute
 
 2. **Array Literals:**
    - Support for `[1, 2, 3]` syntax

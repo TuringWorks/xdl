@@ -234,6 +234,9 @@ pub fn n_elements(args: &[XdlValue]) -> XdlResult<XdlValue> {
     match &args[0] {
         XdlValue::Undefined => Ok(XdlValue::Long(0)),
         XdlValue::Array(arr) => Ok(XdlValue::Long(arr.len() as i32)),
+        // A shaped array has data.len() elements. Falling through to the scalar
+        // arm made N_ELEMENTS(FLTARR(3,2)) and N_ELEMENTS(RANDOMN(1,4,500)) = 1.
+        XdlValue::MultiDimArray { data, .. } => Ok(XdlValue::Long(data.len() as i32)),
         _ => Ok(XdlValue::Long(1)), // Scalar values have 1 element
     }
 }
@@ -256,7 +259,7 @@ pub fn where_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Get the input array (boolean/numeric)
     let input_arr = match &args[0] {
-        XdlValue::Array(arr) => arr,
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => v.as_slice().unwrap_or(&[]),
         XdlValue::Long(n) => {
             // Scalar: return 0 if non-zero, -1 if zero
             return if *n != 0 {
@@ -333,7 +336,8 @@ pub fn min_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
@@ -354,7 +358,8 @@ pub fn max_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
@@ -375,7 +380,8 @@ pub fn mean_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             if arr.is_empty() {
                 return Ok(XdlValue::Undefined);
             }
@@ -400,7 +406,8 @@ pub fn total_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let arr = v.as_slice().unwrap_or(&[]);
             let sum: f64 = arr.iter().sum();
             Ok(XdlValue::Double(sum))
         }
@@ -426,6 +433,14 @@ pub fn reverse_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             reversed.reverse();
             Ok(XdlValue::Array(reversed))
         }
+        XdlValue::MultiDimArray { data, shape } => {
+            let mut reversed = data.clone();
+            reversed.reverse();
+            Ok(XdlValue::MultiDimArray {
+                data: reversed,
+                shape: shape.clone(),
+            })
+        }
         val => Ok(val.clone()), // Single value unchanged
     }
 }
@@ -440,9 +455,10 @@ pub fn sort_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
-            let mut sorted = arr.clone();
-            sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        // N-D input is sorted as its flat elements, like the 1-D case.
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let mut sorted = v.as_slice().unwrap_or(&[]).to_vec();
+            sorted.sort_by(|a, b| a.total_cmp(b));
             Ok(XdlValue::Array(sorted))
         }
         val => Ok(val.clone()), // Single value unchanged
@@ -2479,4 +2495,58 @@ pub fn tile_func(
     }
 
     Ok(XdlValue::Array(result))
+}
+
+#[cfg(test)]
+mod n_elements_shape_tests {
+    use super::*;
+
+    #[test]
+    fn n_elements_counts_every_element_of_a_shaped_array() {
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![0.0; 6],
+            shape: vec![3, 2],
+        };
+        assert_eq!(n_elements(&[shaped]).unwrap(), XdlValue::Long(6));
+    }
+
+    #[test]
+    fn test_reducers_read_all_elements_of_multidim_arrays() {
+        // Non-square shape: a transpose or a first-element fallback would show here.
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![3.0, 0.0, 0.0, 5.0, 1.0, 2.0],
+            shape: vec![2, 3],
+        };
+        let args = std::slice::from_ref(&shaped);
+        assert!(matches!(total_func(args), Ok(XdlValue::Double(v)) if v == 11.0));
+        assert!(matches!(min_func(args), Ok(XdlValue::Double(v)) if v == 0.0));
+        assert!(matches!(max_func(args), Ok(XdlValue::Double(v)) if v == 5.0));
+        assert!(
+            matches!(mean_func(args), Ok(XdlValue::Double(v)) if (v - 11.0 / 6.0).abs() < 1e-12)
+        );
+    }
+
+    #[test]
+    fn test_sort_reverse_where_read_all_elements_of_multidim_arrays() {
+        // 2x3, column-major: flat order is 3, 0, 0, 5, 1, 2.
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![3.0, 0.0, 0.0, 5.0, 1.0, 2.0],
+            shape: vec![2, 3],
+        };
+        let args = std::slice::from_ref(&shaped);
+        assert!(matches!(
+            sort_func(args),
+            Ok(XdlValue::Array(ref v)) if v == &[0.0, 0.0, 1.0, 2.0, 3.0, 5.0]
+        ));
+        assert!(matches!(
+            reverse_func(args),
+            Ok(XdlValue::MultiDimArray { ref data, ref shape })
+                if data == &[2.0, 1.0, 5.0, 0.0, 0.0, 3.0] && shape == &[2, 3]
+        ));
+        // Non-zero flat positions: 0, 3, 4, 5.
+        assert!(matches!(
+            where_func(args),
+            Ok(XdlValue::Array(ref v)) if v == &[0.0, 3.0, 4.0, 5.0]
+        ));
+    }
 }

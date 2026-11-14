@@ -10,12 +10,12 @@ This document identifies GDL/IDL functionality implementation status in XDL.
 
 | Category | Implemented | Pending | Coverage |
 |----------|-------------|---------|----------|
-| **Core Functions** | 250+ | ~50 | ~83% |
-| **ML Functions** | 60+ | ~10 | ~86% |
-| **Graphics Procedures** | 50+ | ~20 | ~71% |
-| **Total** | **360+** | ~80 | **~82%** |
+| **Core Functions** | 250+ | ~50 | not measured |
+| **ML Functions** | 60+ | ~10 | not measured |
+| **Graphics Procedures** | 50+ | ~20 | not measured |
+| **Total** | **~760 dispatch entries** (functions and procedures) | ~80 | **not measured** |
 
-**Completion:** ~82% of common GDL/IDL functionality
+**Completion:** not measured. Per-area status: `xdl compatibility-report --format json`.
 
 ---
 
@@ -450,9 +450,9 @@ XDL includes GPU acceleration via xdl-amp with multiple backends:
 
 ## Conclusion
 
-XDL has achieved **~82% coverage** of common GDL/IDL functionality with:
+XDL covers a broad set of common GDL/IDL functionality, including:
 
-- ✅ **360+ functions** implemented across all categories
+- ✅ **~760 dispatch entries** (functions and procedures) across all categories
 - ✅ **GPU acceleration** for performance-critical operations
 - ✅ **Full linear algebra** via nalgebra
 - ✅ **Complete signal processing** including FFT, wavelets

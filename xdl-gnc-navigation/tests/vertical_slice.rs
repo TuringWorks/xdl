@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! End-to-end vertical slice: truth → GNSS log with a dropout → replay → estimate.
@@ -145,4 +145,41 @@ fn vertical_slice_rejects_stale_gnss_record_and_reports_event_tag() {
     .expect("record");
     let estimates = run(&log).expect("degraded input is accepted");
     assert_eq!(estimates[0].events, vec![StepEvent::DegradedInput]);
+}
+
+#[test]
+fn batch_replay_matches_serial_runs_in_job_order() {
+    use xdl_gnc_navigation::{replay_alpha_beta_batch, ReplayJob};
+    let (log, _) = build_log();
+    let mut short_log = ReplayLog::new();
+    for record in log.records().iter().take(5) {
+        short_log.push(record.clone()).expect("ordered");
+    }
+    let initial = KinematicState::new(
+        Timestamp::ZERO,
+        body(),
+        Vec3::ZERO,
+        Vec3::new(1.0, 0.0, 0.0),
+    )
+    .expect("finite state");
+    let make = || AlphaBetaFilter::new(AlphaBetaConfig::new(0.5, 0.25).expect("gains"), initial);
+    let jobs = [
+        ReplayJob {
+            filter: make(),
+            log: &log,
+        },
+        ReplayJob {
+            filter: make(),
+            log: &short_log,
+        },
+        ReplayJob {
+            filter: make(),
+            log: &log,
+        },
+    ];
+    let batch = replay_alpha_beta_batch(&jobs, |_| ACCEL);
+    assert_eq!(batch.len(), 3);
+    assert_eq!(batch[0], run(&log));
+    assert_eq!(batch[1].as_ref().map(Vec::len).ok(), Some(5));
+    assert_eq!(batch[2], run(&log));
 }

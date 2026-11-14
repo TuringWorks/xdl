@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 use crate::{GncError, Quaternion, Vec3};

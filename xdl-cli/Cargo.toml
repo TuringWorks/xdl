@@ -19,8 +19,11 @@ xdl-parser = { version = "0.1.1", path = "../xdl-parser" }
 xdl-interpreter = { version = "0.1.1", path = "../xdl-interpreter" }
 xdl-stdlib = { version = "0.1.1", path = "../xdl-stdlib" }
 xdl-matlab = { version = "0.1.1", path = "../xdl-matlab" }
+xdl-model = { version = "0.1.1", path = "../xdl-model" }
+xdl-artifacts = { version = "0.1.1", path = "../xdl-artifacts" }
 
 clap = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -30,6 +33,7 @@ tokio = { workspace = true }
 rustyline = "13.0"
 dirs = "5.0"
 serde_json = "1.0"
+sha2 = { workspace = true }
 
 [features]
 default = []

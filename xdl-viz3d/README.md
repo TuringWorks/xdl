@@ -130,4 +130,4 @@ See main XDL project [Contributing section](../README.md#contributing).
 
 ## License
 
-GPL-2.0 (same as XDL project)
+MIT (same as XDL project)

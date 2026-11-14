@@ -90,7 +90,7 @@ impl PostgresConnection {
     pub async fn is_connected(&self) -> bool {
         if let Some(client) = &self.client {
             // Try a simple query
-            client.query("SELECT 1", &[]).await.is_ok()
+            client.query(crate::HEALTH_PROBE_SQL, &[]).await.is_ok()
         } else {
             false
         }

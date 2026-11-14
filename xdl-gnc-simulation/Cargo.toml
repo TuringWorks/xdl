@@ -3,7 +3,7 @@ name = "xdl-gnc-simulation"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "MIT"
 description = "Deterministic simulation and sensor records for XDL GNC research"
 
 [dependencies]

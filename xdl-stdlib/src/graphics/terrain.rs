@@ -144,7 +144,7 @@ pub fn render_elevation_map(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -190,7 +190,7 @@ pub fn render_hillshade(
     let hillshade = dem.generate_hillshade(azimuth, altitude);
 
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -232,7 +232,7 @@ pub fn render_shaded_relief(
     let hillshade = dem.generate_hillshade(azimuth, altitude);
 
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -277,7 +277,7 @@ pub fn generate_contours(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -334,7 +334,7 @@ pub fn render_terrain_3d(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };

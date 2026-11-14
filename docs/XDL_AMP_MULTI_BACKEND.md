@@ -486,7 +486,7 @@ Priority areas for contribution:
 
 ## License
 
-GPL-2.0 (same as XDL project)
+MIT (same as XDL project)
 
 ---
 

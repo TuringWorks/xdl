@@ -1,0 +1,54 @@
+; XDL GNC closed-loop example
+; A deterministic 1D point-mass loop composed from the XDL GNC bindings.
+;
+; The plant update is intentionally visible here so the example can be read as
+; a product integration sketch: guidance -> PID -> actuator -> plant.
+
+PRINT, '=== XDL GNC CLOSED LOOP ==='
+
+position_x = 0.0
+velocity_x = 0.0
+estimated_position = GNC_VEC3(0.0, 0.0, 0.0)
+estimated_velocity = GNC_VEC3(0.0, 0.0, 0.0)
+waypoint = GNC_VEC3(10.0, 0.0, 0.0)
+integral_state = 0.0
+previous_error = 0.0
+previous_timestamp = 0
+previous_output = 0.0
+
+FOR tick = 1, 10 DO BEGIN
+    timestamp = tick * 100000000
+    position = GNC_VEC3(position_x, 0.0, 0.0)
+    navigation = GNC_ALPHA_BETA_STEP(timestamp, previous_timestamp, $
+                                      estimated_position, estimated_velocity, $
+                                      GNC_VEC3(previous_output, 0.0, 0.0), $
+                                      position, GNC_VEC3(velocity_x, 0.0, 0.0), 0.5, 0.5)
+    guidance = GNC_WAYPOINT(navigation.POSITION, waypoint, timestamp, 2.0, 0.25)
+
+    pid = GNC_PID_STEP(timestamp, guidance.DESIRED_VELOCITY[0], navigation.VELOCITY[0], $
+                       1.0, 0.2, 0.05, -5.0, 5.0, -10.0, 10.0, $
+                       integral_state, previous_error, previous_timestamp)
+    actuator = GNC_ACTUATOR_STEP(timestamp, pid.COMMAND, 0.2, -5.0, 5.0, $
+                                 20.0, previous_timestamp, previous_output)
+
+    ; Apply actuator output as acceleration for this 100 ms plant step.
+    velocity_x = velocity_x + actuator.OUTPUT * 0.1
+    position_x = position_x + velocity_x * 0.1
+    estimated_position = navigation.POSITION
+    estimated_velocity = navigation.VELOCITY
+    integral_state = pid.INTEGRAL
+    previous_error = pid.ERROR
+    previous_timestamp = timestamp
+    previous_output = actuator.OUTPUT
+
+    PRINT, 'tick=', tick, ' position=', position_x, ' velocity=', velocity_x, $
+           ' command=', actuator.OUTPUT
+    telemetry = GNC_TELEMETRY_JSON(timestamp, tick, 'closed_loop', $
+                                   GNC_VEC3(position_x, 0.0, 0.0), $
+                                   GNC_VEC3(velocity_x, 0.0, 0.0), actuator.OUTPUT)
+    PRINT, telemetry
+ENDFOR
+
+PRINT, 'Final position (m): ', position_x
+PRINT, 'Final velocity (m/s): ', velocity_x
+PRINT, '=== END CLOSED LOOP ==='

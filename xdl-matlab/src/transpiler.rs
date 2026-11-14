@@ -1058,18 +1058,14 @@ impl Transpiler {
                             }
                             check_pos += 1;
                         }
-                        eprintln!("DEBUG: LeftBracket at expr.is_empty()={}, found_ids={}, found_bracket={}, found_assign={}",
-                            expr.trim().is_empty(), found_ids, found_bracket, found_assign);
                         found_assign
                     } else {
-                        eprintln!("DEBUG: LeftBracket but expr not empty: '{}'", expr.trim());
                         false
                     };
 
                     if is_multiple_output {
                         // Handle multiple output assignment: [X, Y] = func(...)
                         // Just output the bracket and let normal processing continue
-                        eprintln!("DEBUG: Adding opening bracket for multiple output");
                         expr.push('[');
                         self.advance();
                         continue;
@@ -1170,8 +1166,13 @@ impl Transpiler {
                         && next_pos < self.tokens.len()
                         && matches!(self.tokens[next_pos].kind, TokenKind::LeftParen)
                     {
-                        // Both rand and randn map to RANDOMU for now (normal distribution not yet implemented)
-                        let xdl_func = "RANDOMU";
+                        // randn is normal (RANDOMN); rand is uniform (RANDOMU).
+                        // Mapping both to RANDOMU gave randn uniform statistics.
+                        let xdl_func = if mapped_name == "randn" {
+                            "RANDOMN"
+                        } else {
+                            "RANDOMU"
+                        };
                         self.advance(); // skip 'randn'/'rand'
                         self.advance(); // skip '('
 
@@ -1746,24 +1747,27 @@ impl Transpiler {
     }
 
     fn convert_range(&self, range: &str) -> Result<String, String> {
-        // Convert MATLAB range like 1:10 to XDL 0, 9
-        // Or 1:2:10 to 0, 9, 2
+        // Keep MATLAB's bounds: `1:10` -> `1, 10`, `1:2:10` -> `1, 10, 2`.
+        // The loop variable is then MATLAB's value, so `disp(i)` and the
+        // body's index adjustment `x(i-1)` both see the MATLAB number.
+        // Shifting the bounds to 0-based while leaving `i` unshifted printed
+        // 0, 0.1, 0.2 for `for i = 1:3; disp(i*0.1); end`.
 
         let parts: Vec<&str> = range.split(':').collect();
 
         match parts.len() {
             2 => {
-                // start:end -> (start-1), (end-1)
+                // start:end -> start, end
                 let start: i32 = parts[0].trim().parse().map_err(|_| "Invalid range start")?;
                 let end: i32 = parts[1].trim().parse().map_err(|_| "Invalid range end")?;
-                Ok(format!("{}, {}", start - 1, end - 1))
+                Ok(format!("{}, {}", start, end))
             }
             3 => {
-                // start:step:end -> (start-1), (end-1), step
+                // start:step:end -> start, end, step
                 let start: i32 = parts[0].trim().parse().map_err(|_| "Invalid range start")?;
                 let step: i32 = parts[1].trim().parse().map_err(|_| "Invalid range step")?;
                 let end: i32 = parts[2].trim().parse().map_err(|_| "Invalid range end")?;
-                Ok(format!("{}, {}, {}", start - 1, end - 1, step))
+                Ok(format!("{}, {}, {}", start, end, step))
             }
             _ => Ok(range.to_string()), // Return as-is if not a simple range
         }
@@ -2271,5 +2275,33 @@ mod tests {
         assert!(result.contains("for i"));
         assert!(result.contains("if"));
         assert!(result.contains("CONTINUE"));
+    }
+}
+
+#[cfg(test)]
+mod loop_and_random_regression_tests {
+    use super::*;
+
+    #[test]
+    fn for_loop_bounds_keep_matlab_values() {
+        let result = transpile_matlab_to_xdl("for i = 1:3\n  disp(i*0.1);\nend").unwrap();
+        assert!(result.contains("for i = 1, 3"), "got: {result}");
+        assert!(!result.contains("0, 2"), "bounds were shifted: {result}");
+    }
+
+    #[test]
+    fn for_loop_step_keeps_matlab_values() {
+        let result = transpile_matlab_to_xdl("for i = 1:2:9\n  disp(i);\nend").unwrap();
+        assert!(result.contains("for i = 1, 9, 2"), "got: {result}");
+    }
+
+    #[test]
+    fn randn_maps_to_normal_generator() {
+        let result = transpile_matlab_to_xdl("y = randn(size(x));").unwrap();
+        assert!(result.contains("RANDOMN"), "got: {result}");
+        assert!(
+            !result.contains("RANDOMU"),
+            "randn must not be uniform: {result}"
+        );
     }
 }

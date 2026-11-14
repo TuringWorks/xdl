@@ -454,11 +454,11 @@ pub fn median_f32(x: &[f32]) -> f32 {
     let sorted: Vec<f32> = if x.len() >= PARALLEL_THRESHOLD {
         // Parallel sort for large arrays
         let mut v = x.to_vec();
-        v.par_sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        v.par_sort_unstable_by(|a, b| a.total_cmp(b));
         v
     } else {
         let mut v = x.to_vec();
-        v.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        v.sort_unstable_by(|a, b| a.total_cmp(b));
         v
     };
 

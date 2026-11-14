@@ -25,6 +25,9 @@ members = [
     "xdl-gnc-actuators",
     "xdl-gnc-integration",
     "xdl-gnc-telemetry"
+    , "xdl-model",
+    "xdl-sim",
+    "xdl-artifacts"
 ]
 resolver = "2"
 
@@ -32,7 +35,7 @@ resolver = "2"
 version = "0.1.1"
 edition = "2021"
 authors = ["XDL Rust Team"]
-license = "GPL-2.0"
+license = "MIT"
 description = "Extended Data Language (XDL) - Rust implementation"
 homepage = "https://turingworks.github.io/xdl"
 repository = "https://github.com/turingworks/xdl"
@@ -42,6 +45,7 @@ documentation = "https://turingworks.github.io/xdl"
 # Core dependencies
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10"
 thiserror = "1.0"
 anyhow = "1.0"
 tracing = "0.1"

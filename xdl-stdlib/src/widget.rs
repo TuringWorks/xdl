@@ -71,7 +71,7 @@ fn get_next_widget_id() -> usize {
 }
 
 fn store_widget(info: WidgetInfo) {
-    let mut store = WIDGET_STORE.lock().unwrap();
+    let mut store = WIDGET_STORE.lock().unwrap_or_else(|e| e.into_inner());
     if store.is_none() {
         *store = Some(HashMap::new());
     }
@@ -81,7 +81,7 @@ fn store_widget(info: WidgetInfo) {
 }
 
 fn get_widget(id: usize) -> Option<WidgetInfo> {
-    let store = WIDGET_STORE.lock().unwrap();
+    let store = WIDGET_STORE.lock().unwrap_or_else(|e| e.into_inner());
     store.as_ref().and_then(|map| map.get(&id).cloned())
 }
 
@@ -89,7 +89,7 @@ fn update_widget<F>(id: usize, f: F) -> bool
 where
     F: FnOnce(&mut WidgetInfo),
 {
-    let mut store = WIDGET_STORE.lock().unwrap();
+    let mut store = WIDGET_STORE.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(ref mut map) = *store {
         if let Some(widget) = map.get_mut(&id) {
             f(widget);
@@ -547,7 +547,7 @@ pub fn widget_control(
     if destroy {
         println!("WIDGET_CONTROL: Destroying widget {}", id);
         // Remove widget from store
-        let mut store = WIDGET_STORE.lock().unwrap();
+        let mut store = WIDGET_STORE.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(ref mut map) = *store {
             map.remove(&id);
         }

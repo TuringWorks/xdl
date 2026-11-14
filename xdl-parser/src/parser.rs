@@ -409,8 +409,13 @@ impl<'a> Parser<'a> {
             if matches!(self.peek(), Token::Divide) {
                 let next_pos = self.current + 1;
                 if next_pos < self.tokens.len() {
-                    if let Token::Identifier(kw_name) = &self.tokens[next_pos] {
-                        let kw_name = kw_name.clone();
+                    // CONTINUE lexes as the loop keyword; `/CONTINUE` is still a flag.
+                    let flag = match &self.tokens[next_pos] {
+                        Token::Identifier(kw_name) => Some(kw_name.clone()),
+                        Token::Continue => Some("CONTINUE".to_string()),
+                        _ => None,
+                    };
+                    if let Some(kw_name) = flag {
                         self.advance(); // consume '/'
                         self.advance(); // consume identifier
                         keywords.push(Keyword {
@@ -1581,8 +1586,13 @@ impl<'a> Parser<'a> {
     /// Parse primary expressions (literals, identifiers, parenthesized expressions)
     fn parse_primary(&mut self) -> XdlResult<Expression> {
         match self.advance() {
+            // A literal that does not fit in 32 bits becomes LONG64. Truncating it
+            // with `as i32` silently produced a different number.
             Token::Integer(value) => Ok(Expression::Literal {
-                value: XdlValue::Long(*value as i32),
+                value: match i32::try_from(*value) {
+                    Ok(v) => XdlValue::Long(v),
+                    Err(_) => XdlValue::Long64(*value),
+                },
                 location: Location::unknown(),
             }),
             Token::Float(value) => Ok(Expression::Literal {
@@ -1606,8 +1616,14 @@ impl<'a> Parser<'a> {
                             // Check for /FLAG keyword (e.g., /INDEX)
                             if self.check(&Token::Divide) {
                                 self.advance(); // consume '/'
-                                if let Token::Identifier(kw_name) = self.peek() {
-                                    let kw_name = kw_name.clone();
+                                                // CONTINUE lexes as the loop keyword, but `/CONTINUE`
+                                                // is a keyword argument (MESSAGE, /CONTINUE).
+                                let flag_name = match self.peek() {
+                                    Token::Identifier(name) => Some(name.clone()),
+                                    Token::Continue => Some("CONTINUE".to_string()),
+                                    _ => None,
+                                };
+                                if let Some(kw_name) = flag_name {
                                     self.advance(); // consume keyword name
                                     keywords.push(Keyword {
                                         name: kw_name,

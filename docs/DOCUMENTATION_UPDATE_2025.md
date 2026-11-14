@@ -53,7 +53,9 @@ Added comprehensive "Known Limitations" section with subsections:
 
 **Testing & Quality:**
 
-- Test runner (xdl test) is a stub
+- At the time of this 2025 snapshot, the test runner (`xdl test`) was a stub;
+  the current bounded runner and manifest workflow are documented in
+  `SCIENTIFIC_ARTIFACTS.md`.
 - Various edge cases need handling
 - Error messages could be improved
 

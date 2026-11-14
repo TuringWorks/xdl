@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Stable, dependency-light telemetry records for GNC products.
@@ -7,6 +7,7 @@
 //! host application without buffering an entire flight run.
 
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use xdl_gnc_core::{FrameId, GncError, StepEvent, Timestamp, Vec3};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -93,6 +94,29 @@ impl TelemetryLog {
             })
     }
 
+    /// Writes the log as newline-delimited JSON without buffering the output.
+    ///
+    /// The caller owns the transport and may pass a file, socket adapter, or
+    /// product-specific sink. A newline is written after every sample so a
+    /// partially received stream still ends at a record boundary.
+    pub fn write_json_lines<W: Write>(&self, writer: &mut W) -> Result<(), GncError> {
+        for sample in &self.samples {
+            serde_json::to_writer(&mut *writer, sample).map_err(|error| {
+                GncError::InvalidValue {
+                    context: "telemetry JSON export".to_string(),
+                    reason: error.to_string(),
+                }
+            })?;
+            writer
+                .write_all(b"\n")
+                .map_err(|error| GncError::InvalidValue {
+                    context: "telemetry JSON export".to_string(),
+                    reason: error.to_string(),
+                })?;
+        }
+        Ok(())
+    }
+
     pub fn from_json_lines(input: &str) -> Result<Self, GncError> {
         let mut log = Self::new();
         for line in input.lines().filter(|line| !line.trim().is_empty()) {
@@ -145,5 +169,29 @@ mod tests {
         let mut invalid = TelemetrySample::new(Timestamp::from_nanoseconds(3), 0, "control");
         invalid.command = Some(f64::NAN);
         assert!(log.push(invalid).is_err());
+    }
+
+    #[test]
+    fn streaming_json_export_matches_buffered_export() {
+        let mut log = TelemetryLog::new();
+        log.push(TelemetrySample::new(
+            Timestamp::from_nanoseconds(1),
+            0,
+            "navigation",
+        ))
+        .expect("ordered sample");
+        log.push(TelemetrySample::new(
+            Timestamp::from_nanoseconds(2),
+            0,
+            "control",
+        ))
+        .expect("ordered sample");
+
+        let mut output = Vec::new();
+        log.write_json_lines(&mut output).expect("stream export");
+        assert_eq!(
+            String::from_utf8(output).expect("UTF-8 JSON"),
+            log.to_json_lines().expect("buffered export")
+        );
     }
 }

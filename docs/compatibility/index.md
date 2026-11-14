@@ -12,11 +12,16 @@ IDL/GDL and MATLAB compatibility layers.
 
 ## Overview
 
-XDL provides compatibility with:
+XDL provides compatibility layers and migration tooling for:
 
-- **IDL** (Interactive Data Language) - Full syntax and function compatibility
-- **GDL** (GNU Data Language) - Compatible with GDL extensions
-- **MATLAB** - Subset of MATLAB syntax and functions
+- **IDL** (Interactive Data Language) - an evolving compatible syntax/runtime subset
+- **GDL** (GNU Data Language) - an evolving compatible syntax/runtime subset
+- **MATLAB/Octave** - a tested but incomplete syntax/function subset and transpiler
+
+These are compatibility targets, not claims of full language, toolbox, file
+format, numerical, or model-based-design parity. See the [current gap
+analysis](../VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS.md) for scope and
+priorities.
 
 ## IDL/GDL Compatibility
 
@@ -132,15 +137,15 @@ See [MATLAB Limitations](../MATLAB_LIMITATIONS) for details.
 
 | Feature | IDL | GDL | MATLAB | Status |
 |:--------|:----|:----|:-------|:-------|
-| Basic Syntax | ✅ | ✅ | ⚠️ | Complete/Partial |
-| Arrays | ✅ | ✅ | ✅ | Complete |
-| Math Functions | ✅ | ✅ | ✅ | Complete |
-| Graphics | ✅ | ✅ | ⚠️ | Mostly Complete |
+| Basic Syntax | ⚠️ | ⚠️ | ⚠️ | Broad subset; edge cases remain |
+| Arrays | ⚠️ | ⚠️ | ⚠️ | Core operations; advanced shape/indexing gaps remain |
+| Math Functions | ⚠️ | ⚠️ | ⚠️ | Broad registry; conformance depth varies |
+| Graphics | ⚠️ | ⚠️ | ⚠️ | Multiple backends; feature depth varies |
 | I/O | ✅ | ✅ | ⚠️ | In Progress |
 | Structures | ✅ | ✅ | ❌ | IDL/GDL Only |
 | OOP | ⚠️ | ⚠️ | ❌ | Partial |
 
-Legend: ✅ Complete | ⚠️ Partial | ❌ Not Supported
+Legend: ✅ Verified for the stated scope | ⚠️ Partial or backend-dependent | ❌ Not supported
 
 ## Testing
 

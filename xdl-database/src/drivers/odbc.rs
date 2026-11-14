@@ -202,7 +202,7 @@ impl ODBCConnection {
     pub async fn is_connected(&self) -> bool {
         if let Some(conn) = &self.connection {
             // Try a simple query to check connection
-            tokio::task::spawn_blocking(move || conn.execute("SELECT 1", ()))
+            tokio::task::spawn_blocking(move || conn.execute(crate::HEALTH_PROBE_SQL, ()))
                 .await
                 .is_ok()
         } else {

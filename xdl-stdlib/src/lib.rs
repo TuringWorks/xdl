@@ -8,6 +8,7 @@ mod charting_procs; // ECharts charting procedures
 pub mod complex;
 pub mod data_structures; // Pointers, objects, lists, hashes
 pub mod dialog; // Dialog functions for user interaction
+pub mod gnc; // Guidance, navigation, and control bindings
 pub mod gpu_array; // GPU-accelerated array operations
 pub mod graphics; // Full implementation modules
 mod graphics_procs; // Procedure wrappers
@@ -213,7 +214,7 @@ impl StandardLibrary {
             "SCOPE_TRACEBACK" => system::scope_traceback(args),
             "EXIT" => system::exit_session(args),
             "RETALL" => system::retall(args),
-            "MESSAGE" => system::message(args),
+            "MESSAGE" => system::message(args, keywords),
             "ON_ERROR" => system::on_error(args),
             "EXECUTE" => system::execute(args),
 
@@ -282,6 +283,7 @@ impl StandardLibrary {
             "OPENW" => io::openw(args),
             "OPENU" => io::openu(args),
             "CLOSE" => io::close_file(args),
+            "FILE_COPY" => io::file_copy(args),
             "WRITEF" => io::writef(args),
             "PRINTF" => io::printf(args),
 
@@ -309,6 +311,17 @@ impl StandardLibrary {
         keywords: &HashMap<String, XdlValue>,
     ) -> XdlResult<XdlValue> {
         match name.to_uppercase().as_str() {
+            // Guidance, navigation, and control bindings
+            "GNC_VEC3" => gnc::vec3(args),
+            "GNC_FLIGHT_READINESS_STEP" => gnc::flight_readiness_step(args),
+            "GNC_WAYPOINT" => gnc::waypoint(args),
+            "GNC_PID_STEP" => gnc::pid_step(args),
+            "GNC_STATE_SPACE_STEP" => gnc::state_space_step(args),
+            "GNC_SCHEDULED_FEEDBACK_STEP" => gnc::scheduled_feedback_step(args),
+            "GNC_ACTUATOR_STEP" => gnc::actuator_step(args),
+            "GNC_ALPHA_BETA_STEP" => gnc::alpha_beta_step(args),
+            "GNC_TELEMETRY_JSON" => gnc::telemetry_json(args),
+
             // Trigonometric functions
             "SIN" => math::sin(args),
             "COS" => math::cos(args),
@@ -1145,5 +1158,67 @@ fn create_hash(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
         result.push('}');
         Ok(XdlValue::String(result))
+    }
+}
+
+#[cfg(test)]
+mod gnc_dispatch_tests {
+    use super::*;
+
+    #[test]
+    fn gnc_functions_are_reachable_through_case_insensitive_dispatch() {
+        let library = StandardLibrary::new();
+        let value = library
+            .call_function(
+                "gnc_vec3",
+                &[
+                    XdlValue::Double(1.0),
+                    XdlValue::Double(2.0),
+                    XdlValue::Double(3.0),
+                ],
+            )
+            .expect("GNC_VEC3 should be registered");
+        assert_eq!(value, XdlValue::Array(vec![1.0, 2.0, 3.0]));
+
+        let state_space = library
+            .call_function(
+                "gnc_state_space_step",
+                &[
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![0.0]),
+                    XdlValue::Array(vec![0.0]),
+                    XdlValue::Array(vec![2.0]),
+                    XdlValue::Long(1),
+                    XdlValue::Long(1),
+                    XdlValue::Long(1),
+                ],
+            )
+            .expect("GNC_STATE_SPACE_STEP should be registered");
+        let XdlValue::Struct(fields) = state_space else {
+            panic!("expected state-space structure");
+        };
+        assert_eq!(fields.get("STATE"), Some(&XdlValue::Array(vec![2.0])));
+
+        let scheduled = library
+            .call_function(
+                "gnc_scheduled_feedback_step",
+                &[
+                    XdlValue::Array(vec![1.0]),
+                    XdlValue::Array(vec![3.0]),
+                    XdlValue::Double(0.0),
+                    XdlValue::Double(10.0),
+                    XdlValue::Double(5.0),
+                    XdlValue::Array(vec![2.0]),
+                    XdlValue::Long(1),
+                    XdlValue::Long(1),
+                ],
+            )
+            .expect("GNC_SCHEDULED_FEEDBACK_STEP should be registered");
+        let XdlValue::Struct(fields) = scheduled else {
+            panic!("expected scheduled feedback structure");
+        };
+        assert_eq!(fields.get("COMMAND"), Some(&XdlValue::Array(vec![4.0])));
     }
 }

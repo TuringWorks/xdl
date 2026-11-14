@@ -412,7 +412,7 @@ pub fn gpu_sin(x: &Array1<f32>) -> Result<Array1<f32>> {
 
 ## License
 
-GPL-2.0 (same as XDL)
+MIT (same as XDL)
 
 ---
 
