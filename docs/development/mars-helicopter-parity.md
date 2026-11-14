@@ -35,6 +35,7 @@ not mean the result is physically equivalent to Aerospace Blockset or Simscape.
 ```bash
 cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl
 cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl
+cargo run -p xdl-cli -- --headless -q examples/mars_helicopter_system_level.xdl
 cargo run -p xdl-cli -- --headless -q examples/mars_helicopter_results.xdl
 cargo test -p xdl-cli --test cli_tests
 cargo test -p xdl-model

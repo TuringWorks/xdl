@@ -1218,8 +1218,14 @@ pub fn percentiles(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let mut results = Vec::with_capacity(percentile_vals.len());
 
+    if let Some(bad) = percentile_vals.iter().find(|p| !(0.0..=100.0).contains(*p)) {
+        return Err(XdlError::InvalidArgument(format!(
+            "PERCENTILES: percentile {} is outside 0..100",
+            bad
+        )));
+    }
+
     for p in percentile_vals {
-        let p = p.clamp(0.0, 100.0);
         let idx = (p / 100.0) * (n - 1) as f64;
         let lower = idx.floor() as usize;
         let upper = (lower + 1).min(n - 1);
@@ -1321,7 +1327,16 @@ pub fn trimmed_mean(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     let percent = if args.len() > 1 {
-        args[1].to_double().unwrap_or(5.0).clamp(0.0, 49.0)
+        // Out of range is an error, not a clamped trim: a clamped value is a
+        // different statistic reported as the requested one.
+        let requested = args[1].to_double()?;
+        if !(0.0..=49.0).contains(&requested) {
+            return Err(XdlError::InvalidArgument(format!(
+                "TRIMMED_MEAN: percent {} is outside 0..49",
+                requested
+            )));
+        }
+        requested
     } else {
         5.0 // Default 5% trimmed mean
     };
@@ -1726,5 +1741,20 @@ mod tests {
         let args = std::slice::from_ref(&shaped);
         assert!(matches!(median(args), Ok(XdlValue::Double(v)) if (v - 1.5).abs() < 1e-12));
         assert!(matches!(variance(args), Ok(XdlValue::Double(v)) if (v - 6.0).abs() < 1e-12));
+    }
+
+    #[test]
+    fn test_out_of_range_percentile_and_trim_are_errors() {
+        let data = XdlValue::Array(vec![1.0, 2.0, 3.0, 4.0]);
+        assert!(percentiles(&[data.clone(), XdlValue::Array(vec![150.0])]).is_err());
+        assert!(percentiles(&[data.clone(), XdlValue::Array(vec![-1.0])]).is_err());
+        assert!(trimmed_mean(&[data.clone(), XdlValue::Double(60.0)]).is_err());
+        assert!(trimmed_mean(&[data.clone(), XdlValue::Double(-5.0)]).is_err());
+        // In-range requests still succeed.
+        assert!(matches!(
+            percentiles(&[data.clone(), XdlValue::Array(vec![100.0])]),
+            Ok(XdlValue::Double(v)) if v == 4.0
+        ));
+        assert!(trimmed_mean(&[data, XdlValue::Double(25.0)]).is_ok());
     }
 }
