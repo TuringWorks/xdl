@@ -259,7 +259,7 @@ pub fn where_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     // Get the input array (boolean/numeric)
     let input_arr = match &args[0] {
-        XdlValue::Array(arr) => arr,
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => v.as_slice().unwrap_or(&[]),
         XdlValue::Long(n) => {
             // Scalar: return 0 if non-zero, -1 if zero
             return if *n != 0 {
@@ -433,6 +433,14 @@ pub fn reverse_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
             reversed.reverse();
             Ok(XdlValue::Array(reversed))
         }
+        XdlValue::MultiDimArray { data, shape } => {
+            let mut reversed = data.clone();
+            reversed.reverse();
+            Ok(XdlValue::MultiDimArray {
+                data: reversed,
+                shape: shape.clone(),
+            })
+        }
         val => Ok(val.clone()), // Single value unchanged
     }
 }
@@ -447,9 +455,10 @@ pub fn sort_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     }
 
     match &args[0] {
-        XdlValue::Array(arr) => {
-            let mut sorted = arr.clone();
-            sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        // N-D input is sorted as its flat elements, like the 1-D case.
+        v @ (XdlValue::Array(_) | XdlValue::MultiDimArray { .. }) => {
+            let mut sorted = v.as_slice().unwrap_or(&[]).to_vec();
+            sorted.sort_by(|a, b| a.total_cmp(b));
             Ok(XdlValue::Array(sorted))
         }
         val => Ok(val.clone()), // Single value unchanged
@@ -2515,5 +2524,29 @@ mod n_elements_shape_tests {
         assert!(
             matches!(mean_func(args), Ok(XdlValue::Double(v)) if (v - 11.0 / 6.0).abs() < 1e-12)
         );
+    }
+
+    #[test]
+    fn test_sort_reverse_where_read_all_elements_of_multidim_arrays() {
+        // 2x3, column-major: flat order is 3, 0, 0, 5, 1, 2.
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![3.0, 0.0, 0.0, 5.0, 1.0, 2.0],
+            shape: vec![2, 3],
+        };
+        let args = std::slice::from_ref(&shaped);
+        assert!(matches!(
+            sort_func(args),
+            Ok(XdlValue::Array(ref v)) if v == &[0.0, 0.0, 1.0, 2.0, 3.0, 5.0]
+        ));
+        assert!(matches!(
+            reverse_func(args),
+            Ok(XdlValue::MultiDimArray { ref data, ref shape })
+                if data == &[2.0, 1.0, 5.0, 0.0, 0.0, 3.0] && shape == &[2, 3]
+        ));
+        // Non-zero flat positions: 0, 3, 4, 5.
+        assert!(matches!(
+            where_func(args),
+            Ok(XdlValue::Array(ref v)) if v == &[0.0, 3.0, 4.0, 5.0]
+        ));
     }
 }
