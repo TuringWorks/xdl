@@ -67,6 +67,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
         with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
           # Include both the workspace Cargo.lock and the xdl-desktop-viewer
           # manifest hash so the cache is invalidated when either changes.
           # xdl-desktop-viewer is outside the workspace, so the default
@@ -119,6 +120,8 @@ jobs:
           components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
       # GTK/WebKit and fontconfig. Without these packages the build script for
@@ -148,6 +151,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
       # GTK/WebKit and fontconfig. Without these packages the build script for
@@ -191,6 +196,8 @@ jobs:
           components: llvm-tools-preview
 
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # xdl-chart-viewer (Tauri) and xdl-core (plotters -> font-kit) link native
       # GTK/WebKit and fontconfig. Without these packages the build script for
@@ -242,6 +249,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable (pinned)
       - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2 (pinned)
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Build only (gate). Publishing is owned by pages.yml, which builds the
       # cargo API docs and the Jekyll site and deploys both — two workflows
