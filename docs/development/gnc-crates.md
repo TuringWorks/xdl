@@ -80,10 +80,12 @@ Rules:
 | `xdl-sim` | 25 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, typed model-graph execution, deterministic state-machine runtime, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
 `xdl-model` also exposes a typed `StateMachine` contract with explicit states,
-initial-state validation, deterministic event transitions, and duplicate-event
-rejection. It is the semantic foundation for Stateflow/Xcos-style state/event
-subsystems; a scheduler-integrated runtime, timed events, guards, and graphical
-state-machine editing remain open work.
+initial-state validation, deterministic event transitions, positive-delay timed
+transitions, and duplicate-transition rejection. `StateMachineRuntime::advance_to`
+uses explicit simulation timestamps and advances at most one timed transition
+per call; a caller can invoke it again at the same timestamp to advance a due
+timed chain. Runtime integration with the periodic task scheduler, guards, and
+graphical state-machine editing remain open work.
 
 The XDL standard library currently exposes the explicit-state
 `GNC_FLIGHT_READINESS_STEP` binding used by the Mars example. It accepts the
@@ -203,11 +205,13 @@ cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl
 ```
 
 [`examples/mars_helicopter_results.xdl`](../../examples/mars_helicopter_results.xdl)
-reads the simulation's `mars_helicopter_results.csv` output and plots live
-altitude and battery-temperature columns. It copies each headless plot to a
-distinct PNG (`mars_helicopter_altitude.png` and
-`mars_helicopter_temperature.png`). Run the simulation first, then the plot
-script:
+reads the simulation's `mars_helicopter_results.csv` output after the simulation
+finishes, then writes altitude and battery-temperature plots. The reader handles
+this example's header plus well-formed, unquoted numeric rows; it is not a
+general CSV parser. The headless XDLPlot path writes titles and axis labels, then
+copies each plot to a distinct PNG (`mars_helicopter_altitude.png` and
+`mars_helicopter_temperature.png`). Run both commands from the directory
+containing the CSV because the script uses relative paths:
 
 ```bash
 cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl

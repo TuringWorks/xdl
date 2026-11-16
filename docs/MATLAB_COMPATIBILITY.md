@@ -146,7 +146,7 @@ xdl --transpile script.m > script.xdl
 
 - **Syntax transpilation** for common constructs
 - **Function name mapping** for ~80 functions
-- **Index adjustment** (1-based → 0-based)
+- **Index adjustment** (1-based → 0-based; vector slices with positive constant step)
 - **Loop conversion** (for, while)
 - **Conditional statements** (if/else)
 - **Comments** preserved
@@ -155,9 +155,9 @@ xdl --transpile script.m > script.xdl
 
 ### 🚧 Limitations (Future Work)
 
-- **Matrix slicing**: `x(1:10, :)` not yet supported
+- **Multidimensional slicing**: MATLAB matrix row/column selections and `:` across dimensions remain unsupported
 - **Cell arrays**: `{}` syntax needs implementation
-- **Advanced indexing**: `end`, `:` operators
+- **Advanced indexing**: `end`, omitted range bounds, logical/index-vector subscripts
 - **MEX files**: Binary extension support
 - **Classes/OOP**: MATLAB classes not supported
 - **Anonymous functions**: `@(x) x^2` syntax

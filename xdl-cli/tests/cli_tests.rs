@@ -257,6 +257,10 @@ fn test_cli_runs_mars_helicopter_results_after_simulation() {
         let metadata = fs::metadata(&artifact_path)
             .unwrap_or_else(|error| panic!("missing plot artifact {artifact}: {error}"));
         assert!(metadata.len() > 0, "empty plot artifact: {artifact}");
+        let png = fs::read(&artifact_path).expect("read generated plot");
+        assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"), "invalid PNG: {artifact}");
+        assert_eq!(u32::from_be_bytes(png[16..20].try_into().unwrap()), 800);
+        assert_eq!(u32::from_be_bytes(png[20..24].try_into().unwrap()), 600);
     }
     let _ = fs::remove_dir_all(output_root);
 }

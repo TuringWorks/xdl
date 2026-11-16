@@ -46,6 +46,10 @@ cache. Plain `cargo` commands are not affected.
 The `xdl-gnc-*` crates are typed guidance, navigation, and control primitives.
 See [GNC Crates](gnc-crates.html).
 
+The Mars helicopter example tracks runnable system-level behavior against a
+Simulink reference and lists the remaining fidelity gaps. See the
+[Mars Helicopter Parity Matrix](mars-helicopter-parity.html).
+
 ## Testing
 
 ### Running Tests

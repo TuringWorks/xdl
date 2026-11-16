@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use thiserror::Error;
+use xdl_gnc_core::DurationNs;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct StateId(u32);
@@ -29,6 +30,13 @@ pub struct Transition {
     pub event: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TimedTransition {
+    pub from: StateId,
+    pub to: StateId,
+    pub after: DurationNs,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum StateMachineError {
     #[error("state name must not be empty")]
@@ -45,6 +53,10 @@ pub enum StateMachineError {
     DuplicateTransition { from: StateId, event: String },
     #[error("state-machine must contain at least one state")]
     EmptyStateMachine,
+    #[error("timed transition delay must be positive")]
+    InvalidTransitionDelay,
+    #[error("duplicate timed transition from {0:?} after {1} ns")]
+    DuplicateTimedTransition(StateId, i64),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,6 +64,8 @@ pub struct StateMachine {
     pub name: String,
     pub states: BTreeMap<StateId, State>,
     pub transitions: Vec<Transition>,
+    #[serde(default)]
+    pub timed_transitions: Vec<TimedTransition>,
     pub initial_state: Option<StateId>,
     next_state: u32,
 }
@@ -62,6 +76,7 @@ impl StateMachine {
             name: name.into(),
             states: BTreeMap::new(),
             transitions: Vec::new(),
+            timed_transitions: Vec::new(),
             initial_state: None,
             next_state: 0,
         }
@@ -119,6 +134,39 @@ impl StateMachine {
         Ok(())
     }
 
+    /// Adds a transition that becomes eligible after the source state has
+    /// remained active for `after`. Delays are strictly positive so timed
+    /// transition cycles cannot execute infinitely at one simulation time.
+    pub fn add_timed_transition(
+        &mut self,
+        from: StateId,
+        to: StateId,
+        after: DurationNs,
+    ) -> Result<(), StateMachineError> {
+        if !after.is_positive() {
+            return Err(StateMachineError::InvalidTransitionDelay);
+        }
+        if !self.states.contains_key(&from) {
+            return Err(StateMachineError::UnknownState(from));
+        }
+        if !self.states.contains_key(&to) {
+            return Err(StateMachineError::UnknownState(to));
+        }
+        if self
+            .timed_transitions
+            .iter()
+            .any(|transition| transition.from == from && transition.after == after)
+        {
+            return Err(StateMachineError::DuplicateTimedTransition(
+                from,
+                after.as_nanoseconds(),
+            ));
+        }
+        self.timed_transitions
+            .push(TimedTransition { from, to, after });
+        Ok(())
+    }
+
     pub fn validate(&self) -> Result<(), StateMachineError> {
         if self.states.is_empty() {
             return Err(StateMachineError::EmptyStateMachine);
@@ -138,6 +186,17 @@ impl StateMachine {
             }
             if transition.event.trim().is_empty() {
                 return Err(StateMachineError::EmptyEventName);
+            }
+        }
+        for transition in &self.timed_transitions {
+            if !self.states.contains_key(&transition.from) {
+                return Err(StateMachineError::UnknownState(transition.from));
+            }
+            if !self.states.contains_key(&transition.to) {
+                return Err(StateMachineError::UnknownState(transition.to));
+            }
+            if !transition.after.is_positive() {
+                return Err(StateMachineError::InvalidTransitionDelay);
             }
         }
         Ok(())

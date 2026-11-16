@@ -1114,12 +1114,10 @@ impl Transpiler {
                             self.advance();
                         }
 
-                        // Convert 1-based to 0-based if it's a simple number
-                        if let Ok(num) = index_expr.trim().parse::<i32>() {
-                            expr.push_str(&format!("{}", num - 1));
-                        } else {
-                            expr.push_str(&format!("({}) - 1", index_expr));
-                        }
+                        expr.push_str(
+                            &translate_matlab_index(&index_expr)
+                                .unwrap_or_else(|| format!("({}) - 1", index_expr)),
+                        );
 
                         if matches!(self.current_token().kind, TokenKind::RightBracket) {
                             expr.push(']');
@@ -1681,10 +1679,30 @@ impl Transpiler {
                     }
 
                     if has_colon && paren_depth == 0 {
-                        // This is a range expression like (0:L-1) or (1:2:10)
-                        // Parse the range and convert to FINDGEN
-                        let range_expr = self.parse_range_expression(&range_tokens);
-                        expr.push_str(&range_expr);
+                        let range = range_tokens
+                            .iter()
+                            .map(|token| token.lexeme.as_str())
+                            .collect::<String>();
+                        let preceding_name = expr
+                            .trim()
+                            .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+                            .next_back()
+                            .unwrap_or_default();
+                        let is_vector_subscript = !preceding_name.is_empty()
+                            && get_xdl_function(preceding_name).is_none();
+
+                        if is_vector_subscript {
+                            if let Some(index) = translate_matlab_index(&range) {
+                                expr.push('[');
+                                expr.push_str(&index);
+                                expr.push(']');
+                            } else {
+                                expr.push_str(&self.parse_range_expression(&range_tokens));
+                            }
+                        } else {
+                            // Standalone ranges remain vectors generated with FINDGEN.
+                            expr.push_str(&self.parse_range_expression(&range_tokens));
+                        }
                     } else {
                         // Not a range, restore position and just add the paren
                         self.position = start_pos;
@@ -2065,6 +2083,41 @@ impl Transpiler {
     }
 }
 
+/// Translate MATLAB's 1-based vector subscript into XDL's zero-based range.
+/// XDL range ends are exclusive, so MATLAB `start:end` maps to
+/// `(start - 1):end`; MATLAB's `start:step:end` maps to
+/// `(start - 1):end:step`.
+fn translate_matlab_index(index: &str) -> Option<String> {
+    let parts: Vec<&str> = index.split(':').map(str::trim).collect();
+    match parts.as_slice() {
+        [single] => Some(single.parse::<i64>().map_or_else(
+            |_| format!("({single}) - 1"),
+            |value| (value - 1).to_string(),
+        )),
+        [start, end] if !start.is_empty() && !end.is_empty() => {
+            let zero_based_start = offset_matlab_index(start);
+            Some(format!("{zero_based_start}:{end}"))
+        }
+        [start, step, end]
+            if !start.is_empty()
+                && !step.is_empty()
+                && !end.is_empty()
+                && step.parse::<u64>().is_ok_and(|value| value > 0) =>
+        {
+            let zero_based_start = offset_matlab_index(start);
+            Some(format!("{zero_based_start}:{end}:{step}"))
+        }
+        _ => None,
+    }
+}
+
+fn offset_matlab_index(start: &str) -> String {
+    start.parse::<i64>().map_or_else(
+        |_| format!("({start}) - 1"),
+        |value| (value - 1).to_string(),
+    )
+}
+
 /// Main transpilation function
 pub fn transpile_matlab_to_xdl(matlab_code: &str) -> Result<String, String> {
     let mut lexer = Lexer::new(matlab_code);
@@ -2136,6 +2189,19 @@ mod tests {
         let result = transpile_matlab_to_xdl(matlab).unwrap();
         // Should convert to FINDGEN with step
         assert!(result.contains("FINDGEN"));
+    }
+
+    #[test]
+    fn matlab_vector_ranges_translate_to_zero_based_xdl_slices() {
+        let result = transpile_matlab_to_xdl("a = x(2:5); b = x(1:2:7);").unwrap();
+        assert!(result.contains("a = x[1:5]"), "{result}");
+        assert!(result.contains("b = x[0:7:2]"), "{result}");
+    }
+
+    #[test]
+    fn matlab_vector_range_supports_variable_start() {
+        let result = transpile_matlab_to_xdl("y = x(first:last);").unwrap();
+        assert!(result.contains("y = x[(first) - 1:last]"), "{result}");
     }
 
     #[test]

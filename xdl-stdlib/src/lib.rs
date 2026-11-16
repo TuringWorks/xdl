@@ -74,7 +74,7 @@ impl StandardLibrary {
     ) -> XdlResult<XdlValue> {
         match name.to_uppercase().as_str() {
             // Graphics procedures - Basic plotting
-            "PLOT" => graphics_procs::plot(args),
+            "PLOT" => graphics_procs::plot(args, keywords),
             "OPLOT" => graphics_procs::oplot(args),
             "PLOTS" => graphics_procs::plots(args),
             "XYOUTS" => graphics_procs::xyouts(args),

@@ -120,8 +120,14 @@ pub fn plot_xy(args: &[XdlValue]) -> XdlResult<(Vec<f64>, Vec<f64>)> {
     }
 }
 
-pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
+pub fn plot(
+    args: &[XdlValue],
+    keywords: &std::collections::HashMap<String, XdlValue>,
+) -> XdlResult<XdlValue> {
     let (x_data, y_data) = plot_xy(args)?;
+    let title = keyword_text(keywords, "TITLE", "XDL Plot");
+    let x_title = keyword_text(keywords, "XTITLE", "");
+    let y_title = keyword_text(keywords, "YTITLE", "");
 
     match get_plot_backend() {
         PlotBackend::ECharts => {
@@ -130,7 +136,7 @@ pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
             crate::charting_procs::plot(&echarts_args)
         }
         PlotBackend::XDLPlot => {
-            launch_plot_window(x_data, y_data)?;
+            launch_plot_window(x_data, y_data, &title, &x_title, &y_title)?;
             Ok(XdlValue::Undefined)
         }
     }
@@ -138,7 +144,7 @@ pub fn plot(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
 pub fn oplot(args: &[XdlValue]) -> XdlResult<XdlValue> {
     // For now, just call plot - in a full implementation this would overlay
-    plot(args)
+    plot(args, &std::collections::HashMap::new())
 }
 
 /// CONTOUR procedure - creates a contour plot
@@ -362,7 +368,13 @@ fn extract_2d_array(value: &XdlValue) -> XdlResult<Vec<Vec<f64>>> {
 }
 
 /// Launch plot window - uses GUI callback if available, otherwise saves to PNG
-fn launch_plot_window(x_data: Vec<f64>, y_data: Vec<f64>) -> XdlResult<()> {
+fn launch_plot_window(
+    x_data: Vec<f64>,
+    y_data: Vec<f64>,
+    title: &str,
+    x_title: &str,
+    y_title: &str,
+) -> XdlResult<()> {
     // Try to use GUI callback first
     if let Ok(callback_guard) = GUI_PLOT_CALLBACK.lock() {
         if let Some(ref callback) = *callback_guard {
@@ -374,7 +386,7 @@ fn launch_plot_window(x_data: Vec<f64>, y_data: Vec<f64>) -> XdlResult<()> {
 
     // Fallback to PNG file using basic plotter
     let filename = "xdl_plot.png";
-    save_plot_to_file(&x_data, &y_data, filename)?;
+    save_plot_to_file(&x_data, &y_data, filename, title, x_title, y_title)?;
     println!("Plot data saved to '{}' (GUI not available)", filename);
     println!(
         "Data points: {} values from {:.2} to {:.2}",
@@ -407,7 +419,14 @@ where
 }
 
 /// Save plot to PNG file using plotters
-fn save_plot_to_file(x_data: &[f64], y_data: &[f64], filename: &str) -> XdlResult<()> {
+fn save_plot_to_file(
+    x_data: &[f64],
+    y_data: &[f64],
+    filename: &str,
+    title: &str,
+    x_title: &str,
+    y_title: &str,
+) -> XdlResult<()> {
     let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
@@ -417,13 +436,17 @@ fn save_plot_to_file(x_data: &[f64], y_data: &[f64], filename: &str) -> XdlResul
     let y_max = y_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("XDL Plot", ("Arial", 30).into_font())
+        .caption(title, ("Arial", 30).into_font())
         .margin(20)
         .x_label_area_size(40)
         .y_label_area_size(40)
         .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
 
-    chart.configure_mesh().draw()?;
+    chart
+        .configure_mesh()
+        .x_desc(x_title)
+        .y_desc(y_title)
+        .draw()?;
 
     chart
         .draw_series(LineSeries::new(
@@ -436,6 +459,22 @@ fn save_plot_to_file(x_data: &[f64], y_data: &[f64], filename: &str) -> XdlResul
     chart.configure_series_labels().draw()?;
     root.present()?;
     Ok(())
+}
+
+fn keyword_text(
+    keywords: &std::collections::HashMap<String, XdlValue>,
+    name: &str,
+    default: &str,
+) -> String {
+    keywords
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case(name))
+        .and_then(|(_, value)| match value {
+            XdlValue::String(value) => Some(value.as_str()),
+            _ => None,
+        })
+        .unwrap_or(default)
+        .to_string()
 }
 
 /// DEVICE procedure - sets or queries graphics device

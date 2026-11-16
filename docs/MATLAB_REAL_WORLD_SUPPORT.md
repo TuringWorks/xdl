@@ -46,8 +46,10 @@ subset = arr(5:10);    % Get elements 5 through 10
 
 **How It Works:**
 
-- Array indexing with some range expressions `arr(start:end)` is supported;
-  multidimensional, `end`, and advanced indexing cases remain incomplete
+- Vector indexing with `arr(start:end)` and `arr(start:step:end)` is supported
+  for positive constant steps, with MATLAB's 1-based bounds translated to XDL's
+  zero-based, exclusive-end slices. Multidimensional, `end`, omitted-bound,
+  negative-step, and advanced indexing cases remain incomplete.
 - Automatically converts MATLAB's 1-based indexing to XDL's 0-based indexing
 - Handles both numeric indices and variable-based ranges
 

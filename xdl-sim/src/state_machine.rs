@@ -3,13 +3,16 @@
 
 //! Deterministic runtime for typed model state/event contracts.
 
-use xdl_model::{StateId, StateMachine, StateMachineError};
+use xdl_gnc_core::Timestamp;
+use xdl_model::{StateId, StateMachine, StateMachineError, TimedTransition};
 
 use crate::ExecutionError;
 
 pub struct StateMachineRuntime {
     machine: StateMachine,
     current: StateId,
+    current_time: Timestamp,
+    state_entered_at: Timestamp,
 }
 
 impl StateMachineRuntime {
@@ -18,7 +21,12 @@ impl StateMachineRuntime {
         let current = machine
             .initial_state
             .ok_or_else(|| state_machine_error(StateMachineError::MissingInitialState))?;
-        Ok(Self { machine, current })
+        Ok(Self {
+            machine,
+            current,
+            current_time: Timestamp::ZERO,
+            state_entered_at: Timestamp::ZERO,
+        })
     }
 
     pub fn current_state(&self) -> StateId {
@@ -37,7 +45,44 @@ impl StateMachineRuntime {
             .map_err(state_machine_error)?
         {
             self.current = next;
+            self.state_entered_at = self.current_time;
         }
+        Ok(self.current)
+    }
+
+    /// Advances simulation time and fires the first eligible timed transition
+    /// from the active state. Repeated calls at the same timestamp can fire
+    /// subsequent transitions in a timed chain, one at a time.
+    pub fn advance_to(&mut self, timestamp: Timestamp) -> Result<StateId, ExecutionError> {
+        if timestamp < self.current_time {
+            return Err(ExecutionError::Runtime(
+                "state-machine time cannot move backwards".to_string(),
+            ));
+        }
+        let mut transition: Option<(&TimedTransition, Timestamp)> = None;
+        for candidate in self
+            .machine
+            .timed_transitions
+            .iter()
+            .filter(|candidate| candidate.from == self.current)
+        {
+            let deadline = self
+                .state_entered_at
+                .checked_add(candidate.after)
+                .map_err(|error| ExecutionError::Runtime(error.to_string()))?;
+            if deadline <= timestamp
+                && transition
+                    .as_ref()
+                    .map_or(true, |(_, earliest)| deadline < *earliest)
+            {
+                transition = Some((candidate, deadline));
+            }
+        }
+        if let Some((transition, deadline)) = transition {
+            self.current = transition.to;
+            self.state_entered_at = deadline;
+        }
+        self.current_time = timestamp;
         Ok(self.current)
     }
 
@@ -46,6 +91,8 @@ impl StateMachineRuntime {
             .machine
             .initial_state
             .ok_or_else(|| state_machine_error(StateMachineError::MissingInitialState))?;
+        self.current_time = Timestamp::ZERO;
+        self.state_entered_at = Timestamp::ZERO;
         Ok(self.current)
     }
 }

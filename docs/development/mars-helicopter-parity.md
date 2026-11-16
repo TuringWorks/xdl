@@ -20,13 +20,13 @@ not mean the result is physically equivalent to Aerospace Blockset or Simscape.
 | Solar input and battery SOC | Reduced-order | XDL example final SOC and battery-string sweep | Electrothermal battery model, charging limits, cell imbalance |
 | Six-cell battery pack | Reduced-order | `SixCellBatteryPack` in `examples/mars_helicopter_system_level.model.json` | Electrical network and validated cell/string behavior |
 | Heater and thermal readiness | Reduced-order | `GNC_FLIGHT_READINESS_STEP`; hysteresis tests | Thermal conduction/radiation network and calibrated heater plant |
-| Flight-readiness state chart | Partial, executable | `GNC_FLIGHT_READINESS_STEP`; `COLD → READY → FLYING` trace | General state/event runtime, timed events, guards, graphical editor |
+| Flight-readiness state chart | Partial, executable | `GNC_FLIGHT_READINESS_STEP`; `COLD → READY → FLYING` trace; typed timed transitions in `StateMachineRuntime` | Scheduler-integrated execution, guards, graphical editor |
 | Flight controller | Partial, executable | `GNC_WAYPOINT`, `GNC_PID_STEP`, `GNC_ACTUATOR_STEP` | Multi-axis attitude/position controller, tuning and linearization |
 | Motor and gearboxes | Reduced-order | Motor speed, gear ratio, upper/lower rotor states in XDL example | Mechanical drivetrain, torque/load coupling, validated gearbox data |
 | Contra-rotating coaxial rotors | Reduced-order | `CoaxialRotorGearbox` model block and dual rotor state | Blade aerodynamics, induced flow, flap effects, rotor interference |
 | Ground contact / landing protection | Reduced-order | Explicit altitude floor in XDL example | Contact forces, bounce/friction, terrain geometry |
 | Telemetry and replay | Partial, executable | `GNC_TELEMETRY_JSON`, `xdl test --manifest`, `xdl replay`; simulation writes `mars_helicopter_results.csv` | Typed battery/thermal channels in telemetry, clean-machine/reference replay |
-| Altitude and temperature result plots | Partial, executable | Simulation CSV loaded by `examples/mars_helicopter_results.xdl`; separate altitude/temperature PNGs | Visual comparison against reference and manifest-linked plot artifact capture |
+| Altitude and temperature result plots | Partial, executable | Headless XDLPlot path runs the simulation, reads its numeric CSV, and writes separate PNGs with titles and axis labels | General CSV parsing, GUI/ECharts title and axis-label parity, visual comparison against reference, and manifest-linked plot artifact capture |
 | Battery-string flight-duration sweep | Reduced-order, executable | `examples/mars_helicopter_battery_sweep.xdl` | Couple sweep to full plant, parameter artifacts, ranking and plots |
 | Simulink/Simscape physical network | Not implemented | Explicitly excluded from current example | Physical ports, solver domains, units, initialization, conservation |
 
