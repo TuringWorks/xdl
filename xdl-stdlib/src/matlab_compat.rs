@@ -591,8 +591,8 @@ fn matlab_dimensions(value: &XdlValue) -> XdlResult<Vec<usize>> {
 #[cfg(test)]
 mod matlab_length_tests {
     use super::{
-        matlab_find, matlab_find_columns, matlab_find_rows, matlab_index, matlab_length,
-        matlab_numel, matlab_size, matlab_size_tail,
+        matlab_find, matlab_find_columns, matlab_find_indices, matlab_find_rows, matlab_index,
+        matlab_length, matlab_numel, matlab_size, matlab_size_tail,
     };
     use xdl_core::XdlValue;
 
