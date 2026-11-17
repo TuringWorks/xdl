@@ -427,7 +427,7 @@ model-based foundation:
 | Typed model graph/editor | `cargo test -p xdl-model` | 26 passed | Schema, typed connections, validation, layout, editor serialization, validated Mars system-model fixture, structural SVG rendering, and deterministic state/event contracts |
 | Deterministic simulation | `cargo test -p xdl-sim` | 25 passed | Scheduler, multi-rate ordering, delays, state-space and multiport-switch blocks, typed model-graph execution, deterministic state-machine runtime, continuous integration, and solver error paths foundation |
 | Artifact contracts | `cargo test -p xdl-artifacts` | 7 passed | Versioned manifests, bundled JSON schemas, compatibility statuses, artifact hashes, and fail-closed validation |
-| CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 29 passed (verified 2026-11-16) | Includes transpiled MATLAB function parameter indexing, vector `end`/omitted bounds, 2D scalar subscripts, `length`/`numel`/`size` and `find` results, INTERP1 dispatch and NaN boundary behavior, Mars simulation-to-CSV-to-headless-plot, GNC examples, manifests, and replay |
+| CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 29 passed (verified 2026-11-16; linear-index case is being reverified) | Includes transpiled MATLAB function parameter indexing, vector `end`/omitted bounds, 2D scalar and linear subscripts, `length`/`numel`/`size` and `find` results, INTERP1 dispatch and NaN boundary behavior, Mars simulation-to-CSV-to-headless-plot, GNC examples, manifests, and replay |
 
 These tests are useful exit-criteria evidence, but they do not establish
 production readiness. The next validation layer must add real XDL programs,
@@ -444,9 +444,10 @@ that passing tests above do not cover:
   vectors and rectangular 2D matrices, returning one-based indices and
   preserving row-vector orientation. Limit/direction options, multiple outputs,
   and broader array type/order conformance remain open.
-- For a matrix literal represented as nested rows, one-subscript `A(k)` does
-  not implement MATLAB's column-major linear indexing. The verified matrix test
-  covers only two scalar subscripts such as `A(2,3)`.
+- Scalar read `A(k)` now routes through `MATLAB_INDEX`, with a targeted end-to-end
+  regression being added for matrix column-major order and `end`. Indexed
+  assignment and vector-valued subscript results remain open; the existing
+  `A(i,j)` path is independently tested.
 
 These are explicit parity gaps, not covered capabilities. Their implementation
 needs dedicated MATLAB/Octave reference cases before any compatibility claim.

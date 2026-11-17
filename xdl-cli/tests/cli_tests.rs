@@ -382,7 +382,7 @@ fn test_cli_executes_matlab_two_dimensional_scalar_subscripts() {
     let source = output_root.join("matrix_subscripts.m");
     fs::write(
         &source,
-        "matrix = [1, 2, 3; 4, 5, 6];\nfirst = matrix(1, 2);\nlast = matrix(2, 3);\ndisp(first);\ndisp(last);\n",
+        "matrix = [1, 2, 3; 4, 5, 6];\nfirst = matrix(1, 2);\nlast = matrix(2, 3);\nlinear_first = matrix(1);\nlinear_second = matrix(2);\nlinear_fourth = matrix(4);\nlinear_last = matrix(end);\ndisp(first);\ndisp(last);\ndisp(linear_first);\ndisp(linear_second);\ndisp(linear_fourth);\ndisp(linear_last);\n",
     )
     .expect("write MATLAB matrix-index fixture");
 
@@ -400,6 +400,7 @@ fn test_cli_executes_matlab_two_dimensional_scalar_subscripts() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("2.000000000000000"), "{stdout}");
     assert!(stdout.contains("6.000000000000000"), "{stdout}");
+    assert!(stdout.contains("4.000000000000000"), "{stdout}");
     let _ = fs::remove_dir_all(output_root);
 }
 

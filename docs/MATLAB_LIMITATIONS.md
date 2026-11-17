@@ -32,11 +32,12 @@ These counts are test-suite results, not percentages of MATLAB compatibility.
 
 ## Known semantic gaps
 
-- **Matrix indexing:** MATLAB column-major linear indexing `A(k)` is not
-  implemented for matrix literals represented as nested rows. Multidimensional
-  slices, multidimensional `end`, logical/index-vector subscripts, and negative
-  step slices are also unsupported or unverified. The tested `A(i,j)` scalar
-  case does not cover those forms.
+- **Matrix indexing:** Scalar one-subscript reads `A(k)` are routed through
+  `MATLAB_INDEX` for tested numeric matrices and use MATLAB column-major order.
+  Indexed assignment, vector-valued subscripts, multidimensional slices,
+  multidimensional `end`, and negative-step slices remain unsupported or
+  unverified. Two-subscript scalar reads continue to use the separately tested
+  `A(i,j)` path.
 - **Array information:** General multiple-output forms such as `[m,n] = size(A)`
   are not implemented; nonnumeric/object-array size semantics are not verified.
 - **Search:** One-input `find(A)` supports tested numeric vectors and

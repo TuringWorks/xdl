@@ -376,6 +376,7 @@ Functions are registered in `xdl-stdlib/src/lib.rs`:
 "MATLAB_NUMEL" => matlab_compat::matlab_numel(args),
 "MATLAB_SIZE" => matlab_compat::matlab_size(args),
 "MATLAB_FIND" => matlab_compat::matlab_find(args),
+"MATLAB_INDEX" => matlab_compat::matlab_index(args),
 "LINSPACE" => matlab_compat::linspace(args),
 "LOGSPACE" => matlab_compat::logspace(args),
 "REPMAT" => matlab_compat::repmat(args),

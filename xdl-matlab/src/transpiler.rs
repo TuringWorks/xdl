@@ -1812,7 +1812,8 @@ impl Transpiler {
                                 && !has_colon
                                 && !matches!(self.current_token().kind, TokenKind::Assign)
                             {
-                                let index = translate_matlab_linear_index(&index, &preceding_name);
+                                let index =
+                                    translate_matlab_linear_index(&range_tokens, &preceding_name);
                                 expr.push_str("MATLAB_INDEX(");
                                 expr.push_str(&preceding_name);
                                 expr.push_str(", ");
@@ -2295,11 +2296,16 @@ fn translate_matlab_index(index: &str, array_name: &str) -> Option<String> {
 
 /// Translate one scalar MATLAB linear subscript to its one-based XDL helper
 /// argument. `end` is the total number of elements for linear indexing.
-fn translate_matlab_linear_index(index: &str, array_name: &str) -> String {
-    index.replace(
-        "end",
-        &format!("MATLAB_NUMEL({array_name})"),
-    )
+fn translate_matlab_linear_index(tokens: &[Token], array_name: &str) -> String {
+    tokens
+        .iter()
+        .map(|token| match &token.kind {
+            TokenKind::Identifier(name) if name.eq_ignore_ascii_case("end") => {
+                format!("MATLAB_NUMEL({array_name})")
+            }
+            _ => token.lexeme.clone(),
+        })
+        .collect()
 }
 
 fn offset_matlab_index(start: &str, array_name: &str) -> String {
@@ -2450,11 +2456,12 @@ mod tests {
     #[test]
     fn matlab_matrix_scalar_subscripts_translate_per_dimension() {
         let result = transpile_matlab_to_xdl(
-            "matrix = [1, 2, 3; 4, 5, 6]; first = matrix(1, 2); last = matrix(2, 3);",
+            "matrix = [1, 2, 3; 4, 5, 6]; first = matrix(1, 2); last = matrix(2, 3); linear = matrix(2);",
         )
         .unwrap();
         assert!(result.contains("first = matrix [0, 1]"), "{result}");
         assert!(result.contains("last = matrix [1, 2]"), "{result}");
+        assert!(result.contains("linear = MATLAB_INDEX(matrix, 2)"), "{result}");
     }
 
     #[test]

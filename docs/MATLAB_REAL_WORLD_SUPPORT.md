@@ -53,10 +53,10 @@ subset = arr(5:10);    % Get elements 5 through 10
   including function parameters. `arr(start:end)` and positive constant-step
   `arr(start:step:end)` map MATLAB's 1-based bounds to XDL's zero-based,
   exclusive-end slices. Vector `end`, `:`, and omitted range bounds are
-  supported. Two scalar subscripts on a simple 2D matrix expression are also
-  exercised end to end. This does not establish MATLAB's column-major linear
-  matrix indexing. Multidimensional slices, multidimensional `end`, negative
-  steps, and logical/index-vector subscripts remain incomplete.
+  supported. Two scalar subscripts on a simple 2D matrix and scalar linear
+  reads use MATLAB column-major order in the tested cases. Indexed assignment,
+  multidimensional slices, multidimensional `end`, negative steps, and
+  logical/index-vector subscripts remain incomplete.
 - Automatically converts MATLAB's 1-based indexing to XDL's 0-based indexing
 - Handles both numeric indices and variable-based ranges
 

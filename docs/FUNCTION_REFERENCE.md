@@ -132,6 +132,7 @@
 | `MATLAB_NUMEL(x)` | Double scalar with MATLAB-compatible scalar element count; used by transpiled `numel(x)` | `n = MATLAB_NUMEL(matrix)` |
 | `MATLAB_SIZE(x, [dim])` | MATLAB-compatible dimension vector or selected double dimension; used by transpiled `size(x, [dim])` | `dims = MATLAB_SIZE(matrix)` |
 | `MATLAB_FIND(x)` | MATLAB-compatible one-based linear indices; row vectors preserve orientation, other shapes return a column; used by transpiled `find(x)` | `idx = MATLAB_FIND(data)` |
+| `MATLAB_INDEX(x, index)` | Read one MATLAB one-based linear element using column-major traversal | `value = MATLAB_INDEX(matrix, 4)` |
 | `WHERE(condition)` | Find indices | `idx = WHERE(arr GT 0)` |
 | `REFORM(arr, dims)` | Reshape array | `b = REFORM(a, 5, 20)` |
 | `TRANSPOSE(arr)` | Transpose | `b = TRANSPOSE(a)` |

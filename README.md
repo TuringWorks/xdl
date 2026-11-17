@@ -106,7 +106,7 @@ scope and remaining physical-model gaps.
 - **Image processing**: CONVOL, DILATE, ERODE, SOBEL, GAUSSIAN_FILTER, etc.
 - **Signal processing**: A_CORRELATE, C_CORRELATE, DIGITAL_FILTER, HILBERT, etc.
 - **MATLAB/Octave transpilation**: Working transpiler for a tested subset of basic to moderate-complexity `.m` files; advanced syntax is not drop-in compatible
-- **MATLAB compatibility helpers (partial)**: MATLAB_LENGTH, MATLAB_NUMEL, MATLAB_SIZE, MATLAB_FIND, LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
+- **MATLAB compatibility helpers (partial)**: MATLAB_LENGTH, MATLAB_NUMEL, MATLAB_SIZE, MATLAB_FIND, MATLAB_INDEX, LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
 - **GPU acceleration**: XDL-AMP module with multi-backend support
 - **IDE support**: Language Server Protocol (LSP) and VS Code extension
 
@@ -122,7 +122,7 @@ complete or uniformly production-ready:
 ### Compatibility
 - **IDL/GDL compatibility**: Coverage is substantial but is not a formally measured or frozen percentage
 - **MATLAB/Octave compatibility**: A passing transpiler test suite covers the implemented subset; it does not imply language or toolbox parity
-- **MATLAB array semantics**: Single-output `size(A)` and `size(A, dim)` have a tested subset; `find(A)` supports one-based linear indices for tested numeric vectors and rectangular matrices. Multiple-output forms, `find` options, matrix `A(k)` indexing, and multidimensional slices remain unsupported.
+- **MATLAB array semantics**: Single-output `size(A)` and `size(A, dim)` have a tested subset; `find(A)` supports one-based linear indices for tested numeric vectors and rectangular matrices. Scalar linear reads `A(k)` are being covered for matrices; indexed assignment, vector-index results, multiple-output forms, `find` options, and multidimensional slices remain incomplete.
 - **Scientific I/O**: Some FITS, HDF5, and NetCDF paths are placeholders or feature-gated and require end-to-end round-trip tests
 - **Model-based simulation**: `xdl-model` and `xdl-sim` are foundations, not a Simulink/Xcos-equivalent product
 - **Canonical numerics**: Sparse, chunked, units-aware, frame-aware, and distributed data types are incomplete
