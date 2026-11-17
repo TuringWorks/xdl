@@ -17,6 +17,12 @@ pub mod editor;
 pub use editor::{EditorError, EditorEvent, EditorSession, HitTarget, ModelDocument};
 pub mod state;
 pub use state::{State, StateId, StateMachine, StateMachineError, TimedTransition, Transition};
+pub mod statechart_editor;
+pub use statechart_editor::{
+    StateChartDocument, StateChartEditor, StateChartEditorError, StateChartEditorEvent,
+    StateChartHitTarget, StateChartLayout, StateNodeLayout, TransitionKey, TransitionLabelLayout,
+    STATE_CHART_SCHEMA_VERSION,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BlockId(u32);

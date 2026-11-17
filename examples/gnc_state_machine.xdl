@@ -1,0 +1,21 @@
+; Explicit-state XDL binding for guarded and timed state transitions.
+;
+; States: 0=WAIT, 1=READY, 2=COMPLETE
+machine_json = '{"name":"startup","states":{"0":{"id":0,"name":"WAIT"},"1":{"id":1,"name":"READY"},"2":{"id":2,"name":"COMPLETE"}},"transitions":[{"from":0,"to":1,"event":"enable","guard":"thermal_ready"}],"timed_transitions":[{"from":1,"to":2,"after":5000000000}],"initial_state":0}'
+
+current_state_id = 0
+current_entered_ns = 0
+
+; The host has evaluated thermal_ready as true.
+result = GNC_STATE_MACHINE_STEP(machine_json, current_state_id, current_entered_ns, 1000000000, $
+                                'enable', 'thermal_ready')
+current_state_id = result.STATE
+current_entered_ns = result.STATE_ENTERED_NS
+PRINT, 'state=', result.STATE_NAME, ' entered_ns=', current_entered_ns
+
+; No external event: advance only the timed transition.
+result = GNC_STATE_MACHINE_STEP(machine_json, current_state_id, current_entered_ns, 6000000000, $
+                                '', '')
+current_state_id = result.STATE
+current_entered_ns = result.STATE_ENTERED_NS
+PRINT, 'state=', result.STATE_NAME, ' entered_ns=', current_entered_ns

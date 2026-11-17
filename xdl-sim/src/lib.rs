@@ -15,12 +15,12 @@ use xdl_model::{BlockId, Model, ModelError, PortId, SignalShape, Subsystem};
 
 pub mod blocks;
 pub use blocks::{
-    BusCreator, BusSelector, Constant, CrossProduct, Deadzone, Demux, Derivative, DotProduct, Gain,
-    Integrator, LookupTable1D, MatrixGain, MatrixMatrixProduct, MatrixScale, MatrixSum,
-    MatrixTranspose, MatrixVectorProduct, MultiportSwitch, Mux, Pid, PidBlockConfig, Product,
-    QuaternionConjugate, QuaternionInverse, QuaternionMultiply, QuaternionNormalize,
-    QuaternionRotate, RateLimiter, Saturation, StateSpace, StateSpaceConfig, Sum, Switch,
-    VectorNorm, VectorNormalize, VectorScale, VectorSum,
+    BusCreator, BusSelector, Constant, CrossProduct, Deadzone, Demux, Derivative,
+    DiscreteTransferFunction, DotProduct, Gain, Integrator, LookupTable1D, MatrixGain,
+    MatrixMatrixProduct, MatrixScale, MatrixSum, MatrixTranspose, MatrixVectorProduct,
+    MultiportSwitch, Mux, Pid, PidBlockConfig, Product, QuaternionConjugate, QuaternionInverse,
+    QuaternionMultiply, QuaternionNormalize, QuaternionRotate, RateLimiter, Saturation, StateSpace,
+    StateSpaceConfig, Sum, Switch, VectorNorm, VectorNormalize, VectorScale, VectorSum,
 };
 pub mod solver;
 pub mod state_machine;
@@ -28,7 +28,7 @@ pub use solver::{
     euler_step, rk4_adaptive_step, rk4_step, AdaptiveConfig, AdaptiveStep, DerivativeFn,
     SolverError,
 };
-pub use state_machine::StateMachineRuntime;
+pub use state_machine::{ScheduledStateMachineRuntime, StateMachineBlock, StateMachineRuntime};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TaskId(u32);
@@ -119,6 +119,8 @@ pub enum ExecutionError {
     Scheduler(#[from] SchedulerError),
     #[error("task {0:?} is not registered with a runtime block")]
     UnregisteredTask(TaskId),
+    #[error("scheduled event task mismatch: expected {expected:?}, got {actual:?}")]
+    WrongStateMachineTask { expected: TaskId, actual: TaskId },
     #[error("block {0:?} has no registered runtime task")]
     UnregisteredBlock(BlockId),
     #[error("required input port {0:?} has no signal")]
@@ -630,6 +632,53 @@ impl ExecutionEngine {
         Ok(())
     }
 
+    /// Configures and registers a state-machine block from its model document.
+    /// The caller adds the periodic scheduler task separately.
+    pub fn register_state_machine_task(
+        &mut self,
+        task: TaskId,
+        block: BlockId,
+    ) -> Result<(), ExecutionError> {
+        let runtime = StateMachineBlock::from_model(&self.model, block)?;
+        self.register_task(task, block, Box::new(runtime))
+    }
+
+    /// Creates the state-machine task schedule from model-document parameters,
+    /// then configures and registers its block runtime. `period_ns` is
+    /// required; `phase_ns` and `priority` default to zero.
+    pub fn register_state_machine_block(
+        &mut self,
+        block_id: BlockId,
+    ) -> Result<TaskId, ExecutionError> {
+        let block = self.model.block(block_id)?;
+        let runtime = StateMachineBlock::from_model(&self.model, block_id)?;
+        let period = scheduler_parameter_i64(&block.parameters, "period_ns", None)?;
+        let phase = scheduler_parameter_i64(&block.parameters, "phase_ns", Some(0))?;
+        let priority = block
+            .parameters
+            .get("priority")
+            .map(|value| {
+                value
+                    .as_u64()
+                    .and_then(|priority| u32::try_from(priority).ok())
+                    .ok_or_else(|| {
+                        ExecutionError::Runtime(
+                            "state-machine priority must be a non-negative u32 integer".to_string(),
+                        )
+                    })
+            })
+            .transpose()?
+            .unwrap_or(0);
+        let task = self.scheduler.add_periodic_task(
+            block.name.clone(),
+            DurationNs::from_nanoseconds(period),
+            DurationNs::from_nanoseconds(phase),
+            priority,
+        )?;
+        self.register_task(task, block_id, Box::new(runtime))?;
+        Ok(task)
+    }
+
     pub fn signal(&self, port: PortId) -> Option<&SignalValue> {
         self.signals.get(&port)
     }
@@ -811,6 +860,23 @@ impl ExecutionEngine {
             signal_updates,
             updates,
         })
+    }
+}
+
+fn scheduler_parameter_i64(
+    parameters: &BTreeMap<String, serde_json::Value>,
+    name: &str,
+    default: Option<i64>,
+) -> Result<i64, ExecutionError> {
+    match parameters.get(name) {
+        Some(value) => value.as_i64().ok_or_else(|| {
+            ExecutionError::Runtime(format!("state-machine {name} parameter must be an integer"))
+        }),
+        None => default.ok_or_else(|| {
+            ExecutionError::Runtime(format!(
+                "state-machine block is missing required parameter {name}"
+            ))
+        }),
     }
 }
 

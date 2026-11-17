@@ -54,9 +54,14 @@ subset = arr(5:10);    % Get elements 5 through 10
   `arr(start:step:end)` map MATLAB's 1-based bounds to XDL's zero-based,
   exclusive-end slices. Vector `end`, `:`, and omitted range bounds are
   supported. Two scalar subscripts on a simple 2D matrix and scalar linear
-  reads use MATLAB column-major order in the tested cases. Indexed assignment,
-  multidimensional slices, multidimensional `end`, negative steps, and
-  logical/index-vector subscripts remain incomplete.
+  reads use MATLAB column-major order in the tested cases. Rectangular 2D
+  row/column range reads, row-vector scalar/range writes, matrix row/column range
+  writes when the other subscript is scalar, and two-subscript scalar matrix
+  writes and two-axis matrix block writes have focused execution tests. Block
+  writes accept scalar expansion or a rectangular matrix matching the selected
+  shape. Nested-array range sources, single-subscript matrix writes,
+  higher-dimensional slices, multidimensional `end`, negative steps, and logical/index-vector
+  subscripts remain incomplete.
 - Automatically converts MATLAB's 1-based indexing to XDL's 0-based indexing
 - Handles both numeric indices and variable-based ranges
 
@@ -259,7 +264,7 @@ output comparison.
 1. **General Multiple-Output Assignment:**
 
    ```matlab
-   [X, Y] = some_function(x);  % General multiple-output assignment is unsupported
+   [X, Y] = some_function(x);  % General multiple-output assignment is unsupported (size(A) is a verified exception)
    ```
 
 2. **Anonymous Functions:**
@@ -288,15 +293,15 @@ output comparison.
    ```
 
 6. **Matrix Semantics and Linear Algebra:**
-   - MATLAB column-major linear matrix indexing and multidimensional slices
+   - Vector-valued index expressions, nested-array range sources, single-subscript matrix assignment, and higher-dimensional matrix slices (rectangular 2D reads, row/column writes, and shape-matched block writes have focused CLI coverage)
    - Matrix multiplication and full MATLAB shape semantics
    - `inv`/`det` names are mapped, but MATLAB numerical and shape conformance is not established; broader eigenvalue workflows are not verified
 
 ### Next Compatibility Work
 
-- Implement and verify MATLAB `size` separately from XDL's IDL-style `SIZE`
-  metadata function, including the single-dimension form.
-- Add MATLAB column-major linear indexing and multidimensional slices without
+- Extend MATLAB column-major indexing from tested scalar/range reads and
+  two-axis matrix block assignments to single-subscript matrix assignment,
+  vector-valued indices, and multidimensional slices without
   changing native XDL indexing semantics.
 - Add general multiple-output, cell-array, and anonymous-function support with
   explicit diagnostics where the runtime cannot represent MATLAB behavior.

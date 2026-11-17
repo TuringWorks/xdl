@@ -16,6 +16,7 @@ Converts MATLAB code to XDL-compatible syntax:
 - **Arrays**: 1-based → 0-based indexing
 - **Loops**: `for i = 1:10` → `for i = 0, 9`
 - **Element-wise ops**: `.*` → `*`, `./` → `/`, `.^` → `^`
+- **Nonconjugating transpose**: `A.'` → `TRANSPOSE(A)` for a directly named array
 
 ### Function Mapping (~80 functions)
 
@@ -90,6 +91,7 @@ PRINT , mean_x
 - **Simple indexing**: Multi-dimensional arrays need work
 - **No cell arrays**: `{}` syntax not yet supported
 - **No classes/objects**: OOP features not implemented
+- **Transpose scope**: only `A.'` for a named array is translated. Conjugating `A'` and postfix transpose on compound expressions are not supported; apostrophe string literals remain handled by the lexer.
 
 ### Index Adjustment
 

@@ -51,7 +51,7 @@ Rules:
 | `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 | `xdl-gnc-telemetry` | Ordered telemetry samples with finite-value validation and JSON-lines import/export |
 | `xdl-model` | Serializable block/port/signal graph with connection, bus, subsystem-boundary, and cycle validation |
-| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
+| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D/StateMachine blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
 
 ### Step events
 
@@ -76,16 +76,69 @@ Rules:
 | `xdl-gnc-actuators` | 3 | First-order scalar actuator only |
 | `xdl-gnc-integration` | 9 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, ordered telemetry output, and vertical-slice replay tests |
 | `xdl-gnc-telemetry` | 3 | Ordered telemetry samples with buffered and streaming JSON-lines export; product-specific sinks remain pending |
-| `xdl-model` | 26 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable layout, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, editor events, Mars system-model validation, structural SVG rendering, and state/event contracts |
-| `xdl-sim` | 25 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, typed model-graph execution, deterministic state-machine runtime, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
+| `xdl-model` | 32 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable model/state-chart layouts, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, editor events, Mars system-model validation, structural SVG rendering, and state/event contracts with named guards |
+| `xdl-sim` | 28 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, typed model-graph execution, deterministic and scheduler-registered state-machine runtimes with host-provided guards, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
 
 `xdl-model` also exposes a typed `StateMachine` contract with explicit states,
 initial-state validation, deterministic event transitions, positive-delay timed
-transitions, and duplicate-transition rejection. `StateMachineRuntime::advance_to`
+transitions, named guarded transitions, and duplicate-transition rejection. A
+host evaluates the named guards and passes the true set to
+`StateMachineRuntime::step_with_guards`; no interpreter callback is stored in
+the model. `StateMachineRuntime::advance_to`
 uses explicit simulation timestamps and advances at most one timed transition
 per call; a caller can invoke it again at the same timestamp to advance a due
-timed chain. Runtime integration with the periodic task scheduler, guards, and
-graphical state-machine editing remain open work.
+timed chain. `ScheduledStateMachineRuntime` registers a periodic task with
+`Scheduler`, validates each dispatched release's task identity, advances timers
+at the event timestamp, then dispatches an optional external event with its
+active guard set. Timed transitions run before external events at the same
+timestamp. `StateMachineBlock` adapts the same runtime to `BlockRuntime`: a
+numeric event input selects a configured event name, numeric guard inputs map
+to named guards, and a numeric output reports the active state ID. Model
+documents configure `state_machine`, `event_input`, `state_output`,
+`event_codes` (event-name to integer), and optional `guard_inputs` (guard-name
+to port-name) parameters, plus `period_ns` and optional `phase_ns` and
+`priority`. `ExecutionEngine::register_state_machine_block` resolves and
+validates the ports, creates the periodic scheduler task, and registers the
+runtime. A GUI state-machine canvas remains open work.
+
+`xdl-model::StateChartDocument` supplies the model-layer editing surface:
+automatic node placement, editable state and transition-label positions,
+hit-testing, JSON persistence, and SVG rendering for event and timed
+transitions. The FLTK GUI provides a canvas to create and delete states and
+event/timed transitions, choose the initial state, select and drag states or
+transition labels, edit selected transition endpoints/event/guard/delay, and
+open/save JSON documents. `Export Runtime` emits the
+`StateMachineBlock` parameter object accepted by `ExecutionEngine`, assigns
+stable event codes in sorted name order, and maps each named guard to a
+`guard_<name>` input port. The consuming model still supplies scalar ports
+named `event_code`, `state_id`, and each generated guard input, plus the
+connections and sample period. Guard-expression execution, undo/history, and
+one-click insertion into an existing model remain follow-on work.
+
+```json
+{
+  "parameters": {
+    "state_machine": {
+      "name": "flight_mode",
+      "states": {
+        "0": { "id": 0, "name": "WAIT" },
+        "1": { "id": 1, "name": "READY" }
+      },
+      "transitions": [
+        { "from": 0, "to": 1, "event": "enable", "guard": "thermal_ready" }
+      ],
+      "initial_state": 0
+    },
+    "event_input": "event",
+    "state_output": "state",
+    "event_codes": { "enable": 1 },
+    "guard_inputs": { "thermal_ready": "thermal_ready" },
+    "period_ns": 10000000,
+    "phase_ns": 0,
+    "priority": 10
+  }
+}
+```
 
 The XDL standard library currently exposes the explicit-state
 `GNC_FLIGHT_READINESS_STEP` binding used by the Mars example. It accepts the
@@ -140,6 +193,12 @@ The XDL binding `GNC_STATE_SPACE_STEP` extends the slice with a deterministic
 discrete state-space update. It accepts row-major flattened A/B/C/D matrices,
 explicit dimensions, and explicit state, returning the current output and next
 state for script-level closed loops.
+
+`GNC_STATE_MACHINE_STEP` exposes the typed state/event runtime to XDL using a
+serialized machine definition and explicit state/time inputs. The runnable
+[`examples/gnc_state_machine.xdl`](../../examples/gnc_state_machine.xdl)
+demonstrates a named guard followed by a timed transition, feeding each
+returned state and entry timestamp into the next step.
 
 Verified on 2026-11-13 with `cargo run -p xdl-cli -- -q
 examples/gnc_guidance_control.xdl`: the example exited successfully and

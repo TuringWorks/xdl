@@ -177,6 +177,32 @@ fn test_cli_runs_gnc_state_space_example() {
 }
 
 #[test]
+fn test_cli_runs_guarded_timed_gnc_state_machine_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_state_machine.xdl");
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&example)
+        .output()
+        .expect("run guarded timed state-machine example");
+
+    assert!(
+        output.status.success(),
+        "guarded state-machine example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("READY"), "{stdout}");
+    assert!(stdout.contains("1000000000"), "{stdout}");
+    assert!(stdout.contains("COMPLETE"), "{stdout}");
+    assert!(stdout.contains("6000000000"), "{stdout}");
+}
+
+#[test]
 fn test_cli_runs_mars_helicopter_system_level_example() {
     let binary = get_xdl_binary();
     let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -300,6 +326,39 @@ fn test_cli_executes_matlab_function_with_indexed_array_parameter() {
 }
 
 #[test]
+fn test_cli_executes_matlab_nonconjugating_transpose() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-nonconjugating-transpose");
+    fs::create_dir_all(&output_root).expect("create MATLAB transpose directory");
+    let source = output_root.join("transpose.m");
+    fs::write(
+        &source,
+        "matrix = [1, 2, 3; 4, 5, 6];\ntransposed = matrix.';\ndisp(transposed(3, 2));\n",
+    )
+    .expect("write MATLAB transpose fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB transpose through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB transpose failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout
+            .lines()
+            .any(|line| line.trim().parse::<f64>().is_ok_and(|value| value == 6.0)),
+        "{stdout}"
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
 fn test_cli_dispatches_interp1_with_nan_outside_sample_domain() {
     let binary = get_xdl_binary();
     let output_root = test_directory("interp1-domain");
@@ -375,6 +434,76 @@ fn test_cli_executes_matlab_end_and_omitted_vector_subscripts() {
 }
 
 #[test]
+fn test_cli_executes_matlab_scalar_and_range_indexed_assignment() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-indexed-assignment");
+    fs::create_dir_all(&output_root).expect("create MATLAB assignment directory");
+    let source = output_root.join("indexed_assignment.m");
+    let matlab = "values = [10, 20, 30, 40];\nvalues(2) = 99;\nvalues(3:4) = [77, 66];\nexpanded = [1, 2, 3, 4];\nexpanded(2:2:4) = 7;\nmatrix = [1, 2, 3; 4, 5, 6];\nmatrix(2, 3) = 60;\nmatrix(2, 2:3) = [55, 66];\nmatrix(1:2, 1) = [11, 22];\nmatrix(1:2, 3) = 5;\ndisp(values(2));\ndisp(values(3));\ndisp(values(4));\ndisp(expanded(2));\ndisp(expanded(4));\ndisp(matrix(2, 3));\ndisp(matrix(2, 2));\ndisp(matrix(1, 1));\ndisp(matrix(2, 1));\n";
+    fs::write(&source, matlab).expect("write MATLAB indexed-assignment fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB indexed assignment through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB indexed assignment failed; transpiled: {}; stdout: {}; stderr: {}",
+        xdl_matlab::transpile_matlab_to_xdl(matlab).expect("transpile assignment fixture"),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("99.000000000000000"), "{stdout}");
+    assert!(stdout.contains("77.000000000000000"), "{stdout}");
+    assert!(stdout.contains("66.000000000000000"), "{stdout}");
+    assert!(stdout.matches("7.000000000000000").count() >= 2, "{stdout}");
+    assert!(stdout.contains("66.000000000000000"), "{stdout}");
+    assert!(stdout.contains("55.000000000000000"), "{stdout}");
+    assert!(stdout.contains("11.000000000000000"), "{stdout}");
+    assert!(stdout.contains("22.000000000000000"), "{stdout}");
+    assert!(stdout.matches("5.000000000000000").count() >= 2, "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_two_axis_matrix_block_assignment() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-matrix-block-assignment");
+    fs::create_dir_all(&output_root).expect("create MATLAB matrix block directory");
+    let source = output_root.join("matrix_block_assignment.m");
+    let matlab = "matrix = [1, 2, 3; 4, 5, 6; 7, 8, 9];\nmatrix(1:2, 2:3) = [20, 30; 50, 60];\nmatrix(2:3, 1:2) = 8;\nmatrix(1, 1:2) = [11, 12];\ndisp(matrix(1, 1));\ndisp(matrix(1, 2));\ndisp(matrix(1, 3));\ndisp(matrix(2, 1));\ndisp(matrix(2, 2));\ndisp(matrix(2, 3));\ndisp(matrix(3, 1));\ndisp(matrix(3, 2));\ndisp(matrix(3, 3));\n";
+    fs::write(&source, matlab).expect("write MATLAB matrix block fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB matrix block assignment through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB matrix block assignment failed; transpiled: {}; stdout: {}; stderr: {}",
+        xdl_matlab::transpile_matlab_to_xdl(matlab).expect("transpile matrix block fixture"),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let values: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(
+        values,
+        [11.0, 12.0, 30.0, 8.0, 8.0, 60.0, 8.0, 8.0, 9.0],
+        "{stdout}"
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
 fn test_cli_executes_matlab_two_dimensional_scalar_subscripts() {
     let binary = get_xdl_binary();
     let output_root = test_directory("matlab-matrix-subscripts");
@@ -398,9 +527,42 @@ fn test_cli_executes_matlab_two_dimensional_scalar_subscripts() {
         String::from_utf8_lossy(&output.stderr)
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("2.000000000000000"), "{stdout}");
-    assert!(stdout.contains("6.000000000000000"), "{stdout}");
-    assert!(stdout.contains("4.000000000000000"), "{stdout}");
+    let scalar_results: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(scalar_results, [2.0, 6.0, 1.0, 4.0, 5.0, 6.0], "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_two_dimensional_range_reads() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-matrix-range-reads");
+    fs::create_dir_all(&output_root).expect("create MATLAB matrix range directory");
+    let source = output_root.join("matrix_ranges.m");
+    let matlab = "matrix = [1, 2, 3; 4, 5, 6];\nrow = matrix(1, 2:3);\ncolumn = matrix(1:2, 2);\nlast_column = matrix(:, 3);\nlast_row = matrix(2, :);\ndisp(row(2));\ndisp(column(2));\ndisp(last_column(2));\ndisp(last_row(3));\n";
+    fs::write(&source, matlab).expect("write MATLAB matrix range fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB matrix range reads through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB matrix range reads failed; transpiled: {}; stdout: {}; stderr: {}",
+        xdl_matlab::transpile_matlab_to_xdl(matlab).expect("transpile matrix range fixture"),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let values: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(values, [3.0, 5.0, 6.0, 6.0], "{stdout}");
     let _ = fs::remove_dir_all(output_root);
 }
 
@@ -444,7 +606,7 @@ fn test_cli_matlab_size_returns_dimensions_and_selected_dimension() {
     let source = output_root.join("size_dimensions.m");
     fs::write(
         &source,
-        "row = [1, 2, 3];\ncolumn = [1; 2; 3];\nmatrix = [1, 2, 3; 4, 5, 6];\ndisp(size(row));\ndisp(size(column));\ndisp(size(matrix));\ndisp(size(matrix, 1));\ndisp(size(matrix, 2));\ndisp(size(matrix, 4));\n",
+        "row = [1, 2, 3];\ncolumn = [1; 2; 3];\nmatrix = [1, 2, 3; 4, 5, 6];\ndisp(size(row));\ndisp(size(column));\ndisp(size(matrix));\ndisp(size(matrix, 1));\ndisp(size(matrix, 2));\ndisp(size(matrix, 4));\n[rows, columns] = size(matrix);\n[r, c, pages] = size(matrix);\ndisp(rows);\ndisp(columns);\ndisp(r);\ndisp(c);\ndisp(pages);\n",
     )
     .expect("write MATLAB size fixture");
 
@@ -467,7 +629,11 @@ fn test_cli_matlab_size_returns_dimensions_and_selected_dimension() {
         .lines()
         .filter_map(|line| line.trim().parse::<f64>().ok())
         .collect();
-    assert_eq!(scalar_results, [2.0, 3.0, 1.0], "{stdout}");
+    assert_eq!(
+        scalar_results,
+        [2.0, 3.0, 1.0, 2.0, 3.0, 2.0, 3.0, 1.0],
+        "{stdout}"
+    );
     let _ = fs::remove_dir_all(output_root);
 }
 
@@ -479,7 +645,7 @@ fn test_cli_matlab_find_uses_one_based_indices_and_preserves_orientation() {
     let source = output_root.join("find_indices.m");
     fs::write(
         &source,
-        "row = [0, 7, 0, 9];\ncolumn = [0; 7; 0; 9];\nmatrix = [0, 1; 2, 0];\ndisp(find(row));\ndisp(find(column));\ndisp(find(matrix));\ndisp(find([0, 0]));\n",
+        "row = [0, 7, 0, 9];\ncolumn = [0; 7; 0; 9];\nmatrix = [1, 1; 2, 0];\ndisp(find(row));\ndisp(find(column));\ndisp(find(matrix));\ndisp(find([0, 0]));\ndisp(find(7));\ndisp(find(0));\ndisp(find(row, 1));\ndisp(find(row, 1, 'last'));\ndisp(find(matrix, 2, 'first'));\ndisp(find(matrix, 2, 'last'));\n",
     )
     .expect("write MATLAB find fixture");
 
@@ -497,8 +663,48 @@ fn test_cli_matlab_find_uses_one_based_indices_and_preserves_orientation() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Array[1x2]: [2.000, 4.000]"), "{stdout}");
     assert!(stdout.contains("Array[2x1]: [2.000, 4.000]"), "{stdout}");
-    assert!(stdout.contains("Array[2x1]: [2.000, 3.000]"), "{stdout}");
+    assert!(
+        stdout.contains("Array[3x1]: [1.000, 2.000, 3.000]"),
+        "{stdout}"
+    );
     assert!(stdout.contains("Array[1x0]: []"), "{stdout}");
+    assert!(stdout.contains("Array[1x1]: [1.000]"), "{stdout}");
+    assert!(stdout.contains("Array[0x0]: []"), "{stdout}");
+    assert!(stdout.contains("Array[1x1]: [2.000]"), "{stdout}");
+    assert!(stdout.contains("Array[1x1]: [4.000]"), "{stdout}");
+    assert!(stdout.contains("Array[2x1]: [1.000, 2.000]"), "{stdout}");
+    assert!(stdout.contains("Array[2x1]: [2.000, 3.000]"), "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_atan2_is_elementwise_and_scalar_expanding() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-atan2-elementwise");
+    fs::create_dir_all(&output_root).expect("create MATLAB atan2 directory");
+    let source = output_root.join("atan2_elementwise.m");
+    fs::write(
+        &source,
+        "y = [0, 1, -1];\nx = [1, 0, 0];\ndisp(atan2(y, x));\ndisp(atan2(y, 0));\nys = [0, 1; -1, 0];\nxs = [1, 0; 0, -1];\ndisp(atan2(ys, xs));\ndisp(atan2([0.0, -0.0], [-0.0, -0.0]));\n",
+    )
+    .expect("write MATLAB atan2 fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB atan2 fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB atan2 fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("1.570796"), "{stdout}");
+    assert!(stdout.contains("-1.570796"), "{stdout}");
+    assert!(stdout.contains("3.141593"), "{stdout}");
+    assert!(stdout.contains("[0.000000, 0.000000]"), "{stdout}");
     let _ = fs::remove_dir_all(output_root);
 }
 

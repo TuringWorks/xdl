@@ -19,7 +19,7 @@ foundation, not drop-in MATLAB or toolbox compatibility.
 
 #### 2. **Function Mapping Table** (`xdl-matlab/src/function_map.rs`)
 
-**63 MATLAB function names currently map to XDL names:**
+**64 MATLAB function names currently map to XDL names:**
 
 **Array Creation:**
 
@@ -31,8 +31,9 @@ foundation, not drop-in MATLAB or toolbox compatibility.
 
 - `sin, cos, tan, exp, log, sqrt, abs, floor, ceil, round`
 - Names are mapped to XDL functions; semantics are not uniformly identical.
-  For example, general multiple-output `size` and advanced `find` forms remain
-  unsupported, while `length` and `numel` use dedicated compatibility functions. See the compatibility
+  For example, `size` multiple outputs are implemented for known array
+  variables, while expression/object shapes and three-or-more-output `find`
+  remain unsupported. `length` and `numel` use dedicated compatibility functions. See the compatibility
   matrix and open gaps below.
 
 **Statistics:**
@@ -148,10 +149,14 @@ execution, call `xdl_matlab::transpile_matlab_to_xdl` from Rust as shown above.
 ### ✅ What Works
 
 - **Syntax transpilation** for common constructs
-- **Function-name mappings** for 63 MATLAB names; a mapping does not assert behavioral parity
-- **Index adjustment** for known source variables and function parameters (1-based → 0-based; scalar indices, 2D matrix scalar subscripts, and vector slices with positive constant step; vector `end`, `:`, and omitted bounds)
-- **Array dimensions** for single-output `size(A)` and `size(A, dim)` on supported scalar and numeric array shapes
-- **Array search** for one-input `find(A)` on numeric vectors and rectangular 2D matrices, returning one-based indices and preserving row-vector orientation
+- **Postfix transpose** for nonconjugating `A.'` on a directly named array; conjugating `A'` and compound-expression transpose remain unsupported
+- **Function-name mappings** for 64 MATLAB names; a mapping does not assert behavioral parity
+- **Index adjustment** for known source variables and function parameters, including one-based MATLAB linear scalar reads, 2D scalar subscripts, vector slices with positive constant step, vector `end`, `:`, and omitted bounds
+- **2D matrix slice reads** for rectangular numeric matrices: `A(i,j:k)`, `A(i:j,k)`, `A(:,k)`, and `A(i,:)`, preserving row (`1×N`) versus column (`N×1`) result shape
+- **Linear element reads** for one scalar subscript on tested numeric row/column vectors, rectangular matrices, and shaped numeric arrays through `MATLAB_INDEX`
+- **Array dimensions** for single-output and multiple-output `size(A)` on supported scalar and numeric array variables, plus `size(A, dim)`
+- **Array search** for one-output `find(A[,k[,direction]])` on tested numeric vectors and matrices, plus two- and three-output forms with optional `k`/direction on rectangular 2D matrices with at least two rows and columns, returning one-based indices in MATLAB column-major order
+- **CSV import** for headerless rectangular numeric files through transpiled `readmatrix(filename)`; import options, headers, and mixed-type inference remain unsupported
 - **Loop conversion** (for, while)
 - **Conditional statements** (if/else)
 - **Comments** preserved
@@ -160,11 +165,12 @@ execution, call `xdl_matlab::transpile_matlab_to_xdl` from Rust as shown above.
 
 ### 🚧 Limitations (Future Work)
 
-- **Multidimensional slicing**: MATLAB matrix row/column selections and `:` across dimensions remain unsupported; only scalar subscripts for simple 2D matrix expressions have executable coverage
+- **Multidimensional slicing**: only the listed 2D read forms are supported for rectangular numeric matrices. Two-axis block writes support scalar expansion or a rectangular matrix with the selected shape. Ragged or nonnumeric nested rows are rejected explicitly; higher-dimensional slices remain unsupported.
 - **Cell arrays**: `{}` syntax needs implementation
-- **Advanced indexing**: MATLAB column-major linear indexing of matrices, multidimensional `end`, logical/index-vector subscripts, and negative-step slices
-- **Advanced `find` forms**: limit/direction options and multiple-output row/column subscripts
-- **Multiple function outputs**: functions declaring more than one output are rejected with an explicit diagnostic
+- **Advanced indexing**: vector-valued index expressions, nested-array range sources, single-subscript matrix assignment, multidimensional `end`, logical subscripts, and negative-step slices. Row/column range writes are tested when the other subscript is scalar; two-axis block writes accept scalar expansion or a rectangular matrix matching the selected block shape.
+- **Advanced `find` forms**: three or more output subscripts and nonnumeric inputs
+- **Data import**: `readmatrix` currently accepts one filename and strict headerless numeric CSV only; header rows, `detectImportOptions`, mixed types, dates, and other file formats are not supported
+- **Multiple function outputs**: functions declaring more than one output are rejected with an explicit diagnostic; `[d1,...,dn]=size(A)` is a supported assignment special case
 - **MEX files**: Binary extension support
 - **Classes/OOP**: MATLAB classes not supported
 - **Anonymous functions**: `@(x) x^2` syntax
@@ -182,7 +188,7 @@ cargo test -p xdl-matlab
 
 **Test Results:**
 
-- ✅ **40/40 crate tests passing** (pass rate for this suite, not a language-coverage percentage; verified 2026-11-16)
+- ✅ **50/50 crate tests passing** (pass rate for this suite, not a language-coverage percentage; verified 2026-11-16)
 - **Coverage**: Lexer, transpiler, function mapping, control flow, arrays, math
 
 ### Integration Tests ✅
@@ -201,11 +207,13 @@ xdl examples/matlab/02_trigonometry.m
 **Verified Working:**
 
 - ✅ Basic arithmetic and variables
-- ✅ Array literals and tested indexing subset: vector scalar/range indexing, vector `end`/omitted bounds, and 2D scalar subscripts; broader MATLAB matrix indexing remains incomplete
+- ✅ Array literals and tested indexing subset: vector scalar/range reads, vector and matrix scalar linear reads, vector `end`/omitted bounds, 2D scalar subscripts, rectangular numeric 2D reads `A(i,j:k)`, `A(i:j,k)`, `A(:,k)`, and `A(i,:)` with row/column shape preserved, row-vector scalar/range writes, matrix row/column range writes with a scalar or matching-length numeric vector, two-subscript scalar matrix writes, and two-axis block writes with scalar expansion or a shape-matched rectangular matrix; vector-valued index expressions, nested-array range sources, single-subscript matrix writes, ragged matrix slice reads, and higher-dimensional slicing remain incomplete
 - ✅ Function calls (sin, cos, sqrt, etc.)
 - ✅ Simple control flow (for, while, if)
 - ✅ Direct .m file execution via XDL CLI
-- ✅ CLI integration suite: 28 tests passed, including `length`/`numel`, `size(A)`, and `size(A, dim)` cases (verified 2026-11-16)
+- ✅ CLI integration suite: 35 tests passed, including `length`/`numel`, single- and multiple-output `size`, `size(A, dim)`, one- and two-output `find`, scalar matrix linear reads, rectangular 2D matrix range reads, scalar and block matrix writes, nonconjugating transpose, and elementwise `atan2` (verified 2026-11-16)
+- ✅ Separate two-output `find` integration test verifies column-major row/column subscripts, bounded first/last selection, and empty results (verified 2026-11-16)
+- ✅ Separate CSV integration test: `readmatrix` imports a headerless numeric CSV, reads values and dimensions, selects columns, and produces a non-empty `xdl_plot.png` (verified 2026-11-16)
 
 ## Files Created
 
@@ -272,7 +280,7 @@ We've successfully built a foundational **MATLAB compatibility layer** for XDL t
 
 ✅ Lexes MATLAB syntax
 ✅ Transpiles to XDL code
-✅ Maps 63 MATLAB function names to XDL names; this does not imply semantic equivalence
+✅ Maps 64 MATLAB function names to XDL names; this does not imply semantic equivalence
 ✅ Handles basic control flow
 ✅ Adjusts array indexing
 ✅ Preserves comments

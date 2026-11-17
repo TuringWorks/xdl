@@ -3,7 +3,7 @@
 
 //! XDL-facing adapters for the typed GNC libraries.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use xdl_core::{XdlError, XdlResult, XdlValue};
 use xdl_gnc_actuators::{FirstOrderActuator, FirstOrderActuatorConfig};
 use xdl_gnc_control::{PidConfig, PidController};
@@ -12,6 +12,8 @@ use xdl_gnc_guidance::{WaypointGuidance, WaypointGuidanceConfig};
 use xdl_gnc_navigation::{AlphaBetaConfig, AlphaBetaFilter};
 use xdl_gnc_simulation::{GnssMeasurement, KinematicState};
 use xdl_gnc_telemetry::{TelemetryLog, TelemetrySample};
+use xdl_model::{StateId, StateMachine};
+use xdl_sim::StateMachineRuntime;
 
 fn scalar(value: &XdlValue, name: &str) -> XdlResult<f64> {
     let result = match value {
@@ -182,6 +184,140 @@ pub fn flight_readiness_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
         XdlValue::Long(i32::from(next_state == 2)),
     );
     Ok(XdlValue::Struct(output))
+}
+
+/// `GNC_STATE_MACHINE_STEP(machine_json, state, entered_ns, timestamp_ns,
+/// event, active_guards)` advances a serialized state machine using explicit
+/// state and simulation time. Pass an empty string for `event` when processing
+/// only timed transitions. `active_guards` is a string or an array of guard
+/// names that the host evaluated as true; an empty string means no active guards.
+pub fn state_machine_step(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 6 {
+        return Err(XdlError::InvalidArgument(format!(
+            "GNC_STATE_MACHINE_STEP: expected 6 arguments, got {}",
+            args.len()
+        )));
+    }
+    let machine_json = match &args[0] {
+        XdlValue::String(value) if value.len() <= 1_048_576 => value,
+        XdlValue::String(_) => {
+            return Err(XdlError::InvalidArgument(
+                "GNC_STATE_MACHINE_STEP: machine JSON exceeds 1 MiB".to_string(),
+            ));
+        }
+        value => {
+            return Err(XdlError::TypeMismatch {
+                expected: "machine JSON string".to_string(),
+                actual: format!("{:?}", value.gdl_type()),
+            });
+        }
+    };
+    let machine: StateMachine = serde_json::from_str(machine_json).map_err(|error| {
+        XdlError::InvalidArgument(format!(
+            "GNC_STATE_MACHINE_STEP: invalid machine JSON: {error}"
+        ))
+    })?;
+    let state_number = scalar(&args[1], "GNC_STATE_MACHINE_STEP state")?;
+    if state_number.fract() != 0.0 || !(0.0..=u32::MAX as f64).contains(&state_number) {
+        return Err(XdlError::InvalidArgument(
+            "GNC_STATE_MACHINE_STEP state: expected a non-negative integer state ID".to_string(),
+        ));
+    }
+    let entered_ns = machine_timestamp(&args[2], "state entry time")?;
+    let timestamp_ns = machine_timestamp(&args[3], "timestamp")?;
+    let event = match &args[4] {
+        XdlValue::String(value) if value.is_empty() => None,
+        XdlValue::String(value) => Some(value.as_str()),
+        value => {
+            return Err(XdlError::TypeMismatch {
+                expected: "event string".to_string(),
+                actual: format!("{:?}", value.gdl_type()),
+            });
+        }
+    };
+    let active_guards = match &args[5] {
+        XdlValue::String(value) if value.trim().is_empty() => BTreeSet::new(),
+        XdlValue::String(value) => BTreeSet::from([value.clone()]),
+        XdlValue::Undefined => BTreeSet::new(),
+        XdlValue::NestedArray(values) => values
+            .iter()
+            .map(|value| match value {
+                XdlValue::String(name) if !name.trim().is_empty() => Ok(name.clone()),
+                _ => Err(XdlError::InvalidArgument(
+                    "GNC_STATE_MACHINE_STEP active_guards: expected non-empty strings".to_string(),
+                )),
+            })
+            .collect::<XdlResult<BTreeSet<_>>>()?,
+        value => {
+            return Err(XdlError::TypeMismatch {
+                expected: "string, string array, or UNDEFINED".to_string(),
+                actual: format!("{:?}", value.gdl_type()),
+            });
+        }
+    };
+    let mut runtime = StateMachineRuntime::from_explicit_state(
+        machine,
+        StateId::new(state_number as u32),
+        entered_ns,
+        entered_ns,
+    )
+    .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    runtime
+        .advance_to(timestamp_ns)
+        .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    if let Some(event) = event {
+        runtime
+            .step_with_guards(event, &active_guards)
+            .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+    }
+    let mut output = HashMap::new();
+    output.insert(
+        "STATE".to_string(),
+        XdlValue::ULong64(u64::from(runtime.current_state().value())),
+    );
+    output.insert(
+        "STATE_NAME".to_string(),
+        XdlValue::String(runtime.state_name().to_string()),
+    );
+    output.insert(
+        "STATE_ENTERED_NS".to_string(),
+        XdlValue::Long64(runtime.state_entered_at().as_nanoseconds()),
+    );
+    Ok(XdlValue::Struct(output))
+}
+
+fn machine_timestamp(value: &XdlValue, name: &str) -> XdlResult<xdl_gnc_core::Timestamp> {
+    let context = format!("GNC_STATE_MACHINE_STEP {name}");
+    let nanoseconds = match value {
+        XdlValue::Byte(value) => i64::from(*value),
+        XdlValue::Int(value) => i64::from(*value),
+        XdlValue::Long(value) => i64::from(*value),
+        XdlValue::Long64(value) => *value,
+        XdlValue::UInt(value) => i64::from(*value),
+        XdlValue::ULong(value) => i64::from(*value),
+        XdlValue::ULong64(value) => i64::try_from(*value).map_err(|_| {
+            XdlError::InvalidArgument(format!("{context}: timestamp is outside i64 range"))
+        })?,
+        XdlValue::Float(_) | XdlValue::Double(_) => {
+            let value = scalar(value, &context)?;
+            if value.fract() != 0.0
+                || value < i64::MIN as f64
+                || value >= 9_223_372_036_854_775_808.0
+            {
+                return Err(XdlError::InvalidArgument(format!(
+                    "{context}: expected integer nanoseconds in i64 range"
+                )));
+            }
+            value as i64
+        }
+        _ => {
+            return Err(XdlError::TypeMismatch {
+                expected: "integer nanoseconds".to_string(),
+                actual: format!("{:?}", value.gdl_type()),
+            });
+        }
+    };
+    Ok(xdl_gnc_core::Timestamp::from_nanoseconds(nanoseconds))
 }
 
 /// `GNC_VEC3(x, y, z)` returns a three-element numeric XDL array.
@@ -610,6 +746,99 @@ pub fn telemetry_json(args: &[XdlValue]) -> XdlResult<XdlValue> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn guarded_machine_json() -> String {
+        let mut machine = StateMachine::new("startup");
+        let wait = machine.add_state("WAIT").expect("wait");
+        let ready = machine.add_state("READY").expect("ready");
+        let complete = machine.add_state("COMPLETE").expect("complete");
+        machine.set_initial_state(wait).expect("initial state");
+        machine
+            .add_guarded_transition(wait, ready, "enable", "thermal_ready")
+            .expect("guarded transition");
+        machine
+            .add_timed_transition(
+                ready,
+                complete,
+                xdl_gnc_core::DurationNs::from_nanoseconds(5_000_000_000),
+            )
+            .expect("timed transition");
+        serde_json::to_string(&machine).expect("serialize state machine")
+    }
+
+    #[test]
+    fn state_machine_binding_processes_guards_and_timed_transitions() {
+        let machine_json = guarded_machine_json();
+        let ready = state_machine_step(&[
+            XdlValue::String(machine_json.clone()),
+            XdlValue::Long(0),
+            XdlValue::Long64(0),
+            XdlValue::Long64(1_000_000_000),
+            XdlValue::String("enable".to_string()),
+            XdlValue::String("thermal_ready".to_string()),
+        ])
+        .expect("guarded event");
+        let XdlValue::Struct(ready_fields) = ready else {
+            panic!("expected state-machine structure");
+        };
+        assert_eq!(ready_fields.get("STATE"), Some(&XdlValue::ULong64(1)));
+        assert_eq!(
+            ready_fields.get("STATE_NAME"),
+            Some(&XdlValue::String("READY".to_string()))
+        );
+        assert_eq!(
+            ready_fields.get("STATE_ENTERED_NS"),
+            Some(&XdlValue::Long64(1_000_000_000))
+        );
+
+        let complete = state_machine_step(&[
+            XdlValue::String(machine_json),
+            ready_fields.get("STATE").expect("state field").clone(),
+            ready_fields
+                .get("STATE_ENTERED_NS")
+                .expect("entry field")
+                .clone(),
+            XdlValue::Long64(6_000_000_000),
+            XdlValue::String(String::new()),
+            XdlValue::Undefined,
+        ])
+        .expect("timed transition");
+        let XdlValue::Struct(complete_fields) = complete else {
+            panic!("expected state-machine structure");
+        };
+        assert_eq!(complete_fields.get("STATE"), Some(&XdlValue::ULong64(2)));
+        assert_eq!(
+            complete_fields.get("STATE_NAME"),
+            Some(&XdlValue::String("COMPLETE".to_string()))
+        );
+        assert_eq!(
+            complete_fields.get("STATE_ENTERED_NS"),
+            Some(&XdlValue::Long64(6_000_000_000))
+        );
+    }
+
+    #[test]
+    fn state_machine_binding_rejects_bad_json_and_backwards_time() {
+        let bad_json = state_machine_step(&[
+            XdlValue::String("{".to_string()),
+            XdlValue::Long(0),
+            XdlValue::Long64(0),
+            XdlValue::Long64(0),
+            XdlValue::String(String::new()),
+            XdlValue::Undefined,
+        ]);
+        assert!(bad_json.is_err());
+
+        let backwards = state_machine_step(&[
+            XdlValue::String(guarded_machine_json()),
+            XdlValue::Long(0),
+            XdlValue::Long64(10),
+            XdlValue::Long64(9),
+            XdlValue::String(String::new()),
+            XdlValue::Undefined,
+        ]);
+        assert!(backwards.is_err());
+    }
 
     #[test]
     fn flight_readiness_binding_advances_explicit_states() {

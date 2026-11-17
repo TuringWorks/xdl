@@ -20,7 +20,7 @@ not mean the result is physically equivalent to Aerospace Blockset or Simscape.
 | Solar input and battery SOC | Reduced-order | XDL example final SOC and battery-string sweep | Electrothermal battery model, charging limits, cell imbalance |
 | Six-cell battery pack | Reduced-order | `SixCellBatteryPack` in `examples/mars_helicopter_system_level.model.json` | Electrical network and validated cell/string behavior |
 | Heater and thermal readiness | Reduced-order | `GNC_FLIGHT_READINESS_STEP`; hysteresis tests | Thermal conduction/radiation network and calibrated heater plant |
-| Flight-readiness state chart | Partial, executable | `GNC_FLIGHT_READINESS_STEP`; `COLD → READY → FLYING` trace; typed timed transitions in `StateMachineRuntime` | Scheduler-integrated execution, guards, graphical editor |
+| Flight-readiness state chart | Partial, executable | `GNC_FLIGHT_READINESS_STEP`; `COLD → READY → FLYING` trace; model-configured `StateMachineBlock`; FLTK canvas supports state/event/timed-transition creation and deletion, initial-state selection, transition property editing, geometry editing, chart JSON persistence, and runtime-parameter export | Guard-expression execution, undo/history, and one-click insertion into an executable model |
 | Flight controller | Partial, executable | `GNC_WAYPOINT`, `GNC_PID_STEP`, `GNC_ACTUATOR_STEP` | Multi-axis attitude/position controller, tuning and linearization |
 | Motor and gearboxes | Reduced-order | Motor speed, gear ratio, upper/lower rotor states in XDL example | Mechanical drivetrain, torque/load coupling, validated gearbox data |
 | Contra-rotating coaxial rotors | Reduced-order | `CoaxialRotorGearbox` model block and dual rotor state | Blade aerodynamics, induced flow, flap effects, rotor interference |

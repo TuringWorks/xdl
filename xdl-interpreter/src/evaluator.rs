@@ -1150,6 +1150,20 @@ impl Evaluator {
             return self.evaluate_multidim_index(data, shape, indices, context);
         }
 
+        // MATLAB matrix literals are represented as nested row arrays. Route
+        // only 2D slice reads through the column-major extractor, after
+        // proving that the rows form a rectangular numeric matrix.
+        if let XdlValue::NestedArray(rows) = array_val {
+            if indices.len() == 2
+                && indices
+                    .iter()
+                    .any(|index| !matches!(index, ArrayIndex::Single(_)))
+            {
+                let (data, shape) = Self::rectangular_numeric_matrix(rows)?;
+                return self.evaluate_multidim_index(&data, &shape, indices, context);
+            }
+        }
+
         // Handle other array types by applying indices one at a time
         let mut current_val = array_val.clone();
 
@@ -1158,6 +1172,29 @@ impl Evaluator {
         }
 
         Ok(current_val)
+    }
+
+    fn rectangular_numeric_matrix(rows: &[XdlValue]) -> XdlResult<(Vec<f64>, Vec<usize>)> {
+        let row_values = rows
+            .iter()
+            .map(|row| match row {
+                XdlValue::Array(values) => Ok(values),
+                _ => Err(XdlError::InvalidArgument(
+                    "MATLAB matrix slice requires numeric rectangular rows".to_string(),
+                )),
+            })
+            .collect::<XdlResult<Vec<_>>>()?;
+        let columns = row_values.first().map_or(0, |row| row.len());
+        if row_values.iter().any(|row| row.len() != columns) {
+            return Err(XdlError::InvalidArgument(
+                "MATLAB matrix slice does not support ragged rows".to_string(),
+            ));
+        }
+
+        let data = (0..columns)
+            .flat_map(|column| row_values.iter().map(move |row| row[column]))
+            .collect();
+        Ok((data, vec![rows.len(), columns]))
     }
 
     /// Evaluate multi-dimensional array indexing
@@ -1341,6 +1378,11 @@ impl Evaluator {
                     }
                     ranges.push((actual_idx, actual_idx + 1, 1));
                     // Single index collapses dimension - don't add to result_shape
+                    if shape.len() == 2 && indices.len() == 2 {
+                        // MATLAB preserves row/column orientation for 2D
+                        // slices (1×N versus N×1).
+                        result_shape.push(1);
+                    }
                 }
                 ArrayIndex::Range { start, end, step } => {
                     let s = if let Some(e) = start {
@@ -1934,6 +1976,64 @@ impl Default for Evaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn evaluate_matrix_slice(source: &str, matrix: XdlValue) -> XdlResult<XdlValue> {
+        let evaluator = Evaluator::new();
+        let mut context = Context::new();
+        context.set_variable("a".to_string(), matrix);
+        let expression = xdl_parser::parse_expression(source)
+            .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+        evaluator.evaluate(&expression, &mut context)
+    }
+
+    fn nested_matrix() -> XdlValue {
+        XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0, 3.0]),
+            XdlValue::Array(vec![4.0, 5.0, 6.0]),
+        ])
+    }
+
+    #[test]
+    fn two_dimensional_slices_preserve_row_and_column_shape() {
+        assert_eq!(
+            evaluate_matrix_slice("a[0, 1:2]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0, 3.0],
+                shape: vec![1, 2],
+            }
+        );
+        assert_eq!(
+            evaluate_matrix_slice("a[0:1, 1]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0, 5.0],
+                shape: vec![2, 1],
+            }
+        );
+        assert_eq!(
+            evaluate_matrix_slice("a[:, 2]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![3.0, 6.0],
+                shape: vec![2, 1],
+            }
+        );
+        assert_eq!(
+            evaluate_matrix_slice("a[1, :]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![4.0, 5.0, 6.0],
+                shape: vec![1, 3],
+            }
+        );
+    }
+
+    #[test]
+    fn two_dimensional_slices_reject_ragged_rows() {
+        let ragged = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0]),
+            XdlValue::Array(vec![3.0]),
+        ]);
+        let error = evaluate_matrix_slice("a[:, 0]", ragged).unwrap_err();
+        assert!(error.to_string().contains("ragged rows"), "{error}");
+    }
 
     #[test]
     fn test_literal_evaluation() {

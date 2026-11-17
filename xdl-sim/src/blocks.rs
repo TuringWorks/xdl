@@ -100,6 +100,159 @@ impl BlockRuntime for Gain {
     }
 }
 
+/// Scalar discrete transfer function with newest-first delay histories.
+///
+/// `numerator[k]` multiplies `u[n-k]`; `denominator[k]` multiplies
+/// `y[n-k]`, with `denominator[0]` as `a[0]`. Initial histories contain
+/// `numerator.len() - 1` input samples and `denominator.len() - 1` output
+/// samples, newest first. Each coefficient vector is limited to 1025 entries
+/// to bound per-step work.
+pub struct DiscreteTransferFunction {
+    pub input: PortId,
+    pub output: PortId,
+    numerator: Vec<f64>,
+    denominator: Vec<f64>,
+    input_history: Vec<f64>,
+    output_history: Vec<f64>,
+}
+
+impl DiscreteTransferFunction {
+    pub const MAX_COEFFICIENTS: usize = 1025;
+
+    /// Creates a block from coefficients and explicit newest-first delay state.
+    pub fn new(
+        input: PortId,
+        output: PortId,
+        numerator: Vec<f64>,
+        denominator: Vec<f64>,
+        initial_input_history: Vec<f64>,
+        initial_output_history: Vec<f64>,
+    ) -> Result<Self, ExecutionError> {
+        if numerator.is_empty() || denominator.is_empty() {
+            return Err(ExecutionError::Runtime(
+                "transfer-function coefficient vectors must not be empty".to_string(),
+            ));
+        }
+        if numerator.len() > Self::MAX_COEFFICIENTS || denominator.len() > Self::MAX_COEFFICIENTS {
+            return Err(ExecutionError::Runtime(format!(
+                "transfer-function coefficient vectors are limited to {} entries",
+                Self::MAX_COEFFICIENTS
+            )));
+        }
+        if numerator
+            .iter()
+            .chain(&denominator)
+            .any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "transfer-function coefficients must be finite".to_string(),
+            ));
+        }
+        if denominator[0] == 0.0 {
+            return Err(ExecutionError::Runtime(
+                "transfer-function denominator a[0] must be nonzero".to_string(),
+            ));
+        }
+        let expected_input_history = numerator.len() - 1;
+        let expected_output_history = denominator.len() - 1;
+        if initial_input_history.len() != expected_input_history
+            || initial_output_history.len() != expected_output_history
+        {
+            return Err(ExecutionError::Runtime(format!(
+                "transfer-function initial history dimensions must be {expected_input_history} input and {expected_output_history} output samples"
+            )));
+        }
+        if initial_input_history
+            .iter()
+            .chain(&initial_output_history)
+            .any(|value| !value.is_finite())
+        {
+            return Err(ExecutionError::Runtime(
+                "transfer-function initial state must be finite".to_string(),
+            ));
+        }
+        Ok(Self {
+            input,
+            output,
+            numerator,
+            denominator,
+            input_history: initial_input_history,
+            output_history: initial_output_history,
+        })
+    }
+
+    /// Creates a zero-initial-state transfer function.
+    pub fn zero_state(
+        input: PortId,
+        output: PortId,
+        numerator: Vec<f64>,
+        denominator: Vec<f64>,
+    ) -> Result<Self, ExecutionError> {
+        if numerator.is_empty()
+            || denominator.is_empty()
+            || numerator.len() > Self::MAX_COEFFICIENTS
+            || denominator.len() > Self::MAX_COEFFICIENTS
+        {
+            return Err(ExecutionError::Runtime(format!(
+                "transfer-function coefficient vectors must contain 1 to {} entries",
+                Self::MAX_COEFFICIENTS
+            )));
+        }
+        let input_history = vec![0.0; numerator.len().saturating_sub(1)];
+        let output_history = vec![0.0; denominator.len().saturating_sub(1)];
+        Self::new(
+            input,
+            output,
+            numerator,
+            denominator,
+            input_history,
+            output_history,
+        )
+    }
+}
+
+impl BlockRuntime for DiscreteTransferFunction {
+    fn step(
+        &mut self,
+        _timestamp: Timestamp,
+        inputs: &BTreeMap<PortId, SignalValue>,
+    ) -> Result<BTreeMap<PortId, SignalValue>, ExecutionError> {
+        let input = scalar_input(inputs, self.input, "transfer function")?;
+        let feedforward = self
+            .numerator
+            .iter()
+            .enumerate()
+            .skip(1)
+            .fold(self.numerator[0] * input, |sum, (index, coefficient)| {
+                sum + coefficient * self.input_history[index - 1]
+            });
+        let feedback = self
+            .denominator
+            .iter()
+            .enumerate()
+            .skip(1)
+            .fold(0.0, |sum, (index, coefficient)| {
+                sum + coefficient * self.output_history[index - 1]
+            });
+        let output = (feedforward - feedback) / self.denominator[0];
+        if !output.is_finite() {
+            return Err(ExecutionError::Runtime(
+                "transfer-function output became non-finite".to_string(),
+            ));
+        }
+
+        if !self.input_history.is_empty() {
+            self.input_history.rotate_right(1);
+            self.input_history[0] = input;
+        }
+        if !self.output_history.is_empty() {
+            self.output_history.rotate_right(1);
+            self.output_history[0] = output;
+        }
+        Ok(BTreeMap::from([(self.output, SignalValue::Scalar(output))]))
+    }
+}
+
 pub struct Sum {
     pub inputs: Vec<PortId>,
     pub output: PortId,
@@ -2100,6 +2253,110 @@ mod tests {
                 &BTreeMap::from([(PortId::new(1), SignalValue::Scalar(1.0))])
             )
             .is_err());
+    }
+
+    #[test]
+    fn discrete_transfer_function_has_expected_impulse_response() {
+        let input = PortId::new(71);
+        let output = PortId::new(72);
+        let mut block =
+            DiscreteTransferFunction::zero_state(input, output, vec![0.5, 0.25], vec![1.0, -0.5])
+                .expect("transfer function");
+        let response = [1.0, 0.0, 0.0, 0.0]
+            .into_iter()
+            .enumerate()
+            .map(|(sample, value)| {
+                block
+                    .step(
+                        Timestamp::from_nanoseconds(sample as i64),
+                        &BTreeMap::from([(input, SignalValue::Scalar(value))]),
+                    )
+                    .expect("impulse step")[&output]
+                    .clone()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            response,
+            vec![
+                SignalValue::Scalar(0.5),
+                SignalValue::Scalar(0.5),
+                SignalValue::Scalar(0.25),
+                SignalValue::Scalar(0.125),
+            ]
+        );
+    }
+
+    #[test]
+    fn discrete_transfer_function_has_expected_step_response() {
+        let input = PortId::new(73);
+        let output = PortId::new(74);
+        let mut block =
+            DiscreteTransferFunction::zero_state(input, output, vec![1.0], vec![1.0, -0.5])
+                .expect("transfer function");
+        let response = (0..4)
+            .map(|sample| {
+                block
+                    .step(
+                        Timestamp::from_nanoseconds(sample),
+                        &BTreeMap::from([(input, SignalValue::Scalar(1.0))]),
+                    )
+                    .expect("step input")[&output]
+                    .clone()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            response,
+            vec![
+                SignalValue::Scalar(1.0),
+                SignalValue::Scalar(1.5),
+                SignalValue::Scalar(1.75),
+                SignalValue::Scalar(1.875),
+            ]
+        );
+    }
+
+    #[test]
+    fn discrete_transfer_function_rejects_invalid_coefficients_and_state_shapes() {
+        let input = PortId::new(75);
+        let output = PortId::new(76);
+        for denominator in [vec![], vec![0.0], vec![f64::NAN], vec![f64::INFINITY]] {
+            assert!(
+                DiscreteTransferFunction::zero_state(input, output, vec![1.0], denominator,)
+                    .is_err()
+            );
+        }
+        assert!(DiscreteTransferFunction::zero_state(
+            input,
+            output,
+            vec![f64::NEG_INFINITY],
+            vec![1.0],
+        )
+        .is_err());
+        assert!(DiscreteTransferFunction::new(
+            input,
+            output,
+            vec![1.0, 0.5],
+            vec![1.0, -0.25],
+            vec![],
+            vec![0.0],
+        )
+        .is_err());
+        assert!(DiscreteTransferFunction::new(
+            input,
+            output,
+            vec![1.0],
+            vec![1.0],
+            vec![],
+            vec![f64::NAN],
+        )
+        .is_err());
+        assert!(DiscreteTransferFunction::zero_state(
+            input,
+            output,
+            vec![1.0; DiscreteTransferFunction::MAX_COEFFICIENTS + 1],
+            vec![1.0],
+        )
+        .is_err());
     }
 
     #[test]

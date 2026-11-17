@@ -34,11 +34,14 @@ There is no `xdl --transpile` flag.
 ## Verified subset and limits
 
 The current CLI tests cover selected scalar and array expressions, control
-flow, user functions, vector indexing, 2D scalar subscripts, and MATLAB
-`length`/`numel` behavior, and `size` dimension queries. The compatibility pages
-list exact tested cases and known mismatches. Remaining gaps include general
-multiple-output `size`, advanced `find` options and outputs, column-major matrix linear indexing,
-multidimensional slices, and reference-output comparisons.
+flow, user functions, vector indexing, 2D scalar subscripts, scalar linear
+matrix reads, MATLAB `length`/`numel` behavior, single- and multiple-output
+`size`, `find` with positive limits and first/last direction, and rectangular
+2D matrix row/column range reads. The
+compatibility pages list exact tested cases and known mismatches. Remaining
+gaps include three-or-more-output `find`, vector-valued index expressions, nested-array
+range sources, matrix-linear indexed assignment, higher-dimensional slices, and
+reference-output comparisons.
 
 - [Current limitations](MATLAB_LIMITATIONS.md)
 - [Detailed MATLAB compatibility map](MATLAB_COMPATIBILITY.md)

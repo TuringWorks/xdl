@@ -291,7 +291,7 @@ impl Transpiler {
         self.advance();
 
         // Get range (start:end or start:step:end or array)
-        let range_expr = self.collect_expression_until_newline();
+        let range_expr = self.collect_expression_until_newline()?;
 
         // Check if this is a simple range expression with colons
         let xdl_range = if range_expr.contains(':') && !range_expr.contains('(') {
@@ -329,7 +329,7 @@ impl Transpiler {
     fn transpile_while_loop(&mut self) -> Result<(), String> {
         self.advance(); // skip 'while'
 
-        let condition = self.collect_expression_until_newline();
+        let condition = self.collect_expression_until_newline()?;
 
         self.emit_line(&format!("while {}", condition));
         self.indent_level += 1;
@@ -351,7 +351,7 @@ impl Transpiler {
     fn transpile_if_statement(&mut self) -> Result<(), String> {
         self.advance(); // skip 'if'
 
-        let condition = self.collect_expression_until_newline();
+        let condition = self.collect_expression_until_newline()?;
 
         self.emit_line(&format!("if {} then", condition));
         self.indent_level += 1;
@@ -388,7 +388,7 @@ impl Transpiler {
         self.advance(); // skip 'switch'
 
         // Get switch expression
-        let switch_expr = self.collect_expression_until_newline();
+        let switch_expr = self.collect_expression_until_newline()?;
 
         self.emit_line(&format!("CASE {} OF", switch_expr));
         self.indent_level += 1;
@@ -915,27 +915,58 @@ impl Transpiler {
                     }
                     return Ok(());
                 }
-                "xlabel" | "ylabel" | "title" | "legend" | "grid" | "zlabel" => {
-                    // These should be converted to PLOT keywords, but for now ignore
-                    let cmd_name = name.clone();
+                "xlabel" | "ylabel" | "title" => {
+                    let command = name.clone();
                     self.advance();
-                    while !matches!(
-                        self.current_token().kind,
-                        TokenKind::Newline | TokenKind::Semicolon | TokenKind::EOF
-                    ) {
+                    if !matches!(self.current_token().kind, TokenKind::LeftParen) {
+                        return Err(format!(
+                            "MATLAB {command} requires a quoted string argument"
+                        ));
+                    }
+                    self.advance();
+                    let label = match self.current_token().kind.clone() {
+                        TokenKind::String(value) => value,
+                        _ => {
+                            return Err(format!(
+                                "MATLAB {command} currently supports literal strings only"
+                            ))
+                        }
+                    };
+                    self.advance();
+                    if !matches!(self.current_token().kind, TokenKind::RightParen) {
+                        return Err(format!(
+                            "MATLAB {command} currently supports one string argument"
+                        ));
+                    }
+                    self.advance();
+                    while matches!(self.current_token().kind, TokenKind::Semicolon) {
                         self.advance();
                     }
-                    if matches!(
-                        self.current_token().kind,
-                        TokenKind::Newline | TokenKind::Semicolon
-                    ) {
-                        self.advance();
+
+                    let keyword = match command.as_str() {
+                        "title" => "TITLE",
+                        "xlabel" => "XTITLE",
+                        "ylabel" => "YTITLE",
+                        _ => {
+                            return Err(format!("unsupported MATLAB plot label command: {command}"))
+                        }
+                    };
+                    let line_end = self.output.trim_end_matches('\n').len();
+                    let line_start = self.output[..line_end].rfind('\n').map_or(0, |i| i + 1);
+                    let last_line = self.output[line_start..line_end].trim_start();
+                    if !last_line.to_ascii_uppercase().starts_with("PLOT,") {
+                        return Err(format!(
+                            "MATLAB {command} must immediately follow a supported plot(x, y) call"
+                        ));
                     }
-                    self.emit_line(&format!(
-                        "; ({} command - use PLOT keywords: title=, xtitle=, ytitle=)",
-                        cmd_name
-                    ));
+                    self.output.insert_str(
+                        line_end,
+                        &format!(", {keyword}='{}'", label.replace('\'', "''")),
+                    );
                     return Ok(());
+                }
+                "legend" | "grid" | "zlabel" => {
+                    return Err(format!("MATLAB {name} is not supported by the current single-plot transpilation subset"));
                 }
                 "axis" => {
                     // axis equal, axis([xmin xmax ymin ymax]), etc. - ignore for now
@@ -964,6 +995,8 @@ impl Transpiler {
             // Look ahead to see if this is [id, id] = meshgrid(...)
             let saved_pos = self.position;
             let mut is_meshgrid = false;
+            let mut is_matlab_size = false;
+            let mut is_matlab_find = false;
             let mut output_vars = Vec::new();
 
             self.advance(); // skip '['
@@ -985,6 +1018,162 @@ impl Transpiler {
                 if let TokenKind::Identifier(fname) = &self.current_token().kind {
                     if fname == "meshgrid" {
                         is_meshgrid = true;
+                    } else if fname.eq_ignore_ascii_case("size") {
+                        is_matlab_size = true;
+                    } else if fname.eq_ignore_ascii_case("find") {
+                        is_matlab_find = true;
+                    }
+                }
+            }
+
+            if is_matlab_find && output_vars.len() > 3 {
+                return Err("MATLAB find supports at most three output variables".to_string());
+            }
+
+            if is_matlab_find && output_vars.len() == 2 {
+                self.advance(); // skip `find`
+                if matches!(self.current_token().kind, TokenKind::LeftParen) {
+                    self.advance();
+                    let mut arguments = Vec::new();
+                    let mut argument = String::new();
+                    let mut nested = 0usize;
+                    while !matches!(self.current_token().kind, TokenKind::EOF) {
+                        match self.current_token().kind {
+                            TokenKind::LeftParen => {
+                                nested += 1;
+                                argument.push_str(&self.current_token().lexeme);
+                            }
+                            TokenKind::RightParen if nested > 0 => {
+                                nested -= 1;
+                                argument.push_str(&self.current_token().lexeme);
+                            }
+                            TokenKind::RightParen => {
+                                arguments.push(argument.trim().to_string());
+                                break;
+                            }
+                            TokenKind::Comma if nested == 0 => {
+                                arguments.push(argument.trim().to_string());
+                                argument.clear();
+                            }
+                            _ => argument.push_str(&self.current_token().lexeme),
+                        }
+                        self.advance();
+                    }
+                    if !(1..=3).contains(&arguments.len()) {
+                        return Err(
+                            "MATLAB two-output find supports one to three arguments".to_string()
+                        );
+                    }
+                    let array_argument = arguments[0].as_str();
+                    let is_known_array = !array_argument.is_empty()
+                        && array_argument
+                            .chars()
+                            .all(|character| character.is_ascii_alphanumeric() || character == '_')
+                        && self.is_assigned_before(array_argument, self.position);
+                    if is_known_array {
+                        let forwarded_arguments = arguments.join(", ");
+                        self.emit_line(&format!(
+                            "{} = MATLAB_FIND_ROWS({forwarded_arguments})",
+                            output_vars[0]
+                        ));
+                        self.emit_line(&format!(
+                            "{} = MATLAB_FIND_COLUMNS({forwarded_arguments})",
+                            output_vars[1]
+                        ));
+                        if output_vars.len() == 3 {
+                            self.emit_line(&format!(
+                                "{} = MATLAB_FIND_INDICES({forwarded_arguments})",
+                                output_vars[2]
+                            ));
+                        }
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::Newline | TokenKind::Semicolon | TokenKind::EOF
+                        ) {
+                            self.advance();
+                        }
+                        if matches!(
+                            self.current_token().kind,
+                            TokenKind::Newline | TokenKind::Semicolon
+                        ) {
+                            self.advance();
+                        }
+                        return Ok(());
+                    }
+                    return Err(
+                        "MATLAB multi-output find requires one previously assigned array variable"
+                            .to_string(),
+                    );
+                }
+            }
+
+            if is_matlab_size && output_vars.len() >= 2 {
+                self.advance(); // skip `size`
+                if matches!(self.current_token().kind, TokenKind::LeftParen) {
+                    self.advance(); // skip `(`
+                    let mut arguments = Vec::new();
+                    let mut current_argument = String::new();
+                    let mut paren_depth = 0usize;
+                    while !matches!(self.current_token().kind, TokenKind::EOF) {
+                        match &self.current_token().kind {
+                            TokenKind::LeftParen => {
+                                paren_depth += 1;
+                                current_argument.push_str(&self.current_token().lexeme);
+                            }
+                            TokenKind::RightParen if paren_depth > 0 => {
+                                paren_depth -= 1;
+                                current_argument.push_str(&self.current_token().lexeme);
+                            }
+                            TokenKind::RightParen => {
+                                if !current_argument.trim().is_empty() {
+                                    arguments.push(current_argument.trim().to_string());
+                                }
+                                break;
+                            }
+                            TokenKind::Comma if paren_depth == 0 => {
+                                arguments.push(current_argument.trim().to_string());
+                                current_argument.clear();
+                            }
+                            _ => current_argument.push_str(&self.current_token().lexeme),
+                        }
+                        self.advance();
+                    }
+
+                    let array_argument = (arguments.len() == 1)
+                        .then(|| arguments[0].trim())
+                        .filter(|argument| {
+                            !argument.is_empty()
+                                && argument.chars().all(|character| {
+                                    character.is_ascii_alphanumeric() || character == '_'
+                                })
+                        });
+                    if let Some(array_argument) = array_argument {
+                        for (index, output) in output_vars.iter().enumerate() {
+                            if index + 1 == output_vars.len() {
+                                self.emit_line(&format!(
+                                    "{output} = MATLAB_SIZE_TAIL({array_argument}, {})",
+                                    index + 1
+                                ));
+                            } else {
+                                self.emit_line(&format!(
+                                    "{output} = MATLAB_SIZE({array_argument}, {})",
+                                    index + 1
+                                ));
+                            }
+                        }
+                        while !matches!(
+                            self.current_token().kind,
+                            TokenKind::Newline | TokenKind::Semicolon | TokenKind::EOF
+                        ) {
+                            self.advance();
+                        }
+                        if matches!(
+                            self.current_token().kind,
+                            TokenKind::Newline | TokenKind::Semicolon
+                        ) {
+                            self.advance();
+                        }
+                        return Ok(());
                     }
                 }
             }
@@ -1060,14 +1249,14 @@ impl Transpiler {
             self.position = saved_pos;
         }
 
-        let expr = self.collect_expression_until_newline();
+        let expr = self.collect_expression_until_newline()?;
         if !expr.trim().is_empty() {
             self.emit_line(&expr);
         }
         Ok(())
     }
 
-    fn collect_expression_until_newline(&mut self) -> String {
+    fn collect_expression_until_newline(&mut self) -> Result<String, String> {
         let mut expr = String::new();
 
         loop {
@@ -1679,6 +1868,94 @@ impl Transpiler {
                         ) {
                             match &self.current_token().kind {
                                 TokenKind::Identifier(n) => {
+                                    let following_paren = self.position + 1;
+                                    if following_paren < self.tokens.len()
+                                        && matches!(
+                                            self.tokens[following_paren].kind,
+                                            TokenKind::LeftParen
+                                        )
+                                        && self.is_assigned_before(n, self.position)
+                                    {
+                                        self.advance(); // array name
+                                        self.advance(); // opening parenthesis
+                                        let mut index_tokens = Vec::new();
+                                        let mut nested_parens = 0usize;
+                                        while !matches!(
+                                            self.current_token().kind,
+                                            TokenKind::EOF | TokenKind::RightParen
+                                        ) || nested_parens > 0
+                                        {
+                                            match self.current_token().kind {
+                                                TokenKind::LeftParen => nested_parens += 1,
+                                                TokenKind::RightParen => nested_parens -= 1,
+                                                _ => {}
+                                            }
+                                            index_tokens.push(self.current_token().clone());
+                                            self.advance();
+                                        }
+                                        if matches!(
+                                            self.current_token().kind,
+                                            TokenKind::RightParen
+                                        ) {
+                                            self.advance();
+                                        }
+
+                                        let index_parts = split_subscript_tokens(&index_tokens);
+                                        let scalar_indices = index_parts
+                                            .iter()
+                                            .map(|part| {
+                                                !part.is_empty()
+                                                    && !part.iter().any(|token| {
+                                                        matches!(
+                                                            token.kind,
+                                                            TokenKind::Colon | TokenKind::Comma
+                                                        )
+                                                    })
+                                            })
+                                            .all(|scalar| scalar);
+                                        if scalar_indices && index_parts.len() == 1 {
+                                            expr.push_str("MATLAB_INDEX(");
+                                            expr.push_str(n);
+                                            expr.push_str(", ");
+                                            expr.push_str(&translate_matlab_linear_index(
+                                                &index_parts[0],
+                                                n,
+                                            ));
+                                            expr.push(')');
+                                            continue;
+                                        }
+                                        if scalar_indices && index_parts.len() > 1 {
+                                            let translated = index_parts
+                                                .iter()
+                                                .map(|part| {
+                                                    let index = part
+                                                        .iter()
+                                                        .map(|token| token.lexeme.as_str())
+                                                        .collect::<String>();
+                                                    translate_matlab_index(&index, n)
+                                                })
+                                                .collect::<Option<Vec<_>>>();
+                                            if let Some(indices) = translated {
+                                                expr.push_str(n);
+                                                expr.push_str(" [");
+                                                expr.push_str(&indices.join(", "));
+                                                expr.push(']');
+                                                continue;
+                                            }
+                                        }
+                                        // Preserve unsupported ranges and malformed
+                                        // subscripts as source so they fail visibly.
+                                        expr.push_str(n);
+                                        expr.push('(');
+                                        expr.push_str(
+                                            &index_tokens
+                                                .iter()
+                                                .map(|token| token.lexeme.as_str())
+                                                .collect::<String>(),
+                                        );
+                                        expr.push(')');
+                                        continue;
+                                    }
                                     // Map MATLAB function names to XDL
                                     if let Some(xdl_func) = get_xdl_function(n) {
                                         expr.push_str(xdl_func);
@@ -1738,14 +2015,16 @@ impl Transpiler {
                         .to_string();
                     let is_known_array = !preceding_name.is_empty()
                         && self.is_assigned_before(&preceding_name, start_pos);
+                    let is_assignment_target =
+                        matches!(self.current_token().kind, TokenKind::Assign);
 
                     if paren_depth == 0 && index_parts.len() > 1 && is_known_array {
                         let translated = index_parts
                             .iter()
                             .map(|part| {
                                 if part.iter().any(|token| {
-                                    matches!(&token.kind, TokenKind::Colon)
-                                        || matches!(&token.kind, TokenKind::Identifier(name) if name == "end")
+                                    matches!(&token.kind, TokenKind::Identifier(name) if name.eq_ignore_ascii_case("end"))
+                                        || matches!(&token.kind, TokenKind::End)
                                 }) {
                                     None
                                 } else {
@@ -1753,7 +2032,14 @@ impl Transpiler {
                                         .iter()
                                         .map(|token| token.lexeme.as_str())
                                         .collect::<String>();
-                                    translate_matlab_index(&index, &preceding_name)
+                                    if index_parts.len() == 2 {
+                                        translate_matlab_matrix_index(
+                                            &index,
+                                            is_assignment_target,
+                                        )
+                                    } else {
+                                        translate_matlab_index(&index, &preceding_name)
+                                    }
                                 }
                             })
                             .collect::<Option<Vec<_>>>();
@@ -1812,6 +2098,10 @@ impl Transpiler {
                                 && !has_colon
                                 && !matches!(self.current_token().kind, TokenKind::Assign)
                             {
+                                let expression_prefix = expr.trim_end();
+                                if expression_prefix.ends_with(&preceding_name) {
+                                    expr.truncate(expression_prefix.len() - preceding_name.len());
+                                }
                                 let index =
                                     translate_matlab_linear_index(&range_tokens, &preceding_name);
                                 expr.push_str("MATLAB_INDEX(");
@@ -1842,6 +2132,45 @@ impl Transpiler {
                 TokenKind::ElementMultiply => expr.push_str(" * "),
                 TokenKind::ElementDivide => expr.push_str(" / "),
                 TokenKind::ElementPower => expr.push_str(" ^ "),
+                TokenKind::Dot
+                    if self
+                        .tokens
+                        .get(self.position + 1)
+                        .is_some_and(|next| matches!(next.kind, TokenKind::Transpose)) =>
+                {
+                    // This bounded slice supports MATLAB's nonconjugating
+                    // transpose only for a directly named array: A.'.
+                    let trimmed = expr.trim_end();
+                    let operand_start = trimmed
+                        .char_indices()
+                        .rev()
+                        .take_while(|(_, ch)| ch.is_ascii_alphanumeric() || *ch == '_')
+                        .last()
+                        .map(|(index, _)| index);
+                    if let Some(start) = operand_start {
+                        let operand = trimmed[start..].to_owned();
+                        if operand
+                            .chars()
+                            .next()
+                            .is_some_and(|ch| ch.is_ascii_alphabetic() || ch == '_')
+                        {
+                            expr.truncate(start);
+                            expr.push_str(&format!("TRANSPOSE({operand})"));
+                            self.advance(); // dot
+                            self.advance(); // transpose apostrophe
+                            continue;
+                        }
+                    }
+                    return Err(
+                        "MATLAB nonconjugating transpose currently requires a named array (A.')"
+                            .to_string(),
+                    );
+                }
+                TokenKind::Transpose => {
+                    return Err(
+                        "MATLAB conjugating transpose (A') is not supported yet".to_string()
+                    );
+                }
                 TokenKind::Comment(_) => {
                     // Skip comments in expressions
                     self.advance();
@@ -1884,12 +2213,12 @@ impl Transpiler {
                 if colon_count > 0 && !is_array_op {
                     // This looks like a range expression: convert it
                     let converted = self.convert_range_to_findgen(rhs);
-                    return format!("{} = {}", lhs, converted);
+                    return Ok(format!("{} = {}", lhs, converted));
                 }
             }
         }
 
-        expr_trimmed.to_string()
+        Ok(expr_trimmed.to_string())
     }
 
     fn convert_range(&self, range: &str) -> Result<String, String> {
@@ -2081,12 +2410,7 @@ impl Transpiler {
                 }
                 TokenKind::Number(n) => {
                     // If we have an existing element and it's also a number, treat space as separator
-                    if !current_element.trim().is_empty()
-                        && current_element
-                            .trim()
-                            .chars()
-                            .all(|c| c.is_ascii_digit() || c == '.' || c == '-')
-                    {
+                    if current_element.trim().parse::<f64>().is_ok() {
                         // Push the previous number as an element
                         current_row.push(current_element.trim().to_string());
                         current_element.clear();
@@ -2294,6 +2618,45 @@ fn translate_matlab_index(index: &str, array_name: &str) -> Option<String> {
     }
 }
 
+/// Translate one MATLAB matrix-axis subscript for the evaluator's inclusive
+/// XDL ranges. MATLAB is one-based and inclusive too, so both range endpoints
+/// shift down by one. A bare `:` remains a full-axis selection.
+fn translate_matlab_matrix_index(index: &str, assignment_target: bool) -> Option<String> {
+    let parts: Vec<&str> = index.split(':').map(str::trim).collect();
+    let zero_based = |value: &str| {
+        value.parse::<i64>().map_or_else(
+            |_| format!("({value}) - 1"),
+            |value| {
+                value
+                    .checked_sub(1)
+                    .map_or_else(|| format!("({value}) - 1"), |value| value.to_string())
+            },
+        )
+    };
+    match parts.as_slice() {
+        [single] if !single.is_empty() => Some(zero_based(single)),
+        ["", ""] => Some(":".to_string()),
+        [start, end] if !start.is_empty() && !end.is_empty() => {
+            let end = if assignment_target {
+                end.to_string()
+            } else {
+                zero_based(end)
+            };
+            Some(format!("{}:{end}", zero_based(start)))
+        }
+        ["", end] if !end.is_empty() => Some(format!(
+            ":{}",
+            if assignment_target {
+                end.to_string()
+            } else {
+                zero_based(end)
+            }
+        )),
+        [start, ""] if !start.is_empty() => Some(format!("{}:", zero_based(start))),
+        _ => None,
+    }
+}
+
 /// Translate one scalar MATLAB linear subscript to its one-based XDL helper
 /// argument. `end` is the total number of elements for linear indexing.
 fn translate_matlab_linear_index(tokens: &[Token], array_name: &str) -> String {
@@ -2303,6 +2666,7 @@ fn translate_matlab_linear_index(tokens: &[Token], array_name: &str) -> String {
             TokenKind::Identifier(name) if name.eq_ignore_ascii_case("end") => {
                 format!("MATLAB_NUMEL({array_name})")
             }
+            TokenKind::End => format!("MATLAB_NUMEL({array_name})"),
             _ => token.lexeme.clone(),
         })
         .collect()
@@ -2375,6 +2739,18 @@ mod tests {
     }
 
     #[test]
+    fn matlab_nonconjugating_transpose_maps_named_arrays_to_transpose() {
+        let result = transpile_matlab_to_xdl("A = [1, 2; 3, 4]; B = A.';").unwrap();
+        assert!(result.contains("B = TRANSPOSE(A)"), "{result}");
+    }
+
+    #[test]
+    fn matlab_conjugating_transpose_remains_explicitly_unsupported() {
+        let error = transpile_matlab_to_xdl("A = [1, 2; 3, 4]; B = A'").unwrap_err();
+        assert!(error.contains("conjugating transpose"), "{error}");
+    }
+
+    #[test]
     fn test_simple_array_literal() {
         let matlab = "a = [1, 2, 3, 4, 5];";
         let result = transpile_matlab_to_xdl(matlab).unwrap();
@@ -2386,6 +2762,12 @@ mod tests {
         let matlab = "b = [1 2 3];";
         let result = transpile_matlab_to_xdl(matlab).unwrap();
         assert!(result.contains("[1") && result.contains("2") && result.contains("3]"));
+    }
+
+    #[test]
+    fn negative_array_elements_remain_signed_numbers() {
+        let result = transpile_matlab_to_xdl("values = [0, 1, -1];").unwrap();
+        assert!(result.contains("values = [0, 1, -1]"), "{result}");
     }
 
     #[test]
@@ -2456,12 +2838,114 @@ mod tests {
     #[test]
     fn matlab_matrix_scalar_subscripts_translate_per_dimension() {
         let result = transpile_matlab_to_xdl(
-            "matrix = [1, 2, 3; 4, 5, 6]; first = matrix(1, 2); last = matrix(2, 3); linear = matrix(2);",
+            "matrix = [1, 2, 3; 4, 5, 6]; first = matrix(1, 2); last = matrix(2, 3); linear = matrix(2); matrix(2, 2:3) = [55, 66];",
         )
         .unwrap();
         assert!(result.contains("first = matrix [0, 1]"), "{result}");
         assert!(result.contains("last = matrix [1, 2]"), "{result}");
-        assert!(result.contains("linear = MATLAB_INDEX(matrix, 2)"), "{result}");
+        assert!(
+            result.contains("linear = MATLAB_INDEX(matrix, 2)"),
+            "{result}"
+        );
+        assert!(result.contains("matrix [1, 1:3]= [55, 66]"), "{result}");
+    }
+
+    #[test]
+    fn matlab_two_dimensional_range_reads_translate_with_inclusive_matlab_bounds() {
+        let result = transpile_matlab_to_xdl(
+            "matrix = [1, 2, 3; 4, 5, 6]; row = matrix(1, 2:3); column = matrix(1:2, 2); last_column = matrix(:, 3); last_row = matrix(2, :);",
+        )
+        .unwrap();
+        assert!(result.contains("row = matrix [0, 1:2]"), "{result}");
+        assert!(result.contains("column = matrix [0:1, 1]"), "{result}");
+        assert!(result.contains("last_column = matrix [:, 2]"), "{result}");
+        assert!(result.contains("last_row = matrix [1, :]"), "{result}");
+    }
+
+    #[test]
+    fn matlab_two_axis_range_assignment_translates_both_axes_for_runtime_writes() {
+        let result = transpile_matlab_to_xdl(
+            "matrix = [1, 2, 3; 4, 5, 6]; matrix(1:2, 2:3) = [7, 8; 9, 10]; matrix(1:2, 2:3) = 5;",
+        )
+        .expect("transpile block assignment");
+        assert!(
+            result.contains("matrix [0:2, 1:3]= [[7, 8], [9, 10]]"),
+            "{result}"
+        );
+        assert!(result.contains("matrix [0:2, 1:3]= 5"), "{result}");
+    }
+
+    #[test]
+    fn matlab_scalar_indexed_assignment_translates_known_array_targets() {
+        let result = transpile_matlab_to_xdl(
+            "values = [10, 20, 30]; values(2) = 99; matrix = [1, 2, 3; 4, 5, 6]; matrix(2, 3) = 60; disp(values(2)); disp(matrix(2, 3));",
+        )
+        .unwrap();
+        assert!(result.contains("values [1]= 99"), "{result}");
+        assert!(result.contains("matrix [1, 2]= 60"), "{result}");
+        assert!(
+            result.contains("PRINT, MATLAB_INDEX(values, 2)"),
+            "{result}"
+        );
+        assert!(result.contains("PRINT, matrix [1, 2]"), "{result}");
+    }
+
+    #[test]
+    fn matlab_size_multiple_outputs_use_dimension_and_tail_helpers() {
+        let result = transpile_matlab_to_xdl(
+            "matrix = [1, 2, 3; 4, 5, 6]; [rows, columns] = size(matrix); [first, second, third] = size(matrix);",
+        )
+        .unwrap();
+        assert!(result.contains("rows = MATLAB_SIZE(matrix, 1)"), "{result}");
+        assert!(
+            result.contains("columns = MATLAB_SIZE_TAIL(matrix, 2)"),
+            "{result}"
+        );
+        assert!(
+            result.contains("first = MATLAB_SIZE(matrix, 1)"),
+            "{result}"
+        );
+        assert!(
+            result.contains("second = MATLAB_SIZE(matrix, 2)"),
+            "{result}"
+        );
+        assert!(
+            result.contains("third = MATLAB_SIZE_TAIL(matrix, 3)"),
+            "{result}"
+        );
+    }
+
+    #[test]
+    fn matlab_find_two_outputs_lower_for_known_matrix_variables() {
+        let result =
+            transpile_matlab_to_xdl("matrix = [0, 2; 3, 0]; [row, col] = find(matrix);").unwrap();
+        assert!(
+            result.contains("row = MATLAB_FIND_ROWS(matrix)"),
+            "{result}"
+        );
+        assert!(
+            result.contains("col = MATLAB_FIND_COLUMNS(matrix)"),
+            "{result}"
+        );
+        let three_outputs =
+            transpile_matlab_to_xdl("matrix = [0, 2; 3, 0]; [row, col, linear] = find(matrix);")
+                .unwrap();
+        assert!(
+            three_outputs.contains("linear = MATLAB_FIND_INDICES(matrix)"),
+            "{three_outputs}"
+        );
+        assert!(transpile_matlab_to_xdl("[a, b, c, d] = find(matrix);").is_err());
+        let limited =
+            transpile_matlab_to_xdl("matrix = [0, 2; 3, 0]; [row, col] = find(matrix, 2, 'last');")
+                .unwrap();
+        assert!(
+            limited.contains("MATLAB_FIND_ROWS(matrix, 2, 'last')"),
+            "{limited}"
+        );
+        assert!(
+            limited.contains("MATLAB_FIND_COLUMNS(matrix, 2, 'last')"),
+            "{limited}"
+        );
     }
 
     #[test]
@@ -2660,5 +3144,28 @@ mod loop_and_random_regression_tests {
             !result.contains("RANDOMU"),
             "randn must not be uniform: {result}"
         );
+    }
+}
+
+#[cfg(test)]
+mod plot_annotation_tests {
+    use super::transpile_matlab_to_xdl;
+
+    #[test]
+    fn literal_labels_attach_to_the_immediately_preceding_plot() {
+        let result = transpile_matlab_to_xdl(
+            "x = [1, 2, 3];\ny = [2, 4, 8];\nplot(x, y);\ntitle('Response');\nxlabel('Time (s)');\nylabel('Amplitude');",
+        )
+        .unwrap();
+        assert!(
+            result.contains("PLOT, x, y, TITLE='Response', XTITLE='Time (s)', YTITLE='Amplitude'"),
+            "got: {result}"
+        );
+    }
+
+    #[test]
+    fn labels_without_a_preceding_plot_are_rejected() {
+        let error = transpile_matlab_to_xdl("title('Response');").unwrap_err();
+        assert!(error.contains("must immediately follow"), "got: {error}");
     }
 }

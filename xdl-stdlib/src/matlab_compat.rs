@@ -8,6 +8,73 @@ use crate::XdlResult;
 use std::borrow::Cow;
 use xdl_core::{XdlError, XdlValue};
 
+/// MATLAB-compatible numeric CSV import for the headerless rectangular subset.
+pub fn matlab_readmatrix(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 1 {
+        return Err(XdlError::InvalidArgument(format!(
+            "MATLAB_READMATRIX: Expected one filename argument, got {}",
+            args.len()
+        )));
+    }
+    let filename = match &args[0] {
+        XdlValue::String(path) => path,
+        other => {
+            return Err(XdlError::TypeMismatch {
+                expected: "CSV filename string".to_string(),
+                actual: format!("{:?}", other.gdl_type()),
+            })
+        }
+    };
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .flexible(false)
+        .from_path(filename)
+        .map_err(|error| {
+            XdlError::RuntimeError(format!(
+                "MATLAB_READMATRIX: Could not read '{filename}': {error}"
+            ))
+        })?;
+    let rows = reader
+        .records()
+        .enumerate()
+        .map(|(row_index, record)| {
+            let record = record.map_err(|error| {
+                XdlError::RuntimeError(format!(
+                    "MATLAB_READMATRIX: Invalid CSV row {} in '{filename}': {error}",
+                    row_index + 1
+                ))
+            })?;
+            if record.is_empty() {
+                return Err(XdlError::InvalidArgument(format!(
+                    "MATLAB_READMATRIX: CSV row {} in '{filename}' has no numeric columns",
+                    row_index + 1
+                )));
+            }
+            record
+                .iter()
+                .enumerate()
+                .map(|(column_index, field)| {
+                    field.trim().parse::<f64>().map_err(|error| {
+                        XdlError::InvalidArgument(format!(
+                            "MATLAB_READMATRIX: Invalid number at row {}, column {} in '{filename}': {error}",
+                            row_index + 1,
+                            column_index + 1
+                        ))
+                    })
+                })
+                .collect::<XdlResult<Vec<_>>>()
+        })
+        .collect::<XdlResult<Vec<_>>>()?;
+    if rows.is_empty() || rows.first().is_some_and(Vec::is_empty) {
+        return Err(XdlError::InvalidArgument(format!(
+            "MATLAB_READMATRIX: '{filename}' contains no numeric data"
+        )));
+    }
+    Ok(XdlValue::NestedArray(
+        rows.into_iter().map(XdlValue::Array).collect(),
+    ))
+}
+
 /// MATLAB `length`: return the largest dimension of an array.
 ///
 /// This deliberately remains separate from XDL's `N_ELEMENTS`, which returns
@@ -85,6 +152,45 @@ pub fn matlab_size(args: &[XdlValue]) -> XdlResult<XdlValue> {
             .map(|dimension| dimension as f64)
             .collect(),
     ))
+}
+
+/// MATLAB multiple-output `size` tail: product of dimensions from `dim` onward.
+/// This is the value MATLAB assigns to the final output when fewer outputs are
+/// requested than the array has dimensions.
+pub fn matlab_size_tail(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "MATLAB_SIZE_TAIL: Expected 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let dimension_value = args[1].to_double()?;
+    if !dimension_value.is_finite() || dimension_value < 1.0 || dimension_value.fract() != 0.0 {
+        return Err(XdlError::InvalidArgument(
+            "MATLAB_SIZE_TAIL: dimension must be a positive integer".to_string(),
+        ));
+    }
+
+    let mut dimensions = matlab_dimensions(&args[0])?;
+    if dimensions.is_empty() {
+        dimensions = vec![1, 1];
+    } else if dimensions.len() == 1 {
+        dimensions.push(1);
+    }
+
+    // A dimension beyond rank contributes the implicit MATLAB singleton 1.
+    if dimension_value > dimensions.len() as f64 {
+        return Ok(XdlValue::Double(1.0));
+    }
+    let start = dimension_value as usize - 1;
+    let product = dimensions[start..]
+        .iter()
+        .try_fold(1usize, |product, size| product.checked_mul(*size))
+        .ok_or_else(|| {
+            XdlError::InvalidArgument("MATLAB_SIZE_TAIL: dimension product overflow".to_string())
+        })?;
+    Ok(XdlValue::Double(product as f64))
 }
 
 /// MATLAB-style one-based linear indexing into a numeric value.
@@ -196,24 +302,56 @@ fn matlab_index_out_of_range(index: usize) -> XdlError {
     XdlError::InvalidArgument(format!("MATLAB_INDEX: index {index} is out of range"))
 }
 
-/// MATLAB `find` with the default all-dimensions, ascending-index behavior.
+/// MATLAB `find` for the one-output bounded and directional forms.
 /// Results are one-based; row-vector inputs preserve row orientation while
 /// other inputs return a column vector.
 pub fn matlab_find(args: &[XdlValue]) -> XdlResult<XdlValue> {
-    if args.len() != 1 {
+    if !(1..=3).contains(&args.len()) {
         return Err(XdlError::InvalidArgument(format!(
-            "MATLAB_FIND: Expected 1 argument, got {}",
+            "MATLAB_FIND: Expected 1-3 arguments, got {}",
             args.len()
         )));
     }
 
+    let limit = args
+        .get(1)
+        .map(|value| matlab_find_limit(value))
+        .transpose()?;
+    let direction = args
+        .get(2)
+        .map(|value| match value {
+            XdlValue::String(direction) if direction.eq_ignore_ascii_case("first") => Ok("first"),
+            XdlValue::String(direction) if direction.eq_ignore_ascii_case("last") => Ok("last"),
+            XdlValue::String(_) => Err(XdlError::InvalidArgument(
+                "MATLAB_FIND: direction must be 'first' or 'last'".to_string(),
+            )),
+            other => Err(XdlError::TypeMismatch {
+                expected: "string direction ('first' or 'last')".to_string(),
+                actual: format!("{:?}", other.gdl_type()),
+            }),
+        })
+        .transpose()?
+        .unwrap_or("first");
+
     let dimensions = matlab_dimensions(&args[0])?;
     let values = matlab_numeric_values(&args[0])?;
-    let indices: Vec<f64> = values
+    let matching_indices: Vec<f64> = values
         .iter()
         .enumerate()
         .filter_map(|(index, value)| (*value != 0.0).then_some((index + 1) as f64))
         .collect();
+    let indices = match (limit, direction) {
+        (Some(limit), "last") => matching_indices
+            .into_iter()
+            .rev()
+            .take(limit)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect(),
+        (Some(limit), _) => matching_indices.into_iter().take(limit).collect(),
+        (None, _) => matching_indices,
+    };
     let shape = if dimensions == [0, 0] || (dimensions == [1, 1] && values.first() == Some(&0.0)) {
         vec![0, 0]
     } else if dimensions.len() == 2 && dimensions[0] == 1 {
@@ -225,6 +363,128 @@ pub fn matlab_find(args: &[XdlValue]) -> XdlResult<XdlValue> {
         data: indices,
         shape,
     })
+}
+
+/// First output of MATLAB's two-output `find`: one-based row subscripts.
+pub fn matlab_find_rows(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let (rows, _, _) = matlab_find_subscripts(args)?;
+    Ok(XdlValue::MultiDimArray {
+        shape: vec![rows.len(), 1],
+        data: rows,
+    })
+}
+
+/// Second output of MATLAB's two-output `find`: one-based column subscripts.
+pub fn matlab_find_columns(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let (_, columns, _) = matlab_find_subscripts(args)?;
+    Ok(XdlValue::MultiDimArray {
+        shape: vec![columns.len(), 1],
+        data: columns,
+    })
+}
+
+/// Third output of MATLAB's multi-output `find`: one-based linear indices.
+pub fn matlab_find_indices(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    let (_, _, indices) = matlab_find_subscripts(args)?;
+    Ok(XdlValue::MultiDimArray {
+        shape: vec![indices.len(), 1],
+        data: indices,
+    })
+}
+
+fn matlab_find_subscripts(args: &[XdlValue]) -> XdlResult<(Vec<f64>, Vec<f64>, Vec<f64>)> {
+    if !(1..=3).contains(&args.len()) {
+        return Err(XdlError::InvalidArgument(format!(
+            "MATLAB_FIND_SUBSCRIPTS: Expected 1-3 arguments, got {}",
+            args.len()
+        )));
+    }
+    let limit = args.get(1).map(matlab_find_limit).transpose()?;
+    let direction = args
+        .get(2)
+        .map(|value| match value {
+            XdlValue::String(direction) if direction.eq_ignore_ascii_case("first") => Ok(false),
+            XdlValue::String(direction) if direction.eq_ignore_ascii_case("last") => Ok(true),
+            XdlValue::String(_) => Err(XdlError::InvalidArgument(
+                "MATLAB_FIND: direction must be 'first' or 'last'".to_string(),
+            )),
+            other => Err(XdlError::TypeMismatch {
+                expected: "string direction ('first' or 'last')".to_string(),
+                actual: format!("{:?}", other.gdl_type()),
+            }),
+        })
+        .transpose()?
+        .unwrap_or(false);
+    let mut dimensions = matlab_dimensions(&args[0])?;
+    if dimensions.len() == 1 {
+        dimensions.push(1);
+    }
+    if dimensions.len() != 2 {
+        return Err(XdlError::InvalidArgument(
+            "MATLAB_FIND_SUBSCRIPTS: Only 2D numeric matrices are supported".to_string(),
+        ));
+    }
+    if dimensions[0] < 2 || dimensions[1] < 2 {
+        return Err(XdlError::InvalidArgument(
+            "MATLAB_FIND_SUBSCRIPTS: Matrix must have at least two rows and columns".to_string(),
+        ));
+    }
+    let row_count = dimensions[0];
+    let values = matlab_numeric_values(&args[0])?;
+    let matches: Vec<usize> = values
+        .iter()
+        .enumerate()
+        .filter(|(_, value)| **value != 0.0)
+        .map(|(index, _)| index)
+        .collect();
+    let matches: Vec<usize> = match (limit, direction) {
+        (Some(limit), true) => matches
+            .into_iter()
+            .rev()
+            .take(limit)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect(),
+        (Some(limit), false) => matches.into_iter().take(limit).collect(),
+        (None, _) => matches,
+    };
+    let rows = matches
+        .iter()
+        .map(|index| (index % row_count + 1) as f64)
+        .collect();
+    let columns = matches
+        .iter()
+        .map(|index| (index / row_count + 1) as f64)
+        .collect();
+    let linear_indices = matches.iter().map(|index| (index + 1) as f64).collect();
+    Ok((rows, columns, linear_indices))
+}
+
+fn matlab_find_limit(value: &XdlValue) -> XdlResult<usize> {
+    let number = match value {
+        XdlValue::Byte(_)
+        | XdlValue::Int(_)
+        | XdlValue::Long(_)
+        | XdlValue::Float(_)
+        | XdlValue::Double(_)
+        | XdlValue::UInt(_)
+        | XdlValue::ULong(_)
+        | XdlValue::Long64(_)
+        | XdlValue::ULong64(_) => value.to_double()?,
+        other => {
+            return Err(XdlError::TypeMismatch {
+                expected: "positive finite integer limit".to_string(),
+                actual: format!("{:?}", other.gdl_type()),
+            })
+        }
+    };
+    if !number.is_finite() || number < 1.0 || number.fract() != 0.0 {
+        return Err(XdlError::InvalidArgument(
+            "MATLAB_FIND: k must be a positive finite integer".to_string(),
+        ));
+    }
+    Ok(number.min(usize::MAX as f64) as usize)
 }
 
 fn matlab_numeric_values(value: &XdlValue) -> XdlResult<Cow<'_, [f64]>> {
@@ -330,7 +590,10 @@ fn matlab_dimensions(value: &XdlValue) -> XdlResult<Vec<usize>> {
 
 #[cfg(test)]
 mod matlab_length_tests {
-    use super::{matlab_find, matlab_index, matlab_length, matlab_numel, matlab_size};
+    use super::{
+        matlab_find, matlab_find_columns, matlab_find_rows, matlab_index, matlab_length,
+        matlab_numel, matlab_size, matlab_size_tail,
+    };
     use xdl_core::XdlValue;
 
     #[test]
@@ -438,6 +701,80 @@ mod matlab_length_tests {
     }
 
     #[test]
+    fn matlab_size_tail_multiplies_dimensions_from_starting_dimension() {
+        let cases = [
+            (
+                XdlValue::NestedArray(vec![
+                    XdlValue::Array(vec![1.0, 2.0, 3.0]),
+                    XdlValue::Array(vec![4.0, 5.0, 6.0]),
+                ]),
+                2,
+                3.0,
+            ),
+            (
+                XdlValue::MultiDimArray {
+                    data: vec![0.0; 24],
+                    shape: vec![2, 3, 4],
+                },
+                2,
+                12.0,
+            ),
+            (
+                XdlValue::MultiDimArray {
+                    data: vec![0.0; 24],
+                    shape: vec![2, 3, 4, 1],
+                },
+                3,
+                4.0,
+            ),
+            (
+                XdlValue::MultiDimArray {
+                    data: vec![0.0; 24],
+                    shape: vec![2, 3, 4, 1],
+                },
+                4,
+                1.0,
+            ),
+            (
+                XdlValue::MultiDimArray {
+                    data: vec![0.0; 24],
+                    shape: vec![2, 3, 4],
+                },
+                4,
+                1.0,
+            ),
+            (XdlValue::Double(7.0), 1, 1.0),
+            (XdlValue::Undefined, 1, 0.0),
+        ];
+
+        for (value, dimension, expected) in cases {
+            assert_eq!(
+                matlab_size_tail(&[value, XdlValue::Long(dimension)]).unwrap(),
+                XdlValue::Double(expected)
+            );
+        }
+    }
+
+    #[test]
+    fn matlab_size_tail_rejects_invalid_dimensions_and_argument_counts() {
+        let value = XdlValue::MultiDimArray {
+            data: vec![1.0, 2.0],
+            shape: vec![2],
+        };
+        for dimension in [
+            XdlValue::Long(0),
+            XdlValue::Double(-1.0),
+            XdlValue::Double(1.5),
+            XdlValue::Double(f64::INFINITY),
+            XdlValue::Double(f64::NAN),
+        ] {
+            assert!(matlab_size_tail(&[value.clone(), dimension]).is_err());
+        }
+        assert!(matlab_size_tail(&[value.clone()]).is_err());
+        assert!(matlab_size_tail(&[value, XdlValue::Long(1), XdlValue::Long(2)]).is_err());
+    }
+
+    #[test]
     fn matlab_find_returns_one_based_column_indices_and_empty_column() {
         assert_eq!(
             matlab_find(&[XdlValue::Array(vec![0.0, 2.0, 0.0, f64::NAN])]).unwrap(),
@@ -468,6 +805,87 @@ mod matlab_length_tests {
                 shape: vec![3, 1],
             }
         );
+    }
+
+    #[test]
+    fn matlab_find_two_outputs_return_one_based_row_and_column_indices() {
+        let matrix = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![0.0, 2.0, 0.0]),
+            XdlValue::Array(vec![3.0, 0.0, 4.0]),
+        ]);
+        assert_eq!(
+            matlab_find_rows(std::slice::from_ref(&matrix)).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0, 1.0, 2.0],
+                shape: vec![3, 1],
+            }
+        );
+        assert_eq!(
+            matlab_find_columns(&[matrix]).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![1.0, 2.0, 3.0],
+                shape: vec![3, 1],
+            }
+        );
+    }
+
+    #[test]
+    fn matlab_find_two_outputs_honor_limit_and_direction() {
+        let matrix = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![0.0, 2.0, 0.0]),
+            XdlValue::Array(vec![3.0, 0.0, 4.0]),
+        ]);
+        let first_args = [matrix.clone(), XdlValue::Long(2)];
+        assert_eq!(
+            matlab_find_rows(&first_args).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0, 1.0],
+                shape: vec![2, 1]
+            }
+        );
+        let last_args = [matrix, XdlValue::Long(2), XdlValue::String("last".into())];
+        assert_eq!(
+            matlab_find_columns(&last_args).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0, 3.0],
+                shape: vec![2, 1]
+            }
+        );
+        assert_eq!(
+            matlab_find_indices(&last_args).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![3.0, 6.0],
+                shape: vec![2, 1]
+            }
+        );
+    }
+
+    #[test]
+    fn matlab_find_two_outputs_shape_empty_results_and_reject_ragged_matrices() {
+        let zeros = XdlValue::MultiDimArray {
+            data: vec![0.0; 6],
+            shape: vec![2, 3],
+        };
+        assert_eq!(
+            matlab_find_rows(std::slice::from_ref(&zeros)).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![],
+                shape: vec![0, 1],
+            }
+        );
+        assert_eq!(
+            matlab_find_columns(&[zeros]).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![],
+                shape: vec![0, 1],
+            }
+        );
+        let ragged = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0]),
+            XdlValue::Array(vec![3.0]),
+        ]);
+        assert!(matlab_find_rows(&[ragged]).is_err());
+        assert!(matlab_find_rows(&[XdlValue::Array(vec![1.0, 0.0])]).is_err());
     }
 
     #[test]
@@ -509,6 +927,115 @@ mod matlab_length_tests {
                 }
             );
         }
+    }
+
+    #[test]
+    fn matlab_find_handles_nonzero_scalar_as_one_based_singleton() {
+        assert_eq!(
+            matlab_find(&[XdlValue::Double(7.0)]).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![1.0],
+                shape: vec![1, 1],
+            }
+        );
+    }
+
+    #[test]
+    fn matlab_find_first_and_last_limits_keep_indices_ascending() {
+        let row = XdlValue::Array(vec![1.0, 0.0, 2.0, 0.0, 3.0]);
+        assert_eq!(
+            matlab_find(&[row.clone(), XdlValue::Long(2)]).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![1.0, 3.0],
+                shape: vec![1, 2]
+            }
+        );
+        assert_eq!(
+            matlab_find(&[
+                row.clone(),
+                XdlValue::Long(2),
+                XdlValue::String("last".into())
+            ])
+            .unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![3.0, 5.0],
+                shape: vec![1, 2]
+            }
+        );
+        assert_eq!(
+            matlab_find(&[row, XdlValue::Long(20), XdlValue::String("last".into())]).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![1.0, 3.0, 5.0],
+                shape: vec![1, 3]
+            }
+        );
+    }
+
+    #[test]
+    fn matlab_find_limit_and_direction_reject_invalid_values() {
+        let input = XdlValue::Array(vec![1.0, 0.0, 2.0]);
+        for invalid_limit in [
+            XdlValue::Long(0),
+            XdlValue::Double(-1.0),
+            XdlValue::Double(1.5),
+            XdlValue::Double(f64::INFINITY),
+            XdlValue::String("2".into()),
+        ] {
+            assert!(matlab_find(&[input.clone(), invalid_limit]).is_err());
+        }
+        assert!(matlab_find(&[
+            input.clone(),
+            XdlValue::Long(1),
+            XdlValue::String("middle".into())
+        ])
+        .is_err());
+        assert!(matlab_find(&[input.clone(), XdlValue::Long(1), XdlValue::Long(1)]).is_err());
+        assert!(matlab_find(&[
+            input.clone(),
+            XdlValue::Long(1),
+            XdlValue::String("first".into()),
+            XdlValue::Long(1)
+        ])
+        .is_err());
+    }
+
+    #[test]
+    fn matlab_find_limits_preserve_matrix_column_major_order_and_column_shape() {
+        let matrix = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![0.0, 1.0, 0.0]),
+            XdlValue::Array(vec![2.0, 0.0, 3.0]),
+        ]);
+        assert_eq!(
+            matlab_find(&[
+                matrix.clone(),
+                XdlValue::Long(2),
+                XdlValue::String("last".into())
+            ])
+            .unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![3.0, 6.0],
+                shape: vec![2, 1]
+            }
+        );
+        assert_eq!(
+            matlab_find(&[matrix, XdlValue::Long(1)]).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0],
+                shape: vec![1, 1]
+            }
+        );
+    }
+
+    #[test]
+    fn matlab_find_saturates_oversized_finite_limit_to_all_matches() {
+        let input = XdlValue::Array(vec![1.0, 0.0, 2.0]);
+        assert_eq!(
+            matlab_find(&[input, XdlValue::Double(f64::MAX)]).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![1.0, 3.0],
+                shape: vec![1, 2],
+            }
+        );
     }
 
     #[test]
@@ -1013,6 +1540,44 @@ pub fn interp1(args: &[XdlValue]) -> XdlResult<XdlValue> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+
+    fn temporary_csv(contents: &str) -> String {
+        let path = std::env::temp_dir().join(format!(
+            "xdl-readmatrix-{}-{}.csv",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::write(&path, contents).expect("write CSV fixture");
+        path.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn matlab_readmatrix_reads_rectangular_numeric_csv() {
+        let path = temporary_csv("1,2.5\n-3,4\n");
+        let result = matlab_readmatrix(&[XdlValue::String(path.clone())]).unwrap();
+        fs::remove_file(path).expect("remove CSV fixture");
+        assert_eq!(
+            result,
+            XdlValue::NestedArray(vec![
+                XdlValue::Array(vec![1.0, 2.5]),
+                XdlValue::Array(vec![-3.0, 4.0]),
+            ])
+        );
+    }
+
+    #[test]
+    fn matlab_readmatrix_rejects_ragged_malformed_and_empty_csv() {
+        for contents in ["1,2\n3\n", "1,nope\n", "\n"] {
+            let path = temporary_csv(contents);
+            let result = matlab_readmatrix(&[XdlValue::String(path.clone())]);
+            fs::remove_file(path).expect("remove CSV fixture");
+            assert!(result.is_err(), "unexpectedly accepted {contents:?}");
+        }
+    }
 
     fn interp_values(result: XdlValue) -> Vec<f64> {
         match result {

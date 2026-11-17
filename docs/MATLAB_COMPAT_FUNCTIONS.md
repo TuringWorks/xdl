@@ -16,17 +16,60 @@ Transpiled MATLAB `size(x)` calls `MATLAB_SIZE(x)` and returns the represented
 dimension vector. `size(x, dim)` returns the selected dimension, including `1`
 for dimensions beyond the represented rank. Row and column vectors, rectangular
 nested matrices, and shaped numeric arrays have dedicated shape handling.
-General multiple-output forms such as `[m,n] = size(A)` remain unsupported.
+For a known array variable, `[d1, ..., dn] = size(A)` is lowered to one
+dimension query per output; the final output multiplies the remaining
+dimensions, matching MATLAB's behavior for N-D arrays. General expression and
+object-array forms are not verified.
 This follows MATLAB's documented dimension-vector and selected-dimension forms
 for the supported input shapes; see [MathWorks `size`](https://www.mathworks.com/help/matlab/ref/double.size.html).
 
-Transpiled one-input `find(x)` calls `MATLAB_FIND(x)`. The verified subset
-returns one-based linear indices for numeric vectors and rectangular 2D
-matrices. Row-vector inputs preserve row orientation; column vectors and
+Transpiled `find(x)`, `find(x,k)`, and `find(x,k,'first'|'last')` calls use
+`MATLAB_FIND`. The verified subset returns one-based linear indices for
+numeric scalars, vectors, and rectangular 2D matrices. A nonzero scalar returns
+the `1x1` index `[1]`; scalar zero and empty `[]` return an empty `0x0` result.
+Row-vector inputs preserve row
+orientation; column vectors and
 matrices return a column. Empty results preserve row-vector orientation and
 are columns for other inputs; an empty 0×0 matrix and scalar zero produce a
-0×0 result. `find(x,k)`, direction options, multiple outputs, and nonnumeric
-array types are not implemented or verified. See [MathWorks `find`](https://www.mathworks.com/help/matlab/ref/find.html).
+0×0 result. Positive integer limits and `'first'`/`'last'` direction are also
+supported for the tested numeric shapes, with `'last'` indices returned in
+ascending order. The two-output form `[row, col] = find(A[,k[,direction]])`
+is supported for rectangular numeric 2D matrices with at least two rows and
+columns through `MATLAB_FIND_ROWS` and `MATLAB_FIND_COLUMNS`; results are
+one-based column vectors, in MATLAB column-major nonzero order. Positive
+integer `k` and `'first'`/`'last'` are supported, and `'last'` results remain
+in ascending index order. The three-output form `[row, col, linear] = find(A)`
+is also supported for this 2D subset; the third output contains one-based
+column-major linear indices. Two-output vector cases, four or more outputs,
+higher-dimensional inputs, and nonnumeric array types are not implemented or
+verified. See [MathWorks `find`](https://www.mathworks.com/help/matlab/ref/find.html).
+
+For a known array variable used with one scalar linear subscript, the
+transpiler emits `MATLAB_INDEX(array, index)`. This helper reads numeric vector,
+rectangular nested-matrix, and shaped-array values using one-based
+column-major indexing. Indexed assignment and vector-valued index arguments are
+separate compatibility gaps.
+
+## Numeric CSV import
+
+Transpiled `readmatrix(filename)` uses `MATLAB_READMATRIX` for a strict subset:
+headerless rectangular CSV containing only numeric fields. The result is an
+XDL nested numeric matrix usable by tested matrix indexing and plotting paths.
+Empty files, ragged rows, malformed numbers, and unsupported argument forms
+return errors. Header detection, import options, mixed types, dates, and
+large-file streaming are not implemented. See MathWorks
+[`readmatrix`](https://www.mathworks.com/help/matlab/ref/readmatrix.html).
+
+## Basic plot labels
+
+For the supported single-plot workflow, literal `title('...')`,
+`xlabel('...')`, and `ylabel('...')` calls immediately after `plot(x,y)` are
+attached to that emitted XDL `PLOT` as `TITLE`, `XTITLE`, and `YTITLE`
+keywords. Dynamic label expressions, labels separated from the plot by another
+statement, legends, grid/axis controls, and multi-axes graphics are not
+supported by this lowering. XDL's plot procedure consumes these keywords in
+the native plot-window backend; backend-specific presentation parity remains
+limited.
 
 Transpiled MATLAB `length(x)` calls `MATLAB_LENGTH(x)`, which returns the
 largest represented dimension (for example, `length` of a 2×3 matrix is 3).
@@ -37,6 +80,23 @@ not a claim of complete MATLAB string, table, or arbitrary object-array parity.
 MATLAB specifies `length` as the largest array dimension (zero for empty arrays)
 and `numel` as the total element count; see [MathWorks `length`](https://www.mathworks.com/help/matlab/ref/double.length.html)
 and [MathWorks `numel`](https://www.mathworks.com/help/matlab/ref/double.numel.html).
+
+The two-input MATLAB `atan2(y, x)` form maps to XDL `ATAN(y, x)`. It applies
+elementwise to equal-length numeric vectors, equal-shape numeric arrays, and
+rectangular nested matrix literals, and expands a numeric scalar across these
+supported shapes. Mismatched array shapes and ragged nested matrices return
+errors; MATLAB's broader implicit expansion and complex-input behavior are not
+established by these tests. The mapping preserves MATLAB's `y`-then-`x`
+argument order and quadrant behavior.
+MATLAB also defines `atan2(0,-0)` and `atan2(-0,-0)` as zero; XDL follows
+that special case. MATLAB accepts operands with any compatible array sizes,
+including row/column singleton-dimension expansion, while XDL's current subset
+requires equal shapes or a scalar. See [MathWorks `atan2`](https://www.mathworks.com/help/matlab/ref/double.atan2.html).
+
+For transpose, MATLAB defines `A.'` and `transpose(A)` as nonconjugating and
+`A'` as conjugating. XDL implements the former for directly named numeric
+vectors and rectangular matrices and rejects the latter. See [MathWorks
+`transpose`](https://www.mathworks.com/help/matlab/ref/double.transpose.html).
 The scalar results from `MATLAB_LENGTH`, `MATLAB_NUMEL`, and `size(x, dim)` are
 XDL `DOUBLE` values, matching MATLAB's numeric dimension/count results.
 XDL's single string value cannot distinguish a MATLAB char vector from a string
@@ -375,6 +435,7 @@ Functions are registered in `xdl-stdlib/src/lib.rs`:
 "MATLAB_LENGTH" => matlab_compat::matlab_length(args),
 "MATLAB_NUMEL" => matlab_compat::matlab_numel(args),
 "MATLAB_SIZE" => matlab_compat::matlab_size(args),
+"MATLAB_SIZE_TAIL" => matlab_compat::matlab_size_tail(args),
 "MATLAB_FIND" => matlab_compat::matlab_find(args),
 "MATLAB_INDEX" => matlab_compat::matlab_index(args),
 "LINSPACE" => matlab_compat::linspace(args),
@@ -389,9 +450,10 @@ Functions are registered in `xdl-stdlib/src/lib.rs`:
 
 Accepted value shapes and scalar types vary by function. For example,
 `INTERP1` currently accepts one-dimensional `Array` samples, while
-`MATLAB_LENGTH`, `MATLAB_NUMEL`, and `MATLAB_FIND` handle their documented
-rectangular and shaped numeric subsets. Each helper validates its own argument count and supported
-types; this does not imply uniform support across the module.
+`MATLAB_LENGTH`, `MATLAB_NUMEL`, `MATLAB_FIND`, and `MATLAB_INDEX` handle their
+documented rectangular and shaped numeric subsets. Each helper validates its
+own argument count and supported types; this does not imply uniform support
+across the module.
 
 ---
 
@@ -409,16 +471,17 @@ cargo test --lib -p xdl-stdlib matlab_compat
 **Most recent focused result (2026-11-16):**
 
 ```text
-running 15 tests
-test result: ok. 15 passed; 0 failed
+running 28 tests
+test result: ok. 28 passed; 0 failed
 ```
 
 ### CLI Integration Evidence
 
 `cargo test -p xdl-cli --test cli_tests` exercises MATLAB source through
 transpilation and execution. It currently includes focused cases for indexing,
-`length`/`numel`, `size`, and one-input `find`. These are executable smoke/regression tests, not comparisons
-against MATLAB reference outputs.
+`length`/`numel`, `size`, `find` first/last limits, named-array transpose, and
+elementwise/scalar-expanded `atan2`. These are executable
+smoke/regression tests, not comparisons against MATLAB reference outputs.
 ```
 
 ---
@@ -487,11 +550,14 @@ These functions provide a cleaner, more intuitive MATLAB-compatible API while ma
    assignment is unsupported, and the transpiler special case is not conformance
    tested
 4. **SIZE**: Single-output `size(A)` and `size(A, dim)` use `MATLAB_SIZE`;
-   general multiple-output assignment and nonnumeric/object-array semantics
-   remain unsupported
-5. **FIND**: One-input `find(A)` uses `MATLAB_FIND` for tested numeric vectors
-   and rectangular 2D matrices. `find(A,k)`, direction options, multiple
-   outputs, and broader type/order conformance remain unsupported or unverified.
+   `[d1,...,dn]=size(A)` on a known array variable uses `MATLAB_SIZE` plus
+   `MATLAB_SIZE_TAIL`. Other expression/object-array forms and nonnumeric
+   semantics remain unsupported or unverified.
+5. **FIND**: one-output `find(A[,k[,direction]])` uses `MATLAB_FIND` for tested
+   numeric vectors and rectangular 2D matrices. `[row,col]=find(A)` lowers to
+   `MATLAB_FIND_ROWS` and `MATLAB_FIND_COLUMNS` for rectangular numeric 2D
+   matrices with at least two rows and columns. Three or more outputs and
+   broader type/order conformance remain unsupported or unverified.
 6. **Type conversions**: Limited automatic type promotion in some cases
 
 ### Planned Enhancements
@@ -510,8 +576,10 @@ These functions provide a cleaner, more intuitive MATLAB-compatible API while ma
 |----------------|--------------|--------|-------|
 | `length()` | `MATLAB_LENGTH()` | ⚠️ Partial | Largest represented dimension for scalars, vectors, rectangular nested arrays, and shaped numeric arrays; ragged arrays error |
 | `numel()` | `MATLAB_NUMEL()` | ⚠️ Partial | Counts scalar elements for vectors, rectangular nested arrays, and shaped numeric arrays; ragged arrays error |
-| `size()` | `MATLAB_SIZE()` | ⚠️ Partial | Dimension vector and selected dimension for supported scalar/numeric shapes; multiple-output form remains unsupported |
-| `find()` | `MATLAB_FIND()` | ⚠️ Partial | One-input numeric vectors and rectangular matrices; one-based linear indices, preserving row-vector orientation; options and multiple outputs unsupported |
+| `size()` | `MATLAB_SIZE()` / `MATLAB_SIZE_TAIL()` | ⚠️ Partial | Dimension vector and selected dimension for supported scalar/numeric shapes; multiple outputs supported for known array variables |
+| `find()` | `MATLAB_FIND()`; `MATLAB_FIND_ROWS()` / `MATLAB_FIND_COLUMNS()` / `MATLAB_FIND_INDICES()` | ⚠️ Partial | One-output numeric vectors/matrices and two-/three-output forms on rectangular 2D matrices with at least 2 rows and columns; four or more outputs unsupported |
+| `atan2(y, x)` | `ATAN(y, x)` | ⚠️ Partial | Same-shape vectors/matrices and scalar expansion are tested; complex inputs and broader implicit expansion are unverified |
+| `transpose(A)` / `A.'` | `TRANSPOSE(A)` | ⚠️ Partial | Rectangular nested matrices and row/column vectors transpose; postfix syntax currently requires a named array; conjugating transpose is rejected |
 | `linspace()` | `LINSPACE()` | ⚠️ Partial | Common vector generation is implemented; full MATLAB edge-case parity is not established |
 | `logspace()` | `LOGSPACE()` | ⚠️ Partial | Common vector generation is implemented; full MATLAB edge-case parity is not established |
 | `meshgrid()` | `MESHGRID()` | ⚠️ Partial | Runtime and transpiler use constrained output handling; full two-output MATLAB behavior is not established |

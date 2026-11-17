@@ -76,6 +76,7 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("reshape", "REFORM");
     map.insert("sort", "SORT");
     map.insert("find", "MATLAB_FIND");
+    map.insert("readmatrix", "MATLAB_READMATRIX");
 
     // I/O
     map.insert("disp", "PRINT");
@@ -113,6 +114,8 @@ mod tests {
     fn test_function_mapping() {
         assert_eq!(get_xdl_function("zeros"), Some("FLTARR"));
         assert_eq!(get_xdl_function("sin"), Some("SIN"));
+        assert_eq!(get_xdl_function("atan2"), Some("ATAN"));
+        assert_eq!(get_xdl_function("readmatrix"), Some("MATLAB_READMATRIX"));
         assert_eq!(get_xdl_function("plot"), Some("PLOT"));
         assert_eq!(get_xdl_function("nonexistent"), None);
     }

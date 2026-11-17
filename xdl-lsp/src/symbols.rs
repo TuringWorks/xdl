@@ -61,7 +61,12 @@ impl SymbolTable {
             ),
             ("ASIN", "asin(x) - Compute arc sine", "DOUBLE", "ASIN(x)"),
             ("ACOS", "acos(x) - Compute arc cosine", "DOUBLE", "ACOS(x)"),
-            ("ATAN", "atan(x) - Compute arc tangent", "DOUBLE", "ATAN(x)"),
+            (
+                "ATAN",
+                "atan(x) or atan2(y, x) - Compute arc tangent",
+                "DOUBLE",
+                "ATAN(x[, x2])",
+            ),
             (
                 "SINH",
                 "sinh(x) - Compute hyperbolic sine",
@@ -223,10 +228,40 @@ impl SymbolTable {
                 "MATLAB_SIZE(arr, [dim])",
             ),
             (
+                "MATLAB_SIZE_TAIL",
+                "matlab_size_tail(arr, dim) - Multiply MATLAB dimensions from dim onward",
+                "DOUBLE",
+                "MATLAB_SIZE_TAIL(arr, dim)",
+            ),
+            (
                 "MATLAB_FIND",
                 "matlab_find(arr) - Return MATLAB-compatible one-based linear indices",
                 "ARRAY",
                 "MATLAB_FIND(arr)",
+            ),
+            (
+                "MATLAB_FIND_ROWS",
+                "matlab_find_rows(matrix) - Return one-based row outputs for MATLAB find",
+                "ARRAY",
+                "MATLAB_FIND_ROWS(matrix)",
+            ),
+            (
+                "MATLAB_FIND_COLUMNS",
+                "matlab_find_columns(matrix) - Return one-based column outputs for MATLAB find",
+                "ARRAY",
+                "MATLAB_FIND_COLUMNS(matrix)",
+            ),
+            (
+                "MATLAB_FIND_INDICES",
+                "matlab_find_indices(matrix) - Return one-based linear indices for multi-output MATLAB find",
+                "ARRAY",
+                "MATLAB_FIND_INDICES(matrix)",
+            ),
+            (
+                "MATLAB_READMATRIX",
+                "matlab_readmatrix(filename) - Import a headerless rectangular numeric CSV",
+                "NESTED_ARRAY",
+                "MATLAB_READMATRIX(filename)",
             ),
             (
                 "MATLAB_INDEX",
@@ -483,6 +518,12 @@ impl SymbolTable {
                 "gnc_flight_readiness_step(state, temperature_c, soc, launch_requested) - Advance the explicit flight-readiness state machine",
                 "STRUCT",
                 "GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)",
+            ),
+            (
+                "GNC_STATE_MACHINE_STEP",
+                "gnc_state_machine_step(machine_json, state, entered_ns, timestamp_ns, event, active_guards) - Advance a serialized state machine with explicit state and time",
+                "STRUCT",
+                "GNC_STATE_MACHINE_STEP(machine_json, state, entered_ns, timestamp_ns, event, active_guards)",
             ),
             (
                 "GNC_WAYPOINT",
@@ -764,6 +805,34 @@ mod tests {
             .expect("readiness function in LSP symbol table");
         assert_eq!(info.return_type, "STRUCT");
         assert!(info.signature.contains("launch_requested"));
+    }
+
+    #[test]
+    fn atan_documents_both_scalar_and_two_argument_forms() {
+        let table = SymbolTable::new();
+        let info = table.get_function("atan").expect("ATAN builtin");
+        assert!(info.signature.contains("x2"));
+        assert!(info.documentation.contains("atan2(y, x)"));
+    }
+
+    #[test]
+    fn matlab_readmatrix_documents_its_numeric_csv_subset() {
+        let table = SymbolTable::new();
+        let info = table
+            .get_function("MATLAB_READMATRIX")
+            .expect("MATLAB_READMATRIX builtin");
+        assert_eq!(info.return_type, "NESTED_ARRAY");
+        assert!(info
+            .documentation
+            .contains("headerless rectangular numeric CSV"));
+    }
+
+    #[test]
+    fn matlab_find_subscript_helpers_are_documented() {
+        let table = SymbolTable::new();
+        assert!(table.get_function("MATLAB_FIND_ROWS").is_some());
+        assert!(table.get_function("MATLAB_FIND_COLUMNS").is_some());
+        assert!(table.get_function("MATLAB_FIND_INDICES").is_some());
     }
 }
 

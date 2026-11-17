@@ -36,7 +36,7 @@
 | `TAN(x)` | Tangent | `y = TAN(!PI/4)` |
 | `ASIN(x)` | Arc sine | `y = ASIN(1)` |
 | `ACOS(x)` | Arc cosine | `y = ACOS(0)` |
-| `ATAN(x)` | Arc tangent | `y = ATAN(1)` |
+| `ATAN(x[, x2])` | Arc tangent; two arguments compute quadrant-aware `atan2(y, x)` elementwise for equal-shape numeric arrays, with scalar expansion | `a = ATAN(1)`; `theta = ATAN(y, x)` |
 
 ### Hyperbolic
 
@@ -131,11 +131,14 @@
 | `MATLAB_LENGTH(x)` | Double scalar with MATLAB-compatible largest array dimension; used by transpiled `length(x)` | `n = MATLAB_LENGTH(matrix)` |
 | `MATLAB_NUMEL(x)` | Double scalar with MATLAB-compatible scalar element count; used by transpiled `numel(x)` | `n = MATLAB_NUMEL(matrix)` |
 | `MATLAB_SIZE(x, [dim])` | MATLAB-compatible dimension vector or selected double dimension; used by transpiled `size(x, [dim])` | `dims = MATLAB_SIZE(matrix)` |
+| `MATLAB_SIZE_TAIL(x, dim)` | Product of MATLAB dimensions from `dim` onward; used for the final output of `[d1,...,dn] = size(x)` | `n = MATLAB_SIZE_TAIL(volume, 2)` |
 | `MATLAB_FIND(x)` | MATLAB-compatible one-based linear indices; row vectors preserve orientation, other shapes return a column; used by transpiled `find(x)` | `idx = MATLAB_FIND(data)` |
+| `MATLAB_FIND_ROWS(A)` / `MATLAB_FIND_COLUMNS(A)` | One-based row and column outputs for transpiled `[row, col] = find(A)` on supported 2D numeric arrays | The MATLAB transpiler emits both helpers for `[row, col] = find(matrix)` |
+| `MATLAB_READMATRIX(filename)` | Import a headerless rectangular numeric CSV as nested numeric rows; used by transpiled `readmatrix(filename)` | `matrix = MATLAB_READMATRIX('data.csv')` |
 | `MATLAB_INDEX(x, index)` | Read one MATLAB one-based linear element using column-major traversal | `value = MATLAB_INDEX(matrix, 4)` |
 | `WHERE(condition)` | Find indices | `idx = WHERE(arr GT 0)` |
 | `REFORM(arr, dims)` | Reshape array | `b = REFORM(a, 5, 20)` |
-| `TRANSPOSE(arr)` | Transpose | `b = TRANSPOSE(a)` |
+| `TRANSPOSE(arr)` | Transpose a rectangular nested numeric matrix | `b = TRANSPOSE(matrix)` |
 | `REVERSE(arr)` | Reverse array | `b = REVERSE(a)` |
 | `SORT(arr)` | Sort indices | `idx = SORT(arr)` |
 | `SHIFT(arr, s)` | Circular shift elements | `b = SHIFT(arr, 2)` |
@@ -591,6 +594,7 @@ the native GNC crates retain typed frames, timestamps, and error semantics.
 |---|---|---|
 | `GNC_VEC3` | `GNC_VEC3(x, y, z)` | Three-element numeric array |
 | `GNC_FLIGHT_READINESS_STEP` | `GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)` | Explicit-state readiness transition; returns `STATE`, `STATE_NAME`, `READY`, and `FLYING` |
+| `GNC_STATE_MACHINE_STEP` | `GNC_STATE_MACHINE_STEP(machine_json, state, entered_ns, timestamp_ns, event, active_guards)` | Explicit-state serialized event/timed state-machine step; returns `STATE`, `STATE_NAME`, and `STATE_ENTERED_NS` |
 | `GNC_WAYPOINT` | `GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)` | Structure with `DESIRED_VELOCITY`, `DISTANCE`, `REACHED`, and `DEGRADED` |
 | `GNC_PID_STEP` | `GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)` | Structure with `COMMAND`, `ERROR`, `DERIVATIVE`, `INTEGRAL`, and `SATURATED` |
 | `GNC_STATE_SPACE_STEP` | `GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)` | Explicit-state discrete state-space update using row-major flattened matrices; returns `OUTPUT` and next `STATE` |
@@ -610,3 +614,14 @@ flying vehicle returns to ready when `temperature_c < 8` or `soc <= 0.30`.
 The 2 C thermal hysteresis prevents readiness chatter near the heater
 threshold. The caller owns and passes the state on every step, so the function
 has no hidden process-global state.
+
+`GNC_STATE_MACHINE_STEP` accepts a JSON-serialized `xdl_model::StateMachine`,
+the current numeric state ID, its entry timestamp, the current timestamp, an
+event string (or an empty string to process timers only), and a guard name or
+array of guard names that the host has evaluated as true. An empty guard string
+means no active guards. Due timed transitions are
+processed before the optional event. State and entry time are returned for the
+next call; the function keeps no hidden state. Machine JSON should include
+`name`, `states`, `transitions`, `initial_state`, and, when used,
+`timed_transitions`. State IDs are numeric keys in `states`; each state has
+`id` and `name` fields.

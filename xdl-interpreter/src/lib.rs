@@ -27,8 +27,12 @@ pub struct Interpreter {
 /// An index whose expression has been evaluated.
 enum ResolvedIndex {
     Single(i64),
-    /// A range or `*`; reported as unsupported by the write path.
-    Unsupported,
+    Range {
+        start: Option<i64>,
+        end: Option<i64>,
+        step: Option<i64>,
+    },
+    All,
 }
 
 /// Resolve a possibly-negative index (counted from the end) against `len`.
@@ -744,8 +748,7 @@ impl Interpreter {
         Self::write_element(array_val, &resolved, value)
     }
 
-    /// Evaluate the `Single` index expressions. Range and `*` indices are carried
-    /// through so the write path reports them as unsupported.
+    /// Evaluate assignment indices before borrowing the destination variable.
     fn resolve_indices(
         &mut self,
         indices: &[xdl_parser::ArrayIndex],
@@ -758,7 +761,23 @@ impl Interpreter {
                     let value = self.evaluate_expression(expr)?;
                     Ok(ResolvedIndex::Single(value.to_long()? as i64))
                 }
-                ArrayIndex::Range { .. } | ArrayIndex::All => Ok(ResolvedIndex::Unsupported),
+                ArrayIndex::Range { start, end, step } => {
+                    let evaluate_bound = |this: &mut Self, expression: &Option<Box<Expression>>| {
+                        expression
+                            .as_ref()
+                            .map(|value| {
+                                this.evaluate_expression(value)
+                                    .map(|value| value.to_long().map(i64::from))?
+                            })
+                            .transpose()
+                    };
+                    Ok(ResolvedIndex::Range {
+                        start: evaluate_bound(self, start)?,
+                        end: evaluate_bound(self, end)?,
+                        step: evaluate_bound(self, step)?,
+                    })
+                }
+                ArrayIndex::All => Ok(ResolvedIndex::All),
             })
             .collect()
     }
@@ -771,7 +790,7 @@ impl Interpreter {
     ) -> XdlResult<()> {
         let single = |index: &ResolvedIndex| match index {
             ResolvedIndex::Single(raw) => Ok(*raw),
-            ResolvedIndex::Unsupported => Err(XdlError::NotImplemented(
+            ResolvedIndex::Range { .. } | ResolvedIndex::All => Err(XdlError::NotImplemented(
                 "Range indexing in multi-dimensional assignment".to_string(),
             )),
         };
@@ -781,22 +800,27 @@ impl Interpreter {
                 "No index provided for array assignment".to_string(),
             )),
             [only] => match array_val {
-                XdlValue::Array(arr) => {
-                    let ResolvedIndex::Single(raw) = only else {
-                        return Err(XdlError::NotImplemented(
-                            "Range assignment not supported".to_string(),
-                        ));
-                    };
-                    let position = resolve_position(*raw, arr.len())?;
-                    arr[position] = value.to_double()?;
-                    Ok(())
-                }
-                XdlValue::MultiDimArray { data, .. } => {
-                    // A single index addresses the flat, column-major element.
-                    let position = resolve_position(single(only)?, data.len())?;
-                    data[position] = value.to_double()?;
-                    Ok(())
-                }
+                XdlValue::Array(arr) => match only {
+                    ResolvedIndex::Single(raw) => {
+                        let position = resolve_position(*raw, arr.len())?;
+                        arr[position] = value.to_double()?;
+                        Ok(())
+                    }
+                    ResolvedIndex::Range { .. } | ResolvedIndex::All => {
+                        Self::write_f64_range(arr, only, value)
+                    }
+                },
+                XdlValue::MultiDimArray { data, .. } => match only {
+                    ResolvedIndex::Single(raw) => {
+                        // A single index addresses the flat, column-major element.
+                        let position = resolve_position(*raw, data.len())?;
+                        data[position] = value.to_double()?;
+                        Ok(())
+                    }
+                    ResolvedIndex::Range { .. } | ResolvedIndex::All => {
+                        Self::write_f64_range(data, only, value)
+                    }
+                },
                 XdlValue::NestedArray(rows) => {
                     let position = resolve_position(single(only)?, rows.len())?;
                     rows[position] = value;
@@ -808,8 +832,86 @@ impl Interpreter {
             },
             [first, rest @ ..] => match array_val {
                 XdlValue::NestedArray(rows) => {
-                    let position = resolve_position(single(first)?, rows.len())?;
-                    Self::write_element(&mut rows[position], rest, value)
+                    if matches!(first, ResolvedIndex::Single(_)) {
+                        let position = resolve_position(single(first)?, rows.len())?;
+                        Self::write_element(&mut rows[position], rest, value)
+                    } else {
+                        if let [row_index, column_index] = indices {
+                            if matches!(
+                                column_index,
+                                ResolvedIndex::Range { .. } | ResolvedIndex::All
+                            ) {
+                                return Self::write_numeric_matrix_block(
+                                    rows,
+                                    row_index,
+                                    column_index,
+                                    value,
+                                );
+                            }
+                        }
+                        let (start, end, step, selected_len) =
+                            Self::range_bounds(first, rows.len())?;
+                        let values = Self::numeric_values(value)?;
+                        let expands_across_rows = values.len() == 1;
+                        if !expands_across_rows && values.len() != selected_len {
+                            return Err(XdlError::RuntimeError(format!(
+                                "Matrix assignment selects {} rows but source has {} elements",
+                                selected_len,
+                                values.len()
+                            )));
+                        }
+                        let scalar_value = expands_across_rows.then_some(values[0]);
+                        if !expands_across_rows
+                            && rest.iter().any(|index| {
+                                matches!(index, ResolvedIndex::Range { .. } | ResolvedIndex::All)
+                            })
+                        {
+                            return Err(XdlError::NotImplemented(
+                                "Matrix range assignment from nonscalar nested selections is not supported"
+                                    .to_string(),
+                            ));
+                        }
+                        if rest.len() != 1 {
+                            return Err(XdlError::NotImplemented(
+                                "Nested matrix range assignment supports one remaining subscript"
+                                    .to_string(),
+                            ));
+                        }
+                        for row in (start..end).step_by(step) {
+                            match (&rows[row], &rest[0]) {
+                                (XdlValue::Array(values), ResolvedIndex::Single(index)) => {
+                                    resolve_position(*index, values.len())?;
+                                }
+                                (
+                                    XdlValue::Array(values),
+                                    ResolvedIndex::Range { .. } | ResolvedIndex::All,
+                                ) => {
+                                    Self::range_bounds(&rest[0], values.len())?;
+                                }
+                                _ => {
+                                    return Err(XdlError::NotImplemented(
+                                        "Nested matrix range assignment requires flat numeric rows"
+                                            .to_string(),
+                                    ));
+                                }
+                            }
+                        }
+                        let mut source = values.into_iter();
+                        for (offset, row) in (start..end).step_by(step).enumerate() {
+                            let value = if let Some(scalar) = scalar_value {
+                                scalar
+                            } else {
+                                // The source length was checked against selected_len.
+                                source.next().ok_or_else(|| {
+                                    XdlError::RuntimeError(format!(
+                                        "Missing source value for selected row {offset}"
+                                    ))
+                                })?
+                            };
+                            Self::write_element(&mut rows[row], rest, XdlValue::Double(value))?;
+                        }
+                        Ok(())
+                    }
                 }
                 XdlValue::MultiDimArray { data, shape } => {
                     if indices.len() > shape.len() {
@@ -846,6 +948,227 @@ impl Interpreter {
                         .to_string(),
                 )),
             },
+        }
+    }
+
+    /// Assign a rectangular block in a nested numeric matrix. A scalar fills
+    /// the whole block; a matrix source must have exactly the selected shape.
+    /// Flat vectors are intentionally not reshaped because their orientation
+    /// would otherwise be ambiguous for a two-dimensional destination.
+    fn write_numeric_matrix_block(
+        rows: &mut [XdlValue],
+        row_index: &ResolvedIndex,
+        column_index: &ResolvedIndex,
+        value: XdlValue,
+    ) -> XdlResult<()> {
+        let matrix_width = rows
+            .first()
+            .and_then(|row| match row {
+                XdlValue::Array(values) => Some(values.len()),
+                _ => None,
+            })
+            .filter(|width| *width > 0)
+            .ok_or_else(|| {
+                XdlError::InvalidArgument(
+                    "Matrix block assignment requires a nonempty rectangular numeric matrix"
+                        .to_string(),
+                )
+            })?;
+        if rows
+            .iter()
+            .any(|row| !matches!(row, XdlValue::Array(values) if values.len() == matrix_width))
+        {
+            return Err(XdlError::InvalidArgument(
+                "Matrix block assignment does not support ragged or nonnumeric rows".to_string(),
+            ));
+        }
+
+        let (row_start, row_end, row_step, selected_rows) =
+            Self::matrix_axis_bounds(row_index, rows.len())?;
+        let (column_start, column_end, column_step, selected_columns) =
+            Self::matrix_axis_bounds(column_index, matrix_width)?;
+        let scalar = match value {
+            XdlValue::Array(values) if values.len() == 1 => Some(values[0]),
+            XdlValue::NestedArray(source_rows) => {
+                let source_width = source_rows
+                    .first()
+                    .and_then(|row| match row {
+                        XdlValue::Array(values) => Some(values.len()),
+                        _ => None,
+                    })
+                    .filter(|width| *width > 0)
+                    .ok_or_else(|| {
+                        XdlError::InvalidArgument(
+                            "Matrix block source must be a nonempty rectangular numeric matrix"
+                                .to_string(),
+                        )
+                    })?;
+                if source_rows.iter().any(
+                    |row| !matches!(row, XdlValue::Array(values) if values.len() == source_width),
+                ) {
+                    return Err(XdlError::InvalidArgument(
+                        "Matrix block source does not support ragged or nonnumeric rows"
+                            .to_string(),
+                    ));
+                }
+                if source_rows.len() != selected_rows || source_width != selected_columns {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Matrix block assignment selects {}x{} elements but source is {}x{}",
+                        selected_rows,
+                        selected_columns,
+                        source_rows.len(),
+                        source_width
+                    )));
+                }
+                let source = source_rows
+                    .iter()
+                    .map(|row| match row {
+                        XdlValue::Array(values) => Ok(values.clone()),
+                        _ => Err(XdlError::InvalidArgument(
+                            "Matrix block source does not support nonnumeric rows".to_string(),
+                        )),
+                    })
+                    .collect::<XdlResult<Vec<_>>>()?;
+                for (target_row, source_row) in
+                    (row_start..row_end).step_by(row_step).zip(source.iter())
+                {
+                    let Some(XdlValue::Array(target_values)) = rows.get_mut(target_row) else {
+                        return Err(XdlError::InvalidArgument(
+                            "Matrix block assignment requires rectangular numeric rows".to_string(),
+                        ));
+                    };
+                    for (target_column, source_value) in (column_start..column_end)
+                        .step_by(column_step)
+                        .zip(source_row.iter())
+                    {
+                        let Some(target) = target_values.get_mut(target_column) else {
+                            return Err(XdlError::RuntimeError(
+                                "Matrix block column index is out of bounds".to_string(),
+                            ));
+                        };
+                        *target = *source_value;
+                    }
+                }
+                return Ok(());
+            }
+            other => {
+                let values = Self::numeric_values(other)?;
+                if values.len() != 1 {
+                    return Err(XdlError::RuntimeError(format!(
+                        "Matrix block assignment requires a scalar or a {}x{} matrix source, got {} values",
+                        selected_rows, selected_columns, values.len()
+                    )));
+                }
+                Some(values[0])
+            }
+        };
+        if let Some(scalar) = scalar {
+            for target_row in (row_start..row_end).step_by(row_step) {
+                let Some(XdlValue::Array(target_values)) = rows.get_mut(target_row) else {
+                    return Err(XdlError::InvalidArgument(
+                        "Matrix block assignment requires rectangular numeric rows".to_string(),
+                    ));
+                };
+                for target_column in (column_start..column_end).step_by(column_step) {
+                    let Some(target) = target_values.get_mut(target_column) else {
+                        return Err(XdlError::RuntimeError(
+                            "Matrix block column index is out of bounds".to_string(),
+                        ));
+                    };
+                    *target = scalar;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn matrix_axis_bounds(
+        index: &ResolvedIndex,
+        length: usize,
+    ) -> XdlResult<(usize, usize, usize, usize)> {
+        match index {
+            ResolvedIndex::Single(raw) => {
+                let position = resolve_position(*raw, length)?;
+                Ok((position, position + 1, 1, 1))
+            }
+            ResolvedIndex::Range { .. } | ResolvedIndex::All => Self::range_bounds(index, length),
+        }
+    }
+
+    fn write_f64_range(
+        target: &mut [f64],
+        index: &ResolvedIndex,
+        value: XdlValue,
+    ) -> XdlResult<()> {
+        let (start, end, step, selected_len) = Self::range_bounds(index, target.len())?;
+        let values = Self::numeric_values(value)?;
+        if values.len() == 1 {
+            for position in (start..end).step_by(step) {
+                target[position] = values[0];
+            }
+        } else if values.len() == selected_len {
+            for (offset, value) in values.into_iter().enumerate() {
+                target[start + offset * step] = value;
+            }
+        } else {
+            return Err(XdlError::RuntimeError(format!(
+                "Array assignment has {} destination elements but {} source elements",
+                selected_len,
+                values.len()
+            )));
+        }
+        Ok(())
+    }
+
+    fn range_bounds(
+        index: &ResolvedIndex,
+        length: usize,
+    ) -> XdlResult<(usize, usize, usize, usize)> {
+        let (start, end, step) = match index {
+            ResolvedIndex::Range { start, end, step } => (
+                start.unwrap_or(0),
+                end.unwrap_or(length as i64),
+                step.unwrap_or(1),
+            ),
+            ResolvedIndex::All => (0, length as i64, 1),
+            ResolvedIndex::Single(_) => {
+                return Err(XdlError::RuntimeError("Expected a range index".to_string()));
+            }
+        };
+        let start = usize::try_from(start).map_err(|_| {
+            XdlError::RuntimeError("Array assignment range start must be non-negative".to_string())
+        })?;
+        let end = usize::try_from(end).map_err(|_| {
+            XdlError::RuntimeError("Array assignment range end must be non-negative".to_string())
+        })?;
+        let step = usize::try_from(step)
+            .ok()
+            .filter(|&step| step > 0)
+            .ok_or_else(|| {
+                XdlError::RuntimeError("Array assignment range step must be positive".to_string())
+            })?;
+        if start > length || end > length {
+            return Err(XdlError::RuntimeError(format!(
+                "Array assignment range {}:{} exceeds array length {}",
+                start, end, length
+            )));
+        }
+        let selected_len = if start < end {
+            1 + (end - 1 - start) / step
+        } else {
+            0
+        };
+        Ok((start, end, step, selected_len))
+    }
+
+    fn numeric_values(value: XdlValue) -> XdlResult<Vec<f64>> {
+        match value {
+            XdlValue::Array(values) => Ok(values),
+            XdlValue::MultiDimArray { data, .. } => Ok(data),
+            XdlValue::NestedArray(_) => Err(XdlError::NotImplemented(
+                "Nested-array sources in flat range assignment are not supported".to_string(),
+            )),
+            scalar => Ok(vec![scalar.to_double()?]),
         }
     }
 
@@ -1206,6 +1529,107 @@ mod array_element_access_tests {
         let interpreter = run("x = FINDGEN(5)\ny = x[-1]\nz = x[0]\n")?;
         assert!(matches!(variable(&interpreter, "y")?, XdlValue::Double(v) if v == 4.0));
         assert!(matches!(variable(&interpreter, "z")?, XdlValue::Double(v) if v == 0.0));
+        Ok(())
+    }
+
+    #[test]
+    fn range_assignment_writes_matching_vector_values() -> XdlResult<()> {
+        let interpreter = run("x = [10, 20, 30, 40]\nx[1:3] = [99, 88]\n")?;
+        assert!(matches!(
+            variable(&interpreter, "x")?,
+            XdlValue::Array(ref values) if values == &[10.0, 99.0, 88.0, 40.0]
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn range_assignment_expands_scalar_over_vector_selection() -> XdlResult<()> {
+        let interpreter = run("x = [10, 20, 30, 40]\nx[1:4:2] = 7\n")?;
+        assert!(matches!(
+            variable(&interpreter, "x")?,
+            XdlValue::Array(ref values) if values == &[10.0, 7.0, 30.0, 7.0]
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn linear_range_assignment_uses_flat_storage_for_shaped_arrays() -> XdlResult<()> {
+        let interpreter = run("w = FLTARR(2,3)\nw[1:4] = [5, 6, 7]\n")?;
+        assert!(matches!(
+            variable(&interpreter, "w")?,
+            XdlValue::MultiDimArray { ref data, .. }
+                if data == &[0.0, 5.0, 6.0, 7.0, 0.0, 0.0]
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_matrix_column_range_assignment_preserves_rows() -> XdlResult<()> {
+        let interpreter = run("matrix = [[1, 2, 3], [4, 5, 6]]\nmatrix[0:2, 0] = [11, 22]\n")?;
+        assert!(matches!(
+            variable(&interpreter, "matrix")?,
+            XdlValue::NestedArray(ref rows)
+                if matches!(&rows[0], XdlValue::Array(values) if values == &[11.0, 2.0, 3.0])
+                    && matches!(&rows[1], XdlValue::Array(values) if values == &[22.0, 5.0, 6.0])
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_matrix_block_assignment_preserves_source_shape() -> XdlResult<()> {
+        let interpreter = run("matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\n\
+             matrix[0:2, 1:3] = [[20, 30], [50, 60]]\n")?;
+        assert!(matches!(
+            variable(&interpreter, "matrix")?,
+            XdlValue::NestedArray(ref rows)
+                if matches!(&rows[0], XdlValue::Array(values) if values == &[1.0, 20.0, 30.0])
+                    && matches!(&rows[1], XdlValue::Array(values) if values == &[4.0, 50.0, 60.0])
+                    && matches!(&rows[2], XdlValue::Array(values) if values == &[7.0, 8.0, 9.0])
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_matrix_block_assignment_expands_scalar() -> XdlResult<()> {
+        let interpreter = run("matrix = [[1, 2, 3], [4, 5, 6]]\nmatrix[0:2, 1:3] = 9\n")?;
+        assert!(matches!(
+            variable(&interpreter, "matrix")?,
+            XdlValue::NestedArray(ref rows)
+                if matches!(&rows[0], XdlValue::Array(values) if values == &[1.0, 9.0, 9.0])
+                    && matches!(&rows[1], XdlValue::Array(values) if values == &[4.0, 9.0, 9.0])
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_matrix_block_assignment_accepts_scalar_row_with_range_column() -> XdlResult<()> {
+        let interpreter = run("matrix = [[1, 2, 3], [4, 5, 6]]\nmatrix[0, 1:3] = [8, 9]\n")?;
+        assert!(matches!(
+            variable(&interpreter, "matrix")?,
+            XdlValue::NestedArray(ref rows)
+                if matches!(&rows[0], XdlValue::Array(values) if values == &[1.0, 8.0, 9.0])
+                    && matches!(&rows[1], XdlValue::Array(values) if values == &[4.0, 5.0, 6.0])
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn nested_matrix_block_assignment_rejects_shape_and_ragged_rows() {
+        assert!(run("matrix = [[1, 2, 3], [4, 5, 6]]\nmatrix[0:2, 1:3] = [[8, 9]]\n").is_err());
+        assert!(run("matrix = [[1, 2], [3]]\nmatrix[0:2, 0:1] = 5\n").is_err());
+        assert!(run("matrix = [[1, 2], [3, 4]]\nmatrix[0:2, 0:2] = [[5, 6], [7]]\n").is_err());
+    }
+
+    #[test]
+    fn range_assignment_rejects_shape_mismatch_and_out_of_bounds() -> XdlResult<()> {
+        assert!(run("x = [1, 2, 3]\nx[0:2] = [8, 9, 10]\n").is_err());
+        assert!(run("x = [1, 2, 3]\nx[2:4] = 0\n").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn flat_range_assignment_rejects_nested_source_shape() -> XdlResult<()> {
+        assert!(run("x = FLTARR(4)\ny = [[1, 2], [3, 4]]\nx[0:4] = y\n").is_err());
         Ok(())
     }
 }

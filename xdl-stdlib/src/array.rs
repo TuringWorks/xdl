@@ -964,6 +964,79 @@ pub fn transpose_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
+    // Flat XDL arrays represent MATLAB row vectors; transposing them makes a
+    // column vector represented as one nested row per element.
+    if let XdlValue::Array(values) = &args[0] {
+        return Ok(XdlValue::NestedArray(
+            values
+                .iter()
+                .map(|value| XdlValue::Array(vec![*value]))
+                .collect(),
+        ));
+    }
+
+    // Nested row arrays are how matrix literals currently reach the stdlib.
+    if let XdlValue::NestedArray(rows) = &args[0] {
+        if rows.is_empty() {
+            return Ok(XdlValue::NestedArray(Vec::new()));
+        }
+        let first_row = match &rows[0] {
+            XdlValue::Array(values) => values,
+            other => {
+                return Err(XdlError::TypeMismatch {
+                    expected: "rectangular matrix rows".to_string(),
+                    actual: format!("{:?}", other.gdl_type()),
+                })
+            }
+        };
+        let column_count = first_row.len();
+        if rows
+            .iter()
+            .any(|row| !matches!(row, XdlValue::Array(values) if values.len() == column_count))
+        {
+            return Err(XdlError::DimensionError(
+                "TRANSPOSE: matrix rows must have equal lengths".to_string(),
+            ));
+        }
+        if column_count == 1 {
+            let values = rows
+                .iter()
+                .map(|row| match row {
+                    XdlValue::Array(values) => values.first().copied().ok_or_else(|| {
+                        XdlError::DimensionError(
+                            "TRANSPOSE: matrix row changed during transposition".to_string(),
+                        )
+                    }),
+                    other => Err(XdlError::TypeMismatch {
+                        expected: "rectangular matrix rows".to_string(),
+                        actual: format!("{:?}", other.gdl_type()),
+                    }),
+                })
+                .collect::<XdlResult<Vec<_>>>()?;
+            return Ok(XdlValue::Array(values));
+        }
+        let transposed = (0..column_count)
+            .map(|column| -> XdlResult<XdlValue> {
+                rows.iter()
+                    .map(|row| match row {
+                        XdlValue::Array(values) => values.get(column).copied().ok_or_else(|| {
+                            XdlError::DimensionError(
+                                "TRANSPOSE: rectangular row changed during transposition"
+                                    .to_string(),
+                            )
+                        }),
+                        other => Err(XdlError::TypeMismatch {
+                            expected: "rectangular matrix rows".to_string(),
+                            actual: format!("{:?}", other.gdl_type()),
+                        }),
+                    })
+                    .collect::<XdlResult<Vec<_>>>()
+                    .map(XdlValue::Array)
+            })
+            .collect::<XdlResult<Vec<_>>>()?;
+        return Ok(XdlValue::NestedArray(transposed));
+    }
+
     // Get input array
     let _arr = match &args[0] {
         XdlValue::Array(a) => a,
@@ -2495,6 +2568,61 @@ pub fn tile_func(
     }
 
     Ok(XdlValue::Array(result))
+}
+
+#[cfg(test)]
+mod transpose_nested_matrix_tests {
+    use super::*;
+
+    #[test]
+    fn transpose_changes_row_vector_to_column_vector() {
+        assert_eq!(
+            transpose_func(&[XdlValue::Array(vec![1.0, 2.0, 3.0])]).unwrap(),
+            XdlValue::NestedArray(vec![
+                XdlValue::Array(vec![1.0]),
+                XdlValue::Array(vec![2.0]),
+                XdlValue::Array(vec![3.0]),
+            ])
+        );
+    }
+
+    #[test]
+    fn transpose_changes_column_vector_to_row_vector() {
+        assert_eq!(
+            transpose_func(&[XdlValue::NestedArray(vec![
+                XdlValue::Array(vec![1.0]),
+                XdlValue::Array(vec![2.0]),
+                XdlValue::Array(vec![3.0]),
+            ])])
+            .unwrap(),
+            XdlValue::Array(vec![1.0, 2.0, 3.0])
+        );
+    }
+
+    #[test]
+    fn transpose_handles_rectangular_nested_numeric_matrices() {
+        let matrix = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0, 3.0]),
+            XdlValue::Array(vec![4.0, 5.0, 6.0]),
+        ]);
+        assert_eq!(
+            transpose_func(&[matrix]).unwrap(),
+            XdlValue::NestedArray(vec![
+                XdlValue::Array(vec![1.0, 4.0]),
+                XdlValue::Array(vec![2.0, 5.0]),
+                XdlValue::Array(vec![3.0, 6.0]),
+            ])
+        );
+    }
+
+    #[test]
+    fn transpose_rejects_ragged_nested_matrices() {
+        let matrix = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0]),
+            XdlValue::Array(vec![3.0]),
+        ]);
+        assert!(transpose_func(&[matrix]).is_err());
+    }
 }
 
 #[cfg(test)]
