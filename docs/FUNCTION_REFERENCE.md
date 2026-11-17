@@ -128,6 +128,10 @@
 | Function | Description | Example |
 |----------|-------------|---------|
 | `N_ELEMENTS(x)` | Number of elements | `n = N_ELEMENTS(arr)` |
+| `MATLAB_LENGTH(x)` | Double scalar with MATLAB-compatible largest array dimension; used by transpiled `length(x)` | `n = MATLAB_LENGTH(matrix)` |
+| `MATLAB_NUMEL(x)` | Double scalar with MATLAB-compatible scalar element count; used by transpiled `numel(x)` | `n = MATLAB_NUMEL(matrix)` |
+| `MATLAB_SIZE(x, [dim])` | MATLAB-compatible dimension vector or selected double dimension; used by transpiled `size(x, [dim])` | `dims = MATLAB_SIZE(matrix)` |
+| `MATLAB_FIND(x)` | MATLAB-compatible one-based linear indices; row vectors preserve orientation, other shapes return a column; used by transpiled `find(x)` | `idx = MATLAB_FIND(data)` |
 | `WHERE(condition)` | Find indices | `idx = WHERE(arr GT 0)` |
 | `REFORM(arr, dims)` | Reshape array | `b = REFORM(a, 5, 20)` |
 | `TRANSPOSE(arr)` | Transpose | `b = TRANSPOSE(a)` |
@@ -199,6 +203,7 @@
 
 | Function | Description | Example |
 |----------|-------------|---------|
+| `INTERP1(x, y, xi, [method])` | Linear or nearest 1D interpolation; out-of-range queries return NaN | `yi = INTERP1(x, y, xi, 'nearest')` |
 | `INTERPOL(y, x, xnew)` | Linear interpolation | `ynew = INTERPOL(y, x, xnew)` |
 | `SPLINE(x, y, xnew)` | Cubic spline | `ynew = SPLINE(x, y, xnew)` |
 | `BILINEAR(z, x, y)` | Bilinear interpolation | `znew = BILINEAR(z, xnew, ynew)` |

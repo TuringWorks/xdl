@@ -258,10 +258,246 @@ fn test_cli_runs_mars_helicopter_results_after_simulation() {
             .unwrap_or_else(|error| panic!("missing plot artifact {artifact}: {error}"));
         assert!(metadata.len() > 0, "empty plot artifact: {artifact}");
         let png = fs::read(&artifact_path).expect("read generated plot");
-        assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"), "invalid PNG: {artifact}");
+        assert!(
+            png.starts_with(b"\x89PNG\r\n\x1a\n"),
+            "invalid PNG: {artifact}"
+        );
         assert_eq!(u32::from_be_bytes(png[16..20].try_into().unwrap()), 800);
         assert_eq!(u32::from_be_bytes(png[20..24].try_into().unwrap()), 600);
     }
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_function_with_indexed_array_parameter() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-indexed-function");
+    fs::create_dir_all(&output_root).expect("create MATLAB function directory");
+    let source = output_root.join("indexed_function.m");
+    fs::write(
+        &source,
+        "function selected = select_value(values)\nselected = values(3);\nend\nvalues = [10, 20, 30, 40];\nresult = select_value(values);\ndisp(result);\n",
+    )
+    .expect("write MATLAB function fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB function through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB function failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("30.000000000000000"),
+        "unexpected MATLAB function result: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_dispatches_interp1_with_nan_outside_sample_domain() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("interp1-domain");
+    fs::create_dir_all(&output_root).expect("create INTERP1 directory");
+    let source = output_root.join("interp1.xdl");
+    fs::write(
+        &source,
+        "x = [0.0, 1.0, 2.0]\ny = [0.0, 10.0, 20.0]\nxi = [-1.0, 0.5, 2.0]\nresult = INTERP1(x, y, xi)\nPRINT, result\n",
+    )
+    .expect("write INTERP1 fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute INTERP1 through XDL");
+    assert!(
+        output.status.success(),
+        "INTERP1 execution failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("[NaN, 5.000000, 20.000000]"),
+        "unexpected INTERP1 output: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_end_and_omitted_vector_subscripts() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-end-subscripts");
+    fs::create_dir_all(&output_root).expect("create MATLAB index directory");
+    let source = output_root.join("end_subscripts.m");
+    fs::write(
+        &source,
+        "values = [10, 20, 30, 40, 50];\na = values(end);\nb = values(3:end);\nc = values(1:2:end);\nd = values(:);\ne = values(2:);\ndisp(a);\ndisp(b);\ndisp(c);\ndisp(d);\ndisp(e);\n",
+    )
+    .expect("write MATLAB end-index fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB end-index fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB end-index fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("50.000000000000000"), "{stdout}");
+    assert!(
+        stdout.contains("[30.000000, 40.000000, 50.000000]"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("[10.000000, 30.000000, 50.000000]"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("[10.000000, 20.000000, 30.000000, 40.000000, 50.000000]"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("[20.000000, 30.000000, 40.000000, 50.000000]"),
+        "{stdout}"
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_two_dimensional_scalar_subscripts() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-matrix-subscripts");
+    fs::create_dir_all(&output_root).expect("create MATLAB matrix directory");
+    let source = output_root.join("matrix_subscripts.m");
+    fs::write(
+        &source,
+        "matrix = [1, 2, 3; 4, 5, 6];\nfirst = matrix(1, 2);\nlast = matrix(2, 3);\ndisp(first);\ndisp(last);\n",
+    )
+    .expect("write MATLAB matrix-index fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB matrix indexing through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB matrix indexing failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("2.000000000000000"), "{stdout}");
+    assert!(stdout.contains("6.000000000000000"), "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_length_differs_from_numel_for_matrices() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-length-numel");
+    fs::create_dir_all(&output_root).expect("create MATLAB length directory");
+    let source = output_root.join("length_numel.m");
+    fs::write(
+        &source,
+        "scalar = 8;\nrow = [1, 2, 3];\ncolumn = [1; 2; 3];\nmatrix = [1, 2, 3; 4, 5, 6];\ndisp(length(scalar));\ndisp(length(row));\ndisp(length(column));\ndisp(length(matrix));\ndisp(numel(matrix));\n",
+    )
+    .expect("write MATLAB length fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB length fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB length fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let results: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(results, [1.0, 3.0, 3.0, 3.0, 6.0], "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_size_returns_dimensions_and_selected_dimension() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-size-dimensions");
+    fs::create_dir_all(&output_root).expect("create MATLAB size directory");
+    let source = output_root.join("size_dimensions.m");
+    fs::write(
+        &source,
+        "row = [1, 2, 3];\ncolumn = [1; 2; 3];\nmatrix = [1, 2, 3; 4, 5, 6];\ndisp(size(row));\ndisp(size(column));\ndisp(size(matrix));\ndisp(size(matrix, 1));\ndisp(size(matrix, 2));\ndisp(size(matrix, 4));\n",
+    )
+    .expect("write MATLAB size fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB size fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB size fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("[1.000000, 3.000000]"), "{stdout}");
+    assert!(stdout.contains("[3.000000, 1.000000]"), "{stdout}");
+    assert!(stdout.contains("[2.000000, 3.000000]"), "{stdout}");
+    let scalar_results: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(scalar_results, [2.0, 3.0, 1.0], "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_find_uses_one_based_indices_and_preserves_orientation() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-find-indices");
+    fs::create_dir_all(&output_root).expect("create MATLAB find directory");
+    let source = output_root.join("find_indices.m");
+    fs::write(
+        &source,
+        "row = [0, 7, 0, 9];\ncolumn = [0; 7; 0; 9];\nmatrix = [0, 1; 2, 0];\ndisp(find(row));\ndisp(find(column));\ndisp(find(matrix));\ndisp(find([0, 0]));\n",
+    )
+    .expect("write MATLAB find fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB find fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB find fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Array[1x2]: [2.000, 4.000]"), "{stdout}");
+    assert!(stdout.contains("Array[2x1]: [2.000, 4.000]"), "{stdout}");
+    assert!(stdout.contains("Array[2x1]: [2.000, 3.000]"), "{stdout}");
+    assert!(stdout.contains("Array[1x0]: []"), "{stdout}");
     let _ = fs::remove_dir_all(output_root);
 }
 

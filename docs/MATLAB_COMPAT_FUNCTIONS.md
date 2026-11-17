@@ -2,13 +2,45 @@
 
 ## Overview
 
-XDL now includes a comprehensive set of MATLAB-compatible functions implemented as native XDL extensions. These functions extend beyond standard IDL/GDL capabilities to provide better MATLAB compatibility at the runtime level, complementing the transpiler's syntax conversion.
+XDL includes a growing subset of MATLAB-inspired runtime functions. Each function has its own tested scope; the presence of a MATLAB name does not imply complete MATLAB compatibility. See the compatibility matrix and limitations below.
 
 ## Implementation
 
 **Module:** `xdl-stdlib/src/matlab_compat.rs`
 **Integration:** Registered in `xdl-stdlib/src/lib.rs`
-**Status:** ✅ Fully implemented and tested
+**Status:** Partial compatibility; implementations are tested within the scopes documented below.
+
+## Array size semantics
+
+Transpiled MATLAB `size(x)` calls `MATLAB_SIZE(x)` and returns the represented
+dimension vector. `size(x, dim)` returns the selected dimension, including `1`
+for dimensions beyond the represented rank. Row and column vectors, rectangular
+nested matrices, and shaped numeric arrays have dedicated shape handling.
+General multiple-output forms such as `[m,n] = size(A)` remain unsupported.
+This follows MATLAB's documented dimension-vector and selected-dimension forms
+for the supported input shapes; see [MathWorks `size`](https://www.mathworks.com/help/matlab/ref/double.size.html).
+
+Transpiled one-input `find(x)` calls `MATLAB_FIND(x)`. The verified subset
+returns one-based linear indices for numeric vectors and rectangular 2D
+matrices. Row-vector inputs preserve row orientation; column vectors and
+matrices return a column. Empty results preserve row-vector orientation and
+are columns for other inputs; an empty 0×0 matrix and scalar zero produce a
+0×0 result. `find(x,k)`, direction options, multiple outputs, and nonnumeric
+array types are not implemented or verified. See [MathWorks `find`](https://www.mathworks.com/help/matlab/ref/find.html).
+
+Transpiled MATLAB `length(x)` calls `MATLAB_LENGTH(x)`, which returns the
+largest represented dimension (for example, `length` of a 2×3 matrix is 3).
+`numel(x)` calls `MATLAB_NUMEL(x)` and returns the total scalar element count
+(6 for that matrix). Rectangular nested arrays and shaped numeric arrays
+are supported; ragged nested arrays return an error. This is a tested subset,
+not a claim of complete MATLAB string, table, or arbitrary object-array parity.
+MATLAB specifies `length` as the largest array dimension (zero for empty arrays)
+and `numel` as the total element count; see [MathWorks `length`](https://www.mathworks.com/help/matlab/ref/double.length.html)
+and [MathWorks `numel`](https://www.mathworks.com/help/matlab/ref/double.numel.html).
+The scalar results from `MATLAB_LENGTH`, `MATLAB_NUMEL`, and `size(x, dim)` are
+XDL `DOUBLE` values, matching MATLAB's numeric dimension/count results.
+XDL's single string value cannot distinguish a MATLAB char vector from a string
+scalar, so string-array semantics remain outside this verified subset.
 
 ## Available Functions
 
@@ -226,7 +258,7 @@ squeezed = squeeze(arr);
 
 ### INTERP1 - 1D Interpolation
 
-Perform 1D linear interpolation.
+Perform 1D linear or nearest-neighbor interpolation.
 
 **Syntax:**
 
@@ -236,14 +268,14 @@ result = INTERP1(x, y, xi, [method])
 
 **Parameters:**
 
-- `x` - Known x-coordinates (monotonic)
-- `y` - Known y-values corresponding to x
-- `xi` - Query points for interpolation
-- `method` - Interpolation method (optional, currently only 'linear')
+- `x` - Finite, strictly monotonic sample coordinates (ascending or descending)
+- `y` - 1D sample values corresponding to `x`; must have the same length
+- `xi` - Scalar or vector query points
+- `method` - Optional string: `'linear'` (default) or `'nearest'`
 
 **Returns:**
 
-- Array of interpolated values at xi
+- Array of interpolated values; out-of-range queries return `NaN`
 
 **Example:**
 
@@ -267,7 +299,9 @@ yi = interp1(xp, yp, xi);
 **Features:**
 
 - Linear interpolation between points
-- Extrapolation: Uses last value beyond range
+- Out-of-range queries return `NaN` (no extrapolation option is implemented)
+- Nearest-neighbor ties choose the next input sample; descending-axis tie
+  parity against MATLAB/Octave has not been checked
 - Handles exact matches
 - Supports scalar or array xi
 
@@ -320,9 +354,11 @@ y = LOGSPACE(0, 3, 4)
 
 ```rust
 pub mod matlab_compat {
+    pub fn matlab_length(args: &[XdlValue]) -> XdlResult<XdlValue>
+    pub fn matlab_numel(args: &[XdlValue]) -> XdlResult<XdlValue>
+    pub fn matlab_size(args: &[XdlValue]) -> XdlResult<XdlValue>
     pub fn linspace(args: &[XdlValue]) -> XdlResult<XdlValue>
     pub fn logspace(args: &[XdlValue]) -> XdlResult<XdlValue>
-    pub fn meshgrid(args: &[XdlValue]) -> XdlResult<XdlValue>
     pub fn ndgrid(args: &[XdlValue]) -> XdlResult<XdlValue>
     pub fn repmat(args: &[XdlValue]) -> XdlResult<XdlValue>
     pub fn squeeze(args: &[XdlValue]) -> XdlResult<XdlValue>
@@ -336,6 +372,10 @@ Functions are registered in `xdl-stdlib/src/lib.rs`:
 
 ```rust
 // MATLAB compatibility functions
+"MATLAB_LENGTH" => matlab_compat::matlab_length(args),
+"MATLAB_NUMEL" => matlab_compat::matlab_numel(args),
+"MATLAB_SIZE" => matlab_compat::matlab_size(args),
+"MATLAB_FIND" => matlab_compat::matlab_find(args),
 "LINSPACE" => matlab_compat::linspace(args),
 "LOGSPACE" => matlab_compat::logspace(args),
 "REPMAT" => matlab_compat::repmat(args),
@@ -346,13 +386,11 @@ Functions are registered in `xdl-stdlib/src/lib.rs`:
 
 ### Type Support
 
-All functions support:
-
-- `XdlValue::Array` - 1D arrays
-- `XdlValue::MultiDimArray` - Multi-dimensional arrays (where applicable)
-- `XdlValue::Double`, `XdlValue::Float` - Scalar values (where applicable)
-- Proper error handling with `XdlError::TypeMismatch`
-- Validation of argument counts
+Accepted value shapes and scalar types vary by function. For example,
+`INTERP1` currently accepts one-dimensional `Array` samples, while
+`MATLAB_LENGTH`, `MATLAB_NUMEL`, and `MATLAB_FIND` handle their documented
+rectangular and shaped numeric subsets. Each helper validates its own argument count and supported
+types; this does not imply uniform support across the module.
 
 ---
 
@@ -360,51 +398,26 @@ All functions support:
 
 ### Unit Tests
 
-All functions include comprehensive unit tests in `matlab_compat.rs`:
+The focused tests in `matlab_compat.rs` cover selected behavior; passing them
+does not establish MATLAB/Octave parity.
 
 ```bash
 cargo test --lib -p xdl-stdlib matlab_compat
 ```
 
-**Test Results:**
+**Most recent focused result (2026-11-16):**
 
 ```text
-running 3 tests
-test matlab_compat::tests::test_linspace ... ok
-test matlab_compat::tests::test_logspace ... ok
-test matlab_compat::tests::test_meshgrid ... ok
-
-test result: ok. 3 passed; 0 failed
+running 15 tests
+test result: ok. 15 passed; 0 failed
 ```
 
-### Integration Tests
+### CLI Integration Evidence
 
-Test file: `/tmp/test_matlab_compat.xdl`
-
-```bash
-./target/release/xdl /tmp/test_matlab_compat.xdl
-```
-
-**Output:**
-
-```text
-Testing LINSPACE...
-LINSPACE(0, 10, 11):
-[0.000000, 1.000000, ..., 10.000000] (11)
-
-Testing LOGSPACE...
-LOGSPACE(0, 3, 4):
-[1.000000, 10.000000, 100.000000, 1000.000000]
-
-Testing REPMAT...
-REPMAT([1, 2], 2, 3):
-[1.000000, 2.000000, ..., 2.000000] (12)
-
-Testing INTERP1...
-INTERP1 at xi=[0.5, 1.5, 2.5]:
-[0.500000, 2.500000, 6.500000]
-
-All MATLAB compatibility tests completed!
+`cargo test -p xdl-cli --test cli_tests` exercises MATLAB source through
+transpilation and execution. It currently includes focused cases for indexing,
+`length`/`numel`, `size`, and one-input `find`. These are executable smoke/regression tests, not comparisons
+against MATLAB reference outputs.
 ```
 
 ---
@@ -466,15 +479,25 @@ These functions provide a cleaner, more intuitive MATLAB-compatible API while ma
 ### Current Limitations
 
 1. **NDGRID**: Only 2D case implemented (N > 2 returns NotImplemented error)
-2. **INTERP1**: Only linear interpolation supported (no cubic/spline yet)
-3. **MESHGRID**: Returns nested array (MATLAB returns separate X, Y variables)
-4. **Type Conversions**: Limited automatic type promotion in some cases
+2. **INTERP1**: Only linear and nearest methods are implemented; MATLAB's
+   implicit sample coordinates, matrix-valued samples, shape preservation,
+   cubic/spline methods, and explicit extrapolation arguments remain unsupported
+3. **MESHGRID**: Runtime returns a nested pair; MATLAB's general multiple-output
+   assignment is unsupported, and the transpiler special case is not conformance
+   tested
+4. **SIZE**: Single-output `size(A)` and `size(A, dim)` use `MATLAB_SIZE`;
+   general multiple-output assignment and nonnumeric/object-array semantics
+   remain unsupported
+5. **FIND**: One-input `find(A)` uses `MATLAB_FIND` for tested numeric vectors
+   and rectangular 2D matrices. `find(A,k)`, direction options, multiple
+   outputs, and broader type/order conformance remain unsupported or unverified.
+6. **Type conversions**: Limited automatic type promotion in some cases
 
 ### Planned Enhancements
 
 - [ ] N-D NDGRID support (N > 2)
 - [ ] Cubic spline interpolation in INTERP1
-- [ ] Method parameter support in INTERP1 ('nearest', 'cubic', 'spline')
+- [ ] Matrix-valued samples and shape-preserving results in INTERP1
 - [ ] GPU acceleration for large array operations
 - [ ] Extrapolation options in INTERP1
 
@@ -484,18 +507,22 @@ These functions provide a cleaner, more intuitive MATLAB-compatible API while ma
 
 | MATLAB Function | XDL Function | Status | Notes |
 |----------------|--------------|--------|-------|
-| `linspace()` | `LINSPACE()` | ✅ Full | Default n=100 matches MATLAB |
-| `logspace()` | `LOGSPACE()` | ✅ Full | Default n=50 matches MATLAB |
-| `meshgrid()` | `MESHGRID()` | ✅ Full | 2D only |
+| `length()` | `MATLAB_LENGTH()` | ⚠️ Partial | Largest represented dimension for scalars, vectors, rectangular nested arrays, and shaped numeric arrays; ragged arrays error |
+| `numel()` | `MATLAB_NUMEL()` | ⚠️ Partial | Counts scalar elements for vectors, rectangular nested arrays, and shaped numeric arrays; ragged arrays error |
+| `size()` | `MATLAB_SIZE()` | ⚠️ Partial | Dimension vector and selected dimension for supported scalar/numeric shapes; multiple-output form remains unsupported |
+| `find()` | `MATLAB_FIND()` | ⚠️ Partial | One-input numeric vectors and rectangular matrices; one-based linear indices, preserving row-vector orientation; options and multiple outputs unsupported |
+| `linspace()` | `LINSPACE()` | ⚠️ Partial | Common vector generation is implemented; full MATLAB edge-case parity is not established |
+| `logspace()` | `LOGSPACE()` | ⚠️ Partial | Common vector generation is implemented; full MATLAB edge-case parity is not established |
+| `meshgrid()` | `MESHGRID()` | ⚠️ Partial | Runtime and transpiler use constrained output handling; full two-output MATLAB behavior is not established |
 | `ndgrid()` | `NDGRID()` | ⚠️ Partial | 2D only, N-D planned |
-| `repmat()` | `REPMAT()` | ✅ Full | Full compatibility |
-| `squeeze()` | `SQUEEZE()` | ✅ Full | Full compatibility |
-| `interp1()` | `INTERP1()` | ⚠️ Partial | Linear only, cubic/spline planned |
+| `repmat()` | `REPMAT()` | ⚠️ Partial | Replication implemented; full MATLAB shape and type parity is not established |
+| `squeeze()` | `SQUEEZE()` | ⚠️ Partial | Singleton-dimension reduction implemented; full MATLAB shape parity is not established |
+| `interp1()` | `INTERP1()` | ⚠️ Partial | Vector samples; linear/nearest; NaN out of range; advanced methods and shape parity remain open |
 
 **Legend:**
 
 - ✅ Full: Complete compatibility with MATLAB
-- ⚠️ Partial: Core functionality works, advanced features planned
+- ⚠️ Partial / known mismatch: scoped support exists, but parity is incomplete or a semantic difference is documented
 - ❌ None: Not yet implemented
 
 ---
@@ -581,15 +608,9 @@ cargo install --path xdl-cli
 
 ## Summary
 
-The MATLAB compatibility functions in XDL provide:
-
-✅ **7 fully implemented functions** extending beyond IDL/GDL
-✅ **Unit tests for the implemented compatibility functions** with the current test suite passing; this does not imply MATLAB toolbox parity
-✅ **Full integration** with XDL stdlib and transpiler
-✅ **Production ready** for use in scientific computing applications
-✅ **Well documented** with examples and usage guidelines
-
-**Status:** ✅ Complete and tested
-**Version:** XDL v0.1.0
-**Date:** 2025-11-11
-**Build Status:** ✅ Passing
+XDL provides a partial MATLAB-inspired runtime layer with a separately tested
+scope for each function. The transpiler dispatches supported MATLAB names to
+these helpers, and unsupported shapes or methods should be documented and
+reported rather than treated as full MATLAB parity. The current evidence is
+unit and CLI test coverage; it does not establish production readiness or
+complete MATLAB/Octave conformance.

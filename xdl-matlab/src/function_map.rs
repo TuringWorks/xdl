@@ -15,9 +15,9 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("randn", "RANDOMN"); // randn(n) -> RANDOMN(seed, n)
 
     // Array info
-    map.insert("size", "SIZE");
-    map.insert("length", "N_ELEMENTS");
-    map.insert("numel", "N_ELEMENTS");
+    map.insert("size", "MATLAB_SIZE");
+    map.insert("length", "MATLAB_LENGTH");
+    map.insert("numel", "MATLAB_NUMEL");
 
     // Math functions
     map.insert("sin", "SIN");
@@ -75,7 +75,7 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     // Array manipulation
     map.insert("reshape", "REFORM");
     map.insert("sort", "SORT");
-    map.insert("find", "WHERE");
+    map.insert("find", "MATLAB_FIND");
 
     // I/O
     map.insert("disp", "PRINT");
@@ -121,5 +121,13 @@ mod tests {
     fn logical_reductions_map_to_xdl_reductions() {
         assert_eq!(get_xdl_function("all"), Some("ALL"));
         assert_eq!(get_xdl_function("any"), Some("ANY"));
+    }
+
+    #[test]
+    fn matlab_array_information_functions_map_to_compatibility_helpers() {
+        assert_eq!(get_xdl_function("length"), Some("MATLAB_LENGTH"));
+        assert_eq!(get_xdl_function("numel"), Some("MATLAB_NUMEL"));
+        assert_eq!(get_xdl_function("size"), Some("MATLAB_SIZE"));
+        assert_eq!(get_xdl_function("find"), Some("MATLAB_FIND"));
     }
 }

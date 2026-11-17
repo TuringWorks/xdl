@@ -19,7 +19,7 @@ foundation, not drop-in MATLAB or toolbox compatibility.
 
 #### 2. **Function Mapping Table** (`xdl-matlab/src/function_map.rs`)
 
-**~80 MATLAB functions mapped to XDL:**
+**63 MATLAB function names currently map to XDL names:**
 
 **Array Creation:**
 
@@ -30,7 +30,10 @@ foundation, not drop-in MATLAB or toolbox compatibility.
 **Math Functions:**
 
 - `sin, cos, tan, exp, log, sqrt, abs, floor, ceil, round`
-- All mapped 1:1 to XDL equivalents
+- Names are mapped to XDL functions; semantics are not uniformly identical.
+  For example, general multiple-output `size` and advanced `find` forms remain
+  unsupported, while `length` and `numel` use dedicated compatibility functions. See the compatibility
+  matrix and open gaps below.
 
 **Statistics:**
 
@@ -130,23 +133,25 @@ let xdl_code = load_matlab_file(Path::new("script.m"))?;
 // Execute with XDL interpreter
 ```
 
-### 3. Integration with XDL CLI (Future)
+### 3. XDL CLI Integration
 
 ```bash
 # Load and execute MATLAB files directly
 xdl script.m
-
-# Transpile only
-xdl --transpile script.m > script.xdl
 ```
+
+The CLI has no `--transpile` flag. To obtain transpiled source without
+execution, call `xdl_matlab::transpile_matlab_to_xdl` from Rust as shown above.
 
 ## Key Features
 
 ### ✅ What Works
 
 - **Syntax transpilation** for common constructs
-- **Function name mapping** for ~80 functions
-- **Index adjustment** for variables assigned earlier in the source (1-based → 0-based; scalar indices and vector slices with positive constant step)
+- **Function-name mappings** for 63 MATLAB names; a mapping does not assert behavioral parity
+- **Index adjustment** for known source variables and function parameters (1-based → 0-based; scalar indices, 2D matrix scalar subscripts, and vector slices with positive constant step; vector `end`, `:`, and omitted bounds)
+- **Array dimensions** for single-output `size(A)` and `size(A, dim)` on supported scalar and numeric array shapes
+- **Array search** for one-input `find(A)` on numeric vectors and rectangular 2D matrices, returning one-based indices and preserving row-vector orientation
 - **Loop conversion** (for, while)
 - **Conditional statements** (if/else)
 - **Comments** preserved
@@ -155,9 +160,11 @@ xdl --transpile script.m > script.xdl
 
 ### 🚧 Limitations (Future Work)
 
-- **Multidimensional slicing**: MATLAB matrix row/column selections and `:` across dimensions remain unsupported
+- **Multidimensional slicing**: MATLAB matrix row/column selections and `:` across dimensions remain unsupported; only scalar subscripts for simple 2D matrix expressions have executable coverage
 - **Cell arrays**: `{}` syntax needs implementation
-- **Advanced indexing**: `end`, omitted range bounds, logical/index-vector subscripts
+- **Advanced indexing**: MATLAB column-major linear indexing of matrices, multidimensional `end`, logical/index-vector subscripts, and negative-step slices
+- **Advanced `find` forms**: limit/direction options and multiple-output row/column subscripts
+- **Multiple function outputs**: functions declaring more than one output are rejected with an explicit diagnostic
 - **MEX files**: Binary extension support
 - **Classes/OOP**: MATLAB classes not supported
 - **Anonymous functions**: `@(x) x^2` syntax
@@ -167,7 +174,7 @@ xdl --transpile script.m > script.xdl
 
 ### Unit Tests ✅
 
-The crate includes comprehensive unit tests:
+The crate includes focused unit tests:
 
 ```bash
 cargo test -p xdl-matlab
@@ -175,7 +182,7 @@ cargo test -p xdl-matlab
 
 **Test Results:**
 
-- ✅ **35/35 crate tests passing** (100% pass rate for these tests; not a language-coverage percentage)
+- ✅ **40/40 crate tests passing** (pass rate for this suite, not a language-coverage percentage; verified 2026-11-16)
 - **Coverage**: Lexer, transpiler, function mapping, control flow, arrays, math
 
 ### Integration Tests ✅
@@ -187,17 +194,18 @@ MATLAB .m files can be executed directly:
 xdl examples/matlab/01_simple_math.m
 xdl examples/matlab/02_trigonometry.m
 
-# Run comprehensive MATLAB execution tests
+# Run the selected MATLAB execution fixtures
 ./tests/test_matlab_execution.sh
 ```
 
 **Verified Working:**
 
 - ✅ Basic arithmetic and variables
-- ✅ Array operations and indexing
+- ✅ Array literals and tested indexing subset: vector scalar/range indexing, vector `end`/omitted bounds, and 2D scalar subscripts; broader MATLAB matrix indexing remains incomplete
 - ✅ Function calls (sin, cos, sqrt, etc.)
 - ✅ Simple control flow (for, while, if)
 - ✅ Direct .m file execution via XDL CLI
+- ✅ CLI integration suite: 28 tests passed, including `length`/`numel`, `size(A)`, and `size(A, dim)` cases (verified 2026-11-16)
 
 ## Files Created
 
@@ -264,7 +272,7 @@ We've successfully built a foundational **MATLAB compatibility layer** for XDL t
 
 ✅ Lexes MATLAB syntax
 ✅ Transpiles to XDL code
-✅ Maps 80+ common functions
+✅ Maps 63 MATLAB function names to XDL names; this does not imply semantic equivalence
 ✅ Handles basic control flow
 ✅ Adjusts array indexing
 ✅ Preserves comments

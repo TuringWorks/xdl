@@ -2,11 +2,20 @@
 
 **Date:** 2025-11-11
 **Total Files Found:** 45 files
-**Status:** All files ready for testing in XDL GUI
+**Status:** Historical file inventory and smoke-test report; not a current compatibility certification
+
+This is a 2025 snapshot. Its original “ready for testing” language described
+that repository state and limited checks; it does not establish that every
+listed file currently executes or matches MATLAB/Octave outputs. See
+[current MATLAB limitations](MATLAB_LIMITATIONS.md) and the
+[scientific-computing gap analysis](VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS.md)
+for present evidence.
 
 ## Summary
 
-All MATLAB files in `/examples` and `/tests` directories have been verified for compatibility with the XDL MATLAB transpiler. The transpiler now includes:
+The report inventoried MATLAB files found in `/examples` and `/tests` and
+recorded the checks performed at the time. It did not establish full behavior
+parity for every listed file. The transpiler state recorded then included:
 
 ✅ **Updated Function Mappings:**
 

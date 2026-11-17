@@ -431,6 +431,10 @@ impl StandardLibrary {
             "MESHGRID" => math::meshgrid(args),
 
             // MATLAB compatibility functions
+            "MATLAB_LENGTH" => matlab_compat::matlab_length(args),
+            "MATLAB_NUMEL" => matlab_compat::matlab_numel(args),
+            "MATLAB_SIZE" => matlab_compat::matlab_size(args),
+            "MATLAB_FIND" => matlab_compat::matlab_find(args),
             "LINSPACE" => matlab_compat::linspace(args),
             "LOGSPACE" => matlab_compat::logspace(args),
             "REPMAT" => matlab_compat::repmat(args),

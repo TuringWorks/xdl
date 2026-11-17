@@ -4,6 +4,7 @@
 
 use crate::function_map::get_xdl_function;
 use crate::lexer::{Lexer, Token, TokenKind};
+use std::collections::HashSet;
 
 pub struct Transpiler {
     tokens: Vec<Token>,
@@ -14,6 +15,9 @@ pub struct Transpiler {
     subplot_rows: usize,
     subplot_cols: usize,
     current_tile: usize,
+    scope_start: usize,
+    function_parameters: HashSet<String>,
+    function_output: Option<String>,
 }
 
 impl Transpiler {
@@ -26,6 +30,9 @@ impl Transpiler {
             subplot_rows: 1,
             subplot_cols: 1,
             current_tile: 0,
+            scope_start: 0,
+            function_parameters: HashSet::new(),
+            function_output: None,
         }
     }
 
@@ -45,12 +52,13 @@ impl Transpiler {
     }
 
     fn is_assigned_before(&self, name: &str, position: usize) -> bool {
-        self.tokens[..position.min(self.tokens.len())]
-            .windows(2)
-            .any(|pair| {
-                matches!(&pair[0].kind, TokenKind::Identifier(candidate) if candidate == name)
-                    && matches!(pair[1].kind, TokenKind::Assign)
-            })
+        self.function_parameters.contains(name)
+            || self.tokens[self.scope_start.min(position)..position.min(self.tokens.len())]
+                .windows(2)
+                .any(|pair| {
+                    matches!(&pair[0].kind, TokenKind::Identifier(candidate) if candidate == name)
+                        && matches!(pair[1].kind, TokenKind::Assign)
+                })
     }
 
     fn emit(&mut self, s: &str) {
@@ -176,6 +184,12 @@ impl Transpiler {
             }
         }
 
+        if outputs.len() > 1 {
+            return Err(
+                "MATLAB functions with multiple output variables are not supported yet".to_string(),
+            );
+        }
+
         // Get function name
         let func_name = if let TokenKind::Identifier(name) = &self.current_token().kind {
             name.clone()
@@ -200,8 +214,21 @@ impl Transpiler {
             self.advance(); // skip ')'
         }
 
+        let param_names = params.clone();
+        let previous_scope_start = self.scope_start;
+        let previous_parameters =
+            std::mem::replace(&mut self.function_parameters, params.into_iter().collect());
+        let previous_output =
+            std::mem::replace(&mut self.function_output, outputs.first().cloned());
+        self.scope_start = self.position;
+
         // Emit XDL function
-        self.emit_line(&format!("FUNCTION {}", func_name));
+        let signature = if self.function_parameters.is_empty() {
+            format!("FUNCTION {}", func_name)
+        } else {
+            format!("FUNCTION {}, {}", func_name, param_names.join(", "))
+        };
+        self.emit_line(&signature);
         self.indent_level += 1;
 
         // Skip to end
@@ -230,8 +257,14 @@ impl Transpiler {
             }
         }
 
+        if let Some(output) = &self.function_output {
+            self.emit_line(&format!("RETURN, {output}"));
+        }
         self.indent_level -= 1;
         self.emit_line("END");
+        self.scope_start = previous_scope_start;
+        self.function_parameters = previous_parameters;
+        self.function_output = previous_output;
 
         if matches!(self.current_token().kind, TokenKind::End) {
             self.advance();
@@ -560,7 +593,11 @@ impl Transpiler {
                 return Ok(());
             }
             TokenKind::Return => {
-                self.emit_line("RETURN");
+                if let Some(output) = &self.function_output {
+                    self.emit_line(&format!("RETURN, {output}"));
+                } else {
+                    self.emit_line("RETURN");
+                }
                 self.advance();
                 if matches!(
                     self.current_token().kind,
@@ -1123,8 +1160,13 @@ impl Transpiler {
                             self.advance();
                         }
 
+                        let array_name = expr
+                            .trim()
+                            .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+                            .next_back()
+                            .unwrap_or_default();
                         expr.push_str(
-                            &translate_matlab_index(&index_expr)
+                            &translate_matlab_index(&index_expr, array_name)
                                 .unwrap_or_else(|| format!("({}) - 1", index_expr)),
                         );
 
@@ -1687,22 +1729,60 @@ impl Transpiler {
                         self.advance();
                     }
 
-                    if has_colon && paren_depth == 0 {
+                    let index_parts = split_subscript_tokens(&range_tokens);
+                    let preceding_name = expr
+                        .trim()
+                        .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+                        .next_back()
+                        .unwrap_or_default()
+                        .to_string();
+                    let is_known_array = !preceding_name.is_empty()
+                        && self.is_assigned_before(&preceding_name, start_pos);
+
+                    if paren_depth == 0 && index_parts.len() > 1 && is_known_array {
+                        let translated = index_parts
+                            .iter()
+                            .map(|part| {
+                                if part.iter().any(|token| {
+                                    matches!(&token.kind, TokenKind::Colon)
+                                        || matches!(&token.kind, TokenKind::Identifier(name) if name == "end")
+                                }) {
+                                    None
+                                } else {
+                                    let index = part
+                                        .iter()
+                                        .map(|token| token.lexeme.as_str())
+                                        .collect::<String>();
+                                    translate_matlab_index(&index, &preceding_name)
+                                }
+                            })
+                            .collect::<Option<Vec<_>>>();
+
+                        if let Some(translated) = translated {
+                            expr.push('[');
+                            expr.push_str(&translated.join(", "));
+                            expr.push(']');
+                        } else {
+                            // Leave unsupported multidimensional forms visible so
+                            // XDL reports them instead of fabricating a subscript.
+                            expr.push('(');
+                            expr.push_str(
+                                &range_tokens
+                                    .iter()
+                                    .map(|token| token.lexeme.as_str())
+                                    .collect::<String>(),
+                            );
+                            expr.push(')');
+                        }
+                    } else if has_colon && paren_depth == 0 {
                         let range = range_tokens
                             .iter()
                             .map(|token| token.lexeme.as_str())
                             .collect::<String>();
-                        let preceding_name = expr
-                            .trim()
-                            .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
-                            .next_back()
-                            .unwrap_or_default()
-                            .to_string();
-                        let is_vector_subscript =
-                            self.is_assigned_before(&preceding_name, start_pos);
+                        let is_vector_subscript = is_known_array;
 
                         if is_vector_subscript {
-                            if let Some(index) = translate_matlab_index(&range) {
+                            if let Some(index) = translate_matlab_index(&range, &preceding_name) {
                                 expr.push('[');
                                 expr.push_str(&index);
                                 expr.push(']');
@@ -1727,17 +1807,8 @@ impl Transpiler {
                             .iter()
                             .map(|token| token.lexeme.as_str())
                             .collect::<String>();
-                        let preceding_name = expr
-                            .trim()
-                            .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
-                            .next_back()
-                            .unwrap_or_default()
-                            .to_string();
-
-                        if !preceding_name.is_empty()
-                            && self.is_assigned_before(&preceding_name, start_pos)
-                        {
-                            if let Some(index) = translate_matlab_index(&index) {
+                        if is_known_array {
+                            if let Some(index) = translate_matlab_index(&index, &preceding_name) {
                                 expr.push('[');
                                 expr.push_str(&index);
                                 expr.push(']');
@@ -2131,16 +2202,68 @@ impl Transpiler {
 /// XDL range ends are exclusive, so MATLAB `start:end` maps to
 /// `(start - 1):end`; MATLAB's `start:step:end` maps to
 /// `(start - 1):end:step`.
-fn translate_matlab_index(index: &str) -> Option<String> {
+fn split_subscript_tokens(tokens: &[Token]) -> Vec<Vec<Token>> {
+    let mut parts = vec![Vec::new()];
+    let (mut paren_depth, mut bracket_depth, mut brace_depth) = (0usize, 0usize, 0usize);
+    for token in tokens {
+        match &token.kind {
+            TokenKind::LeftParen => paren_depth += 1,
+            TokenKind::RightParen => paren_depth = paren_depth.saturating_sub(1),
+            TokenKind::LeftBracket => bracket_depth += 1,
+            TokenKind::RightBracket => bracket_depth = bracket_depth.saturating_sub(1),
+            TokenKind::LeftBrace => brace_depth += 1,
+            TokenKind::RightBrace => brace_depth = brace_depth.saturating_sub(1),
+            TokenKind::Comma if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 => {
+                parts.push(Vec::new());
+                continue;
+            }
+            _ => {}
+        }
+        if let Some(part) = parts.last_mut() {
+            part.push(token.clone());
+        }
+    }
+    parts
+}
+
+fn translate_matlab_index(index: &str, array_name: &str) -> Option<String> {
     let parts: Vec<&str> = index.split(':').map(str::trim).collect();
     match parts.as_slice() {
-        [single] => Some(single.parse::<i64>().map_or_else(
-            |_| format!("({single}) - 1"),
-            |value| (value - 1).to_string(),
-        )),
+        [""] => Some(":".to_string()),
+        ["", ""] => Some(":".to_string()),
+        [single] => {
+            let expanded = expand_matlab_end(single, array_name);
+            Some(expanded.parse::<i64>().map_or_else(
+                |_| format!("({expanded}) - 1"),
+                |value| {
+                    value.checked_sub(1).map_or_else(
+                        || format!("({expanded}) - 1"),
+                        |zero_based| zero_based.to_string(),
+                    )
+                },
+            ))
+        }
+        ["", end] if !end.is_empty() => Some(format!(":{}", expand_matlab_end(end, array_name))),
+        [start, ""] if !start.is_empty() => {
+            Some(format!("{}:", offset_matlab_index(start, array_name)))
+        }
         [start, end] if !start.is_empty() && !end.is_empty() => {
-            let zero_based_start = offset_matlab_index(start);
-            Some(format!("{zero_based_start}:{end}"))
+            let zero_based_start = offset_matlab_index(start, array_name);
+            Some(format!(
+                "{zero_based_start}:{}",
+                expand_matlab_end(end, array_name)
+            ))
+        }
+        ["", end, step] if !end.is_empty() && step.parse::<u64>().is_ok_and(|value| value > 0) => {
+            Some(format!(":{}:{step}", expand_matlab_end(end, array_name)))
+        }
+        [start, step, ""]
+            if !start.is_empty() && step.parse::<u64>().is_ok_and(|value| value > 0) =>
+        {
+            Some(format!(
+                "{}:*:{step}",
+                offset_matlab_index(start, array_name)
+            ))
         }
         [start, step, end]
             if !start.is_empty()
@@ -2148,18 +2271,53 @@ fn translate_matlab_index(index: &str) -> Option<String> {
                 && !end.is_empty()
                 && step.parse::<u64>().is_ok_and(|value| value > 0) =>
         {
-            let zero_based_start = offset_matlab_index(start);
-            Some(format!("{zero_based_start}:{end}:{step}"))
+            let zero_based_start = offset_matlab_index(start, array_name);
+            Some(format!(
+                "{zero_based_start}:{}:{step}",
+                expand_matlab_end(end, array_name)
+            ))
         }
         _ => None,
     }
 }
 
-fn offset_matlab_index(start: &str) -> String {
-    start.parse::<i64>().map_or_else(
-        |_| format!("({start}) - 1"),
-        |value| (value - 1).to_string(),
+fn offset_matlab_index(start: &str, array_name: &str) -> String {
+    let expanded = expand_matlab_end(start, array_name);
+    expanded.parse::<i64>().map_or_else(
+        |_| format!("({expanded}) - 1"),
+        |value| {
+            value.checked_sub(1).map_or_else(
+                || format!("({expanded}) - 1"),
+                |zero_based| zero_based.to_string(),
+            )
+        },
     )
+}
+
+fn expand_matlab_end(expression: &str, array_name: &str) -> String {
+    let mut result = String::with_capacity(expression.len());
+    let mut chars = expression.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch.is_ascii_alphabetic() || ch == '_' {
+            let mut identifier = String::from(ch);
+            while chars
+                .peek()
+                .is_some_and(|next| next.is_ascii_alphanumeric() || *next == '_')
+            {
+                if let Some(next) = chars.next() {
+                    identifier.push(next);
+                }
+            }
+            if identifier == "end" {
+                result.push_str(&format!("N_ELEMENTS({array_name})"));
+            } else {
+                result.push_str(&identifier);
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+    result
 }
 
 /// Main transpilation function
@@ -2253,12 +2411,57 @@ mod tests {
     }
 
     #[test]
+    fn matlab_end_and_omitted_vector_bounds_map_to_xdl_ranges() {
+        let result = transpile_matlab_to_xdl(
+            "x = [10, 20, 30, 40, 50]; a = x(end); b = x(3:end); c = x(1:2:end); d = x(:); e = x(2:);",
+        )
+        .unwrap();
+        assert!(result.contains("a = x [(N_ELEMENTS(x)) - 1]"), "{result}");
+        assert!(result.contains("b = x [2:N_ELEMENTS(x)]"), "{result}");
+        assert!(result.contains("c = x [0:N_ELEMENTS(x):2]"), "{result}");
+        assert!(result.contains("d = x [:]"), "{result}");
+        assert!(result.contains("e = x [1:]"), "{result}");
+    }
+
+    #[test]
+    fn matlab_matrix_scalar_subscripts_translate_per_dimension() {
+        let result = transpile_matlab_to_xdl(
+            "matrix = [1, 2, 3; 4, 5, 6]; first = matrix(1, 2); last = matrix(2, 3);",
+        )
+        .unwrap();
+        assert!(result.contains("first = matrix [0, 1]"), "{result}");
+        assert!(result.contains("last = matrix [1, 2]"), "{result}");
+    }
+
+    #[test]
     fn range_arguments_to_unknown_functions_remain_function_calls() {
         let result =
             transpile_matlab_to_xdl("y = user_function(2:5); z = user_function(7);").unwrap();
         assert!(result.contains("user_function (FINDGEN"), "{result}");
         assert!(!result.contains("user_function ["), "{result}");
         assert!(result.contains("user_function (7 )"), "{result}");
+    }
+
+    #[test]
+    fn matlab_function_array_parameters_support_scalar_and_range_subscripts() {
+        let result =
+            transpile_matlab_to_xdl("function y = select_values(x)\ny = x(3);\nz = x(2:4);\nend")
+                .unwrap();
+        assert!(result.contains("FUNCTION select_values, x"), "{result}");
+        assert!(result.contains("y = x [2]"), "{result}");
+        assert!(result.contains("z = x [1:4]"), "{result}");
+        assert!(result.contains("RETURN, y"), "{result}");
+    }
+
+    #[test]
+    fn matlab_multiple_function_outputs_fail_explicitly() {
+        let result = transpile_matlab_to_xdl(
+            "function [first, second] = split_values(x)\nfirst = x;\nsecond = x;\nend",
+        );
+        assert!(result.is_err());
+        assert!(result
+            .expect_err("multiple outputs are unsupported")
+            .contains("multiple output variables are not supported"));
     }
 
     #[test]

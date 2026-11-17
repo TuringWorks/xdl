@@ -205,6 +205,30 @@ impl SymbolTable {
                 "N_ELEMENTS(arr)",
             ),
             (
+                "MATLAB_LENGTH",
+                "matlab_length(arr) - Return the largest MATLAB-compatible array dimension",
+                "DOUBLE",
+                "MATLAB_LENGTH(arr)",
+            ),
+            (
+                "MATLAB_NUMEL",
+                "matlab_numel(arr) - Return the MATLAB-compatible scalar element count",
+                "DOUBLE",
+                "MATLAB_NUMEL(arr)",
+            ),
+            (
+                "MATLAB_SIZE",
+                "matlab_size(arr, [dim]) - Return MATLAB-compatible dimension lengths",
+                "ARRAY or DOUBLE",
+                "MATLAB_SIZE(arr, [dim])",
+            ),
+            (
+                "MATLAB_FIND",
+                "matlab_find(arr) - Return MATLAB-compatible one-based linear indices",
+                "ARRAY",
+                "MATLAB_FIND(arr)",
+            ),
+            (
                 "SIZE",
                 "size(arr) - Return array dimensions info",
                 "ARRAY",
