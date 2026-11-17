@@ -229,6 +229,12 @@ impl SymbolTable {
                 "MATLAB_FIND(arr)",
             ),
             (
+                "MATLAB_INDEX",
+                "matlab_index(arr, index) - Read a MATLAB one-based linear array element",
+                "DOUBLE",
+                "MATLAB_INDEX(arr, index)",
+            ),
+            (
                 "SIZE",
                 "size(arr) - Return array dimensions info",
                 "ARRAY",

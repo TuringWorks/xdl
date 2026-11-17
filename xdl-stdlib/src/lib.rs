@@ -434,6 +434,7 @@ impl StandardLibrary {
             "MATLAB_LENGTH" => matlab_compat::matlab_length(args),
             "MATLAB_NUMEL" => matlab_compat::matlab_numel(args),
             "MATLAB_SIZE" => matlab_compat::matlab_size(args),
+            "MATLAB_INDEX" => matlab_compat::matlab_index(args),
             "MATLAB_FIND" => matlab_compat::matlab_find(args),
             "LINSPACE" => matlab_compat::linspace(args),
             "LOGSPACE" => matlab_compat::logspace(args),

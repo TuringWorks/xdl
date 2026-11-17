@@ -87,6 +87,115 @@ pub fn matlab_size(args: &[XdlValue]) -> XdlResult<XdlValue> {
     ))
 }
 
+/// MATLAB-style one-based linear indexing into a numeric value.
+pub fn matlab_index(args: &[XdlValue]) -> XdlResult<XdlValue> {
+    if args.len() != 2 {
+        return Err(XdlError::InvalidArgument(format!(
+            "MATLAB_INDEX: Expected 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let index_value = match &args[1] {
+        XdlValue::Byte(_)
+        | XdlValue::Int(_)
+        | XdlValue::Long(_)
+        | XdlValue::Float(_)
+        | XdlValue::Double(_)
+        | XdlValue::UInt(_)
+        | XdlValue::ULong(_)
+        | XdlValue::Long64(_)
+        | XdlValue::ULong64(_) => args[1].to_double()?,
+        other => {
+            return Err(XdlError::TypeMismatch {
+                expected: "numeric scalar index".to_string(),
+                actual: format!("{:?}", other.gdl_type()),
+            })
+        }
+    };
+    if !index_value.is_finite()
+        || index_value < 1.0
+        || index_value.fract() != 0.0
+        || index_value >= usize::MAX as f64
+    {
+        return Err(XdlError::InvalidArgument(
+            "MATLAB_INDEX: index must be a positive integer".to_string(),
+        ));
+    }
+    let index = index_value as usize;
+    let dimensions = matlab_dimensions(&args[0])?;
+    let elements = dimensions
+        .iter()
+        .try_fold(1usize, |count, dimension| count.checked_mul(*dimension))
+        .ok_or_else(|| {
+            XdlError::InvalidArgument("MATLAB_INDEX: array element count overflow".to_string())
+        })?;
+    if index > elements {
+        return Err(XdlError::InvalidArgument(format!(
+            "MATLAB_INDEX: index {index} exceeds the number of elements ({elements})"
+        )));
+    }
+
+    matlab_numeric_element(&args[0], index)
+}
+
+fn matlab_numeric_element(value: &XdlValue, one_based_index: usize) -> XdlResult<XdlValue> {
+    match value {
+        XdlValue::Array(values) => values
+            .get(one_based_index - 1)
+            .copied()
+            .map(XdlValue::Double)
+            .ok_or_else(|| matlab_index_out_of_range(one_based_index)),
+        XdlValue::MultiDimArray { data, .. } => data
+            .get(one_based_index - 1)
+            .copied()
+            .map(XdlValue::Double)
+            .ok_or_else(|| matlab_index_out_of_range(one_based_index)),
+        XdlValue::NestedArray(values)
+            if values.iter().all(|item| matches!(item, XdlValue::Array(_))) =>
+        {
+            let row_count = values.len();
+            let row_index = (one_based_index - 1) % row_count;
+            let column_index = (one_based_index - 1) / row_count;
+            match values.get(row_index) {
+                Some(XdlValue::Array(row)) => row
+                    .get(column_index)
+                    .copied()
+                    .map(XdlValue::Double)
+                    .ok_or_else(|| matlab_index_out_of_range(one_based_index)),
+                _ => Err(XdlError::InvalidArgument(
+                    "MATLAB_INDEX: expected rectangular matrix rows".to_string(),
+                )),
+            }
+        }
+        XdlValue::NestedArray(values) => {
+            let outer_index = (one_based_index - 1) % values.len();
+            let child_index = (one_based_index - 1) / values.len() + 1;
+            let child = values
+                .get(outer_index)
+                .ok_or_else(|| matlab_index_out_of_range(one_based_index))?;
+            matlab_numeric_element(child, child_index)
+        }
+        XdlValue::Byte(_)
+        | XdlValue::Int(_)
+        | XdlValue::Long(_)
+        | XdlValue::Float(_)
+        | XdlValue::Double(_)
+        | XdlValue::UInt(_)
+        | XdlValue::ULong(_)
+        | XdlValue::Long64(_)
+        | XdlValue::ULong64(_) => Ok(XdlValue::Double(value.to_double()?)),
+        other => Err(XdlError::TypeMismatch {
+            expected: "numeric array".to_string(),
+            actual: format!("{:?}", other.gdl_type()),
+        }),
+    }
+}
+
+fn matlab_index_out_of_range(index: usize) -> XdlError {
+    XdlError::InvalidArgument(format!("MATLAB_INDEX: index {index} is out of range"))
+}
+
 /// MATLAB `find` with the default all-dimensions, ascending-index behavior.
 /// Results are one-based; row-vector inputs preserve row orientation while
 /// other inputs return a column vector.
@@ -221,7 +330,7 @@ fn matlab_dimensions(value: &XdlValue) -> XdlResult<Vec<usize>> {
 
 #[cfg(test)]
 mod matlab_length_tests {
-    use super::{matlab_find, matlab_length, matlab_numel, matlab_size};
+    use super::{matlab_find, matlab_index, matlab_length, matlab_numel, matlab_size};
     use xdl_core::XdlValue;
 
     #[test]
@@ -400,6 +509,59 @@ mod matlab_length_tests {
                 }
             );
         }
+    }
+
+    #[test]
+    fn matlab_index_reads_flat_shaped_and_nested_numeric_values() {
+        let flat = XdlValue::Array(vec![10.0, 20.0, 30.0]);
+        assert_eq!(
+            matlab_index(&[flat, XdlValue::Long(2)]).unwrap(),
+            XdlValue::Double(20.0)
+        );
+
+        let shaped = XdlValue::MultiDimArray {
+            data: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            shape: vec![2, 3],
+        };
+        assert_eq!(
+            matlab_index(&[shaped, XdlValue::Long(5)]).unwrap(),
+            XdlValue::Double(5.0)
+        );
+
+        let nested_matrix = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 3.0, 5.0]),
+            XdlValue::Array(vec![2.0, 4.0, 6.0]),
+        ]);
+        let indexed: Vec<XdlValue> = (1..=6)
+            .map(|index| matlab_index(&[nested_matrix.clone(), XdlValue::Long(index)]).unwrap())
+            .collect();
+        assert_eq!(
+            indexed,
+            (1..=6)
+                .map(|index| XdlValue::Double(index as f64))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn matlab_index_rejects_invalid_indices_and_ragged_inputs() {
+        let array = XdlValue::Array(vec![7.0, 8.0]);
+        for index in [
+            XdlValue::Long(0),
+            XdlValue::Long(-1),
+            XdlValue::Double(1.5),
+            XdlValue::Double(f64::NAN),
+        ] {
+            assert!(matlab_index(&[array.clone(), index]).is_err());
+        }
+        assert!(matlab_index(&[array.clone(), XdlValue::Long(3)]).is_err());
+        assert!(matlab_index(&[array, XdlValue::String("1".to_string())]).is_err());
+
+        let ragged = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0]),
+            XdlValue::Array(vec![3.0]),
+        ]);
+        assert!(matlab_index(&[ragged, XdlValue::Long(1)]).is_err());
     }
 }
 
