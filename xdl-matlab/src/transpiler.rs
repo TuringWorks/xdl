@@ -1030,7 +1030,7 @@ impl Transpiler {
                 return Err("MATLAB find supports at most three output variables".to_string());
             }
 
-            if is_matlab_find && output_vars.len() == 2 {
+            if is_matlab_find && (2..=3).contains(&output_vars.len()) {
                 self.advance(); // skip `find`
                 if matches!(self.current_token().kind, TokenKind::LeftParen) {
                     self.advance();
@@ -1061,7 +1061,7 @@ impl Transpiler {
                     }
                     if !(1..=3).contains(&arguments.len()) {
                         return Err(
-                            "MATLAB two-output find supports one to three arguments".to_string()
+                            "MATLAB multi-output find supports one to three arguments".to_string()
                         );
                     }
                     let array_argument = arguments[0].as_str();
