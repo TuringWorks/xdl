@@ -40,16 +40,17 @@ x = (FINDGEN(((10)-(1))/(2) +1) * (2)) + (1)
 
 ```matlab
 arr = (0:19);
-slice = arr(1:50);     % Get elements 1 through 50
+slice = arr(1:10);     % Get the first ten elements
 subset = arr(5:10);    % Get elements 5 through 10
 ```
 
 **How It Works:**
 
-- Vector indexing with `arr(start:end)` and `arr(start:step:end)` is supported
-  for positive constant steps, with MATLAB's 1-based bounds translated to XDL's
-  zero-based, exclusive-end slices. Multidimensional, `end`, omitted-bound,
-  negative-step, and advanced indexing cases remain incomplete.
+- Scalar indexing and vector ranges are translated for array variables assigned
+  earlier in the same source file. `arr(start:end)` and positive constant-step
+  `arr(start:step:end)` map MATLAB's 1-based bounds to XDL's zero-based,
+  exclusive-end slices. Function-argument arrays, multidimensional indexing,
+  `end`, omitted bounds, negative steps, and advanced indexing remain incomplete.
 - Automatically converts MATLAB's 1-based indexing to XDL's 0-based indexing
 - Handles both numeric indices and variable-based ranges
 

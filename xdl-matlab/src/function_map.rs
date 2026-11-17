@@ -83,8 +83,8 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("sprintf", "STRING");
 
     // Logical
-    map.insert("all", "MIN"); // all -> MIN (non-zero check)
-    map.insert("any", "MAX"); // any -> MAX (non-zero check)
+    map.insert("all", "ALL");
+    map.insert("any", "ANY");
 
     // Type conversion
     map.insert("double", "DOUBLE");
@@ -115,5 +115,11 @@ mod tests {
         assert_eq!(get_xdl_function("sin"), Some("SIN"));
         assert_eq!(get_xdl_function("plot"), Some("PLOT"));
         assert_eq!(get_xdl_function("nonexistent"), None);
+    }
+
+    #[test]
+    fn logical_reductions_map_to_xdl_reductions() {
+        assert_eq!(get_xdl_function("all"), Some("ALL"));
+        assert_eq!(get_xdl_function("any"), Some("ANY"));
     }
 }

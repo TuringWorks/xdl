@@ -417,7 +417,7 @@ model-based foundation:
 
 | Surface | Verification | Result | Interpretation |
 |---|---|---:|---|
-| MATLAB transpiler | `cargo test -p xdl-matlab` | 28 passed | Tested syntax/function subset; not MATLAB/Octave parity |
+| MATLAB transpiler | `cargo test -p xdl-matlab` | 35 passed (verified 2026-11-16) | Tested syntax/function subset; not MATLAB/Octave parity |
 | Typed model graph/editor | `cargo test -p xdl-model` | 26 passed | Schema, typed connections, validation, layout, editor serialization, validated Mars system-model fixture, structural SVG rendering, and deterministic state/event contracts |
 | Deterministic simulation | `cargo test -p xdl-sim` | 25 passed | Scheduler, multi-rate ordering, delays, state-space and multiport-switch blocks, typed model-graph execution, deterministic state-machine runtime, continuous integration, and solver error paths foundation |
 | Artifact contracts | `cargo test -p xdl-artifacts` | 7 passed | Versioned manifests, bundled JSON schemas, compatibility statuses, artifact hashes, and fail-closed validation |

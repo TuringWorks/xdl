@@ -44,6 +44,15 @@ impl Transpiler {
         }
     }
 
+    fn is_assigned_before(&self, name: &str, position: usize) -> bool {
+        self.tokens[..position.min(self.tokens.len())]
+            .windows(2)
+            .any(|pair| {
+                matches!(&pair[0].kind, TokenKind::Identifier(candidate) if candidate == name)
+                    && matches!(pair[1].kind, TokenKind::Assign)
+            })
+    }
+
     fn emit(&mut self, s: &str) {
         self.output.push_str(s);
     }
@@ -1687,9 +1696,10 @@ impl Transpiler {
                             .trim()
                             .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
                             .next_back()
-                            .unwrap_or_default();
-                        let is_vector_subscript = !preceding_name.is_empty()
-                            && get_xdl_function(preceding_name).is_none();
+                            .unwrap_or_default()
+                            .to_string();
+                        let is_vector_subscript =
+                            self.is_assigned_before(&preceding_name, start_pos);
 
                         if is_vector_subscript {
                             if let Some(index) = translate_matlab_index(&range) {
@@ -1697,17 +1707,51 @@ impl Transpiler {
                                 expr.push_str(&index);
                                 expr.push(']');
                             } else {
+                                expr.push('(');
                                 expr.push_str(&self.parse_range_expression(&range_tokens));
+                                expr.push(')');
                             }
                         } else {
-                            // Standalone ranges remain vectors generated with FINDGEN.
+                            // Preserve function-call syntax for names that are not
+                            // known array variables; convert a range argument to a vector.
+                            if !preceding_name.is_empty() {
+                                expr.push('(');
+                            }
                             expr.push_str(&self.parse_range_expression(&range_tokens));
+                            if !preceding_name.is_empty() {
+                                expr.push(')');
+                            }
                         }
                     } else {
-                        // Not a range, restore position and just add the paren
-                        self.position = start_pos;
-                        self.advance();
-                        expr.push('(');
+                        let index = range_tokens
+                            .iter()
+                            .map(|token| token.lexeme.as_str())
+                            .collect::<String>();
+                        let preceding_name = expr
+                            .trim()
+                            .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+                            .next_back()
+                            .unwrap_or_default()
+                            .to_string();
+
+                        if !preceding_name.is_empty()
+                            && self.is_assigned_before(&preceding_name, start_pos)
+                        {
+                            if let Some(index) = translate_matlab_index(&index) {
+                                expr.push('[');
+                                expr.push_str(&index);
+                                expr.push(']');
+                            } else {
+                                expr.push('(');
+                                expr.push_str(&index);
+                                expr.push(')');
+                            }
+                        } else {
+                            // Not a known array subscript or range; leave the call intact.
+                            self.position = start_pos;
+                            self.advance();
+                            expr.push('(');
+                        }
                     }
                     continue;
                 }
@@ -2193,15 +2237,28 @@ mod tests {
 
     #[test]
     fn matlab_vector_ranges_translate_to_zero_based_xdl_slices() {
-        let result = transpile_matlab_to_xdl("a = x(2:5); b = x(1:2:7);").unwrap();
-        assert!(result.contains("a = x[1:5]"), "{result}");
-        assert!(result.contains("b = x[0:7:2]"), "{result}");
+        let result = transpile_matlab_to_xdl(
+            "x = [10, 20, 30, 40, 50, 60, 70]; a = x(2:5); b = x(1:2:7); c = x(3);",
+        )
+        .unwrap();
+        assert!(result.contains("a = x [1:5]"), "{result}");
+        assert!(result.contains("b = x [0:7:2]"), "{result}");
+        assert!(result.contains("c = x [2]"), "{result}");
     }
 
     #[test]
     fn matlab_vector_range_supports_variable_start() {
-        let result = transpile_matlab_to_xdl("y = x(first:last);").unwrap();
-        assert!(result.contains("y = x[(first) - 1:last]"), "{result}");
+        let result = transpile_matlab_to_xdl("x = [1, 2, 3]; y = x(first:last);").unwrap();
+        assert!(result.contains("y = x [(first) - 1:last]"), "{result}");
+    }
+
+    #[test]
+    fn range_arguments_to_unknown_functions_remain_function_calls() {
+        let result =
+            transpile_matlab_to_xdl("y = user_function(2:5); z = user_function(7);").unwrap();
+        assert!(result.contains("user_function (FINDGEN"), "{result}");
+        assert!(!result.contains("user_function ["), "{result}");
+        assert!(result.contains("user_function (7 )"), "{result}");
     }
 
     #[test]

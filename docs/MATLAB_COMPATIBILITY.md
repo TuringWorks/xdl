@@ -146,7 +146,7 @@ xdl --transpile script.m > script.xdl
 
 - **Syntax transpilation** for common constructs
 - **Function name mapping** for ~80 functions
-- **Index adjustment** (1-based → 0-based; vector slices with positive constant step)
+- **Index adjustment** for variables assigned earlier in the source (1-based → 0-based; scalar indices and vector slices with positive constant step)
 - **Loop conversion** (for, while)
 - **Conditional statements** (if/else)
 - **Comments** preserved
@@ -175,7 +175,7 @@ cargo test -p xdl-matlab
 
 **Test Results:**
 
-- ✅ **28/28 focused tests passing** (100% pass rate for those tests; not a language-coverage percentage)
+- ✅ **35/35 crate tests passing** (100% pass rate for these tests; not a language-coverage percentage)
 - **Coverage**: Lexer, transpiler, function mapping, control flow, arrays, math
 
 ### Integration Tests ✅
