@@ -1808,7 +1808,19 @@ impl Transpiler {
                             .map(|token| token.lexeme.as_str())
                             .collect::<String>();
                         if is_known_array {
-                            if let Some(index) = translate_matlab_index(&index, &preceding_name) {
+                            if index_parts.len() == 1
+                                && !has_colon
+                                && !matches!(self.current_token().kind, TokenKind::Assign)
+                            {
+                                let index = translate_matlab_linear_index(&index, &preceding_name);
+                                expr.push_str("MATLAB_INDEX(");
+                                expr.push_str(&preceding_name);
+                                expr.push_str(", ");
+                                expr.push_str(&index);
+                                expr.push(')');
+                            } else if let Some(index) =
+                                translate_matlab_index(&index, &preceding_name)
+                            {
                                 expr.push('[');
                                 expr.push_str(&index);
                                 expr.push(']');
@@ -2281,6 +2293,15 @@ fn translate_matlab_index(index: &str, array_name: &str) -> Option<String> {
     }
 }
 
+/// Translate one scalar MATLAB linear subscript to its one-based XDL helper
+/// argument. `end` is the total number of elements for linear indexing.
+fn translate_matlab_linear_index(index: &str, array_name: &str) -> String {
+    index.replace(
+        "end",
+        &format!("MATLAB_NUMEL({array_name})"),
+    )
+}
+
 fn offset_matlab_index(start: &str, array_name: &str) -> String {
     let expanded = expand_matlab_end(start, array_name);
     expanded.parse::<i64>().map_or_else(
@@ -2401,7 +2422,7 @@ mod tests {
         .unwrap();
         assert!(result.contains("a = x [1:5]"), "{result}");
         assert!(result.contains("b = x [0:7:2]"), "{result}");
-        assert!(result.contains("c = x [2]"), "{result}");
+        assert!(result.contains("c = MATLAB_INDEX(x, 3)"), "{result}");
     }
 
     #[test]
@@ -2416,7 +2437,10 @@ mod tests {
             "x = [10, 20, 30, 40, 50]; a = x(end); b = x(3:end); c = x(1:2:end); d = x(:); e = x(2:);",
         )
         .unwrap();
-        assert!(result.contains("a = x [(N_ELEMENTS(x)) - 1]"), "{result}");
+        assert!(
+            result.contains("a = MATLAB_INDEX(x, MATLAB_NUMEL(x))"),
+            "{result}"
+        );
         assert!(result.contains("b = x [2:N_ELEMENTS(x)]"), "{result}");
         assert!(result.contains("c = x [0:N_ELEMENTS(x):2]"), "{result}");
         assert!(result.contains("d = x [:]"), "{result}");
@@ -2448,7 +2472,7 @@ mod tests {
             transpile_matlab_to_xdl("function y = select_values(x)\ny = x(3);\nz = x(2:4);\nend")
                 .unwrap();
         assert!(result.contains("FUNCTION select_values, x"), "{result}");
-        assert!(result.contains("y = x [2]"), "{result}");
+        assert!(result.contains("y = MATLAB_INDEX(x, 3)"), "{result}");
         assert!(result.contains("z = x [1:4]"), "{result}");
         assert!(result.contains("RETURN, y"), "{result}");
     }
