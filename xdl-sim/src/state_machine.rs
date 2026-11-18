@@ -10,6 +10,7 @@ use xdl_model::{
     TimedTransition,
 };
 
+use crate::guard_expression::GuardExpression;
 use crate::{BlockRuntime, ExecutionError, ScheduledEvent, Scheduler, SignalValue, TaskId};
 
 pub struct StateMachineRuntime {
@@ -34,12 +35,14 @@ pub struct StateMachineBlock {
     guard_inputs: BTreeMap<String, PortId>,
     output: PortId,
     event_codes: BTreeMap<i64, String>,
+    guard_expressions: BTreeMap<String, GuardExpression>,
 }
 
 impl StateMachineBlock {
     /// Builds a state-machine block from model-document parameters.
     /// Required parameters: `state_machine`, `event_input`, `state_output`,
-    /// and `event_codes`; `guard_inputs` maps guard names to input port names.
+    /// and `event_codes`; `guard_inputs` maps expression variables to input
+    /// port names.
     pub fn from_model(model: &Model, block_id: BlockId) -> Result<Self, ExecutionError> {
         let block = model.block(block_id)?;
         let machine_value = block
@@ -138,21 +141,42 @@ impl StateMachineBlock {
             .iter()
             .filter_map(|transition| transition.guard.as_deref())
             .collect();
-        if guard_inputs
-            .keys()
-            .any(|guard| guard.trim().is_empty() || !known_guards.contains(guard.as_str()))
-            || known_guards
+        let guard_expressions = known_guards.iter().try_fold(
+            BTreeMap::<String, GuardExpression>::new(),
+            |mut expressions, source| {
+                let expression = GuardExpression::parse(source).map_err(|error| {
+                    ExecutionError::Runtime(format!("invalid guard expression {source:?}: {error}"))
+                })?;
+                expressions.insert((*source).to_string(), expression);
+                Ok::<_, ExecutionError>(expressions)
+            },
+        )?;
+        let required_variables: BTreeSet<_> = guard_expressions
+            .values()
+            .flat_map(|expression| expression.variables().iter().cloned())
+            .collect();
+        if guard_inputs.keys().any(|name| name.trim().is_empty())
+            || required_variables
                 .iter()
-                .any(|guard| !guard_inputs.contains_key(*guard))
+                .any(|variable| !guard_inputs.contains_key(variable))
+            || guard_inputs
+                .keys()
+                .any(|variable| !required_variables.contains(variable))
         {
             return Err(ExecutionError::Runtime(
-                "state-machine guard inputs must map every declared guard exactly by name"
+                "state-machine guard_inputs must map every expression variable exactly by name"
                     .to_string(),
             ));
         }
-        if event_input == output || guard_inputs.values().any(|port| *port == output) {
+        let guard_ports: BTreeSet<_> = guard_inputs.values().copied().collect();
+        if event_input == output
+            || guard_inputs
+                .values()
+                .any(|port| *port == output || *port == event_input)
+            || guard_ports.len() != guard_inputs.len()
+        {
             return Err(ExecutionError::Runtime(
-                "state-machine output port must differ from all input ports".to_string(),
+                "state-machine input and output ports must be distinct".to_string(),
             ));
         }
         let runtime = StateMachineRuntime::new(machine)?;
@@ -162,6 +186,7 @@ impl StateMachineBlock {
             guard_inputs,
             output,
             event_codes,
+            guard_expressions,
         })
     }
 }
@@ -191,17 +216,32 @@ impl BlockRuntime for StateMachineBlock {
                 ))
             })?)
         };
-        let active_guards = self
+        let guard_values = self
             .guard_inputs
             .iter()
-            .map(|(guard, port)| {
-                let value = scalar_input(inputs, *port, "state-machine guard")?;
-                Ok((value != 0.0).then(|| guard.clone()))
+            .map(|(variable, port)| {
+                let value = scalar_input(inputs, *port, "state-machine guard expression")?;
+                Ok((variable.clone(), value))
             })
-            .collect::<Result<BTreeSet<_>, ExecutionError>>()?
+            .collect::<Result<BTreeMap<_, _>, ExecutionError>>()?;
+        let active_guards = self
+            .guard_expressions
+            .values()
+            .map(|expression| {
+                expression
+                    .evaluate(&guard_values)
+                    .map(|active| active.then(|| expression.source().to_string()))
+                    .map_err(|error| {
+                        ExecutionError::Runtime(format!(
+                            "could not evaluate state-machine guard {:?}: {error}",
+                            expression.source()
+                        ))
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .flatten()
-            .collect();
+            .collect::<BTreeSet<_>>();
 
         self.runtime.advance_to(timestamp)?;
         if let Some(event) = event {
@@ -443,9 +483,12 @@ fn state_machine_error(error: StateMachineError) -> ExecutionError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::SchedulerConfig;
+    use crate::{Constant, ExecutionEngine, Scheduler, SchedulerConfig};
     use std::collections::BTreeSet;
-    use xdl_model::StateMachine;
+    use xdl_model::{
+        Model, ModelDocument, ModelLayout, PortDirection, SignalSpec, StateChartDocument,
+        StateMachine,
+    };
 
     fn duration(nanoseconds: i64) -> DurationNs {
         DurationNs::from_nanoseconds(nanoseconds)
@@ -592,5 +635,214 @@ mod tests {
                 actual: other_task,
             })
         );
+    }
+
+    #[test]
+    fn state_chart_document_builds_an_executable_guarded_model_block() {
+        let mut machine = StateMachine::new("flight_readiness");
+        let cold = machine.add_state("COLD").expect("cold state");
+        let ready = machine.add_state("READY").expect("ready state");
+        machine.set_initial_state(cold).expect("initial state");
+        machine
+            .add_guarded_transition(
+                cold,
+                ready,
+                "launch",
+                "battery_temperature_c >= 10 && battery_soc > 0.3",
+            )
+            .expect("guarded transition");
+        let chart = StateChartDocument::from_machine(machine).expect("chart document");
+
+        let mut model = Model::new("state_chart_host");
+        model.add_block("plant").expect("plant block");
+        let layout = ModelLayout::from_model(&model).expect("model layout");
+        let mut document = ModelDocument::new(model, layout).expect("model document");
+        let block_id = chart
+            .insert_runtime_block(&mut document, "readiness", 100_000_000)
+            .expect("insert runtime block");
+        let model = &document.model;
+        let block = model.block(block_id).expect("inserted block");
+        let port_named = |name: &str| {
+            block
+                .ports
+                .values()
+                .find(|port| port.name == name)
+                .map(|port| port.id)
+                .expect("expected state-chart port")
+        };
+        let event_port = port_named("event_code");
+        let temperature_port = port_named("guard_battery_temperature_c");
+        let soc_port = port_named("guard_battery_soc");
+        let output_port = port_named("state_id");
+        let mut runtime = StateMachineBlock::from_model(model, block_id)
+            .expect("runtime block from state-chart parameters");
+
+        let event_code = document.model.block(block_id).unwrap().parameters["event_codes"]["launch"]
+            .as_i64()
+            .expect("configured event code") as f64;
+        let cold_temperature = runtime
+            .step(
+                Timestamp::from_nanoseconds(0),
+                &BTreeMap::from([
+                    (event_port, SignalValue::Scalar(event_code)),
+                    (temperature_port, SignalValue::Scalar(9.0)),
+                    (soc_port, SignalValue::Scalar(0.45)),
+                ]),
+            )
+            .expect("temperature guard false");
+        assert_eq!(
+            cold_temperature[&output_port],
+            SignalValue::Scalar(f64::from(cold.value()))
+        );
+
+        let low_charge = runtime
+            .step(
+                Timestamp::from_nanoseconds(0),
+                &BTreeMap::from([
+                    (event_port, SignalValue::Scalar(event_code)),
+                    (temperature_port, SignalValue::Scalar(12.0)),
+                    (soc_port, SignalValue::Scalar(0.2)),
+                ]),
+            )
+            .expect("charge guard false");
+        assert_eq!(
+            low_charge[&output_port],
+            SignalValue::Scalar(f64::from(cold.value()))
+        );
+
+        let transitioned = runtime
+            .step(
+                Timestamp::from_nanoseconds(0),
+                &BTreeMap::from([
+                    (event_port, SignalValue::Scalar(event_code)),
+                    (temperature_port, SignalValue::Scalar(12.0)),
+                    (soc_port, SignalValue::Scalar(0.45)),
+                ]),
+            )
+            .expect("compound guard active step");
+        assert_eq!(
+            transitioned[&output_port],
+            SignalValue::Scalar(f64::from(ready.value()))
+        );
+    }
+
+    #[test]
+    fn mars_readiness_model_executes_connected_sensor_guards_and_events() {
+        let mut machine = StateMachine::new("mars_flight_readiness");
+        let cold = machine.add_state("COLD").expect("cold state");
+        let ready = machine.add_state("READY").expect("ready state");
+        let flying = machine.add_state("FLYING").expect("flying state");
+        machine.set_initial_state(cold).expect("initial state");
+        machine
+            .add_guarded_transition(
+                cold,
+                ready,
+                "launch",
+                "battery_temperature_c >= 10 && battery_soc > 0.3",
+            )
+            .expect("readiness transition");
+        machine
+            .add_guarded_transition(ready, flying, "takeoff", "battery_soc > 0.3")
+            .expect("takeoff transition");
+        let chart = StateChartDocument::from_machine(machine).expect("chart document");
+
+        let mut model = Model::new("mars_readiness_vertical_slice");
+        let (temperature_source, temperature_output) =
+            add_constant_source(&mut model, "BatteryTemperature");
+        let (soc_source, soc_output) = add_constant_source(&mut model, "BatterySoc");
+        let layout = ModelLayout::from_model(&model).expect("model layout");
+        let mut document = ModelDocument::new(model, layout).expect("model document");
+        let chart_block = chart
+            .insert_runtime_block(&mut document, "FlightReadiness", 100_000_000)
+            .expect("insert chart block");
+        let chart_model = &mut document.model;
+        let chart_ports = chart_model
+            .block(chart_block)
+            .expect("chart block")
+            .ports
+            .values()
+            .map(|port| (port.name.clone(), port.id))
+            .collect::<BTreeMap<_, _>>();
+        let temperature_input = chart_ports["guard_battery_temperature_c"];
+        let soc_input = chart_ports["guard_battery_soc"];
+        let event_input = chart_ports["event_code"];
+        let state_output = chart_ports["state_id"];
+        chart_model
+            .connect(temperature_output, temperature_input)
+            .expect("connect temperature signal");
+        chart_model
+            .connect(soc_output, soc_input)
+            .expect("connect SOC signal");
+
+        let scheduler = Scheduler::new(
+            SchedulerConfig::new(duration(100_000_000), 16).expect("scheduler config"),
+        );
+        let mut engine = ExecutionEngine::new(document.model, scheduler).expect("engine");
+        for (block, output, value, name) in [
+            (temperature_source, temperature_output, 12.0, "temperature"),
+            (soc_source, soc_output, 0.45, "SOC"),
+        ] {
+            let task = engine
+                .scheduler
+                .add_periodic_task(name, duration(100_000_000), DurationNs::ZERO, 0)
+                .expect("source task");
+            engine
+                .register_task(
+                    task,
+                    block,
+                    Box::new(Constant::new(output, value).expect("constant")),
+                )
+                .expect("register source");
+        }
+        engine
+            .register_state_machine_block(chart_block)
+            .expect("register readiness chart");
+        let launch_code = engine.model.block(chart_block).expect("chart").parameters["event_codes"]
+            ["launch"]
+            .as_i64()
+            .expect("launch event code") as f64;
+        let takeoff_code = engine.model.block(chart_block).expect("chart").parameters["event_codes"]
+            ["takeoff"]
+            .as_i64()
+            .expect("takeoff event code") as f64;
+
+        engine
+            .inject_signal(event_input, SignalValue::Scalar(launch_code))
+            .expect("inject launch command");
+        engine.advance_to(Timestamp::ZERO).expect("cold to ready");
+        assert_eq!(
+            engine.signal(state_output),
+            Some(&SignalValue::Scalar(f64::from(ready.value())))
+        );
+
+        engine
+            .inject_signal(event_input, SignalValue::Scalar(0.0))
+            .expect("clear event input");
+        engine
+            .advance_to(Timestamp::from_nanoseconds(100_000_000))
+            .expect("hold ready state");
+        assert_eq!(
+            engine.signal(state_output),
+            Some(&SignalValue::Scalar(f64::from(ready.value())))
+        );
+
+        engine
+            .inject_signal(event_input, SignalValue::Scalar(takeoff_code))
+            .expect("inject takeoff command");
+        engine
+            .advance_to(Timestamp::from_nanoseconds(200_000_000))
+            .expect("ready to flying");
+        assert_eq!(
+            engine.signal(state_output),
+            Some(&SignalValue::Scalar(f64::from(flying.value())))
+        );
+    }
+
+    fn add_constant_source(model: &mut Model, name: &str) -> (BlockId, PortId) {
+        let block = model.add_block(name).expect("constant source block");
+        let output = model
+            .add_port(block, "output", PortDirection::Output, SignalSpec::scalar())
+            .expect("constant output port");
+        (block, output)
     }
 }

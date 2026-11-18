@@ -132,6 +132,24 @@ impl SymbolTable {
         // Array functions
         let array_funcs = vec![
             (
+                "MATLAB_COLON",
+                "matlab_colon(start, stop) or matlab_colon(start, step, stop) - Build a finite inclusive numeric range, capped at 1,000,000 elements",
+                "ARRAY",
+                "MATLAB_COLON(start[, step], stop)",
+            ),
+            (
+                "MATLAB_NAN",
+                "matlab_nan() - Return MATLAB NaN scalar",
+                "DOUBLE",
+                "MATLAB_NAN()",
+            ),
+            (
+                "MATLAB_INF",
+                "matlab_inf() - Return MATLAB positive infinity scalar",
+                "DOUBLE",
+                "MATLAB_INF()",
+            ),
+            (
                 "FINDGEN",
                 "findgen(n) - Generate float array [0, 1, ..., n-1]",
                 "ARRAY",
@@ -253,21 +271,63 @@ impl SymbolTable {
             ),
             (
                 "MATLAB_FIND_INDICES",
-                "matlab_find_indices(matrix) - Return one-based linear indices for multi-output MATLAB find",
+                "matlab_find_indices(matrix) - Return one-based linear indices as an XDL helper",
                 "ARRAY",
                 "MATLAB_FIND_INDICES(matrix)",
             ),
             (
+                "MATLAB_FIND_VALUES",
+                "matlab_find_nonzero_values(matrix) - Return nonzero values from three-output MATLAB find",
+                "ARRAY",
+                "MATLAB_FIND_VALUES(matrix)",
+            ),
+            (
+                "MATLAB_RESHAPE",
+                "matlab_reshape(array, d1, d2, ...) - Reshape a numeric array with MATLAB column-major semantics",
+                "ARRAY",
+                "MATLAB_RESHAPE(array, d1, d2, ...)",
+            ),
+            (
+                "MATLAB_CTRANSPOSE",
+                "matlab_ctranspose(array) - MATLAB apostrophe transpose for supported real arrays",
+                "ARRAY",
+                "MATLAB_CTRANSPOSE(array)",
+            ),
+            (
+                "MATLAB_MLDIVIDE",
+                "matlab_mldivide(A, b) - Solve a supported square numeric linear system",
+                "ARRAY",
+                "MATLAB_MLDIVIDE(A, b)",
+            ),
+            (
                 "MATLAB_READMATRIX",
-                "matlab_readmatrix(filename) - Import a headerless rectangular numeric CSV",
+                "matlab_readmatrix(filename, ['NumHeaderLines', n]) - Import rectangular numeric CSV with explicit header-line skipping",
                 "NESTED_ARRAY",
-                "MATLAB_READMATRIX(filename)",
+                "MATLAB_READMATRIX(filename, ['NumHeaderLines', n])",
             ),
             (
                 "MATLAB_INDEX",
                 "matlab_index(arr, index) - Read a MATLAB one-based linear array element",
                 "DOUBLE",
                 "MATLAB_INDEX(arr, index)",
+            ),
+            (
+                "MATLAB_INDEX_VECTOR",
+                "matlab_index_vector(array, indices) - Read ordered one-based linear indices from numeric arrays in column-major order; result orientation is not represented",
+                "ARRAY",
+                "MATLAB_INDEX_VECTOR(vector, indices)",
+            ),
+            (
+                "SCILAB_INDEX",
+                "scilab_index(index) - Validate and convert a positive one-based Scilab scalar index to XDL's zero-based index",
+                "LONG",
+                "SCILAB_INDEX(index)",
+            ),
+            (
+                "SCILAB_INDEX_RANGE",
+                "scilab_index_range(vector, start, step, end) - Read a validated inclusive Scilab one-based range from a numeric vector",
+                "ARRAY",
+                "SCILAB_INDEX_RANGE(vector, start, step, end)",
             ),
             (
                 "SIZE",
@@ -321,6 +381,24 @@ impl SymbolTable {
 
         // Statistics functions
         let stat_funcs = vec![
+            (
+                "ISNAN",
+                "isnan(x) - Test values for NaN",
+                "ARRAY",
+                "ISNAN(x)",
+            ),
+            (
+                "ISINF",
+                "isinf(x) - Test values for infinity",
+                "ARRAY",
+                "ISINF(x)",
+            ),
+            (
+                "FINITE",
+                "finite(x) - Test values for finite values",
+                "ARRAY",
+                "FINITE(x)",
+            ),
             (
                 "TOTAL",
                 "total(arr) - Sum all elements",
@@ -822,17 +900,53 @@ mod tests {
             .get_function("MATLAB_READMATRIX")
             .expect("MATLAB_READMATRIX builtin");
         assert_eq!(info.return_type, "NESTED_ARRAY");
-        assert!(info
-            .documentation
-            .contains("headerless rectangular numeric CSV"));
+        assert!(info.documentation.contains("explicit header-line skipping"));
     }
 
     #[test]
-    fn matlab_find_subscript_helpers_are_documented() {
+    fn matlab_compatibility_helpers_are_documented() {
         let table = SymbolTable::new();
+        let colon = table
+            .get_function("MATLAB_COLON")
+            .expect("MATLAB_COLON builtin");
+        assert_eq!(colon.return_type, "ARRAY");
+        assert!(colon
+            .documentation
+            .contains("finite inclusive numeric range"));
         assert!(table.get_function("MATLAB_FIND_ROWS").is_some());
         assert!(table.get_function("MATLAB_FIND_COLUMNS").is_some());
         assert!(table.get_function("MATLAB_FIND_INDICES").is_some());
+        assert!(table.get_function("MATLAB_FIND_VALUES").is_some());
+        assert!(table.get_function("MATLAB_RESHAPE").is_some());
+        assert!(table.get_function("MATLAB_CTRANSPOSE").is_some());
+        assert!(table.get_function("MATLAB_MLDIVIDE").is_some());
+        assert!(table.get_function("MATLAB_NAN").is_some());
+        assert!(table.get_function("MATLAB_INF").is_some());
+        let index_vector = table
+            .get_function("MATLAB_INDEX_VECTOR")
+            .expect("MATLAB_INDEX_VECTOR builtin");
+        assert_eq!(index_vector.return_type, "ARRAY");
+        assert!(index_vector.documentation.contains("ordered one-based"));
+        assert!(table.get_function("ISNAN").is_some());
+        assert!(table.get_function("ISINF").is_some());
+        assert!(table.get_function("FINITE").is_some());
+    }
+
+    #[test]
+    fn scilab_index_helper_is_documented() {
+        let table = SymbolTable::new();
+        let info = table
+            .get_function("SCILAB_INDEX")
+            .expect("SCILAB_INDEX builtin");
+        assert_eq!(info.return_type, "LONG");
+        assert!(info.documentation.contains("one-based Scilab scalar index"));
+        let range = table
+            .get_function("SCILAB_INDEX_RANGE")
+            .expect("SCILAB_INDEX_RANGE builtin");
+        assert_eq!(range.return_type, "ARRAY");
+        assert!(range
+            .documentation
+            .contains("inclusive Scilab one-based range"));
     }
 }
 

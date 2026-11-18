@@ -64,6 +64,7 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("close", "WDELETE");
 
     // MATLAB compatibility functions
+    map.insert("colon", "MATLAB_COLON");
     map.insert("linspace", "LINSPACE");
     map.insert("logspace", "LOGSPACE");
     map.insert("meshgrid", "MESHGRID");
@@ -73,10 +74,14 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("interp1", "INTERP1");
 
     // Array manipulation
-    map.insert("reshape", "REFORM");
+    map.insert("reshape", "MATLAB_RESHAPE");
+    map.insert("matlab_index_vector", "MATLAB_INDEX_VECTOR");
     map.insert("sort", "SORT");
     map.insert("find", "MATLAB_FIND");
     map.insert("readmatrix", "MATLAB_READMATRIX");
+    map.insert("isfinite", "FINITE");
+    map.insert("isnan", "ISNAN");
+    map.insert("isinf", "ISINF");
 
     // I/O
     map.insert("disp", "PRINT");
@@ -116,6 +121,15 @@ mod tests {
         assert_eq!(get_xdl_function("sin"), Some("SIN"));
         assert_eq!(get_xdl_function("atan2"), Some("ATAN"));
         assert_eq!(get_xdl_function("readmatrix"), Some("MATLAB_READMATRIX"));
+        assert_eq!(get_xdl_function("colon"), Some("MATLAB_COLON"));
+        assert_eq!(get_xdl_function("isfinite"), Some("FINITE"));
+        assert_eq!(get_xdl_function("isnan"), Some("ISNAN"));
+        assert_eq!(get_xdl_function("isinf"), Some("ISINF"));
+        assert_eq!(get_xdl_function("reshape"), Some("MATLAB_RESHAPE"));
+        assert_eq!(
+            get_xdl_function("matlab_index_vector"),
+            Some("MATLAB_INDEX_VECTOR")
+        );
         assert_eq!(get_xdl_function("plot"), Some("PLOT"));
         assert_eq!(get_xdl_function("nonexistent"), None);
     }

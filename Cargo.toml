@@ -24,10 +24,11 @@ members = [
     "xdl-gnc-control",
     "xdl-gnc-actuators",
     "xdl-gnc-integration",
-    "xdl-gnc-telemetry"
-    , "xdl-model",
+    "xdl-gnc-telemetry",
+    "xdl-model",
     "xdl-sim",
-    "xdl-artifacts"
+    "xdl-artifacts",
+    "xdl-scilab",
 ]
 resolver = "2"
 

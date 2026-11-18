@@ -15,6 +15,38 @@ export async function activate(context: ExtensionContext) {
     outputChannel = window.createOutputChannel('XDL Language Server');
     outputChannel.appendLine('XDL extension activating...');
 
+    // Register execution separately from the XDL LSP so Scilab files can run
+    // through the CLI without being sent to the XDL language server.
+    context.subscriptions.push(
+        require('vscode').commands.registerCommand('xdl.runFile', async () => {
+            const editor = window.activeTextEditor;
+            if (!editor) {
+                window.showErrorMessage('No active editor');
+                return;
+            }
+
+            const filePath = editor.document.uri.fsPath;
+            const extension = path.extname(filePath).toLowerCase();
+            if (!['.xdl', '.pro', '.m', '.sci', '.sce'].includes(extension)) {
+                window.showErrorMessage('Current file type is not supported by XDL');
+                return;
+            }
+
+            await editor.document.save();
+            const terminal = window.createTerminal('XDL');
+            terminal.show();
+            terminal.sendText(`xdl "${filePath}"`);
+        })
+    );
+
+    const activeExtension = path.extname(
+        window.activeTextEditor?.document.uri.fsPath ?? ''
+    ).toLowerCase();
+    if (['.m', '.sci', '.sce'].includes(activeExtension)) {
+        outputChannel.appendLine('Dialect source uses CLI transpilation; XDL diagnostics are not enabled');
+        return;
+    }
+
     const config = workspace.getConfiguration('xdl');
     const lspEnabled = config.get<boolean>('lsp.enabled', true);
 
@@ -77,32 +109,6 @@ export async function activate(context: ExtensionContext) {
                 await client.start();
                 outputChannel.appendLine('XDL Language Server restarted');
             }
-        })
-    );
-
-    // Run file command
-    const runFileCommand = 'xdl.runFile';
-    context.subscriptions.push(
-        require('vscode').commands.registerCommand(runFileCommand, async () => {
-            const editor = window.activeTextEditor;
-            if (!editor) {
-                window.showErrorMessage('No active editor');
-                return;
-            }
-
-            const filePath = editor.document.uri.fsPath;
-            if (!filePath.endsWith('.xdl') && !filePath.endsWith('.pro')) {
-                window.showErrorMessage('Current file is not an XDL file');
-                return;
-            }
-
-            // Save the file first
-            await editor.document.save();
-
-            // Create terminal and run
-            const terminal = window.createTerminal('XDL');
-            terminal.show();
-            terminal.sendText(`xdl "${filePath}"`);
         })
     );
 

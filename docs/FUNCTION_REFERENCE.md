@@ -37,6 +37,9 @@
 | `ASIN(x)` | Arc sine | `y = ASIN(1)` |
 | `ACOS(x)` | Arc cosine | `y = ACOS(0)` |
 | `ATAN(x[, x2])` | Arc tangent; two arguments compute quadrant-aware `atan2(y, x)` elementwise for equal-shape numeric arrays, with scalar expansion | `a = ATAN(1)`; `theta = ATAN(y, x)` |
+| `ISNAN(x)` | Return 1/true where numeric values are NaN | `mask = ISNAN(values)` |
+| `ISINF(x)` | Return 1/true where numeric values are positive or negative infinity | `mask = ISINF(values)` |
+| `FINITE(x)` | Return 1/true for finite numeric values, false for NaN or infinity | `mask = FINITE(values)` |
 
 ### Hyperbolic
 
@@ -133,9 +136,19 @@
 | `MATLAB_SIZE(x, [dim])` | MATLAB-compatible dimension vector or selected double dimension; used by transpiled `size(x, [dim])` | `dims = MATLAB_SIZE(matrix)` |
 | `MATLAB_SIZE_TAIL(x, dim)` | Product of MATLAB dimensions from `dim` onward; used for the final output of `[d1,...,dn] = size(x)` | `n = MATLAB_SIZE_TAIL(volume, 2)` |
 | `MATLAB_FIND(x)` | MATLAB-compatible one-based linear indices; row vectors preserve orientation, other shapes return a column; used by transpiled `find(x)` | `idx = MATLAB_FIND(data)` |
-| `MATLAB_FIND_ROWS(A)` / `MATLAB_FIND_COLUMNS(A)` | One-based row and column outputs for transpiled `[row, col] = find(A)` on supported 2D numeric arrays | The MATLAB transpiler emits both helpers for `[row, col] = find(matrix)` |
-| `MATLAB_READMATRIX(filename)` | Import a headerless rectangular numeric CSV as nested numeric rows; used by transpiled `readmatrix(filename)` | `matrix = MATLAB_READMATRIX('data.csv')` |
+| `MATLAB_FIND_ROWS(A)` / `MATLAB_FIND_COLUMNS(A)` | One-based row and collapsed column subscripts for transpiled two-output `find` | Runtime supports vectors, matrices, and shaped/nested N-D numeric arrays; optional `k` and direction are forwarded |
+| `MATLAB_FIND_VALUES(A)` | Nonzero values, the third output of `[row,col,v] = find(A)` | Values follow MATLAB column-major traversal and optional `k`/direction selection |
+| `MATLAB_FIND_INDICES(A)` | One-based linear indices as an XDL helper | The MATLAB transpiler does not use this for the third `find` output |
+| `MATLAB_RESHAPE(A, d1, d2, ...)` | Reshape a numeric array while preserving MATLAB column-major element order | Used by transpiled `reshape` to retain explicit XDL shape metadata |
+| `MATLAB_CTRANSPOSE(A)` | MATLAB apostrophe transpose for supported real arrays; conjugates a complex scalar | Used by transpiled `A'`; complex arrays are rejected explicitly |
+| `MATLAB_MLDIVIDE(A, b)` | Solve finite real-valued square or rectangular systems for vector or matrix RHS values | Emitted for direct named-array MATLAB `A \ b`; square uses LU, rectangular uses SVD, and elementwise left division remains unsupported |
+| `MATLAB_READMATRIX(filename[, 'NumHeaderLines', n])` | Import a rectangular numeric CSV, optionally skipping an explicit number of header lines; automatic header detection and other import options are unsupported | `matrix = MATLAB_READMATRIX('data.csv', 'NumHeaderLines', 1)` |
+| `MATLAB_NAN()` / `MATLAB_INF()` | Explicit IEEE-754 NaN and positive infinity values used for transpiled MATLAB/Octave constants | `values = [MATLAB_NAN(), MATLAB_INF(), -MATLAB_INF()]` |
 | `MATLAB_INDEX(x, index)` | Read one MATLAB one-based linear element using column-major traversal | `value = MATLAB_INDEX(matrix, 4)` |
+| `MATLAB_INDEX_VECTOR(array, indices)` | Gather ordered, duplicate-preserving one-based linear indices from a numeric array in MATLAB column-major order; empty indices return an empty selection. Flat XDL results cannot retain MATLAB row/column orientation | `selected = MATLAB_INDEX_VECTOR(values, picks)` |
+| `SCILAB_INDEX(index)` | Validate a positive integer Scilab index and convert it to XDL's zero-based scalar index; rejects non-finite, fractional, nonpositive, and unrepresentable values | Used by transpiled `v(k)` reads when `k` is a scalar expression |
+| `SCILAB_INDEX_RANGE(vector, start, step, end)` | Read an inclusive one-based Scilab vector range after validating integer bounds, positive step, and vector length; step may be omitted in the three-argument form | `selected = SCILAB_INDEX_RANGE(values, first, stride, last)` |
+| `MATLAB_COLON(start, stop)` / `MATLAB_COLON(start, step, stop)` | Build an inclusive finite runtime numeric range; accepts numeric scalars or one-element numeric arrays and returns a one-dimensional double vector, capped at 1,000,000 elements | `values = MATLAB_COLON(first, stride, last)` |
 | `WHERE(condition)` | Find indices | `idx = WHERE(arr GT 0)` |
 | `REFORM(arr, dims)` | Reshape array | `b = REFORM(a, 5, 20)` |
 | `TRANSPOSE(arr)` | Transpose a rectangular nested numeric matrix | `b = TRANSPOSE(matrix)` |

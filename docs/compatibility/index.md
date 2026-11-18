@@ -17,6 +17,7 @@ XDL provides compatibility layers and migration tooling for:
 - **IDL** (Interactive Data Language) - an evolving compatible syntax/runtime subset
 - **GDL** (GNU Data Language) - an evolving compatible syntax/runtime subset
 - **MATLAB/Octave** - a tested but incomplete syntax/function subset and transpiler
+- **Scilab** - a separate, tested source-transpilation slice; no general Scilab or Xcos parity
 
 These are compatibility targets, not claims of full language, toolbox, file
 format, numerical, or model-based-design parity. See the [current gap
@@ -105,6 +106,15 @@ xdl script.m
 - [MATLAB Real World](../MATLAB_REAL_WORLD_SUPPORT) - Real-world usage
 - [MATLAB Critical Fixes](../MATLAB_CRITICAL_FIXES) - Bug fixes
 - [Tiled Layout](../MATLAB_TILEDLAYOUT) - Tiled layout support
+
+## Scilab Compatibility
+
+The CLI routes `.sci` and `.sce` files through the independent
+`xdl-scilab` front end. It supports a narrow subset of assignments, percent
+constants, `disp`, comments, and conditional blocks; it does not support
+Scilab function files or Xcos models.
+
+- [Scilab Support](../SCILAB_SUPPORT) - Current syntax subset and limitations
 
 ## Migration Guide
 

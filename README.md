@@ -4,7 +4,7 @@
 
 A Rust implementation of GNU Data Language (GDL), providing an IDL-inspired
 scientific-computing language, runtime, visualization stack, and an evolving
-MATLAB/Octave migration path.
+MATLAB/Octave migration path and a separate, limited Scilab source-transpilation path.
 
 ## Overview
 
@@ -23,22 +23,23 @@ For the current capability map and the VibeCoder + XDL product roadmap, see
 
 The project is structured as a Cargo workspace with the following crates:
 
-- **`xdl-core`**: Core data structures, types, and array operations (~1,353 lines)
-- **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom (~2,176 lines)
-- **`xdl-interpreter`**: AST interpreter and execution engine (~1,796 lines)
+- **`xdl-core`**: Core data structures, types, and array operations
+- **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom
+- **`xdl-interpreter`**: AST interpreter and execution engine
 - **`xdl-runtime`**: Runtime system with memory management
-- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics, ML) (~13,199 lines)
+- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics, ML)
 - **`xdl-ffi`**: Foreign function interfaces to external libraries
 - **`xdl-cli`**: Command-line interface and REPL
-- **`xdl-gui`**: Graphical user interface components (~1,963 lines)
-- **`xdl-charts`**: Charting and visualization library (~584 lines)
+- **`xdl-scilab`**: Independent Scilab lexer/transpiler for a narrow script subset
+- **`xdl-gui`**: Graphical user interface components
+- **`xdl-charts`**: Charting and visualization library
 - **`xdl-viz3d`**: 3D visualization engine
 - **`xdl-viz3d-web`**: Web-based 3D visualization
 - **`xdl-viz3d-threejs`**: Three.js 3D visualization web components
 - **`xdl-chart-viewer`**: Interactive chart viewer application
 - **`xdl-amp`**: Accelerated Math Processing
 - **`xdl-lsp`**: Language Server Protocol implementation for IDE support
-- **`xdl-matlab`**: MATLAB/Octave transpiler for a tested `.m` subset (50 crate tests; not full language or toolbox parity)
+- **`xdl-matlab`**: MATLAB/Octave transpiler for a tested `.m` subset (59 crate tests; includes bounded literal and runtime-valued colon vectors and vector-index reads; not full language or toolbox parity)
 - **`xdl-artifacts`**: Versioned run-manifest and compatibility-status contracts
 - **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**, **`xdl-gnc-actuators`**, **`xdl-gnc-integration`**, **`xdl-gnc-telemetry`**: Typed guidance, navigation, control, actuator, integration, and telemetry libraries with an XDL-facing `GNC_*` slice. The physical-model and full block-diagram gaps remain under development; see [GNC Crates](docs/development/gnc-crates.md)
 
@@ -63,10 +64,26 @@ The companion battery-string parameter sweep is also executable:
 cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl
 ```
 
+The sweep couples parallel-string count to battery mass, Mars weight, an
+illustrative lift limit, and SOC-limited flight duration; its parameters are
+reduced-order examples, not validated Ingenuity data.
+
 This is an evidence-bearing starting point for the MATLAB/Aerospace
 Blockset/Simscape compatibility track, not a claim of drop-in Simulink parity.
 See [the GNC documentation](docs/development/gnc-crates.md) for the current
 scope and remaining physical-model gaps.
+
+### Runnable Scilab subset example
+
+Run the checked-in `.sce` example with the XDL CLI:
+
+```bash
+cargo run -p xdl-cli -- -q examples/scilab/mars_readiness_gate.sce
+```
+
+It demonstrates assignments, percent constants, `disp`, and conditionals in
+the supported Scilab syntax subset. This does not imply general Scilab or Xcos
+compatibility; see [Scilab support and limitations](docs/SCILAB_SUPPORT.md).
 
 ### Core Data Types
 - All XDL/IDL numeric types (BYTE, INT, LONG, FLOAT, DOUBLE, COMPLEX, etc.)
@@ -106,7 +123,8 @@ scope and remaining physical-model gaps.
 - **Image processing**: CONVOL, DILATE, ERODE, SOBEL, GAUSSIAN_FILTER, etc.
 - **Signal processing**: A_CORRELATE, C_CORRELATE, DIGITAL_FILTER, HILBERT, etc.
 - **MATLAB/Octave transpilation**: Working transpiler for a tested subset of basic to moderate-complexity `.m` files; advanced syntax is not drop-in compatible
-- **MATLAB compatibility helpers (partial)**: MATLAB_LENGTH, MATLAB_NUMEL, MATLAB_SIZE, MATLAB_SIZE_TAIL, MATLAB_FIND, MATLAB_INDEX, LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
+- **Scilab transpilation (partial)**: `.sci`/`.sce` route case-insensitively to a separate tested subset for assignments, `disp`, constants, comments, conditionals, bounded transpose, rectangular numeric 2D matrix literals, scalar `A(i,j)` reads on tracked matrices, scalar `v(k)` reads, and inclusive vector range reads `v(a:b)` / `v(a:s:b)` on tracked comma-separated numeric vector literals. Indices, range endpoints, and steps must be positive integer literals. Scilab's one-based inclusive ranges lower to XDL zero-based end-exclusive slices; e.g. `v(2:4)` becomes `v[1:4:1]` and `v(1:2:5)` becomes `v[0:5:2]`. Ordinary calls such as `sum(v)` are preserved. Variable/negative/zero indices or steps, other subscript counts, and indexed writes are rejected. It supports multiple single-output function definitions per file, each with zero to four distinct comma-separated inputs, straight-line assignment bodies, and same-file calls (including calls before the definition). Function libraries, cross-file calls, multiple outputs, and control flow inside functions are unsupported. It supports literal-bounded `for` loops and a narrow precondition `while` form (`while expression`, optionally followed on that line by `do` or `then`), each closed by Scilab `end`. While conditions are reevaluated each iteration; XDL's runtime does not impose an iteration cap, so programs must ensure termination. Inline loop bodies, `while ... else`, and `endwhile` are rejected. For-loop bounds and step must be signed 32-bit integer literals (decimal and exponent forms are rejected), step cannot be zero, and the range is capped at 1,000,000 iterations. Endpoints are inclusive, and a step pointing away from the endpoint yields zero iterations; loop values retain Scilab's one-based values. General loop expressions, matrix operations, other indexing forms, and Xcos are not supported
+- **MATLAB compatibility helpers (partial)**: MATLAB_LENGTH, MATLAB_NUMEL, MATLAB_SIZE, MATLAB_SIZE_TAIL, MATLAB_FIND, MATLAB_FIND_ROWS/COLUMNS/VALUES, MATLAB_RESHAPE, MATLAB_CTRANSPOSE, MATLAB_INDEX, MATLAB_READMATRIX, MATLAB_MLDIVIDE, LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
 - **GPU acceleration**: XDL-AMP module with multi-backend support
 - **IDE support**: Language Server Protocol (LSP) and VS Code extension
 
@@ -122,7 +140,8 @@ complete or uniformly production-ready:
 ### Compatibility
 - **IDL/GDL compatibility**: Coverage is substantial but is not a formally measured or frozen percentage
 - **MATLAB/Octave compatibility**: A passing transpiler test suite covers the implemented subset; it does not imply language or toolbox parity
-- **MATLAB array and data semantics**: A strict headerless numeric CSV `readmatrix` subset returns a matrix; tested `size`, one- and two-output `find`, scalar linear reads, rectangular 2D row/column range reads, scalar or shape-matched two-axis block writes, and selected scalar/range writes cover the documented cases. Vector-valued indices, nested-array range sources, single-subscript matrix writes, general import options, nonnumeric `find` inputs, and higher-dimensional slices remain incomplete.
+- **Scilab compatibility**: A narrow source-transpilation subset is tested; it does not establish general Scilab, function-file, or Xcos compatibility
+- **MATLAB array and data semantics**: `readmatrix` imports strict rectangular numeric CSV, with an optional explicit `'NumHeaderLines', n` pair; automatic header detection and other import options remain unsupported. Tested `size`, one-/two-/three-output `find` on the documented shapes, scalar linear reads, rectangular 2D row/column range reads, scalar or shape-matched two-axis block writes, and selected scalar/range writes cover the documented cases. Vector-valued indices, nested-array range sources, single-subscript matrix writes, nonnumeric `find` inputs, and higher-dimensional slices remain incomplete.
 - **Scientific I/O**: Some FITS, HDF5, and NetCDF paths are placeholders or feature-gated and require end-to-end round-trip tests
 - **Model-based simulation**: `xdl-model` and `xdl-sim` are foundations, not a Simulink/Xcos-equivalent product
 - **Canonical numerics**: Sparse, chunked, units-aware, frame-aware, and distributed data types are incomplete

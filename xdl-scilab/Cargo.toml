@@ -1,0 +1,10 @@
+[package]
+name = "xdl-scilab"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Bounded Scilab source transpilation to XDL"
+
+[dependencies]
+

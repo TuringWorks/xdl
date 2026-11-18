@@ -3,7 +3,10 @@
 
 //! Serializable geometry and editing operations for state/event diagrams.
 
-use crate::{StateId, StateMachine, StateMachineError};
+use crate::{
+    BlockId, BlockLayout, EditorError, ModelDocument, ModelError, PortDirection, PortLayout,
+    PortSide, SignalSpec, StateId, StateMachine, StateMachineError,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
@@ -123,6 +126,16 @@ pub enum StateChartEditorError {
     Deserialization(String),
     #[error("invalid state-chart interaction: {0}")]
     InvalidInteraction(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum StateChartIntegrationError {
+    #[error("state-chart error: {0}")]
+    Chart(#[from] StateChartEditorError),
+    #[error("model error: {0}")]
+    Model(#[from] ModelError),
+    #[error("model document error: {0}")]
+    Document(#[from] EditorError),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -303,12 +316,17 @@ impl StateChartDocument {
                 Ok((event.to_string(), code))
             })
             .collect::<Result<BTreeMap<_, _>, StateChartEditorError>>()?;
-        let guard_inputs: BTreeMap<_, _> = self
+        let guard_variables: BTreeSet<_> = self
             .machine
             .transitions
             .iter()
             .filter_map(|transition| transition.guard.as_ref())
-            .map(|guard| (guard.clone(), format!("guard_{guard}")))
+            .flat_map(|guard| guard_identifiers(guard))
+            .map(str::to_string)
+            .collect();
+        let guard_inputs: BTreeMap<_, _> = guard_variables
+            .into_iter()
+            .map(|variable| (variable.clone(), format!("guard_{variable}")))
             .collect();
         let machine = serde_json::to_value(&self.machine)
             .map_err(|error| StateChartEditorError::Serialization(error.to_string()))?;
@@ -322,6 +340,92 @@ impl StateChartDocument {
             "phase_ns": 0,
             "priority": 0
         }))
+    }
+
+    /// Inserts a configured state-machine runtime block into a model
+    /// document. The operation is atomic: the original document is retained
+    /// if any port, parameter, or layout validation fails.
+    pub fn insert_runtime_block(
+        &self,
+        document: &mut ModelDocument,
+        block_name: impl Into<String>,
+        period_ns: i64,
+    ) -> Result<BlockId, StateChartIntegrationError> {
+        let parameters = self.runtime_block_parameters(period_ns)?;
+        let mut candidate = document.clone();
+        let block = candidate.model.add_block(block_name)?;
+        let parameter_values = parameters.as_object().ok_or_else(|| {
+            StateChartEditorError::Serialization(
+                "runtime block parameters must serialize as an object".to_string(),
+            )
+        })?;
+        for (name, value) in parameter_values {
+            candidate
+                .model
+                .set_block_parameter(block, name.clone(), value.clone())?;
+        }
+
+        let mut input_names = vec!["event_code".to_string()];
+        if let Some(guards) = parameters
+            .get("guard_inputs")
+            .and_then(serde_json::Value::as_object)
+        {
+            input_names.extend(
+                guards
+                    .values()
+                    .filter_map(serde_json::Value::as_str)
+                    .map(str::to_string),
+            );
+        }
+        input_names.sort();
+        input_names.dedup();
+        let input_count = input_names.len();
+        for (index, name) in input_names.into_iter().enumerate() {
+            let port = candidate.model.add_port(
+                block,
+                name,
+                PortDirection::Input,
+                SignalSpec::scalar(),
+            )?;
+            candidate.layout.ports.insert(
+                port,
+                PortLayout::new(
+                    PortSide::Left,
+                    (index + 1) as f64 / (input_count + 1) as f64,
+                ),
+            );
+        }
+        let output_name = parameters
+            .get("state_output")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| {
+                StateChartEditorError::Serialization("missing state_output".to_string())
+            })?;
+        let output = candidate.model.add_port(
+            block,
+            output_name,
+            PortDirection::Output,
+            SignalSpec::scalar(),
+        )?;
+        candidate
+            .layout
+            .ports
+            .insert(output, PortLayout::new(PortSide::Right, 0.5));
+
+        let x = candidate
+            .layout
+            .blocks
+            .values()
+            .map(|layout| layout.x + layout.width)
+            .fold(0.0_f64, f64::max)
+            + 80.0;
+        candidate.layout.blocks.insert(
+            block,
+            BlockLayout::new(x, 80.0, 220.0, (input_count as f64 * 24.0 + 48.0).max(80.0)),
+        );
+        candidate.validate()?;
+        *document = candidate;
+        Ok(block)
     }
 
     pub fn from_json(json: &str) -> Result<Self, StateChartEditorError> {
@@ -726,6 +830,56 @@ impl StateChartDocument {
     }
 }
 
+fn guard_identifiers(expression: &str) -> impl Iterator<Item = &str> {
+    let bytes = expression.as_bytes();
+    let mut identifiers = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index].is_ascii_digit()
+            || (bytes[index] == b'.' && bytes.get(index + 1).is_some_and(u8::is_ascii_digit))
+        {
+            if bytes[index] == b'.' {
+                index += 1;
+                while bytes.get(index).is_some_and(u8::is_ascii_digit) {
+                    index += 1;
+                }
+            } else {
+                while bytes.get(index).is_some_and(u8::is_ascii_digit) {
+                    index += 1;
+                }
+                if bytes.get(index) == Some(&b'.') {
+                    index += 1;
+                    while bytes.get(index).is_some_and(u8::is_ascii_digit) {
+                        index += 1;
+                    }
+                }
+            }
+            if matches!(bytes.get(index), Some(b'e' | b'E')) {
+                index += 1;
+                if matches!(bytes.get(index), Some(b'+' | b'-')) {
+                    index += 1;
+                }
+                while bytes.get(index).is_some_and(u8::is_ascii_digit) {
+                    index += 1;
+                }
+            }
+        } else if bytes[index].is_ascii_alphabetic() || bytes[index] == b'_' {
+            let start = index;
+            index += 1;
+            while bytes
+                .get(index)
+                .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+            {
+                index += 1;
+            }
+            identifiers.push(&expression[start..index]);
+        } else {
+            index += 1;
+        }
+    }
+    identifiers.into_iter()
+}
+
 impl StateChartEditor {
     pub fn new(document: StateChartDocument) -> Result<Self, StateChartEditorError> {
         document.validate()?;
@@ -1025,5 +1179,79 @@ mod tests {
         assert!(svg.contains("enable [thermal_ready]"), "{svg}");
         assert!(svg.contains("after 5000000000 ns"), "{svg}");
         assert!(svg.contains("class=\"state initial\""), "{svg}");
+    }
+
+    #[test]
+    fn runtime_block_insertion_is_configured_valid_and_atomic() {
+        let chart = StateChartDocument::from_machine(example_machine()).unwrap();
+        let mut model = crate::Model::new("statechart_host");
+        model.add_block("plant").unwrap();
+        let layout = crate::ModelLayout::from_model(&model).unwrap();
+        let mut document = ModelDocument::new(model, layout).unwrap();
+
+        let parameters = chart.runtime_block_parameters(100_000_000).unwrap();
+        assert_eq!(parameters["event_codes"]["enable"], 1);
+        assert_eq!(
+            parameters["guard_inputs"]["thermal_ready"],
+            "guard_thermal_ready"
+        );
+
+        let block_id = chart
+            .insert_runtime_block(&mut document, "flight_chart", 100_000_000)
+            .unwrap();
+        document.validate().unwrap();
+        let block = document.model.block(block_id).unwrap();
+        assert_eq!(
+            block.parameters["state_machine"],
+            parameters["state_machine"]
+        );
+        assert_eq!(block.parameters["period_ns"], 100_000_000);
+        let input_names: BTreeSet<_> = block
+            .ports
+            .values()
+            .filter(|port| port.direction == PortDirection::Input)
+            .map(|port| port.name.as_str())
+            .collect();
+        assert_eq!(
+            input_names,
+            BTreeSet::from(["event_code", "guard_thermal_ready"])
+        );
+        assert!(block
+            .ports
+            .values()
+            .any(|port| { port.direction == PortDirection::Output && port.name == "state_id" }));
+
+        let before_failed_insert = document.clone();
+        assert!(chart
+            .insert_runtime_block(&mut document, "flight_chart", 100_000_000)
+            .is_err());
+        assert_eq!(document, before_failed_insert);
+        assert!(chart
+            .insert_runtime_block(&mut document, "bad_period", 0)
+            .is_err());
+        assert_eq!(document, before_failed_insert);
+    }
+
+    #[test]
+    fn guard_ports_include_identifiers_but_not_scientific_notation_exponents() {
+        let mut machine = StateMachine::new("numeric_guard");
+        let cold = machine.add_state("COLD").unwrap();
+        let ready = machine.add_state("READY").unwrap();
+        machine.set_initial_state(cold).unwrap();
+        machine
+            .add_guarded_transition(
+                cold,
+                ready,
+                "launch",
+                "temperature >= 1e-3 && battery_soc > .30",
+            )
+            .unwrap();
+        let chart = StateChartDocument::from_machine(machine).unwrap();
+        let parameters = chart.runtime_block_parameters(10).unwrap();
+        let guard_inputs = parameters["guard_inputs"].as_object().unwrap();
+        assert_eq!(guard_inputs.len(), 2);
+        assert_eq!(guard_inputs["temperature"], "guard_temperature");
+        assert_eq!(guard_inputs["battery_soc"], "guard_battery_soc");
+        assert!(!guard_inputs.contains_key("e"));
     }
 }

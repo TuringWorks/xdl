@@ -51,7 +51,7 @@ Rules:
 | `xdl-gnc-integration` | Closed-loop deterministic truth → sensors → EKF → guidance → PID → actuator contract test |
 | `xdl-gnc-telemetry` | Ordered telemetry samples with finite-value validation and JSON-lines import/export |
 | `xdl-model` | Serializable block/port/signal graph with connection, bus, subsystem-boundary, and cycle validation |
-| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D/StateMachine blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
+| `xdl-sim` | Bounded deterministic periodic-task scheduler, reusable Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/DiscreteTransferFunction/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D/StateMachine blocks, typed bus values, unit delay, zero-order hold, subsystem runtime, and Euler/RK4 solvers |
 
 ### Step events
 
@@ -76,13 +76,13 @@ Rules:
 | `xdl-gnc-actuators` | 3 | First-order scalar actuator only |
 | `xdl-gnc-integration` | 9 | Deterministic scenario, seeded noisy scenario, Monte Carlo wrapper, typed replay runner, ordered telemetry output, and vertical-slice replay tests |
 | `xdl-gnc-telemetry` | 3 | Ordered telemetry samples with buffered and streaming JSON-lines export; product-specific sinks remain pending |
-| `xdl-model` | 32 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable model/state-chart layouts, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, editor events, Mars system-model validation, structural SVG rendering, and state/event contracts with named guards |
-| `xdl-sim` | 28 | Scheduler, parameterized Constant/Gain/Sum/Integrator/Derivative/Pid/StateSpace/Mux/Demux/MultiportSwitch/MatrixGain/MatrixMatrixProduct/MatrixScale/MatrixSum/MatrixTranspose/MatrixVectorProduct/VectorSum/VectorScale/VectorNorm/VectorNormalize/DotProduct/CrossProduct/QuaternionNormalize/QuaternionMultiply/QuaternionConjugate/QuaternionInverse/QuaternionRotate/BusCreator/BusSelector/Saturation/Product/Switch/RateLimiter/Deadzone/LookupTable1D block runtimes, delay/hold with explicit initial values, matrix-preserving signals, timestamped JSON-lines tracing with cursor replay and tolerance comparison, typed model-graph execution, deterministic and scheduler-registered state-machine runtimes with host-provided guards, subsystem runtime, deterministic graph ordering, readiness diagnostics, feedback-safe startup, bounded Euler/RK4 solvers, adaptive RK4 retry, and continuous runtime integration |
+| `xdl-model` | 34 | Graph, typed subsystem-boundary contract, block parameters, delay-safe feedback validation, deterministic execution ordering, serializable model/state-chart layouts, auto-layout, transactional editor operations, versioned JSON documents, SVG rendering, hit testing, editor events, atomic chart-to-model-block insertion with expression-variable ports, exponent-aware guard-variable extraction, Mars system-model validation, and state/event contracts |
+| `xdl-sim` | 37 | Scheduler, parameterized block runtimes including `DiscreteTransferFunction`, delay/hold, matrix-preserving signals, timestamped tracing/replay, typed model-graph execution, an integrated Mars readiness graph with connected temperature/SOC sources and chart events, chart-derived `StateMachineBlock::from_model`, bounded arithmetic/boolean guard-expression parsing and evaluation, deterministic and scheduler-registered state machines, bounded Euler/RK4 and adaptive integration |
 
 `xdl-model` also exposes a typed `StateMachine` contract with explicit states,
 initial-state validation, deterministic event transitions, positive-delay timed
-transitions, named guarded transitions, and duplicate-transition rejection. A
-host evaluates the named guards and passes the true set to
+transitions, expression-guarded transitions, and duplicate-transition rejection. A
+host evaluating a raw `StateMachineRuntime` supplies active guard expressions to
 `StateMachineRuntime::step_with_guards`; no interpreter callback is stored in
 the model. `StateMachineRuntime::advance_to`
 uses explicit simulation timestamps and advances at most one timed transition
@@ -92,14 +92,19 @@ timed chain. `ScheduledStateMachineRuntime` registers a periodic task with
 at the event timestamp, then dispatches an optional external event with its
 active guard set. Timed transitions run before external events at the same
 timestamp. `StateMachineBlock` adapts the same runtime to `BlockRuntime`: a
-numeric event input selects a configured event name, numeric guard inputs map
-to named guards, and a numeric output reports the active state ID. Model
+numeric event input selects a configured event name, scalar guard-variable
+inputs are bound by identifier and evaluated as expressions, and a numeric
+output reports the active state ID. Guard expressions support finite numeric
+literals, identifiers, unary `!`/`-`, `+ - * /`, comparisons, `&&`, `||`, and
+parentheses; division by zero, non-finite values, missing variables, and invalid
+syntax are runtime errors. Model
 documents configure `state_machine`, `event_input`, `state_output`,
-`event_codes` (event-name to integer), and optional `guard_inputs` (guard-name
-to port-name) parameters, plus `period_ns` and optional `phase_ns` and
+`event_codes` (event-name to integer), and optional `guard_inputs` (expression
+variable to port-name) parameters, plus `period_ns` and optional `phase_ns` and
 `priority`. `ExecutionEngine::register_state_machine_block` resolves and
 validates the ports, creates the periodic scheduler task, and registers the
-runtime. A GUI state-machine canvas remains open work.
+runtime. This is a narrow integration slice, not full Stateflow authoring or
+semantics.
 
 `xdl-model::StateChartDocument` supplies the model-layer editing surface:
 automatic node placement, editable state and transition-label positions,
@@ -109,11 +114,15 @@ event/timed transitions, choose the initial state, select and drag states or
 transition labels, edit selected transition endpoints/event/guard/delay, and
 open/save JSON documents. `Export Runtime` emits the
 `StateMachineBlock` parameter object accepted by `ExecutionEngine`, assigns
-stable event codes in sorted name order, and maps each named guard to a
-`guard_<name>` input port. The consuming model still supplies scalar ports
-named `event_code`, `state_id`, and each generated guard input, plus the
-connections and sample period. Guard-expression execution, undo/history, and
-one-click insertion into an existing model remain follow-on work.
+stable event codes in sorted name order, and maps each guard variable to a
+`guard_<variable>` input port. The consuming model supplies scalar values on
+`event_code` and each generated guard-variable input, plus connections and
+the sample period; the `StateMachineBlock` produces `state_id`. The block
+runtime evaluates guard expressions. The editor does not create signal sources
+or connections, and undo/history remains follow-on work. `Insert in Model...` imports a model
+document, adds the configured block and scalar ports with a valid layout, and
+saves a new model document; signal sources and connections remain the model
+author's responsibility.
 
 ```json
 {
@@ -125,14 +134,14 @@ one-click insertion into an existing model remain follow-on work.
         "1": { "id": 1, "name": "READY" }
       },
       "transitions": [
-        { "from": 0, "to": 1, "event": "enable", "guard": "thermal_ready" }
+        { "from": 0, "to": 1, "event": "enable", "guard": "battery_soc >= 0.8 && thermal_ready" }
       ],
       "initial_state": 0
     },
     "event_input": "event",
     "state_output": "state",
     "event_codes": { "enable": 1 },
-    "guard_inputs": { "thermal_ready": "thermal_ready" },
+    "guard_inputs": { "battery_soc": "guard_battery_soc", "thermal_ready": "guard_thermal_ready" },
     "period_ns": 10000000,
     "phase_ns": 0,
     "priority": 10
@@ -159,6 +168,7 @@ adapters and product applications. The current GNC-oriented mapping is:
 |---|---|
 | `Constant`, `Gain`, `Sum`, `Product`, `Saturation`, `Deadzone`, `RateLimiter` | Command shaping, actuator limits, and calibration logic |
 | `Integrator`, `Derivative`, `Pid`, `UnitDelay`, `ZeroOrderHold` | Discrete controllers, plant state, and sampled-data loops |
+| `DiscreteTransferFunction` | Scalar sampled-data LTI filters and discrete plant/controller transfer functions |
 | `Mux`, `Demux`, `VectorSum`, `VectorScale`, `VectorNorm`, `VectorNormalize`, `DotProduct`, `CrossProduct` | Multi-axis guidance, line-of-sight geometry, and vector control |
 | `StateSpace`, `MatrixGain`, `MatrixScale`, `MatrixSum`, `MatrixTranspose`, `MatrixVectorProduct`, `MatrixMatrixProduct` | State-space models, covariance transforms, and coordinate maps |
 | `QuaternionNormalize`, `QuaternionMultiply`, `QuaternionConjugate`, `QuaternionInverse`, `QuaternionRotate` | Attitude propagation and frame transformations |
@@ -255,9 +265,12 @@ cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl
 
 The companion
 [`examples/mars_helicopter_battery_sweep.xdl`](../../examples/mars_helicopter_battery_sweep.xdl)
-executes a deterministic one-to-four battery-string endurance sweep. It makes
-the parameter-study workflow executable in XDL while clearly labeling its
-energy-budget model as reduced order.
+executes a deterministic one-to-six battery-string sweep. Added parallel
+strings increase both battery energy and vehicle mass; each variant checks
+Mars weight against an explicit reduced-order lift limit before calculating
+SOC-limited flight duration. The lift and energy parameters are illustrative,
+not calibrated vehicle data, and the sweep does not yet re-simulate the main
+closed-loop altitude plant or plot each trajectory.
 
 ```bash
 cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl

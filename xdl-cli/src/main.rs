@@ -21,6 +21,7 @@ use xdl_artifacts::{
 use xdl_core::XdlValue;
 use xdl_interpreter::Interpreter;
 use xdl_matlab::transpile_matlab_to_xdl;
+use xdl_scilab::transpile_scilab_to_xdl;
 
 mod repl;
 
@@ -1235,13 +1236,22 @@ fn run_file_into(file: &Path, buffer: &Rc<RefCell<Vec<u8>>>) -> Result<()> {
     let content = fs::read_to_string(file)
         .with_context(|| format!("Failed to read file: {}", file.display()))?;
 
-    // Check if file is a MATLAB file and transpile it
-    let xdl_code = if file.extension().and_then(|s| s.to_str()) == Some("m") {
-        info!("Detected MATLAB file, transpiling...");
-        transpile_matlab_to_xdl(&content)
-            .map_err(|e| anyhow::anyhow!("Failed to transpile MATLAB code: {}", e))?
-    } else {
-        content
+    let extension = file
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::to_ascii_lowercase);
+    let xdl_code = match extension.as_deref() {
+        Some("m") => {
+            info!("Detected MATLAB file, transpiling...");
+            transpile_matlab_to_xdl(&content)
+                .map_err(|e| anyhow::anyhow!("Failed to transpile MATLAB code: {}", e))?
+        }
+        Some("sci" | "sce") => {
+            info!("Detected Scilab file, transpiling...");
+            transpile_scilab_to_xdl(&content)
+                .map_err(|e| anyhow::anyhow!("Failed to transpile Scilab code: {}", e))?
+        }
+        _ => content,
     };
 
     let program = xdl_parser::parse_xdl(&xdl_code).with_context(|| "Failed to parse XDL code")?;

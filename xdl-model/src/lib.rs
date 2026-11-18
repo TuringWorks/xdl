@@ -20,8 +20,8 @@ pub use state::{State, StateId, StateMachine, StateMachineError, TimedTransition
 pub mod statechart_editor;
 pub use statechart_editor::{
     StateChartDocument, StateChartEditor, StateChartEditorError, StateChartEditorEvent,
-    StateChartHitTarget, StateChartLayout, StateNodeLayout, TransitionKey, TransitionLabelLayout,
-    STATE_CHART_SCHEMA_VERSION,
+    StateChartHitTarget, StateChartIntegrationError, StateChartLayout, StateNodeLayout,
+    TransitionKey, TransitionLabelLayout, STATE_CHART_SCHEMA_VERSION,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]

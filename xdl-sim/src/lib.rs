@@ -22,11 +22,12 @@ pub use blocks::{
     QuaternionMultiply, QuaternionNormalize, QuaternionRotate, RateLimiter, Saturation, StateSpace,
     StateSpaceConfig, Sum, Switch, VectorNorm, VectorNormalize, VectorScale, VectorSum,
 };
+mod guard_expression;
 pub mod solver;
 pub mod state_machine;
 pub use solver::{
-    euler_step, rk4_adaptive_step, rk4_step, AdaptiveConfig, AdaptiveStep, DerivativeFn,
-    SolverError,
+    euler_step, integrate_rk4_adaptive, rk4_adaptive_step, rk4_step, AdaptiveConfig,
+    AdaptiveIntegration, AdaptiveStep, DerivativeFn, IntegrationSample, SolverError,
 };
 pub use state_machine::{ScheduledStateMachineRuntime, StateMachineBlock, StateMachineRuntime};
 

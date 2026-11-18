@@ -16,8 +16,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use xdl_gnc_core::DurationNs;
 use xdl_model::{
-    StateChartDocument, StateChartEditor, StateChartEditorError, StateChartEditorEvent,
-    StateChartHitTarget, StateId, StateMachine, TransitionKey,
+    ModelDocument, StateChartDocument, StateChartEditor, StateChartEditorError,
+    StateChartEditorEvent, StateChartHitTarget, StateId, StateMachine, TransitionKey,
 };
 
 pub struct StateChartWindow {
@@ -40,7 +40,8 @@ impl StateChartWindow {
         let mut set_initial = Button::new(626, 10, 110, 32, "Set Initial");
         let mut export_runtime = Button::new(746, 10, 142, 32, "Export Runtime");
         let mut edit_transition = Button::new(898, 10, 124, 32, "Edit Transition");
-        let mut canvas = Frame::new(10, 52, 1020, 698, "");
+        let mut insert_model = Button::new(10, 48, 150, 32, "Insert in Model...");
+        let mut canvas = Frame::new(10, 88, 1020, 662, "");
         canvas.set_frame(FrameType::DownBox);
         canvas.set_color(Color::White);
 
@@ -313,6 +314,59 @@ impl StateChartWindow {
                     }
                 }
                 canvas_for_edit_transition.redraw();
+            }
+        });
+
+        let editor_for_insert_model = Rc::clone(&editor);
+        insert_model.set_callback(move |_| {
+            let Some(source_path) =
+                dialog::file_chooser("Open Model Document", "*.json", ".", false)
+            else {
+                return;
+            };
+            let result = (|| -> Result<String, String> {
+                let model_json = std::fs::read_to_string(&source_path)
+                    .map_err(|error| format!("could not read model document: {error}"))?;
+                let mut document =
+                    ModelDocument::from_json(&model_json).map_err(|error| error.to_string())?;
+                let (machine_name, parameters) = {
+                    let chart = editor_for_insert_model
+                        .try_borrow()
+                        .map_err(|_| "state chart is busy".to_string())?;
+                    let machine_name = chart.document.machine.name.clone();
+                    let period =
+                        dialog::input_default("Runtime sample period (nanoseconds)", "100000000")
+                            .ok_or_else(|| "cancelled".to_string())?
+                            .parse::<i64>()
+                            .map_err(|error| error.to_string())?;
+                    (machine_name, period)
+                };
+                let block_name = dialog::input_default("New block name", &machine_name)
+                    .ok_or_else(|| "cancelled".to_string())?;
+                editor_for_insert_model
+                    .try_borrow()
+                    .map_err(|_| "state chart is busy".to_string())?
+                    .document
+                    .insert_runtime_block(&mut document, block_name, parameters)
+                    .map_err(|error| error.to_string())?;
+                document.to_json().map_err(|error| error.to_string())
+            })();
+            match result {
+                Ok(json) => {
+                    if let Some(output_path) =
+                        dialog::file_chooser("Save Model with State Machine", "*.json", ".", true)
+                    {
+                        if let Err(error) = std::fs::write(output_path, json) {
+                            dialog::alert_default(&format!(
+                                "Could not save integrated model: {error}"
+                            ));
+                        }
+                    }
+                }
+                Err(error) if error != "cancelled" => {
+                    dialog::alert_default(&format!("Could not insert state machine: {error}"));
+                }
+                Err(_) => {}
             }
         });
 

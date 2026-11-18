@@ -50,7 +50,9 @@ The competitor baseline is based on the current official product descriptions: M
 
 | Capability family | MATLAB / Octave / Scilab / Simulink expectation | XDL today | VibeCoder today | Target combination | Gap / priority |
 |---|---|---|---|---|---|
-| Matrix language and expressions | Mature matrix/array syntax, broadcasting, indexing, scripts/functions | XDL/IDL language and arrays; MATLAB transpiler is basic-to-moderate | Monaco, agent editing, LSP | MATLAB-compatible surface plus safer XDL-native mode | **B → A; P0**: array literals, indexing, broadcasting, shape diagnostics, compatibility tests |
+| Matrix language and expressions | Mature matrix/array syntax, broadcasting, indexing, scripts/functions | XDL/IDL arrays; MATLAB transpiler supports bounded literal and runtime whole-expression colon vectors plus one-based vector-index gathers for numeric vectors/matrices in column-major order, preserving order/duplicates and empty selections | Monaco, agent editing, LSP | MATLAB-compatible surface plus safer XDL-native mode | **B → A; P0**: vector-index result orientation, logical indexing, general indexed assignment, full broadcasting/shape rules, compatibility tests |
+| MATLAB transpose semantics | `A.'` nonconjugating and `A'` conjugating, including complex arrays | Named-array `A.'`; `A'` supports real numeric scalar/vector/2D values and complex scalar conjugation through a checked helper | `.m` execution integration is not demonstrated in VibeCoder | Correct real and complex array semantics with reference fixtures | **B/C; P1**: complex-array conjugating transpose and compound-expression operands remain unsupported; reference-runtime comparison remains open |
+| Scilab source execution | Scilab scripts/functions, percent constants, matrix language, and Xcos integration | Independent `xdl-scilab` front end and case-insensitive `.sci`/`.sce` routing; tests cover multiple same-file single-output functions with zero to four distinct inputs, straight-line bodies, same-file helper calls, assignments, vectors, rectangular numeric 2D literals, one-based scalar `A(i,j)` matrix reads for positive integer literals, runtime-validated positive integer scalar-expression vector reads `v(k)`, and inclusive/stepped vector range reads with runtime scalar bounds and steps, bounded integer-literal `for` ranges, narrow `while`, `%pi/%e/%t/%f`, comments, `disp`, nested conditionals, and bounded apostrophe transpose | No Scilab entry in the inspected VibeCoder language registry or run panel; integration not demonstrated | Discoverable Scilab source mode with broader syntax and executable Xcos/model workflows | **C; P0**: no function libraries/cross-file calls, multiple outputs, function control flow, general matrix concatenation, negative-step ranges, vector-valued indexing or indexed writes, variable loop bounds, full matrix language, graphics, file I/O, toolboxes, or Xcos model support |
 | Functions, modules, packages, OOP | Scripts, functions, classes, packages, namespaces | User functions/procedures; limited MATLAB class/package support | Workspace/project editing and Git | Package manager, modules, typed APIs, generated docs | **C → B; P1** |
 | Interactive console / REPL | Rich command window, history, workspace inspection | CLI/REPL exists | Integrated terminal and agent context | Scientific console with tables, plots, variable inspector, rich errors | **B → A; P0** |
 | Notebook / literate computing | Live Editor, Jupyter integrations, executable reports | No clear first-class notebook artifact | Browser panel, editor, artifacts | `.xnb`/`.xdlbook` notebook with code, results, plots, markdown, run metadata | **D → A; P0** |
@@ -79,7 +81,7 @@ The competitor baseline is based on the current official product descriptions: M
 | Dynamic simulation | ODE/DAE solvers, events, hybrid systems | `xdl-sim` emerging, fixed-step/multi-rate intent | Run orchestration | Deterministic discrete + continuous + hybrid engine | **C → A; P0** |
 | Block diagrams | Simulink/Xcos graphical/programmatic models | `xdl-model` typed graph seed; no full editor | Canvas/UI platform exists but not scientific model editor | Versioned block graph, visual editor, code/API parity | **C/D → A; P0** |
 | Physical modeling | Simscape-style mechanical/electrical/thermal/fluids | GNC domain crates only | None | Component/connector/units model library and FMI integration | **D/E → B; P2** |
-| State machines/events | Stateflow/SimEvents/Xcos hybrid systems | Language control flow only | Agent/IDE shell | Explicit state/event subsystem with deterministic semantics | **D → A; P1** |
+| State machines/events | Stateflow/SimEvents/Xcos hybrid systems | State-chart documents/editor, model insertion, guarded/timed runtime blocks, expression evaluation, and a periodic scheduler | No XDL model/editor/runtime path appears in the inspected VibeCoder XDL Studio panel | Explicit state/event subsystem with deterministic semantics and signal-wired execution | **C → A; P1**: signal sources/connections, VibeCoder integration, and full Stateflow/Xcos semantics remain |
 | FMI / co-simulation | Simulink FMU, Xcos FMI, plant integration | Not first-class | MCP can host adapters | FMU 1/2/3 import/export and co-simulation runner | **D → B; P1** |
 | Code generation | C/C++/CUDA/HDL/PLC and embedded deployment | Rust/C FFI prototypes; no model codegen contract | Build/terminal/agent infrastructure | Rust first, C ABI second, C/CUDA/WASM/embedded profiles later | **C/D → A; P0** |
 | SIL/PIL/HIL | Mature model-to-code validation and real-time workflows | Not present as a product | Jobs/terminal/device hooks | Same model/test vectors across interpreter, native, target, and HIL | **D → B; P1** |
@@ -90,6 +92,43 @@ The competitor baseline is based on the current official product descriptions: M
 | Distributed/HPC/cloud | Parallel Server, clusters, cloud, batch | Rayon/GPU experiments; no unified job model | Background jobs, manager view | Reproducible local/remote jobs with artifacts and cost/resource metadata | **C → A; P1** |
 | Deployment | Apps, web, services, compiled artifacts | CLI/GUI/FFI; native Rust path | Tauri desktop, extensions | One-click desktop, web, container, service, WASM, embedded export | **B/C → A; P1** |
 | Education/community | Courses, examples, package ecosystem, support | Docs/examples; small ecosystem | AI onboarding and project workflows | Open examples, executable lessons, benchmark corpus, support/community loop | **C → A; P1** |
+
+### VibeCoder integration evidence (source inspection, 2026-11-17)
+
+The sibling VibeCoder checkout contains an **XDL Studio** panel. Its UI posts
+native XDL source text to `/xdl/run`, polls `/xdl/status`, and displays captured
+stdout/stderr plus returned PNG and HTML artifacts. The daemon executes a child
+`xdl --headless main.xdl` in a fresh temporary directory with source/output
+bounds and a timeout. This confirms a useful native-XDL run loop exists; it
+does not demonstrate a MATLAB/Octave or Scilab workflow inside that panel, a
+variable inspector, model editor/runtime view, test explorer, or run manifest.
+
+The inspected daemon source pins XDL revision `b048b83`; the current XDL
+checkout is `2a25cda`. The status response reports the pinned revision rather
+than querying the located binary, so it does not prove that the installed XDL
+runtime matches either revision. Recent compatibility work in this checkout
+is not yet evidence of behavior in VibeCoder's pinned binary. The VibeCoder app
+maps `.m` to the MATLAB language identifier, but language recognition does not
+prove execution or LSP integration. The XDL VS Code extension routes `.m`
+separately and recognizes `.sci`/`.sce`; that is a distinct surface from
+VibeCoder XDL Studio.
+
+The run request sends source text only. The panel is mounted from a parent that
+has workspace context, but that context is not passed to the panel or daemon.
+Each request gets a fresh temporary directory containing `main.xdl`; project
+CSV/data inputs cannot be staged, and generated files are returned as captured
+PNG/HTML rather than retained as project artifacts under a run ID. The inspected
+XDL route also has no MATLAB/Scilab source mode or scientific workflow node.
+Its real-binary tests are ignored unless `XDL_TEST_BIN` is configured; no panel
+component test was found in the inspected test tree.
+
+The next VibeCoder integration milestone is a project-aware, artifact-preserving
+run contract: carry the active project and entry-file identity, stage explicitly
+selected and size-bounded input files into the isolated run directory, and
+return outputs under a stable run ID for review/download. Follow with dialect
+selection for `.m`/`.sci`/`.sce`, runtime-version verification, and workflow
+pipeline integration. These changes belong in the sibling VibeCoder checkout;
+the current audit is read-only and none of them is implemented here.
 
 ## What “preeminent” should mean
 
@@ -215,7 +254,7 @@ Goal: a scientist can install the platform, import a real dataset, write MATLAB-
 - Build numerical diff views: array summary, histogram/delta, plot image diff, table diff, model graph diff.
 - Stabilize array shape/type diagnostics and error spans.
 - Create the first 20 end-to-end examples: signal analysis, imaging, tabular science, GNC, Monte Carlo, and a model simulation.
-- Add a VibeCoder XDL workspace mode: run/inspect variables, plots, diagnostics, tests, and artifacts from one panel.
+- Expand the existing VibeCoder XDL Studio panel from native XDL text execution into a scientific workspace: file/project selection, MATLAB/Scilab routing, variable and model inspection, diagnostics, tests, and run-manifest/artifact browsing.
 
 **P0 exit criteria:** 50 real-world MATLAB/Octave scripts run or fail with actionable diagnostics; 10 GB-class chunked dataset workflow; every result has a replayable manifest; CI can reproduce a reference run on a clean machine.
 
@@ -306,6 +345,26 @@ Do not map MATLAB `randn` to a uniform generator or silently ignore plot styles.
 
 Scilab/Xcos validates that an open platform can combine numerical programming, visualization, deployment, and a hybrid dynamic-systems modeler. Simulink demonstrates that the industrial moat is the model lifecycle: authoring, libraries, solvers, code generation, test, traceability, and hardware integration.
 
+**Scilab source compatibility is a separate dialect target.** The initial
+`xdl-scilab` slice now has an independent lexer, tested assignment and
+conditional lowering, supported percent constants, Scilab comments, `disp`,
+rectangular numeric matrix literals, scalar one-based matrix reads and
+runtime-validated one-based scalar-expression vector reads,
+inclusive/stepped vector range reads for tracked literals, bounded literal
+`for` loops, and a limited precondition `while` form, plus explicit
+`.sci`/`.sce` CLI routing. The MATLAB lexer remains unchanged:
+its `%` comment rule would erase Scilab percent-prefixed values if reused.
+The Scilab slice supports multiple single-output function definitions per file,
+each with zero to four distinct inputs and a straight-line assignment body;
+same-file helper calls work. Tracked vector scalar and inclusive range reads
+accept runtime-validated positive integer expressions; vector-valued indexing
+remains open. It does not cover
+function libraries, cross-file calls, multiple outputs, function control flow, the complete matrix language,
+graphics, file I/O, toolboxes, or Xcos models. See the
+[Scilab comment syntax reference](https://help.scilab.org/docs/2024.1.0/en_US/comments.html).
+Xcos interchange and behavioral parity remain separate gaps; source
+transpilation alone does not provide them.
+
 XDL should target **semantic interoperability**, not file-format imitation:
 
 - import/export through FMI wherever possible;
@@ -330,11 +389,11 @@ was found in these crates or their current GNC documentation.
 | Lifecycle area | Present evidence | Status | Parity gap |
 |---|---|---|---|
 | Block-diagram model representation | `xdl-model` defines serializable blocks, ports, signal shapes/metadata, connections, buses, subsystem boundaries, parameters, graph validation, execution ordering, and cycle checks. The Mars fixture is validated as a typed graph. | **Implemented foundation** | This is a graph/schema library, not broad Simulink/Xcos block-library, model-import, or model-authoring parity. |
-| Diagram editing and display | `ModelDocument` has versioned JSON serialization, validation, layout, hit testing, selection/move/reconnect editor events, deterministic auto-layout, and structural SVG output. `StateChartDocument` adds layout, state/transition-label movement, hit testing, JSON persistence, and SVG. The FLTK state-chart editor exposes state/event/timed-transition creation and editing, deletion, initial-state selection, open/save, runtime-parameter export, selection, and drag controls. | **Scaffolded native editor** | The interactive surface is limited to state charts. A general block-model canvas, undo/history, subsystem navigation, block palette, richer annotations, and VibeCoder integration are not established. SVG and canvas rendering are early structural UX. |
-| Subsystems and state/event models | Typed subsystem boundary binding, named guarded transitions, a periodic-scheduler-registered state-machine runtime, serialized state-chart documents, and a native GUI canvas for editing state/event/timed transitions exist. The host provides the active guard set; the GUI exports runtime block parameters. | **Scaffolded** | No general Stateflow/Xcos hybrid language, guard-expression evaluator, or direct execution-engine integration from the authored chart is established. |
+| Diagram editing and display | `ModelDocument` has versioned JSON serialization, validation, layout, hit testing, selection/move/reconnect editor events, deterministic auto-layout, and structural SVG output. `StateChartDocument` adds layout, state/transition-label movement, hit testing, JSON persistence, and SVG. The FLTK state-chart editor exposes state/event/timed-transition creation and editing, deletion, initial-state selection, open/save, runtime-parameter export, and an action that inserts the chart as a configured block with event/guard/state ports in a model document. | **Scaffolded native editor** | The interactive surface is limited to state charts. A general block-model canvas, undo/history, subsystem navigation, block palette, richer annotations, connected signal sources, and VibeCoder integration are not established. SVG and canvas rendering are early structural UX. |
+| Subsystems and state/event models | Typed subsystem boundary binding, guarded/timed transitions, periodic-scheduler state-machine runtime, serialized state-chart documents, chart-to-model insertion, and `StateMachineBlock::from_model` are present. The block evaluates bounded arithmetic/boolean guard expressions from scalar input ports. Tests cover chart-to-block creation and compound-guard execution. | **Scaffolded** | The host still provides and wires event/guard signals; the editor does not create signal sources or connections automatically. Full Stateflow/Xcos hybrid language and semantics remain absent. |
 | Discrete and multi-rate execution | `xdl-sim` has a deterministic periodic-task scheduler with explicit timestamps, phase/priority ordering, event bounds, and periods constrained to integer multiples of a base period. An execution engine routes typed signal values through registered runtimes; delay, zero-order-hold, and subsystem runtimes exist. | **Implemented narrow runtime** | The documented/runtime contract is a bounded scheduler and block runtime, not complete Simulink rate-transition, tasking, data-store, initialization, enable/trigger, or execution-order semantics. |
 | Block library | Reusable scalar, vector, matrix, quaternion, bus, switch, lookup, control, and GNC-oriented block runtimes are present, including Constant, Gain, Sum, Integrator, Derivative, PID, StateSpace, delays, and rate limiting. | **Implemented subset** | The set is not a comprehensive, versioned Simulink/Xcos library; broad domain, physical-network, and compatibility semantics remain unverified. |
-| Numerical solvers | `xdl-sim::solver` provides bounded explicit Euler and classical RK4 steps plus RK4 step-doubling with an error estimate and explicit retry response. Continuous runtime integration consumes adaptive RK4; diagnostics reject invalid/non-finite states and bound retries. | **Implemented subset** | No evidence here for stiff ODE methods, DAE solvers, zero-crossing/event localization, solver configuration parity, robust variable-step production behavior, or a comparative solver-conformance suite. Do not describe this as full Simulink solver parity. |
+| Numerical solvers | `xdl-sim::solver` provides bounded explicit Euler and classical RK4 steps, RK4 step-doubling, and an adaptive interval integrator that emits time/state samples, clips the final step to the requested endpoint, and bounds total attempts and retries. | **Implemented subset** | No evidence here for stiff ODE methods, DAE solvers, zero-crossing/event localization, solver configuration parity, industrial-scale solver robustness, or a comparative solver-conformance suite. Do not describe this as full Simulink solver parity. |
 | Model execution and examples | A typed model-graph execution path, continuous runtime adapter, deterministic GNC integration examples, and an executable Mars system-level XDL scenario are documented. The Mars example is expressly described as a reduced-order analogue, with unvalidated thrust/battery maps and omitted physical/aerodynamic effects. | **Scaffolded vertical slices** | The Mars XDL scenario and the JSON graph fixture are evidence of related workflows, not proof that the graph fixture executes that full scenario or that the physical model is validated. |
 | Simulation traces and replay | `ExecutionReport` serializes signal updates as JSON Lines; `TraceCursor` replays them, and `compare_traces` checks metadata and values under absolute/relative tolerances. GNC replay and telemetry crates provide additional deterministic, typed replay/export slices. | **Implemented narrow verification utility** | This is not a full run/artifact lifecycle: no demonstrated model coverage, requirements traceability, test campaign/reporting, clean-machine end-to-end model replay contract, or audit approval workflow. |
 | Code generation and deployment | The inspected `xdl-model` and `xdl-sim` APIs expose model representation, runtime execution, and solver functions. The GNC crate guide describes these as typed Rust libraries and does not document a model compiler/code generator. | **Absent** | No model-to-Rust/C/C++/CUDA/WASM/PLC/HDL generation, generated artifact validation, target profile, or generated-vs-interpreted equivalence contract is established. Existing XDL C FFI or ordinary Rust compilation is not model code generation. |
@@ -454,49 +513,70 @@ Track product outcomes, not just crate counts:
 
 The next bounded MATLAB bridges identified from the current code are:
 
-- Extend two-/three-output `find` to N-D and vector cases with MATLAB reference
-  fixtures. The verified rectangular 2D subset supports `[row,col,linear]`
-  outputs and positive integer `k` with `'first'`/`'last'` selection.
-- Extend numeric `readmatrix` beyond the verified headerless rectangular CSV
-  subset, using explicit options and reference fixtures before adding header,
-  missing-value, or mixed-type behavior.
+- Compare the `.m` 2×2×2 `reshape`/`find` fixture against MATLAB or Octave
+  reference output, then extend the corpus to additional ranks and rectangular
+  shapes. XDL now has an end-to-end N-D fixture as well as runtime coverage for
+  shaped/nested arrays, vector subscripts, collapsed trailing dimensions, and
+  three-output `[row,col,v]` values; independent oracle conformance is open.
+- Extend numeric `readmatrix` beyond the verified rectangular numeric CSV with
+  explicit `NumHeaderLines`, adding reference fixtures before supporting
+  automatic header detection, missing values, or mixed types.
+- Expand non-finite numeric verification beyond the new `.m` scalar/vector
+  cases to shaped arrays, complex inputs, and independent MATLAB/Octave results.
 - Add broader plot labels and graphics-state support, including dynamic labels,
   legends, axis/grid controls, and multiple axes.
+- Extend matrix left division beyond direct named operands, and implement
+  elementwise `.\` separately before claiming broader operator parity.
 
 Completed since the prior checkpoint: literal `title`, `xlabel`, and `ylabel`
 calls immediately following a supported `plot(x,y)` are lowered into XDL plot
 keywords. Unsupported annotation forms now fail explicitly rather than being
 silently discarded. Two-output `find(A,k,direction)` now forwards the optional
 limit and direction to its runtime helpers and has CLI fixture coverage for
-first/last selection. Three-output `[row,col,linear]=find(A,k,direction)` is
-now supported for rectangular 2D numeric matrices and covered by runtime,
-transpiler, and CLI checks. Acceptance for remaining increments needs
+first/last selection. Three-output `[row,col,v]=find(A,k,direction)` returns
+nonzero values, matching MATLAB's documented output contract; the previous
+linear-index description was incorrect and has been corrected. Runtime tests
+cover shaped/nested N-D values, while the `.m` CLI fixture covers vectors and
+2D matrices plus a 2×2×2 `reshape` input. MATLAB `reshape` now routes through
+`MATLAB_RESHAPE`, which validates dimensions and preserves column-major
+sequence in shaped XDL storage; reference-runtime comparisons remain open.
+Named-array `A \ b` solves square and rectangular
+finite real-valued systems with vector and matrix right-hand sides; rectangular
+systems use SVD least-squares/minimum-norm solving. Singular and shape errors
+have runtime tests, and the `.m` path has a CLI fixture. Acceptance for remaining increments needs
 end-to-end `.m` fixtures and reference outputs for each behavior.
 
 ## Verified local baseline
 
-The table records the 2026-11-13 checkpoint; MATLAB, CLI, interpreter, model,
-simulation, standard-library, and LSP rows were rerun on 2026-11-16 for the
-compatibility and state-machine increments. Other crate counts remain the
-original snapshot and have not been rechecked here.
+The table records the 2026-11-13 checkpoint; the MATLAB transpiler, CLI
+fixtures, standard library, model, simulation, and LSP suites were rerun on
+2026-11-17 for compatibility, Scilab routing, and state-machine integration.
+Other crate counts remain the original snapshot and have not been rechecked
+here.
 
 The current repository checkpoint provides executable evidence for the first
 model-based foundation:
 
 | Surface | Verification | Result | Interpretation |
 |---|---|---:|---|
-| MATLAB transpiler | `cargo test -p xdl-matlab` | 50 passed (verified 2026-11-16) | Tested syntax/function subset, including vector `end`/omitted bounds, 2D scalar and matrix range subscripts, scalar and block indexed-assignment lowering, one-/two-output `find` with bounded first/last selection, single-/multiple-output `size`, named-array `A.'`, negative array literals, and literal plot-label lowering; not MATLAB/Octave parity |
+| MATLAB transpiler | `cargo test -p xdl-matlab` | 59 passed (verified 2026-11-17) | Tested syntax/function subset, including bounded literal and runtime-valued whole-expression colon vectors, vector-index lowering while preserving subscript ranges, case-insensitive NaN/Inf constants in expressions and numeric arrays, vector `end`/omitted bounds, 2D scalar and matrix range subscripts, scalar and block indexed-assignment lowering, one-/two-/three-output `find`, `if/elseif/else`, named-array left-division lowering, single-/multiple-output `size`, named-array `A.'`, negative array literals, and literal plot-label lowering; not MATLAB/Octave parity |
 | Interpreter | `cargo test -p xdl-interpreter` | 41 passed (verified 2026-11-16) | Includes rectangular 2D range reads with row/column shape preservation, ragged-matrix rejection, and shape-checked two-axis block writes; not broad MATLAB indexing parity |
-| Typed model graph/editor | `cargo test -p xdl-model` | 32 passed (verified 2026-11-16) | Schema, typed connections, validation, layout, editor serialization, state-chart document layout/JSON/SVG/hit testing, validated Mars system-model fixture, structural SVG rendering, and state/event contracts with named guards |
-| Native state-chart UI | `cargo check -p xdl-gui` | Passed (verified 2026-11-16) | FLTK canvas with state/event/timer create/edit/delete, initial-state selection, JSON open/save, runtime-parameter export, selection, and move controls compiles; no automated GUI interaction or visual QA was run |
-| Deterministic simulation | `cargo test -p xdl-sim` | 28 passed (verified 2026-11-16) | Scheduler, multi-rate ordering, delays, state-space and multiport-switch blocks, typed model-graph execution, scheduler-registered timed state-machine dispatch with host-guarded transitions, continuous integration, and solver error paths foundation |
-| Standard library | `cargo test -p xdl-stdlib` | 132 unit + 29 integration passed (verified 2026-11-16) | Full default-feature stdlib suite, including numeric CSV import, one-/two-output `find` with optional limits/direction, malformed/ragged/empty CSV rejection, matrix transpose, and elementwise/scalar-expanded `atan2` |
+| Typed model graph/editor | `cargo test -p xdl-model` | 34 passed (verified 2026-11-17) | Schema, typed connections, validation, layout/editor operations, chart-to-model-block insertion with atomic failure behavior, expression-variable ports including exponent-safe extraction, state-chart JSON/SVG, and Mars model fixture |
+| Native state-chart UI | `cargo check -p xdl-gui` | Passed (verified 2026-11-17) | FLTK canvas with state/event/timer create/edit/delete, initial-state selection, JSON open/save, runtime-parameter export, model-block insertion, selection, and move controls compiles; no automated GUI interaction or visual QA was run |
+| Deterministic simulation | `cargo test -p xdl-sim` | 42 passed (verified 2026-11-17) | Scheduler, multi-rate ordering, delays, transfer functions, typed model-graph execution, integrated Mars readiness graph with connected thermal/SOC sources and event-driven chart transitions, compound guard evaluation, bounded adaptive RK4 interval sampling and retry limits, parser validation, non-finite/error handling, and expression-size bounds |
+| Standard library | `cargo test -p xdl-stdlib` | 153 unit + 29 integration passed (verified 2026-11-17) | Default-feature suite includes N-D `find`, MATLAB-order reshape, three-output values, checked transpose, physical-line CSV header skipping, and IEEE non-finite constant helpers; full compatibility remains partial |
 | Artifact contracts | `cargo test -p xdl-artifacts` | 7 passed | Versioned manifests, bundled JSON schemas, compatibility statuses, artifact hashes, and fail-closed validation |
 | Standard-library `atan2` | `cargo test -p xdl-stdlib atan2_tests` | 8 passed (verified 2026-11-16) | Same-shape vector, nested-matrix, and shaped-array elementwise results, scalar expansion, quadrant and signed-zero values, malformed-shape and mismatch rejection; complex and broader singleton-dimension expansion are not established |
-| LSP built-ins | `cargo test -p xdl-lsp` | 6 passed (verified 2026-11-16) | Includes case-insensitive ATAN metadata plus MATLAB_READMATRIX and MATLAB_FIND_ROWS/COLUMNS help; not full MATLAB editor integration |
+| LSP built-ins | `cargo test -p xdl-lsp` | 7 passed (verified 2026-11-17) | Built-in help includes MATLAB_COLON, MATLAB_FIND_VALUES, MATLAB_RESHAPE, MATLAB_CTRANSPOSE, and SCILAB_INDEX; not full MATLAB or Scilab editor integration |
 | CLI evidence/replay | `cargo test -p xdl-cli --test cli_tests` | 35 passed (verified 2026-11-16) | Includes MATLAB matrix range reads and scalar/block writes, `find` orientation/limits/directions, nonconjugating transpose, elementwise/scalar-expanded `atan2`, array information, Mars simulation-to-CSV-to-headless-plot, GNC examples, manifests, and replay |
-| MATLAB CSV-to-plot | `cargo test -p xdl-cli --test matlab_readmatrix` | 1 passed (verified 2026-11-16) | Imports headerless numeric CSV with `readmatrix`, reads dimensions and values, selects columns, and confirms native PNG output; import options remain unsupported |
-| MATLAB two-output `find` | `cargo test -p xdl-cli --test matlab_find_outputs` | 1 passed (verified 2026-11-16) | Verifies one-based row/column subscripts, column-major order, optional `k` with `'first'`/`'last'`, and empty output shapes in `.m` execution |
+| MATLAB CSV-to-plot | `cargo test -p xdl-cli --test matlab_readmatrix` | 2 passed (verified 2026-11-17) | Imports numeric CSV with and without explicit `NumHeaderLines`, indexes values, selects columns, and confirms native PNG output; automatic header detection and other import options remain unsupported |
+| MATLAB non-finite values | `cargo test -p xdl-cli --test matlab_isfinite` | 1 passed (verified 2026-11-17) | `.m` CLI verifies case-insensitive NaN/Inf constants, including -Inf, scalar `isnan`/`isinf`/`isfinite`, and vector masks; shaped-array, complex, and external oracle parity remain open |
+| MATLAB two-/three-output `find` | `cargo test -p xdl-cli --test matlab_find_outputs` | 1 passed (verified 2026-11-17) | `.m` fixture verifies row vector, 2D matrix, and 2×2×2 reshape inputs; checks collapsed N-D columns and three-output values |
+| Scilab source subset | `cargo test -p xdl-scilab`; `cargo test -p xdl-cli --test scilab_file_routing`; `cargo test -p xdl-cli --test scilab_function_file`; `cargo test -p xdl-cli --test scilab_dynamic_indexing` | 28 + 11 + 1 + 3 passed (verified 2026-11-17) | Covers constants, vectors, rectangular numeric matrix literals, one-based scalar matrix reads, runtime-validated one-based scalar-expression vector reads and inclusive/stepped range reads, empty direction-mismatch ranges, and runtime rejection of invalid indices, steps, and bounds; also covers indexed-write rejection, bounded integer-literal `for` loops, precondition `while`, comments/strings, bounded transpose, nested conditionals, multiple same-file one-output zero-to-four-argument straight-line functions with duplicate/malformed-name/parameter rejection, four-input and composed multi-function CLI execution, and case-insensitive routing while preserving MATLAB/native-XDL routing |
+| MATLAB compatibility helpers | `cargo test --lib -p xdl-stdlib matlab_compat` | 50 passed (verified 2026-11-17) | Includes IEEE NaN/Inf constant helpers, `reshape`, N-D/vector `find`, three-output nonzero values, left division, numeric CSV helpers with physical `NumHeaderLines` validation, and checked apostrophe transpose |
+| MATLAB `elseif` | `cargo test -p xdl-cli --test matlab_elseif` | 1 passed (verified 2026-11-17) | Executes four `.m` inputs and confirms first, middle, final, and else branches remain within the conditional |
+| MATLAB matrix left division | `cargo test -p xdl-cli --test matlab_mldivide` | 1 passed (verified 2026-11-17) | Executes square and rectangular `A \ b` with vector and 2D matrix RHS values, including overdetermined least squares and underdetermined minimum norm; runtime rejects singular square and shape-invalid systems |
+| MATLAB conjugating transpose | `cargo test -p xdl-cli --test matlab_ctranspose` | 1 passed (verified 2026-11-17) | `.m` executes `A'` on a real 2×3 matrix and verifies transposed dimensions and values; complex-array conjugation remains unsupported |
 
 These tests are useful exit-criteria evidence, but they do not establish
 production readiness. The next validation layer must add real XDL programs,
@@ -509,17 +589,20 @@ that passing tests above do not cover:
 - Single-output `size(A)`, `size(A, dim)`, and `[d1,...,dn] = size(A)` for a
   known array variable use `MATLAB_SIZE` and `MATLAB_SIZE_TAIL`. General
   expression/object forms remain unverified.
-- `find(A)`, `find(A,k)`, and `find(A,k,'first'|'last')` route through
-  `MATLAB_FIND` for tested numeric vectors and rectangular 2D matrices,
-  returning one-based indices and preserving row-vector orientation. Multiple
-  outputs and broader type/order conformance remain open.
+- One-output `find` returns one-based indices for tested vectors and rectangular
+  matrices. Two-output `find` covers vectors, 2D matrices, and runtime shaped/
+  nested N-D arrays; three-output `[row,col,v]` returns nonzero values. N-D
+  end-to-end `.m` reference fixtures and broader type/order conformance remain
+  open.
 - `atan2(y,x)` is mapped to two-argument `ATAN` and tested elementwise for
   equal-shape numeric vectors, shaped arrays, and rectangular nested matrices,
   including numeric scalar expansion. Complex values and general implicit
   expansion remain unverified.
 - Nonconjugating transpose `A.'` is executable for directly named numeric
-  vectors and rectangular matrices. Conjugating transpose, compound-expression
-  transpose, and broader XDL array-shape preservation remain open.
+  vectors and rectangular matrices. `A'` supports real numeric scalars,
+  vectors, and 2D arrays plus complex scalar conjugation. Complex-array
+  conjugation, compound-expression transpose, and broader XDL array-shape
+  preservation remain open.
 - Scalar read `A(k)` routes through `MATLAB_INDEX`; transpiler and CLI tests
   verify matrix column-major order and `end`. Scalar vector assignment and
   two-subscript matrix assignment have a CLI execution case. Positive-step

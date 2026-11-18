@@ -61,6 +61,25 @@ impl Transpiler {
                 })
     }
 
+    fn is_tracked_numeric_vector(&self, name: &str, position: usize) -> bool {
+        self.tokens[..position.min(self.tokens.len())]
+            .windows(2)
+            .enumerate()
+            .any(|(index, pair)| {
+                matches!(&pair[0].kind, TokenKind::Identifier(candidate) if candidate == name)
+                    && matches!(pair[1].kind, TokenKind::Assign)
+                    && self.tokens[index + 2..position.min(self.tokens.len())]
+                        .iter()
+                        .take_while(|token| {
+                            !matches!(token.kind, TokenKind::Newline | TokenKind::Semicolon)
+                        })
+                        .any(|token| {
+                            matches!(token.kind, TokenKind::LeftBracket | TokenKind::Colon)
+                                || matches!(&token.kind, TokenKind::Identifier(function) if matches!(function.as_str(), "find" | "colon" | "linspace" | "findgen" | "indgen" | "dindgen" | "bindgen"))
+                        })
+            })
+    }
+
     fn emit(&mut self, s: &str) {
         self.output.push_str(s);
     }
@@ -356,26 +375,43 @@ impl Transpiler {
         self.emit_line(&format!("if {} then", condition));
         self.indent_level += 1;
 
-        while !matches!(
-            self.current_token().kind,
-            TokenKind::End | TokenKind::Else | TokenKind::Elseif | TokenKind::EOF
-        ) {
-            self.transpile_statement()?;
-        }
-
-        if matches!(self.current_token().kind, TokenKind::Else) {
-            self.indent_level -= 1;
-            self.emit_line("else");
-            self.indent_level += 1;
-            self.advance();
-
-            while !matches!(self.current_token().kind, TokenKind::End | TokenKind::EOF) {
+        let mut nested_if_count = 1usize;
+        loop {
+            while !matches!(
+                self.current_token().kind,
+                TokenKind::End | TokenKind::Else | TokenKind::Elseif | TokenKind::EOF
+            ) {
                 self.transpile_statement()?;
             }
+
+            if matches!(self.current_token().kind, TokenKind::Elseif) {
+                self.indent_level -= 1;
+                self.emit_line("else");
+                self.indent_level += 1;
+                self.advance();
+                let elseif_condition = self.collect_expression_until_newline()?;
+                self.emit_line(&format!("if {} then", elseif_condition));
+                self.indent_level += 1;
+                nested_if_count += 1;
+                continue;
+            }
+
+            if matches!(self.current_token().kind, TokenKind::Else) {
+                self.indent_level -= 1;
+                self.emit_line("else");
+                self.indent_level += 1;
+                self.advance();
+                while !matches!(self.current_token().kind, TokenKind::End | TokenKind::EOF) {
+                    self.transpile_statement()?;
+                }
+            }
+            break;
         }
 
-        self.indent_level -= 1;
-        self.emit_line("endif");
+        for _ in 0..nested_if_count {
+            self.indent_level -= 1;
+            self.emit_line("endif");
+        }
 
         if matches!(self.current_token().kind, TokenKind::End) {
             self.advance();
@@ -1082,7 +1118,7 @@ impl Transpiler {
                         ));
                         if output_vars.len() == 3 {
                             self.emit_line(&format!(
-                                "{} = MATLAB_FIND_INDICES({forwarded_arguments})",
+                                "{} = MATLAB_FIND_VALUES({forwarded_arguments})",
                                 output_vars[2]
                             ));
                         }
@@ -1380,6 +1416,8 @@ impl Transpiler {
                     let is_lhs_of_assignment =
                         expr.trim().is_empty() || expr.trim().ends_with('\n');
                     let mapped_name = match name.as_str() {
+                        _ if name.eq_ignore_ascii_case("nan") => "MATLAB_NAN()",
+                        _ if name.eq_ignore_ascii_case("inf") => "MATLAB_INF()",
                         "pi" => "!PI",
                         "e" if !is_lhs_of_assignment => "!E", // Only map 'e' if not on LHS
                         _ => name.as_str(),
@@ -1901,6 +1939,10 @@ impl Transpiler {
                                         }
 
                                         let index_parts = split_subscript_tokens(&index_tokens);
+                                        let vector_index = index_tokens.iter().any(|token| {
+                                            matches!(token.kind, TokenKind::LeftBracket | TokenKind::Colon)
+                                                || matches!(&token.kind, TokenKind::Identifier(index_name) if self.is_tracked_numeric_vector(index_name, self.position))
+                                        });
                                         let scalar_indices = index_parts
                                             .iter()
                                             .map(|part| {
@@ -1913,8 +1955,14 @@ impl Transpiler {
                                                     })
                                             })
                                             .all(|scalar| scalar);
-                                        if scalar_indices && index_parts.len() == 1 {
-                                            expr.push_str("MATLAB_INDEX(");
+                                        if (scalar_indices || vector_index)
+                                            && index_parts.len() == 1
+                                        {
+                                            expr.push_str(if vector_index {
+                                                "MATLAB_INDEX_VECTOR("
+                                            } else {
+                                                "MATLAB_INDEX("
+                                            });
                                             expr.push_str(n);
                                             expr.push_str(", ");
                                             expr.push_str(&translate_matlab_linear_index(
@@ -1956,8 +2004,12 @@ impl Transpiler {
                                         expr.push(')');
                                         continue;
                                     }
+                                    if n.eq_ignore_ascii_case("nan") {
+                                        expr.push_str("MATLAB_NAN()");
+                                    } else if n.eq_ignore_ascii_case("inf") {
+                                        expr.push_str("MATLAB_INF()");
                                     // Map MATLAB function names to XDL
-                                    if let Some(xdl_func) = get_xdl_function(n) {
+                                    } else if let Some(xdl_func) = get_xdl_function(n) {
                                         expr.push_str(xdl_func);
                                     } else {
                                         expr.push_str(n);
@@ -2067,7 +2119,19 @@ impl Transpiler {
                             .collect::<String>();
                         let is_vector_subscript = is_known_array;
 
-                        if is_vector_subscript {
+                        if is_vector_subscript && index_parts.len() == 1 && !is_assignment_target {
+                            let expression_prefix = expr.trim_end();
+                            if expression_prefix.ends_with(&preceding_name) {
+                                expr.truncate(expression_prefix.len() - preceding_name.len());
+                            }
+                            let indices =
+                                translate_matlab_linear_index(&range_tokens, &preceding_name);
+                            expr.push_str("MATLAB_INDEX_VECTOR(");
+                            expr.push_str(&preceding_name);
+                            expr.push_str(", ");
+                            expr.push_str(&indices);
+                            expr.push(')');
+                        } else if is_vector_subscript {
                             if let Some(index) = translate_matlab_index(&range, &preceding_name) {
                                 expr.push('[');
                                 expr.push_str(&index);
@@ -2098,13 +2162,21 @@ impl Transpiler {
                                 && !has_colon
                                 && !matches!(self.current_token().kind, TokenKind::Assign)
                             {
+                                let vector_index = range_tokens.iter().any(|token| {
+                                    matches!(token.kind, TokenKind::LeftBracket | TokenKind::Colon)
+                                        || matches!(&token.kind, TokenKind::Identifier(index_name) if self.is_tracked_numeric_vector(index_name, start_pos))
+                                });
                                 let expression_prefix = expr.trim_end();
                                 if expression_prefix.ends_with(&preceding_name) {
                                     expr.truncate(expression_prefix.len() - preceding_name.len());
                                 }
                                 let index =
                                     translate_matlab_linear_index(&range_tokens, &preceding_name);
-                                expr.push_str("MATLAB_INDEX(");
+                                expr.push_str(if vector_index {
+                                    "MATLAB_INDEX_VECTOR("
+                                } else {
+                                    "MATLAB_INDEX("
+                                });
                                 expr.push_str(&preceding_name);
                                 expr.push_str(", ");
                                 expr.push_str(&index);
@@ -2132,6 +2204,68 @@ impl Transpiler {
                 TokenKind::ElementMultiply => expr.push_str(" * "),
                 TokenKind::ElementDivide => expr.push_str(" / "),
                 TokenKind::ElementPower => expr.push_str(" ^ "),
+                TokenKind::Equal => expr.push_str(" EQ "),
+                TokenKind::NotEqual => expr.push_str(" NE "),
+                TokenKind::Less => expr.push_str(" LT "),
+                TokenKind::LessEqual => expr.push_str(" LE "),
+                TokenKind::Greater => expr.push_str(" GT "),
+                TokenKind::GreaterEqual => expr.push_str(" GE "),
+                TokenKind::LeftDivide => {
+                    let left_expression = expr.trim_end();
+                    let left_operand = left_expression
+                        .rsplit(|character: char| {
+                            !(character.is_ascii_alphanumeric() || character == '_')
+                        })
+                        .next()
+                        .unwrap_or_default()
+                        .to_string();
+                    let left_start = left_expression.len().saturating_sub(left_operand.len());
+                    let prefix = left_expression[..left_start].trim_end();
+                    let is_operand_boundary = prefix.is_empty()
+                        || prefix.ends_with('=')
+                        || prefix.ends_with('(')
+                        || prefix.ends_with(',');
+                    if left_operand.is_empty() || !is_operand_boundary {
+                        return Err(
+                            "MATLAB matrix left division currently requires a named array on the left"
+                                .to_string(),
+                        );
+                    }
+                    if !left_operand.chars().next().is_some_and(|character| {
+                        character.is_ascii_alphabetic() || character == '_'
+                    }) {
+                        return Err(
+                            "MATLAB matrix left division currently requires named array operands"
+                                .to_string(),
+                        );
+                    }
+                    self.advance();
+                    let right_operand = match &self.current_token().kind {
+                        TokenKind::Identifier(name) => name.clone(),
+                        _ => {
+                            return Err(
+                                "MATLAB matrix left division currently requires a named array on the right"
+                                    .to_string(),
+                            )
+                        }
+                    };
+                    self.advance();
+                    if !self.is_assigned_before(&left_operand, self.position)
+                        || !self.is_assigned_before(&right_operand, self.position)
+                    {
+                        return Err(
+                            "MATLAB matrix left division operands must be previously assigned arrays"
+                                .to_string(),
+                        );
+                    }
+                    expr.truncate(left_start);
+                    expr.push_str("MATLAB_MLDIVIDE(");
+                    expr.push_str(&left_operand);
+                    expr.push_str(", ");
+                    expr.push_str(&right_operand);
+                    expr.push(')');
+                    continue;
+                }
                 TokenKind::Dot
                     if self
                         .tokens
@@ -2167,8 +2301,29 @@ impl Transpiler {
                     );
                 }
                 TokenKind::Transpose => {
+                    let trimmed = expr.trim_end();
+                    let operand_start = trimmed
+                        .char_indices()
+                        .rev()
+                        .take_while(|(_, ch)| ch.is_ascii_alphanumeric() || *ch == '_')
+                        .last()
+                        .map(|(index, _)| index);
+                    if let Some(start) = operand_start {
+                        let operand = trimmed[start..].to_owned();
+                        if operand
+                            .chars()
+                            .next()
+                            .is_some_and(|ch| ch.is_ascii_alphabetic() || ch == '_')
+                        {
+                            expr.truncate(start);
+                            expr.push_str(&format!("MATLAB_CTRANSPOSE({operand})"));
+                            self.advance();
+                            continue;
+                        }
+                    }
                     return Err(
-                        "MATLAB conjugating transpose (A') is not supported yet".to_string()
+                        "MATLAB conjugating transpose currently requires a named array (A')"
+                            .to_string(),
                     );
                 }
                 TokenKind::Comment(_) => {
@@ -2205,14 +2360,8 @@ impl Transpiler {
 
                 // Check if RHS contains colon - indicating a range expression
                 // The convert_range_to_findgen function handles both simple and complex ranges
-                let colon_count = rhs.matches(" : ").count();
-
-                // Don't convert if it looks like array indexing or cell arrays
-                let is_array_op = rhs.contains("[") || rhs.contains("{");
-
-                if colon_count > 0 && !is_array_op {
-                    // This looks like a range expression: convert it
-                    let converted = self.convert_range_to_findgen(rhs);
+                if top_level_colon_parts(rhs).is_some() {
+                    let converted = convert_colon_expression(rhs)?;
                     return Ok(format!("{} = {}", lhs, converted));
                 }
             }
@@ -2394,6 +2543,8 @@ impl Transpiler {
                 TokenKind::Identifier(name) => {
                     // Map constants and check for function calls
                     let mapped = match name.as_str() {
+                        _ if name.eq_ignore_ascii_case("nan") => "MATLAB_NAN()".to_string(),
+                        _ if name.eq_ignore_ascii_case("inf") => "MATLAB_INF()".to_string(),
                         "pi" => "!PI".to_string(),
                         "e" => "!E".to_string(),
                         other => {
@@ -2442,7 +2593,7 @@ impl Transpiler {
                 let elem = &elements[0];
                 if elem.contains(':') {
                     // Parse as range expression
-                    Ok(self.convert_range_to_findgen(elem))
+                    Ok(convert_literal_range_to_findgen(elem)?)
                 } else {
                     Ok(format!("[{}]", elem))
                 }
@@ -2452,12 +2603,12 @@ impl Transpiler {
                     .iter()
                     .map(|e| {
                         if e.contains(':') {
-                            self.convert_range_to_findgen(e)
+                            Ok(convert_colon_expression(e)?)
                         } else {
-                            e.clone()
+                            Ok(e.clone())
                         }
                     })
-                    .collect();
+                    .collect::<Result<Vec<_>, String>>()?;
                 Ok(format!("[{}]", converted.join(", ")))
             }
         } else {
@@ -2469,15 +2620,15 @@ impl Transpiler {
                         .iter()
                         .map(|e| {
                             if e.contains(':') {
-                                self.convert_range_to_findgen(e)
+                                Ok(convert_colon_expression(e)?)
                             } else {
-                                e.clone()
+                                Ok(e.clone())
                             }
                         })
-                        .collect();
-                    format!("[{}]", elements.join(", "))
+                        .collect::<Result<Vec<_>, String>>()?;
+                    Ok(format!("[{}]", elements.join(", ")))
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
             Ok(format!("[{}]", row_strs.join(", ")))
         }
     }
@@ -2533,6 +2684,141 @@ impl Transpiler {
             _ => format!("/* invalid range: {} */", range_str),
         }
     }
+}
+
+const MAX_LITERAL_RANGE_ELEMENTS: usize = 1_000_000;
+
+/// Find colon-separated scalar expressions only when the colons are outside
+/// parentheses, brackets, braces, and quoted strings. Parenthesized colons are
+/// left to the dedicated MATLAB subscript lowering path.
+fn top_level_colon_parts(expression: &str) -> Option<Vec<&str>> {
+    let (mut parens, mut brackets, mut braces) = (0usize, 0usize, 0usize);
+    let mut quote = None;
+    let mut start = 0usize;
+    let mut parts = Vec::new();
+    for (index, character) in expression.char_indices() {
+        if let Some(active_quote) = quote {
+            if character == active_quote {
+                quote = None;
+            }
+            continue;
+        }
+        match character {
+            '\'' | '"' => quote = Some(character),
+            '(' => parens += 1,
+            ')' => parens = parens.saturating_sub(1),
+            '[' => brackets += 1,
+            ']' => brackets = brackets.saturating_sub(1),
+            '{' => braces += 1,
+            '}' => braces = braces.saturating_sub(1),
+            ':' if parens == 0 && brackets == 0 && braces == 0 => {
+                parts.push(expression[start..index].trim());
+                start = index + character.len_utf8();
+            }
+            _ => (),
+        }
+    }
+    if parts.is_empty() {
+        None
+    } else {
+        parts.push(expression[start..].trim());
+        Some(parts)
+    }
+}
+
+/// Preserve compile-time lowering for numeric literals and send other
+/// whole-vector bounds through the runtime scalar-validating helper.
+fn convert_colon_expression(expression: &str) -> Result<String, String> {
+    let parts = top_level_colon_parts(expression)
+        .ok_or_else(|| format!("unsupported MATLAB colon expression `{expression}`"))?;
+    if !(2..=3).contains(&parts.len()) || parts.iter().any(|part| part.is_empty()) {
+        return Err(format!(
+            "unsupported MATLAB colon expression `{expression}`: expected start:stop or start:step:stop"
+        ));
+    }
+    let numeric_literals = parts.iter().all(|part| {
+        part.chars()
+            .filter(|character| !character.is_whitespace())
+            .collect::<String>()
+            .parse::<f64>()
+            .is_ok()
+    });
+    if numeric_literals {
+        return convert_literal_range_to_findgen(expression);
+    }
+    Ok(format!("MATLAB_COLON({})", parts.join(", ")))
+}
+
+/// Lower only finite numeric literal ranges. The count is computed here, before
+/// emitting FINDGEN, so generated XDL cannot request an unbounded allocation.
+fn convert_literal_range_to_findgen(range: &str) -> Result<String, String> {
+    let parts: Vec<&str> = range.split(':').map(str::trim).collect();
+    if !(2..=3).contains(&parts.len()) {
+        return Err(format!(
+            "unsupported MATLAB colon expression `{range}`: expected start:stop or start:step:stop with numeric scalar literals"
+        ));
+    }
+
+    let parse_literal = |part: &str, label: &str| -> Result<f64, String> {
+        // The lexer joins tokens with spaces, so signed literals may arrive as
+        // `- 1`; removing whitespace still leaves arithmetic bounds invalid.
+        let compact: String = part
+            .chars()
+            .filter(|character| !character.is_whitespace())
+            .collect();
+        let value = compact.parse::<f64>().map_err(|_| {
+            format!(
+                "unsupported MATLAB colon expression `{range}`: {label} must be a numeric scalar literal"
+            )
+        })?;
+        if !value.is_finite() {
+            return Err(format!(
+                "unsupported MATLAB colon expression `{range}`: range values must be finite"
+            ));
+        }
+        Ok(value)
+    };
+
+    let start = parse_literal(parts[0], "start")?;
+    let (step, stop) = if parts.len() == 2 {
+        let stop = parse_literal(parts[1], "stop")?;
+        (1.0, stop)
+    } else {
+        let step = parse_literal(parts[1], "step")?;
+        let stop = parse_literal(parts[2], "stop")?;
+        if step == 0.0 {
+            return Err(format!(
+                "unsupported MATLAB colon expression `{range}`: step must be nonzero"
+            ));
+        }
+        (step, stop)
+    };
+
+    let distance = stop - start;
+    let count = if distance == 0.0 {
+        1.0
+    } else if distance.signum() != step.signum() {
+        0.0
+    } else {
+        let quotient = distance / step;
+        // MATLAB colon tolerates floating-point roundoff at an endpoint.
+        let tolerance = 8.0 * f64::EPSILON * quotient.abs().max(1.0);
+        (quotient + tolerance).floor() + 1.0
+    };
+    if !count.is_finite() || count > MAX_LITERAL_RANGE_ELEMENTS as f64 {
+        return Err(format!(
+            "MATLAB colon expression `{range}` would create more than {MAX_LITERAL_RANGE_ELEMENTS} elements"
+        ));
+    }
+    let count = count as usize;
+    if count == 0 {
+        return Ok(if parts.len() == 2 {
+            format!("MATLAB_COLON({start:.17}, {stop:.17})")
+        } else {
+            format!("MATLAB_COLON({start:.17}, {step:.17}, {stop:.17})")
+        });
+    }
+    Ok(format!("(FINDGEN({count}) * ({step:.17}) + ({start:.17}))"))
 }
 
 /// Translate MATLAB's 1-based vector subscript into XDL's zero-based range.
@@ -2660,7 +2946,7 @@ fn translate_matlab_matrix_index(index: &str, assignment_target: bool) -> Option
 /// Translate one scalar MATLAB linear subscript to its one-based XDL helper
 /// argument. `end` is the total number of elements for linear indexing.
 fn translate_matlab_linear_index(tokens: &[Token], array_name: &str) -> String {
-    tokens
+    let translated: String = tokens
         .iter()
         .map(|token| match &token.kind {
             TokenKind::Identifier(name) if name.eq_ignore_ascii_case("end") => {
@@ -2669,7 +2955,40 @@ fn translate_matlab_linear_index(tokens: &[Token], array_name: &str) -> String {
             TokenKind::End => format!("MATLAB_NUMEL({array_name})"),
             _ => token.lexeme.clone(),
         })
-        .collect()
+        .collect();
+    if tokens
+        .iter()
+        .any(|token| matches!(token.kind, TokenKind::Colon))
+    {
+        if let Some(parts) = top_level_colon_parts(&translated) {
+            let end = format!("MATLAB_NUMEL({array_name})");
+            let full = match parts.as_slice() {
+                ["", ""] => Some(format!("MATLAB_COLON(1, {end})")),
+                ["", stop] if !stop.is_empty() => Some(format!("MATLAB_COLON(1, {stop})")),
+                [start, ""] if !start.is_empty() => Some(format!("MATLAB_COLON({start}, {end})")),
+                [start, stop] if !start.is_empty() && !stop.is_empty() => None,
+                ["", step, stop] if !step.is_empty() && !stop.is_empty() => {
+                    Some(format!("MATLAB_COLON(1, {step}, {stop})"))
+                }
+                [start, step, ""] if !start.is_empty() && !step.is_empty() => {
+                    Some(format!("MATLAB_COLON({start}, {step}, {end})"))
+                }
+                [start, step, stop]
+                    if !start.is_empty() && !step.is_empty() && !stop.is_empty() =>
+                {
+                    None
+                }
+                _ => Some(translated.clone()),
+            };
+            if let Some(full) = full {
+                return full;
+            }
+        }
+        if let Ok(range) = convert_colon_expression(&translated) {
+            return range;
+        }
+    }
+    translated
 }
 
 fn offset_matlab_index(start: &str, array_name: &str) -> String {
@@ -2745,9 +3064,10 @@ mod tests {
     }
 
     #[test]
-    fn matlab_conjugating_transpose_remains_explicitly_unsupported() {
-        let error = transpile_matlab_to_xdl("A = [1, 2; 3, 4]; B = A'").unwrap_err();
-        assert!(error.contains("conjugating transpose"), "{error}");
+    fn matlab_conjugating_transpose_maps_named_arrays_to_checked_helper() {
+        let result = transpile_matlab_to_xdl("A = [1, 2; 3, 4]; B = A'").unwrap();
+        assert!(result.contains("B = MATLAB_CTRANSPOSE(A)"), "{result}");
+        assert!(transpile_matlab_to_xdl("B = A'").is_ok());
     }
 
     #[test]
@@ -2798,8 +3118,86 @@ mod tests {
     fn test_colon_range_with_step() {
         let matlab = "y = 0:0.1:1;";
         let result = transpile_matlab_to_xdl(matlab).unwrap();
-        // Should convert to FINDGEN with step
-        assert!(result.contains("FINDGEN"));
+        assert!(result.contains("FINDGEN(11)"), "{result}");
+        assert!(result.contains("0.10000000000000001"), "{result}");
+    }
+
+    #[test]
+    fn literal_colon_ranges_preserve_inclusive_endpoints_and_direction() {
+        let cases = [
+            ("x = 1:3;", "FINDGEN(3)"),
+            (
+                "x = 5:1;",
+                "MATLAB_COLON(5.00000000000000000, 1.00000000000000000)",
+            ),
+            ("x = 3:-1:1;", "FINDGEN(3)"),
+            (
+                "x = 1:-1:3;",
+                "MATLAB_COLON(1.00000000000000000, -1.00000000000000000, 3.00000000000000000)",
+            ),
+            ("x = -2:0.5:-1;", "FINDGEN(3)"),
+        ];
+        for (source, expected) in cases {
+            let result = transpile_matlab_to_xdl(source).unwrap();
+            assert!(result.contains(expected), "{source} lowered to {result}");
+        }
+    }
+
+    #[test]
+    fn literal_colon_ranges_reject_unsupported_and_unbounded_inputs() {
+        for (source, message) in [
+            ("x = 1:0:5;", "step must be nonzero"),
+            ("x = 1:1000001;", "more than 1000000 elements"),
+        ] {
+            let error = transpile_matlab_to_xdl(source).unwrap_err();
+            assert!(error.contains(message), "{source}: {error}");
+        }
+    }
+
+    #[test]
+    fn runtime_colon_bounds_use_helper_without_rewriting_subscript_ranges() {
+        let result = transpile_matlab_to_xdl(
+            "first = 2; last = 8; stride = 2; values = first: last; stepped = first: stride: last; selected = values(2:4); empty = values(1:-1:3);",
+        )
+        .unwrap();
+        assert!(
+            result.contains("values = MATLAB_COLON(first, last)"),
+            "{result}"
+        );
+        assert!(
+            result.contains("stepped = MATLAB_COLON(first, stride, last)"),
+            "{result}"
+        );
+        assert!(
+            result.contains("selected = MATLAB_INDEX_VECTOR(values, (FINDGEN(3) * (1.00000000000000000) + (2.00000000000000000)))"),
+            "{result}"
+        );
+        assert!(!result.contains("MATLAB_COLON ( 2 , 4 )"), "{result}");
+    }
+
+    #[test]
+    fn colon_vector_subscripts_use_validated_index_helper() {
+        let result = transpile_matlab_to_xdl(
+            "values = [10, 20, 30, 40]; selected = values(1:-1:3); all_values = values(:);",
+        )
+        .unwrap();
+        assert!(
+            result.contains("selected = MATLAB_INDEX_VECTOR(values, MATLAB_COLON(1.00000000000000000, -1.00000000000000000, 3.00000000000000000))"),
+            "{result}"
+        );
+        assert!(
+            result.contains(
+                "all_values = MATLAB_INDEX_VECTOR(values, MATLAB_COLON(1, MATLAB_NUMEL(values)))"
+            ),
+            "{result}"
+        );
+    }
+
+    #[test]
+    fn runtime_colon_inside_vector_literal_uses_helper() {
+        let result =
+            transpile_matlab_to_xdl("first = 2; last = 4; values = [first:last, 9];").unwrap();
+        assert!(result.contains("MATLAB_COLON"), "{result}");
     }
 
     #[test]
@@ -2808,15 +3206,41 @@ mod tests {
             "x = [10, 20, 30, 40, 50, 60, 70]; a = x(2:5); b = x(1:2:7); c = x(3);",
         )
         .unwrap();
-        assert!(result.contains("a = x [1:5]"), "{result}");
-        assert!(result.contains("b = x [0:7:2]"), "{result}");
+        assert!(
+            result.contains("a = MATLAB_INDEX_VECTOR(x, (FINDGEN(4) * (1.00000000000000000) + (2.00000000000000000)))"),
+            "{result}"
+        );
+        assert!(
+            result.contains("b = MATLAB_INDEX_VECTOR(x, (FINDGEN(4) * (2.00000000000000000) + (1.00000000000000000)))"),
+            "{result}"
+        );
         assert!(result.contains("c = MATLAB_INDEX(x, 3)"), "{result}");
+    }
+
+    #[test]
+    fn matlab_vector_linear_index_reads_use_validating_helper() {
+        let result = transpile_matlab_to_xdl(
+            "values = [10, 20, 30, 40]; picks = [4, 1, 4]; selected = values(picks); literal = values([3, 2]);",
+        )
+        .unwrap();
+        assert!(
+            result.contains("selected = MATLAB_INDEX_VECTOR(values, picks)"),
+            "{result}"
+        );
+        assert!(
+            result.contains("literal = MATLAB_INDEX_VECTOR(values, [3,2])"),
+            "{result}"
+        );
+        assert!(result.contains("values = [10, 20, 30, 40]"), "{result}");
     }
 
     #[test]
     fn matlab_vector_range_supports_variable_start() {
         let result = transpile_matlab_to_xdl("x = [1, 2, 3]; y = x(first:last);").unwrap();
-        assert!(result.contains("y = x [(first) - 1:last]"), "{result}");
+        assert!(
+            result.contains("y = MATLAB_INDEX_VECTOR(x, MATLAB_COLON(first, last))"),
+            "{result}"
+        );
     }
 
     #[test]
@@ -2829,10 +3253,22 @@ mod tests {
             result.contains("a = MATLAB_INDEX(x, MATLAB_NUMEL(x))"),
             "{result}"
         );
-        assert!(result.contains("b = x [2:N_ELEMENTS(x)]"), "{result}");
-        assert!(result.contains("c = x [0:N_ELEMENTS(x):2]"), "{result}");
-        assert!(result.contains("d = x [:]"), "{result}");
-        assert!(result.contains("e = x [1:]"), "{result}");
+        assert!(
+            result.contains("b = MATLAB_INDEX_VECTOR(x, MATLAB_COLON(3, MATLAB_NUMEL(x)))"),
+            "{result}"
+        );
+        assert!(
+            result.contains("c = MATLAB_INDEX_VECTOR(x, MATLAB_COLON(1, 2, MATLAB_NUMEL(x)))"),
+            "{result}"
+        );
+        assert!(
+            result.contains("d = MATLAB_INDEX_VECTOR(x, MATLAB_COLON(1, MATLAB_NUMEL(x)))"),
+            "{result}"
+        );
+        assert!(
+            result.contains("e = MATLAB_INDEX_VECTOR(x, MATLAB_COLON(2, MATLAB_NUMEL(x)))"),
+            "{result}"
+        );
     }
 
     #[test]
@@ -2928,10 +3364,10 @@ mod tests {
             "{result}"
         );
         let three_outputs =
-            transpile_matlab_to_xdl("matrix = [0, 2; 3, 0]; [row, col, linear] = find(matrix);")
+            transpile_matlab_to_xdl("matrix = [0, 2; 3, 0]; [row, col, values] = find(matrix);")
                 .unwrap();
         assert!(
-            three_outputs.contains("linear = MATLAB_FIND_INDICES(matrix)"),
+            three_outputs.contains("values = MATLAB_FIND_VALUES(matrix)"),
             "{three_outputs}"
         );
         assert!(transpile_matlab_to_xdl("[a, b, c, d] = find(matrix);").is_err());
@@ -2946,6 +3382,27 @@ mod tests {
             limited.contains("MATLAB_FIND_COLUMNS(matrix, 2, 'last')"),
             "{limited}"
         );
+    }
+
+    #[test]
+    fn matlab_elseif_lowers_to_nested_conditionals_without_escaping_the_branch() {
+        let result = transpile_matlab_to_xdl(
+            "x = 2;\nif x == 1\n  y = 10;\nelseif x == 2\n  y = 20;\nelseif x == 3\n  y = 30;\nelse\n  y = 40;\nend\n",
+        )
+        .unwrap();
+        assert!(result.contains("if x  EQ  1 then"), "{result}");
+        assert!(result.contains("else\n  if x  EQ  2 then"), "{result}");
+        assert!(result.contains("else\n    if x  EQ  3 then"), "{result}");
+        assert!(result.contains("y = 40"), "{result}");
+        assert_eq!(result.matches("endif").count(), 3, "{result}");
+    }
+
+    #[test]
+    fn matlab_square_matrix_left_division_calls_compatibility_solver() {
+        let result =
+            transpile_matlab_to_xdl(r#"A = [3, 1; 1, 2]; b = [9; 8]; x = A \ b;"#).unwrap();
+        assert!(result.contains("x = MATLAB_MLDIVIDE(A, b)"), "{result}");
+        assert!(transpile_matlab_to_xdl(r#"x = A \ b;"#).is_err());
     }
 
     #[test]
@@ -2964,7 +3421,10 @@ mod tests {
                 .unwrap();
         assert!(result.contains("FUNCTION select_values, x"), "{result}");
         assert!(result.contains("y = MATLAB_INDEX(x, 3)"), "{result}");
-        assert!(result.contains("z = x [1:4]"), "{result}");
+        assert!(
+            result.contains("z = MATLAB_INDEX_VECTOR(x, (FINDGEN(3) * (1.00000000000000000) + (2.00000000000000000)))"),
+            "{result}"
+        );
         assert!(result.contains("RETURN, y"), "{result}");
     }
 
@@ -3143,6 +3603,20 @@ mod loop_and_random_regression_tests {
         assert!(
             !result.contains("RANDOMU"),
             "randn must not be uniform: {result}"
+        );
+    }
+
+    #[test]
+    fn non_finite_constants_lower_in_expressions_and_array_literals_case_insensitively() {
+        let result =
+            transpile_matlab_to_xdl("a = NaN; b = iNF; c = -Inf; values = [nan, Inf, -iNF, 2];")
+                .unwrap();
+        assert!(result.contains("a = MATLAB_NAN()"), "got: {result}");
+        assert!(result.contains("b = MATLAB_INF()"), "got: {result}");
+        assert!(result.contains("c = - MATLAB_INF()"), "got: {result}");
+        assert!(
+            result.contains("values = [MATLAB_NAN(), MATLAB_INF(), -MATLAB_INF(), 2"),
+            "got: {result}"
         );
     }
 }

@@ -728,8 +728,48 @@ fn test_cli_runs_mars_helicopter_battery_sweep_example() {
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("=== XDL MARS HELICOPTER BATTERY-STRING SWEEP ==="));
-    assert!(stdout.contains("battery_strings= 1"));
-    assert!(stdout.contains("battery_strings= 4"));
+    let configurations: Vec<_> = stdout
+        .lines()
+        .filter(|line| line.contains("battery_strings="))
+        .collect();
+    assert_eq!(configurations.len(), 6, "{stdout}");
+    for configuration in &configurations[..3] {
+        assert!(configuration.contains("can_takeoff= 1"), "{configuration}");
+        assert!(
+            !configuration.contains("flight_duration_s= 0"),
+            "a takeoff-capable configuration should accrue flight time: {configuration}"
+        );
+    }
+    for configuration in &configurations[3..] {
+        assert!(configuration.contains("can_takeoff= 0"), "{configuration}");
+        assert!(
+            configuration.contains("flight_duration_s= 0"),
+            "an overloaded configuration should not accrue flight time: {configuration}"
+        );
+    }
+    assert!(
+        configurations[0].contains("battery_strings= 1")
+            && configurations[0].contains("vehicle_mass_kg= 1.800000")
+            && configurations[0].contains("can_takeoff= 1"),
+        "one-string baseline should lift: {}",
+        configurations[0]
+    );
+    assert!(
+        configurations[2].contains("battery_strings= 3")
+            && configurations[2].contains("can_takeoff= 1")
+            && !configurations[2].contains("flight_duration_s= 0"),
+        "three strings should remain below the illustrative lift threshold: {}",
+        configurations[2]
+    );
+    assert!(
+        configurations[3].contains("battery_strings= 4")
+            && configurations[3].contains("vehicle_mass_kg= 2.700000")
+            && configurations[3].contains("can_takeoff= 0")
+            && configurations[3].contains("flight_duration_s= 0"),
+        "four strings should exceed the illustrative lift threshold: {}",
+        configurations[3]
+    );
+    assert!(configurations[5].contains("battery_strings= 6"));
     assert!(stdout.contains("=== END XDL MARS HELICOPTER BATTERY-STRING SWEEP ==="));
 }
 

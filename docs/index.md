@@ -133,6 +133,10 @@ IDL/GDL and MATLAB compatibility layers
 - [MATLAB Limitations](MATLAB_LIMITATIONS) - Known limitations
 - [Tiled Layout](MATLAB_TILEDLAYOUT) - Tiled layout support
 
+#### Scilab Compatibility
+
+- [Scilab Support](SCILAB_SUPPORT) - Tested source syntax subset and current limitations
+
 ### Advanced Topics
 
 {: .text-delta }

@@ -23,6 +23,7 @@ pub mod ml;
 #[cfg(feature = "python")]
 pub mod python;
 pub mod scientific_io; // Scientific data formats (FITS, HDF5, NetCDF)
+pub mod scilab_compat; // Scilab source compatibility helpers
 pub mod signal; // Signal processing
 pub mod statistics;
 pub mod string;
@@ -432,16 +433,26 @@ impl StandardLibrary {
             "MESHGRID" => math::meshgrid(args),
 
             // MATLAB compatibility functions
+            "MATLAB_COLON" => matlab_compat::matlab_colon(args),
+            "MATLAB_NAN" => matlab_compat::matlab_nan(args),
+            "MATLAB_INF" => matlab_compat::matlab_inf(args),
             "MATLAB_LENGTH" => matlab_compat::matlab_length(args),
             "MATLAB_NUMEL" => matlab_compat::matlab_numel(args),
             "MATLAB_SIZE" => matlab_compat::matlab_size(args),
             "MATLAB_SIZE_TAIL" => matlab_compat::matlab_size_tail(args),
             "MATLAB_INDEX" => matlab_compat::matlab_index(args),
+            "MATLAB_INDEX_VECTOR" => matlab_compat::matlab_index_vector(args),
+            "SCILAB_INDEX" => scilab_compat::scilab_index(args),
+            "SCILAB_INDEX_RANGE" => scilab_compat::scilab_index_range(args),
             "MATLAB_FIND" => matlab_compat::matlab_find(args),
             "MATLAB_FIND_ROWS" => matlab_compat::matlab_find_rows(args),
             "MATLAB_FIND_COLUMNS" => matlab_compat::matlab_find_columns(args),
             "MATLAB_FIND_INDICES" => matlab_compat::matlab_find_indices(args),
+            "MATLAB_FIND_VALUES" => matlab_compat::matlab_find_nonzero_values(args),
+            "MATLAB_RESHAPE" => matlab_compat::matlab_reshape(args),
+            "MATLAB_CTRANSPOSE" => matlab_compat::matlab_ctranspose(args),
             "MATLAB_READMATRIX" => matlab_compat::matlab_readmatrix(args),
+            "MATLAB_MLDIVIDE" => matlab_compat::matlab_mldivide(args),
             "LINSPACE" => matlab_compat::linspace(args),
             "LOGSPACE" => matlab_compat::logspace(args),
             "REPMAT" => matlab_compat::repmat(args),
