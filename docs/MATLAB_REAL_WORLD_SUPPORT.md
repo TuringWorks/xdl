@@ -1,10 +1,16 @@
 # Real-World MATLAB/Octave Support
 
-This document describes the comprehensive MATLAB/Octave compatibility features that have been added to the XDL transpiler to support real-world scientific computing code.
+This document describes the MATLAB/Octave compatibility subset currently
+implemented in the XDL transpiler. It supports selected real-world scripts but
+is not MATLAB or Octave language/toolbox parity. Validate each required feature
+with an executable test before production use.
 
 ## Overview
 
-The XDL MATLAB transpiler now supports a wide range of real-world MATLAB patterns commonly found in scientific computing, data analysis, and visualization code.
+The XDL MATLAB transpiler supports selected MATLAB constructs and example
+workflows used in scientific computing. The examples below demonstrate runtime
+paths; they are not a conformance suite and generally lack MATLAB/Octave
+reference-output comparisons.
 
 ## Features Implemented
 
@@ -37,13 +43,25 @@ x = (FINDGEN(((10)-(1))/(2) +1) * (2)) + (1)
 
 ```matlab
 arr = (0:19);
-slice = arr(1:50);     % Get elements 1 through 50
+slice = arr(1:10);     % Get the first ten elements
 subset = arr(5:10);    % Get elements 5 through 10
 ```
 
 **How It Works:**
 
-- Array indexing with range expressions `arr(start:end)` is fully supported
+- Scalar indexing and vector ranges are translated for known source variables,
+  including function parameters. `arr(start:end)` and positive constant-step
+  `arr(start:step:end)` map MATLAB's 1-based bounds to XDL's zero-based,
+  exclusive-end slices. Vector `end`, `:`, and omitted range bounds are
+  supported. Two scalar subscripts on a simple 2D matrix and scalar linear
+  reads use MATLAB column-major order in the tested cases. Rectangular 2D
+  row/column range reads, row-vector scalar/range writes, matrix row/column range
+  writes when the other subscript is scalar, and two-subscript scalar matrix
+  writes and two-axis matrix block writes have focused execution tests. Block
+  writes accept scalar expansion or a rectangular matrix matching the selected
+  shape. Nested-array range sources, single-subscript matrix writes,
+  higher-dimensional slices, multidimensional `end`, negative steps, and logical/index-vector
+  subscripts remain incomplete.
 - Automatically converts MATLAB's 1-based indexing to XDL's 0-based indexing
 - Handles both numeric indices and variable-based ranges
 
@@ -69,7 +87,8 @@ r = RANDOMU(1, 10, 20)
 
 - Special handling for `rand(size(x))` and `randn(size(x))` patterns
 - Converts `size(x)` to `N_ELEMENTS(x)` for RANDOMU/RANDOMN
-- Both `rand` and `randn` currently map to `RANDOMU` (normal distribution to be added later)
+- `rand` maps to a uniform generator; `randn` is not yet a faithful
+  normal-distribution implementation and must not be treated as equivalent
 - Seed is fixed at 1 for reproducibility
 
 ### 4. Statistical Functions
@@ -105,7 +124,8 @@ y = abs(x);      % Absolute value
 y = log(x);      % Natural logarithm
 ```
 
-All math functions work seamlessly with both scalar and array inputs.
+Many mapped math functions work with scalar and array inputs, but broadcasting,
+shape rules, and edge cases are still under conformance testing.
 
 ### 6. Advanced Plotting
 
@@ -117,7 +137,9 @@ plot(x, y, 'r--');    % Red dashed line
 plot(x, y, 'g:');     % Green dotted line
 ```
 
-Line style strings are detected and gracefully ignored (XDL doesn't support line styles yet).
+Some line-style strings are detected but may be ignored because XDL plotting
+style coverage is incomplete; ignored styling is a compatibility limitation,
+not feature parity.
 
 **Multiple Plots:**
 
@@ -169,7 +191,18 @@ y = sin(x);
 
 Transpiles correctly with `pi` mapped to `!PI`.
 
-## Tested Real-World Examples
+`interp1(x, y, xi)` supports piecewise-linear interpolation; the optional
+`'nearest'` method is also supported. Sample locations must be strictly
+monotonic (ascending or descending), and queries outside their range return
+`NaN`. XDL chooses the next input sample on an equal-distance nearest tie;
+descending-axis tie behavior has not been cross-checked against MATLAB/Octave.
+Other interpolation methods and extrapolation options are not supported.
+
+## Representative MATLAB/Octave Workflows
+
+These snippets show syntax and runtime paths that XDL is targeting. They are
+not a claim of full MATLAB/Octave equivalence; this page does not publish
+reference-output comparisons for the complete workflows below.
 
 ### Example 1: Noisy Signal Analysis
 
@@ -189,7 +222,9 @@ plot(t, data, 'b-');
 title('Noisy Sine Wave');
 ```
 
-✅ **Works perfectly**
+**Status:** The listed constructs have partial support. Validate numerical
+outputs and plot properties against the source MATLAB/Octave workflow before
+relying on a migrated result.
 
 ### Example 2: Multi-panel Plots
 
@@ -207,7 +242,8 @@ plot(x2, cos(x2));
 title('Cosine');
 ```
 
-✅ **Works perfectly** - generates separate plot files for each tile
+**Status:** Tile selection and separate plot-file generation are supported in
+the current transpiler path; visual layout parity has not been established.
 
 ### Example 3: Array Operations
 
@@ -217,16 +253,18 @@ y = sin(x);             % Function on array
 z = y(10:50);           % Array slicing
 ```
 
-✅ **Works perfectly**
+**Status:** Range generation, array expressions, and the documented vector
+slice subset are supported. The combined example has no published reference
+output comparison.
 
 ## Limitations and Future Work
 
 ### Currently Not Supported
 
-1. **Multiple Return Values:**
+1. **General Multiple-Output Assignment:**
 
    ```matlab
-   [X, Y] = meshgrid(-5:0.25:5);  % Not supported
+   [X, Y] = some_function(x);  % General multiple-output assignment is unsupported (size(A) is a verified exception)
    ```
 
 2. **Anonymous Functions:**
@@ -247,36 +285,29 @@ z = y(10:50);           % Array slicing
    Y = fft(X);  % FFT function exists but complex number handling needs work
    ```
 
-5. **Surface/Mesh Plots:**
+5. **Surface/Mesh Plots and Grid Parity:**
 
    ```matlab
    surf(X, Y, Z);  % Needs surface plotting support
-   meshgrid(...);  % Needs 2D array generation
+   meshgrid(...);  % A mapping exists; full MATLAB output and shape parity is unverified
    ```
 
-6. **Matrix Operations:**
-   - Matrix multiplication (non-element-wise)
-   - Linear algebra functions (inv, det, eig, etc.)
+6. **Matrix Semantics and Linear Algebra:**
+   - Vector-valued index expressions, nested-array range sources, single-subscript matrix assignment, and higher-dimensional matrix slices (rectangular 2D reads, row/column writes, and shape-matched block writes have focused CLI coverage)
+   - Matrix multiplication and full MATLAB shape semantics
+   - `inv`/`det` names are mapped, but MATLAB numerical and shape conformance is not established; broader eigenvalue workflows are not verified
 
-### Planned Improvements
+### Next Compatibility Work
 
-1. **Normal Distribution Random Numbers:**
-   - Add proper `RANDOMN` function to XDL stdlib
-   - Currently both `rand` and `randn` use `RANDOMU`
-
-2. **Array Literals:**
-   - Support for `[1, 2, 3]` syntax
-   - Multi-dimensional arrays
-
-3. **Control Flow:**
-   - `if/else/elseif` statements
-   - `for` and `while` loops
-   - `switch/case` statements
-
-4. **Functions and Scripts:**
-   - Function definitions
-   - Multiple file support
-   - Path management
+- Extend MATLAB column-major indexing from tested scalar/range reads and
+  two-axis matrix block assignments to single-subscript matrix assignment,
+  vector-valued indices, and multidimensional slices without
+  changing native XDL indexing semantics.
+- Add general multiple-output, cell-array, and anonymous-function support with
+  explicit diagnostics where the runtime cannot represent MATLAB behavior.
+- Establish reference-vector comparisons for `randn`, FFT/complex operations,
+  plotting properties, and mapped linear-algebra functions.
+- Define multi-file function lookup and path behavior for `.m` projects.
 
 ## Usage Examples
 
@@ -303,31 +334,21 @@ PLOT: Rendering 100 points to xdl_plot.png
   Plot saved to 'xdl_plot.png'
 ```
 
-## Testing
+## Example Execution
 
-Run the comprehensive test suite:
+Run the current sample script:
 
 ```bash
-xdl /tmp/comprehensive_matlab_test.m
+xdl examples/matlab/01_simple_math.m
 ```
 
-This tests:
+This demonstrates selected range, array, mathematical, random, and plotting
+paths. It does not compare numerical results or rendered plots against MATLAB.
 
-- Range operators (0:9, 1:2:10)
-- Array slicing
-- Random number generation
-- Statistical functions
-- Mathematical functions on arrays
-- Plotting with line styles and hold on/off
+## Current Evidence
 
-## Conclusion
-
-The XDL MATLAB transpiler now supports a substantial subset of real-world MATLAB code, particularly for:
-
-- Numerical computation with arrays
-- Statistical analysis
-- Signal generation and processing
-- 2D and 3D plotting
-- Multi-panel visualizations
-
-This makes it practical for transpiling many scientific computing scripts from MATLAB/Octave to XDL/IDL.
+The CLI suite exercises a focused subset of MATLAB transpilation, including
+vector indexing, selected 2D scalar subscripts, and `length`/`numel` on simple
+values. The sample workflows above are illustrative. Suitability for a real
+project must be established with that project's syntax, numerical reference
+outputs, file dependencies, and plot comparisons.

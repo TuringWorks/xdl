@@ -1,0 +1,58 @@
+; Reduced-order coupled mass, takeoff, and battery-endurance sweep for the Mars
+; helicopter. Each configuration re-evaluates Mars weight and the lift limit;
+; parallel strings add both stored energy and battery mass. The cell, thrust,
+; and energy values are illustrative system parameters, not validated Ingenuity
+; or Simscape data.
+
+PRINT, '=== XDL MARS HELICOPTER BATTERY-STRING SWEEP ==='
+PRINT, 'Configuration: one to six parallel strings; reduced-order mass-coupled flight'
+
+mars_gravity = 3.71
+series_cells = 6
+cell_voltage_v = 3.7
+cell_capacity_ah = 2.0
+cell_mass_kg = 0.05
+base_vehicle_mass_kg = 1.5
+maximum_lift_n = 9.5
+flight_load_w = 120.0
+initial_soc = 0.97
+minimum_soc = 0.30
+mission_limit_s = 3000
+dt = 1.0
+
+FOR battery_strings = 1, 6 DO BEGIN
+    battery_mass_kg = series_cells * cell_mass_kg * battery_strings
+    vehicle_mass_kg = base_vehicle_mass_kg + battery_mass_kg
+    mars_weight_n = vehicle_mass_kg * mars_gravity
+    battery_energy_j = cell_voltage_v * series_cells * cell_capacity_ah * 3600.0 * battery_strings
+    flight_draw_per_s = flight_load_w * dt / battery_energy_j
+    state_of_charge = initial_soc
+    active = 1
+    can_takeoff = 0
+    elapsed_s = 0
+    IF maximum_lift_n GT mars_weight_n THEN can_takeoff = 1
+
+    IF can_takeoff EQ 1 THEN BEGIN
+        FOR tick = 1, mission_limit_s DO BEGIN
+            IF active EQ 1 THEN BEGIN
+                state_of_charge = state_of_charge - flight_draw_per_s
+                elapsed_s = tick * dt
+                IF state_of_charge LE minimum_soc THEN BEGIN
+                    state_of_charge = minimum_soc
+                    active = 0
+                ENDIF
+            ENDIF
+        ENDFOR
+    ENDIF
+
+    PRINT, 'battery_strings=', battery_strings, $
+           ' battery_mass_kg=', battery_mass_kg, $
+           ' vehicle_mass_kg=', vehicle_mass_kg, $
+           ' mars_weight_n=', mars_weight_n, $
+           ' maximum_lift_n=', maximum_lift_n, $
+           ' can_takeoff=', can_takeoff, $
+           ' flight_duration_s=', elapsed_s, $
+           ' final_soc=', state_of_charge
+ENDFOR
+
+PRINT, '=== END XDL MARS HELICOPTER BATTERY-STRING SWEEP ==='

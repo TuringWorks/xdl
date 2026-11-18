@@ -3,7 +3,7 @@ name = "xdl-gnc-integration"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "MIT"
 description = "End-to-end deterministic GNC integration scenario"
 
 [dependencies]
@@ -13,3 +13,4 @@ xdl-gnc-core = { path = "../xdl-gnc-core" }
 xdl-gnc-guidance = { path = "../xdl-gnc-guidance" }
 xdl-gnc-navigation = { path = "../xdl-gnc-navigation" }
 xdl-gnc-simulation = { path = "../xdl-gnc-simulation" }
+xdl-gnc-telemetry = { path = "../xdl-gnc-telemetry" }

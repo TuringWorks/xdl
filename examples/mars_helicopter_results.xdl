@@ -1,0 +1,27 @@
+; Read live CSV output from mars_helicopter_system_level.xdl and plot columns.
+
+result_file = 'mars_helicopter_results.csv'
+line_count = FILE_LINES(result_file)
+
+OPENR, 43, result_file
+header = READF(43)
+
+row_count = line_count - 1
+time_s = FLTARR(row_count)
+altitude_m = FLTARR(row_count)
+battery_temperature_c = FLTARR(row_count)
+FOR row = 0, row_count - 1 DO BEGIN
+    line = READF(43)
+    values = READS(STRREPLACE(line, ',', ' '))
+    time_s[row] = values[0]
+    altitude_m[row] = values[1]
+    battery_temperature_c[row] = values[2]
+ENDFOR
+CLOSE, 43
+
+PLOT, time_s, altitude_m, TITLE='Mars Helicopter Reduced-Order Altitude', $
+      XTITLE='Time (s)', YTITLE='Altitude (m)'
+FILE_COPY, 'xdl_plot.png', 'mars_helicopter_altitude.png'
+PLOT, time_s, battery_temperature_c, TITLE='Mars Helicopter Battery Temperature', $
+      XTITLE='Time (s)', YTITLE='Temperature (degC)'
+FILE_COPY, 'xdl_plot.png', 'mars_helicopter_temperature.png'

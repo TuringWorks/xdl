@@ -21,6 +21,7 @@
 11. [Signal Processing](#signal-processing)
 12. [Image Processing](#image-processing)
 13. [System Functions](#system-functions)
+14. [GNC Bindings](#gnc-bindings)
 
 ---
 
@@ -35,7 +36,10 @@
 | `TAN(x)` | Tangent | `y = TAN(!PI/4)` |
 | `ASIN(x)` | Arc sine | `y = ASIN(1)` |
 | `ACOS(x)` | Arc cosine | `y = ACOS(0)` |
-| `ATAN(x)` | Arc tangent | `y = ATAN(1)` |
+| `ATAN(x[, x2])` | Arc tangent; two arguments compute quadrant-aware `atan2(y, x)` elementwise for equal-shape numeric arrays, with scalar expansion | `a = ATAN(1)`; `theta = ATAN(y, x)` |
+| `ISNAN(x)` | Return 1/true where numeric values are NaN | `mask = ISNAN(values)` |
+| `ISINF(x)` | Return 1/true where numeric values are positive or negative infinity | `mask = ISINF(values)` |
+| `FINITE(x)` | Return 1/true for finite numeric values, false for NaN or infinity | `mask = FINITE(values)` |
 
 ### Hyperbolic
 
@@ -127,9 +131,27 @@
 | Function | Description | Example |
 |----------|-------------|---------|
 | `N_ELEMENTS(x)` | Number of elements | `n = N_ELEMENTS(arr)` |
+| `MATLAB_LENGTH(x)` | Double scalar with MATLAB-compatible largest array dimension; used by transpiled `length(x)` | `n = MATLAB_LENGTH(matrix)` |
+| `MATLAB_NUMEL(x)` | Double scalar with MATLAB-compatible scalar element count; used by transpiled `numel(x)` | `n = MATLAB_NUMEL(matrix)` |
+| `MATLAB_SIZE(x, [dim])` | MATLAB-compatible dimension vector or selected double dimension; used by transpiled `size(x, [dim])` | `dims = MATLAB_SIZE(matrix)` |
+| `MATLAB_SIZE_TAIL(x, dim)` | Product of MATLAB dimensions from `dim` onward; used for the final output of `[d1,...,dn] = size(x)` | `n = MATLAB_SIZE_TAIL(volume, 2)` |
+| `MATLAB_FIND(x)` | MATLAB-compatible one-based linear indices; row vectors preserve orientation, other shapes return a column; used by transpiled `find(x)` | `idx = MATLAB_FIND(data)` |
+| `MATLAB_FIND_ROWS(A)` / `MATLAB_FIND_COLUMNS(A)` | One-based row and collapsed column subscripts for transpiled two-output `find` | Runtime supports vectors, matrices, and shaped/nested N-D numeric arrays; optional `k` and direction are forwarded |
+| `MATLAB_FIND_VALUES(A)` | Nonzero values, the third output of `[row,col,v] = find(A)` | Values follow MATLAB column-major traversal and optional `k`/direction selection |
+| `MATLAB_FIND_INDICES(A)` | One-based linear indices as an XDL helper | The MATLAB transpiler does not use this for the third `find` output |
+| `MATLAB_RESHAPE(A, d1, d2, ...)` | Reshape a numeric array while preserving MATLAB column-major element order | Used by transpiled `reshape` to retain explicit XDL shape metadata |
+| `MATLAB_CTRANSPOSE(A)` | MATLAB apostrophe transpose for supported real arrays; conjugates a complex scalar | Used by transpiled `A'`; complex arrays are rejected explicitly |
+| `MATLAB_MLDIVIDE(A, b)` | Solve finite real-valued square or rectangular systems for vector or matrix RHS values | Emitted for direct named-array MATLAB `A \ b`; square uses LU, rectangular uses SVD, and elementwise left division remains unsupported |
+| `MATLAB_READMATRIX(filename[, 'NumHeaderLines', n])` | Import a rectangular numeric CSV, optionally skipping an explicit number of header lines; automatic header detection and other import options are unsupported | `matrix = MATLAB_READMATRIX('data.csv', 'NumHeaderLines', 1)` |
+| `MATLAB_NAN()` / `MATLAB_INF()` | Explicit IEEE-754 NaN and positive infinity values used for transpiled MATLAB/Octave constants | `values = [MATLAB_NAN(), MATLAB_INF(), -MATLAB_INF()]` |
+| `MATLAB_INDEX(x, index)` | Read one MATLAB one-based linear element using column-major traversal | `value = MATLAB_INDEX(matrix, 4)` |
+| `MATLAB_INDEX_VECTOR(array, indices)` | Gather ordered, duplicate-preserving one-based linear indices from a numeric array in MATLAB column-major order; empty indices return an empty selection. Flat XDL results cannot retain MATLAB row/column orientation | `selected = MATLAB_INDEX_VECTOR(values, picks)` |
+| `SCILAB_INDEX(index)` | Validate a positive integer Scilab index and convert it to XDL's zero-based scalar index; rejects non-finite, fractional, nonpositive, and unrepresentable values | Used by transpiled `v(k)` reads when `k` is a scalar expression |
+| `SCILAB_INDEX_RANGE(vector, start, step, end)` | Read an inclusive one-based Scilab vector range after validating integer bounds, positive step, and vector length; step may be omitted in the three-argument form | `selected = SCILAB_INDEX_RANGE(values, first, stride, last)` |
+| `MATLAB_COLON(start, stop)` / `MATLAB_COLON(start, step, stop)` | Build an inclusive finite runtime numeric range; accepts numeric scalars or one-element numeric arrays and returns a one-dimensional double vector, capped at 1,000,000 elements | `values = MATLAB_COLON(first, stride, last)` |
 | `WHERE(condition)` | Find indices | `idx = WHERE(arr GT 0)` |
 | `REFORM(arr, dims)` | Reshape array | `b = REFORM(a, 5, 20)` |
-| `TRANSPOSE(arr)` | Transpose | `b = TRANSPOSE(a)` |
+| `TRANSPOSE(arr)` | Transpose a rectangular nested numeric matrix | `b = TRANSPOSE(matrix)` |
 | `REVERSE(arr)` | Reverse array | `b = REVERSE(a)` |
 | `SORT(arr)` | Sort indices | `idx = SORT(arr)` |
 | `SHIFT(arr, s)` | Circular shift elements | `b = SHIFT(arr, 2)` |
@@ -198,6 +220,7 @@
 
 | Function | Description | Example |
 |----------|-------------|---------|
+| `INTERP1(x, y, xi, [method])` | Linear or nearest 1D interpolation; out-of-range queries return NaN | `yi = INTERP1(x, y, xi, 'nearest')` |
 | `INTERPOL(y, x, xnew)` | Linear interpolation | `ynew = INTERPOL(y, x, xnew)` |
 | `SPLINE(x, y, xnew)` | Cubic spline | `ynew = SPLINE(x, y, xnew)` |
 | `BILINEAR(z, x, y)` | Bilinear interpolation | `znew = BILINEAR(z, xnew, ynew)` |
@@ -574,3 +597,44 @@ Build with flags:
 ```bash
 cargo build --features "python,dataframes,ml"
 ```
+# GNC bindings
+
+The first XDL-facing guidance binding is available through the standard
+library. These functions use numeric arrays and return an XDL structure, while
+the native GNC crates retain typed frames, timestamps, and error semantics.
+
+| Function | Signature | Result |
+|---|---|---|
+| `GNC_VEC3` | `GNC_VEC3(x, y, z)` | Three-element numeric array |
+| `GNC_FLIGHT_READINESS_STEP` | `GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)` | Explicit-state readiness transition; returns `STATE`, `STATE_NAME`, `READY`, and `FLYING` |
+| `GNC_STATE_MACHINE_STEP` | `GNC_STATE_MACHINE_STEP(machine_json, state, entered_ns, timestamp_ns, event, active_guards)` | Explicit-state serialized event/timed state-machine step; returns `STATE`, `STATE_NAME`, and `STATE_ENTERED_NS` |
+| `GNC_WAYPOINT` | `GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)` | Structure with `DESIRED_VELOCITY`, `DISTANCE`, `REACHED`, and `DEGRADED` |
+| `GNC_PID_STEP` | `GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)` | Structure with `COMMAND`, `ERROR`, `DERIVATIVE`, `INTEGRAL`, and `SATURATED` |
+| `GNC_STATE_SPACE_STEP` | `GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)` | Explicit-state discrete state-space update using row-major flattened matrices; returns `OUTPUT` and next `STATE` |
+| `GNC_SCHEDULED_FEEDBACK_STEP` | `GNC_SCHEDULED_FEEDBACK_STEP(lower_gain, upper_gain, lower_parameter, upper_parameter, parameter, state_error, inputs, states)` | Interpolated state-feedback command using row-major flattened gain matrices; parameter is clamped to the schedule range |
+| `GNC_ACTUATOR_STEP` | `GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min, output_max, rate_limit, previous_timestamp_ns, previous_output)` | Structure with `OUTPUT`, `SATURATED`, and `RATE_LIMITED` |
+| `GNC_ALPHA_BETA_STEP` | `GNC_ALPHA_BETA_STEP(timestamp_ns, initial_timestamp_ns, position, velocity, acceleration, gnss_position, gnss_velocity, position_gain, velocity_gain)` | Structure with updated `POSITION`, `VELOCITY`, and residual fields |
+| `GNC_TELEMETRY_JSON` | `GNC_TELEMETRY_JSON(timestamp_ns, sequence, source, position, velocity, command)` | Newline-terminated JSON telemetry record |
+
+`timestamp_ns` is an integer nanosecond timestamp. `position` and `waypoint`
+must be three-element finite arrays; speed and radius must be finite and obey
+the guidance configuration limits.
+
+`GNC_FLIGHT_READINESS_STEP` uses explicit states `0=COLD`, `1=READY`, and
+`2=FLYING`. A cold vehicle becomes ready when `temperature_c > 10` and
+`soc > 0.30`; a ready vehicle launches when `launch_requested` is nonzero; a
+flying vehicle returns to ready when `temperature_c < 8` or `soc <= 0.30`.
+The 2 C thermal hysteresis prevents readiness chatter near the heater
+threshold. The caller owns and passes the state on every step, so the function
+has no hidden process-global state.
+
+`GNC_STATE_MACHINE_STEP` accepts a JSON-serialized `xdl_model::StateMachine`,
+the current numeric state ID, its entry timestamp, the current timestamp, an
+event string (or an empty string to process timers only), and a guard name or
+array of guard names that the host has evaluated as true. An empty guard string
+means no active guards. Due timed transitions are
+processed before the optional event. State and entry time are returned for the
+next call; the function keeps no hidden state. Machine JSON should include
+`name`, `states`, `transitions`, `initial_state`, and, when used,
+`timed_transitions`. State IDs are numeric keys in `states`; each state has
+`id` and `name` fields.

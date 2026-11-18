@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Deterministic replay of a recorded sensor log through an estimator.
 
 use crate::{AlphaBetaFilter, NavigationEstimate};
+use rayon::prelude::*;
 use xdl_gnc_core::{GncError, Vec3};
 use xdl_gnc_simulation::{ReplayLog, ReplayRecord};
 
@@ -41,5 +42,30 @@ where
             let input = acceleration(record);
             filter.step(record.timestamp, input, record.gnss)
         })
+        .collect()
+}
+
+/// One independent replay: an estimator and the log it consumes.
+#[derive(Debug, Clone)]
+pub struct ReplayJob<'a> {
+    pub filter: AlphaBetaFilter,
+    pub log: &'a ReplayLog,
+}
+
+/// Runs many independent replays in parallel on the rayon pool.
+///
+/// Jobs share no state, so this is embarrassingly parallel across runs (the
+/// unit of parallelism that pays off; a single filter step is too small to
+/// split). Results are returned in job order regardless of thread scheduling,
+/// and each entry equals what [`replay_alpha_beta`] returns for that job alone.
+pub fn replay_alpha_beta_batch<F>(
+    jobs: &[ReplayJob<'_>],
+    acceleration: F,
+) -> Vec<Result<Vec<NavigationEstimate>, GncError>>
+where
+    F: Fn(&ReplayRecord) -> Vec3 + Sync,
+{
+    jobs.par_iter()
+        .map(|job| replay_alpha_beta(job.filter.clone(), job.log, |record| acceleration(record)))
         .collect()
 }

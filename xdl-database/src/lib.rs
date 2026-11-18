@@ -35,6 +35,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use xdl_core::{XdlError, XdlResult};
 
+/// Connectivity probe, kept in `sql/health_probe.sql` rather than inline in each driver.
+pub(crate) const HEALTH_PROBE_SQL: &str = include_str!("../sql/health_probe.sql");
+
 pub mod connection;
 pub mod drivers;
 pub mod error;

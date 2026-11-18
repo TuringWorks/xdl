@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Scilab",
+  "scopeName": "source.scilab",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#constants" },
+    { "include": "#keywords" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "name": "comment.line.double-slash.scilab", "begin": "//", "end": "$" },
+        { "name": "comment.block.scilab", "begin": "/\\*", "end": "\\*/" }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.scilab",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "name": "constant.character.escape.scilab", "match": "\\\\." }
+          ]
+        },
+        {
+          "name": "string.quoted.single.scilab",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            { "name": "constant.character.escape.scilab", "match": "\\\\." }
+          ]
+        }
+      ]
+    },
+    "constants": {
+      "name": "constant.language.scilab",
+      "match": "%(?:pi|e|[tT]|[fF])\\b"
+    },
+    "keywords": {
+      "name": "keyword.control.scilab",
+      "match": "\\b(?:if|then|elseif|else|end|for|while|do|select|case|otherwise|break|continue|return|function|endfunction)\\b"
+    },
+    "operators": {
+      "name": "keyword.operator.comparison.scilab",
+      "match": "(?:==|<>|~=|<=|>=|<|>)"
+    }
+  }
+}

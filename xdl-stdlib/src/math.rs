@@ -329,11 +329,190 @@ pub fn atan2(_args: &[XdlValue]) -> XdlResult<XdlValue> {
         )));
     }
 
-    let y = to_float(&_args[0])?;
-    let x = to_float(&_args[1])?;
-    let result = y.atan2(x);
+    let (y, x) = (&_args[0], &_args[1]);
+    match (y, x) {
+        (XdlValue::Array(ys), XdlValue::Array(xs)) if ys.len() == xs.len() => Ok(XdlValue::Array(
+            ys.iter()
+                .zip(xs)
+                .map(|(&y, &x)| matlab_atan2(y, x))
+                .collect(),
+        )),
+        (XdlValue::Array(ys), value) if is_numeric_scalar(value) => {
+            let x = to_float(value)?;
+            Ok(XdlValue::Array(
+                ys.iter().map(|&y| matlab_atan2(y, x)).collect(),
+            ))
+        }
+        (value, XdlValue::Array(xs)) if is_numeric_scalar(value) => {
+            let y = to_float(value)?;
+            Ok(XdlValue::Array(
+                xs.iter().map(|&x| matlab_atan2(y, x)).collect(),
+            ))
+        }
+        (
+            XdlValue::MultiDimArray {
+                data: ys,
+                shape: y_shape,
+            },
+            XdlValue::MultiDimArray {
+                data: xs,
+                shape: x_shape,
+            },
+        ) if y_shape == x_shape => {
+            validate_numeric_shape(ys, y_shape)?;
+            validate_numeric_shape(xs, x_shape)?;
+            Ok(XdlValue::MultiDimArray {
+                data: ys
+                    .iter()
+                    .zip(xs)
+                    .map(|(&y, &x)| matlab_atan2(y, x))
+                    .collect(),
+                shape: y_shape.clone(),
+            })
+        }
+        (XdlValue::MultiDimArray { data, shape }, value) if is_numeric_scalar(value) => {
+            validate_numeric_shape(data, shape)?;
+            let x = to_float(value)?;
+            Ok(XdlValue::MultiDimArray {
+                data: data.iter().map(|&y| matlab_atan2(y, x)).collect(),
+                shape: shape.clone(),
+            })
+        }
+        (value, XdlValue::MultiDimArray { data, shape }) if is_numeric_scalar(value) => {
+            validate_numeric_shape(data, shape)?;
+            let y = to_float(value)?;
+            Ok(XdlValue::MultiDimArray {
+                data: data.iter().map(|&x| matlab_atan2(y, x)).collect(),
+                shape: shape.clone(),
+            })
+        }
+        (XdlValue::Array(ys), XdlValue::Array(xs)) => Err(XdlError::InvalidArgument(format!(
+            "ATAN: Array arguments have different lengths ({} and {})",
+            ys.len(),
+            xs.len()
+        ))),
+        (
+            XdlValue::MultiDimArray { shape: y_shape, .. },
+            XdlValue::MultiDimArray { shape: x_shape, .. },
+        ) => Err(XdlError::InvalidArgument(format!(
+            "ATAN: Array arguments have different shapes ({y_shape:?} and {x_shape:?})"
+        ))),
+        (XdlValue::NestedArray(y_rows), XdlValue::NestedArray(x_rows)) => {
+            let y_rows = numeric_rows(y_rows)?;
+            let x_rows = numeric_rows(x_rows)?;
+            if y_rows.len() != x_rows.len()
+                || y_rows
+                    .iter()
+                    .zip(&x_rows)
+                    .any(|(ys, xs)| ys.len() != xs.len())
+            {
+                return Err(XdlError::InvalidArgument(
+                    "ATAN: Nested array arguments have different shapes".to_string(),
+                ));
+            }
+            Ok(XdlValue::NestedArray(
+                y_rows
+                    .iter()
+                    .zip(&x_rows)
+                    .map(|(ys, xs)| {
+                        XdlValue::Array(
+                            ys.iter()
+                                .zip(*xs)
+                                .map(|(&y, &x)| matlab_atan2(y, x))
+                                .collect(),
+                        )
+                    })
+                    .collect(),
+            ))
+        }
+        (XdlValue::NestedArray(rows), value) if is_numeric_scalar(value) => {
+            let x = to_float(value)?;
+            Ok(XdlValue::NestedArray(
+                numeric_rows(rows)?
+                    .into_iter()
+                    .map(|row| XdlValue::Array(row.iter().map(|&y| matlab_atan2(y, x)).collect()))
+                    .collect(),
+            ))
+        }
+        (value, XdlValue::NestedArray(rows)) if is_numeric_scalar(value) => {
+            let y = to_float(value)?;
+            Ok(XdlValue::NestedArray(
+                numeric_rows(rows)?
+                    .into_iter()
+                    .map(|row| XdlValue::Array(row.iter().map(|&x| matlab_atan2(y, x)).collect()))
+                    .collect(),
+            ))
+        }
+        (y, x) if is_numeric_scalar(y) && is_numeric_scalar(x) => {
+            let result = matlab_atan2(to_float(y)?, to_float(x)?);
+            Ok(from_float(result, y.gdl_type()))
+        }
+        (y, x) => Err(XdlError::TypeMismatch {
+            expected: "numeric scalars or same-shaped numeric arrays".to_string(),
+            actual: format!("{:?} and {:?}", y.gdl_type(), x.gdl_type()),
+        }),
+    }
+}
 
-    Ok(from_float(result, _args[0].gdl_type()))
+fn is_numeric_scalar(value: &XdlValue) -> bool {
+    matches!(
+        value,
+        XdlValue::Byte(_)
+            | XdlValue::Int(_)
+            | XdlValue::Long(_)
+            | XdlValue::Float(_)
+            | XdlValue::Double(_)
+            | XdlValue::UInt(_)
+            | XdlValue::ULong(_)
+            | XdlValue::Long64(_)
+            | XdlValue::ULong64(_)
+    )
+}
+
+fn matlab_atan2(y: f64, x: f64) -> f64 {
+    // MATLAB defines either signed-zero combination as a zero angle; IEEE
+    // atan2 distinguishes the sign of zero when x is negative.
+    if y == 0.0 && x == 0.0 {
+        0.0
+    } else {
+        y.atan2(x)
+    }
+}
+
+fn numeric_rows(rows: &[XdlValue]) -> XdlResult<Vec<&[f64]>> {
+    let numeric_rows = rows
+        .iter()
+        .map(|row| match row {
+            XdlValue::Array(values) => Ok(values.as_slice()),
+            other => Err(XdlError::TypeMismatch {
+                expected: "rectangular numeric matrix rows".to_string(),
+                actual: format!("{:?}", other.gdl_type()),
+            }),
+        })
+        .collect::<XdlResult<Vec<_>>>()?;
+    if numeric_rows
+        .first()
+        .is_some_and(|first| numeric_rows.iter().any(|row| row.len() != first.len()))
+    {
+        return Err(XdlError::InvalidArgument(
+            "ATAN: Nested array arguments must be rectangular".to_string(),
+        ));
+    }
+    Ok(numeric_rows)
+}
+
+fn validate_numeric_shape(data: &[f64], shape: &[usize]) -> XdlResult<()> {
+    let expected = shape
+        .iter()
+        .try_fold(1usize, |size, dimension| size.checked_mul(*dimension))
+        .ok_or_else(|| XdlError::DimensionError("ATAN: Array shape overflows".to_string()))?;
+    if expected != data.len() {
+        return Err(XdlError::DimensionError(format!(
+            "ATAN: Array shape {shape:?} requires {expected} values but contains {}",
+            data.len()
+        )));
+    }
+    Ok(())
 }
 
 /// SINH - Hyperbolic sine
@@ -1622,9 +1801,9 @@ pub fn randomu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let rand_val = ((a.wrapping_mul(seed).wrapping_add(c) % 1000000) as f64) / 1000000.0;
         Ok(XdlValue::Double(rand_val))
     } else {
-        // Array of random numbers
-        let n = args[1].to_long()? as usize;
-        let mut values = Vec::new();
+        let dims = random_dims(&args[1..], "RANDOMU")?;
+        let n = element_count(&dims, "RANDOMU")?;
+        let mut values = Vec::with_capacity(n);
         let mut current_seed = seed;
 
         for _i in 0..n {
@@ -1634,7 +1813,7 @@ pub fn randomu(args: &[XdlValue]) -> XdlResult<XdlValue> {
             let rand_val = ((current_seed % 1000000) as f64) / 1000000.0;
             values.push(rand_val);
         }
-        Ok(XdlValue::Array(values))
+        Ok(random_result(values, dims))
     }
 }
 
@@ -1680,9 +1859,9 @@ pub fn randomn(args: &[XdlValue]) -> XdlResult<XdlValue> {
         let (z0, _z1) = box_muller(u1, u2);
         Ok(XdlValue::Double(z0))
     } else {
-        // Array of random numbers
-        let n = args[1].to_long()? as usize;
-        let mut values = Vec::new();
+        let dims = random_dims(&args[1..], "RANDOMN")?;
+        let n = element_count(&dims, "RANDOMN")?;
+        let mut values = Vec::with_capacity(n);
         let mut current_seed = seed;
 
         for _i in 0..n.div_ceil(2) {
@@ -1695,7 +1874,44 @@ pub fn randomn(args: &[XdlValue]) -> XdlResult<XdlValue> {
             }
         }
         values.truncate(n);
-        Ok(XdlValue::Array(values))
+        Ok(random_result(values, dims))
+    }
+}
+
+/// Dimensions after the seed in `RANDOMU(seed, d1, d2, ...)`. Every one counts.
+/// Reading only the first made `RANDOMN(1, 1, 2000)` return a single value.
+fn random_dims(dim_args: &[XdlValue], name: &str) -> XdlResult<Vec<usize>> {
+    dim_args
+        .iter()
+        .map(|arg| {
+            let d = arg.to_long()? as i64;
+            usize::try_from(d).ok().filter(|&d| d >= 1).ok_or_else(|| {
+                XdlError::InvalidArgument(format!("{name}: dimensions must be positive, got {d}"))
+            })
+        })
+        .collect()
+}
+
+/// Total element count, checked before any allocation so a huge request
+/// fails cleanly instead of overflowing.
+fn element_count(dims: &[usize], name: &str) -> XdlResult<usize> {
+    dims.iter()
+        .try_fold(1usize, |acc, &d| acc.checked_mul(d))
+        .ok_or_else(|| XdlError::InvalidArgument(format!("{name}: array is too large")))
+}
+
+/// A vector-shaped result (one non-unit dimension, e.g. 1 x N) is returned as
+/// a flat array, which the rest of the stdlib accepts (MEAN rejects
+/// MultiDimArray). Only a genuinely multi-dimensional result is shaped.
+fn random_result(values: Vec<f64>, dims: Vec<usize>) -> XdlValue {
+    let non_unit = dims.iter().filter(|&&d| d != 1).count();
+    if non_unit <= 1 {
+        XdlValue::Array(values)
+    } else {
+        XdlValue::MultiDimArray {
+            data: values,
+            shape: dims,
+        }
     }
 }
 
@@ -3129,4 +3345,169 @@ pub fn frexp_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
     let mantissa = f64::from_bits((bits & 0x800fffffffffffff) | 0x3fe0000000000000);
 
     Ok(XdlValue::Array(vec![mantissa, exp as f64]))
+}
+
+#[cfg(test)]
+mod random_shape_tests {
+    use super::*;
+
+    #[test]
+    fn randomn_takes_every_dimension() {
+        let v = randomn(&[XdlValue::Long(1), XdlValue::Long(4), XdlValue::Long(500)]).unwrap();
+        match v {
+            XdlValue::MultiDimArray { data, shape } => {
+                assert_eq!(shape, vec![4, 500]);
+                assert_eq!(data.len(), 2000);
+                let mean = data.iter().sum::<f64>() / 2000.0;
+                assert!(mean.abs() < 0.2, "mean {mean}");
+                assert!(
+                    data.iter().any(|&x| (x - data[0]).abs() > 1e-9),
+                    "constant output"
+                );
+            }
+            other => panic!("expected MultiDimArray, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn randomu_takes_every_dimension() {
+        let v = randomu(&[XdlValue::Long(7), XdlValue::Long(3), XdlValue::Long(4)]).unwrap();
+        match v {
+            XdlValue::MultiDimArray { data, shape } => {
+                assert_eq!(shape, vec![3, 4]);
+                assert_eq!(data.len(), 12);
+            }
+            other => panic!("expected MultiDimArray, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn row_vector_dimensions_are_flat_arrays() {
+        let v = randomn(&[XdlValue::Long(1), XdlValue::Long(1), XdlValue::Long(2000)]).unwrap();
+        assert!(matches!(v, XdlValue::Array(ref a) if a.len() == 2000));
+    }
+
+    #[test]
+    fn one_dimension_stays_a_vector() {
+        let v = randomu(&[XdlValue::Long(7), XdlValue::Long(5)]).unwrap();
+        assert!(matches!(v, XdlValue::Array(ref a) if a.len() == 5));
+    }
+
+    #[test]
+    fn non_positive_dimension_is_an_error() {
+        assert!(randomn(&[XdlValue::Long(1), XdlValue::Long(0)]).is_err());
+        assert!(randomu(&[XdlValue::Long(1), XdlValue::Long(-3)]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod atan2_tests {
+    use super::*;
+
+    #[test]
+    fn atan2_maps_equal_length_vectors_elementwise() {
+        let result = atan2(&[
+            XdlValue::Array(vec![0.0, 1.0, -1.0]),
+            XdlValue::Array(vec![1.0, 0.0, 0.0]),
+        ])
+        .unwrap();
+        assert_eq!(
+            result,
+            XdlValue::Array(vec![
+                0.0,
+                std::f64::consts::FRAC_PI_2,
+                -std::f64::consts::FRAC_PI_2
+            ])
+        );
+    }
+
+    #[test]
+    fn atan2_expands_a_numeric_scalar_across_a_vector() {
+        let result = atan2(&[XdlValue::Array(vec![1.0, -1.0]), XdlValue::Double(0.0)]).unwrap();
+        assert_eq!(
+            result,
+            XdlValue::Array(vec![
+                std::f64::consts::FRAC_PI_2,
+                -std::f64::consts::FRAC_PI_2
+            ])
+        );
+    }
+
+    #[test]
+    fn atan2_preserves_multidimensional_shape() {
+        let result = atan2(&[
+            XdlValue::MultiDimArray {
+                data: vec![1.0, -1.0, 1.0, -1.0],
+                shape: vec![2, 2],
+            },
+            XdlValue::Double(0.0),
+        ])
+        .unwrap();
+        assert!(matches!(result, XdlValue::MultiDimArray { data, shape }
+            if shape == vec![2, 2]
+                && data == vec![std::f64::consts::FRAC_PI_2, -std::f64::consts::FRAC_PI_2,
+                                std::f64::consts::FRAC_PI_2, -std::f64::consts::FRAC_PI_2]));
+    }
+
+    #[test]
+    fn atan2_handles_nested_matrix_literals_and_scalar_expansion() {
+        let matrix = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![0.0, 1.0]),
+            XdlValue::Array(vec![-1.0, 2.0]),
+        ]);
+        let result = atan2(&[matrix, XdlValue::Double(0.0)]).unwrap();
+        assert_eq!(
+            result,
+            XdlValue::NestedArray(vec![
+                XdlValue::Array(vec![0.0, std::f64::consts::FRAC_PI_2]),
+                XdlValue::Array(vec![
+                    -std::f64::consts::FRAC_PI_2,
+                    std::f64::consts::FRAC_PI_2
+                ]),
+            ])
+        );
+    }
+
+    #[test]
+    fn atan2_maps_equal_shape_nested_matrices_elementwise() {
+        let ys = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![0.0, 1.0]),
+            XdlValue::Array(vec![-1.0, 0.0]),
+        ]);
+        let xs = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 0.0]),
+            XdlValue::Array(vec![0.0, -1.0]),
+        ]);
+        assert_eq!(
+            atan2(&[ys, xs]).unwrap(),
+            XdlValue::NestedArray(vec![
+                XdlValue::Array(vec![0.0, std::f64::consts::FRAC_PI_2]),
+                XdlValue::Array(vec![-std::f64::consts::FRAC_PI_2, std::f64::consts::PI]),
+            ])
+        );
+    }
+
+    #[test]
+    fn atan2_rejects_inconsistent_multidimensional_storage() {
+        let malformed = XdlValue::MultiDimArray {
+            data: vec![1.0, 2.0],
+            shape: vec![2, 2],
+        };
+        assert!(atan2(&[malformed, XdlValue::Double(0.0)]).is_err());
+    }
+
+    #[test]
+    fn atan2_rejects_mismatched_array_shapes() {
+        assert!(atan2(&[XdlValue::Array(vec![0.0, 1.0]), XdlValue::Array(vec![1.0]),]).is_err());
+    }
+
+    #[test]
+    fn atan2_matches_matlab_signed_zero_convention() {
+        let result = atan2(&[
+            XdlValue::Array(vec![0.0, -0.0]),
+            XdlValue::Array(vec![-0.0, -0.0]),
+        ])
+        .unwrap();
+        assert_eq!(result, XdlValue::Array(vec![0.0, 0.0]));
+    }
 }

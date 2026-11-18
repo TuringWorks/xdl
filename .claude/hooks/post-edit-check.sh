@@ -15,7 +15,10 @@
 
 set -uo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Physical path (pwd -P): compared against realpath below. A logical path
+# (pwd) through a symlinked checkout made the containment check fail and the
+# hook silently skip every edit.
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 f="$(jq -r '.tool_input.file_path // empty' 2>/dev/null)"
 [ -n "$f" ] || exit 0
 

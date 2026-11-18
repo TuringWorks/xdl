@@ -4,6 +4,10 @@
 **Branch**: main
 **Total Files Tested**: 106
 
+> This is a dated validation snapshot, not a current release certification.
+> The pass/fail/timeout counts are evidence for that run only and should be
+> regenerated after source or environment changes.
+
 ## Executive Summary
 
 - ✅ **Passed**: 41 files (38.7%)

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Test script to verify MATLAB .m files can be executed directly by XDL
-# This tests the full MATLAB compatibility pipeline
+# Smoke-tests the transpile-and-execute path for selected MATLAB fixtures.
+# Successful execution does not establish numerical or language parity.
 
 set -e  # Exit on error
 
@@ -64,10 +65,10 @@ echo "======================================"
 echo "MATLAB EXECUTION TEST SUMMARY"
 echo "======================================"
 echo ""
-echo "If all tests passed above, XDL successfully:"
+echo "If all selected fixtures passed, XDL demonstrated that it can:"
 echo "✓ Transpiles MATLAB .m files to XDL syntax"
 echo "✓ Executes transpiled code without errors"
-echo "✓ Maintains MATLAB semantics and behavior"
-echo "✓ Provides full MATLAB language compatibility"
+echo "! These smoke tests do not compare numerical results with MATLAB"
+echo "! They do not establish full MATLAB language or toolbox compatibility"
 echo ""
 echo "MATLAB files can be executed directly by XDL!"

@@ -53,7 +53,7 @@ pub fn plot_2d(
 ) -> XdlResult<()> {
     // Get window dimensions from graphics state
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -212,7 +212,7 @@ pub fn histogram_plot(
 
     // Get window dimensions
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -254,7 +254,7 @@ pub fn histogram_plot(
 pub fn bar_plot(values: Vec<f64>, config: Plot2DConfig, filename: &str) -> XdlResult<()> {
     // Get window dimensions
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -312,7 +312,7 @@ pub fn plot_with_errors(
     // Then add error bars (re-open the file and overlay)
     // For now, create a new plot with error bars
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };

@@ -16,7 +16,17 @@ xdl-viz3d-web = { version = "0.1.1", path = "../xdl-viz3d-web" }
 xdl-viz3d-threejs = { version = "0.1.1", path = "../xdl-viz3d-threejs" }
 xdl-charts = { version = "0.1.1", path = "../xdl-charts" }
 xdl-amp = { version = "0.1.1", path = "../xdl-amp" }
+xdl-gnc-core = { version = "0.1.1", path = "../xdl-gnc-core" }
+xdl-gnc-guidance = { version = "0.1.1", path = "../xdl-gnc-guidance" }
+xdl-gnc-control = { version = "0.1.1", path = "../xdl-gnc-control" }
+xdl-gnc-actuators = { version = "0.1.1", path = "../xdl-gnc-actuators" }
+xdl-gnc-navigation = { version = "0.1.1", path = "../xdl-gnc-navigation" }
+xdl-gnc-simulation = { version = "0.1.1", path = "../xdl-gnc-simulation" }
+xdl-gnc-telemetry = { version = "0.1.1", path = "../xdl-gnc-telemetry" }
+xdl-model = { version = "0.1.1", path = "../xdl-model" }
+xdl-sim = { version = "0.1.1", path = "../xdl-sim" }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 num-complex = { workspace = true }
@@ -31,6 +41,7 @@ rustfft = "6.1"
 nalgebra = "0.32"
 regex = "1.10"
 libm = "0.2"
+csv = "1.4"
 
 # RustPython - embedded Python interpreter (pure Rust)
 rustpython = { workspace = true, optional = true }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Small deterministic navigation estimators for the XDL GNC vertical slice.
@@ -9,11 +9,13 @@
 //! sophisticated estimator.
 
 use serde::{Deserialize, Serialize};
-use xdl_gnc_core::{GncError, Quality, Quaternion, SignalStatus, StepEvent, Timestamp, Vec3};
+use xdl_gnc_core::{
+    FrameId, GncError, Quality, Quaternion, SignalStatus, StepEvent, Timestamp, Vec3,
+};
 use xdl_gnc_simulation::{GnssMeasurement, ImuMeasurement, KinematicState};
 
 mod replay;
-pub use replay::replay_alpha_beta;
+pub use replay::{replay_alpha_beta, replay_alpha_beta_batch, ReplayJob};
 
 /// GNSS quality policy shared by every estimator in this crate.
 ///
@@ -291,6 +293,10 @@ pub struct ErrorStateEkf {
     nominal: StrapdownState,
     covariance: Covariance15,
     gravity: Vec3,
+    /// Frame of the nominal position/velocity; GNSS must be expressed in it.
+    navigation_frame: FrameId,
+    /// Frame of the IMU specific force and angular rate.
+    body_frame: FrameId,
 }
 
 impl ErrorStateEkf {
@@ -299,6 +305,8 @@ impl ErrorStateEkf {
         nominal: StrapdownState,
         covariance: Covariance15,
         gravity: Vec3,
+        navigation_frame: FrameId,
+        body_frame: FrameId,
     ) -> Result<Self, GncError> {
         validate_covariance15(covariance)?;
         if !gravity.is_finite() {
@@ -311,6 +319,8 @@ impl ErrorStateEkf {
             nominal,
             covariance,
             gravity,
+            navigation_frame,
+            body_frame,
         })
     }
 
@@ -323,6 +333,11 @@ impl ErrorStateEkf {
     }
 
     pub fn predict(&mut self, measurement: ImuMeasurement) -> Result<(), GncError> {
+        require_frame(
+            self.body_frame,
+            measurement.frame,
+            "error-state EKF IMU measurement",
+        )?;
         let dt = measurement
             .status
             .timestamp
@@ -394,22 +409,34 @@ impl ErrorStateEkf {
         measurement: GnssMeasurement,
     ) -> Result<ErrorStateEstimate, GncError> {
         let events = accept_gnss_quality(&measurement, "error-state EKF GNSS measurement")?;
+        require_frame(
+            self.navigation_frame,
+            measurement.frame,
+            "error-state EKF GNSS measurement",
+        )?;
         if measurement.status.timestamp != self.nominal.timestamp {
             return Err(GncError::InvalidTime(
                 "predict error-state EKF to GNSS timestamp before updating".to_string(),
             ));
         }
+        // Prior innovations, reported to the caller.
         let position_innovation = measurement.position - self.nominal.position;
         let velocity_innovation = measurement.velocity - self.nominal.velocity;
+        // Recompute each residual from the nominal state left by the previous
+        // scalar update (injection moves it), not from the prior state.
         for axis in 0..3 {
+            let position_residual =
+                component(measurement.position, axis)? - component(self.nominal.position, axis)?;
             self.scalar_update(
                 axis,
-                component(position_innovation, axis)?,
+                position_residual,
                 self.config.position_measurement_noise,
             )?;
+            let velocity_residual =
+                component(measurement.velocity, axis)? - component(self.nominal.velocity, axis)?;
             self.scalar_update(
                 axis + 3,
-                component(velocity_innovation, axis)?,
+                velocity_residual,
                 self.config.velocity_measurement_noise,
             )?;
         }
@@ -621,17 +648,24 @@ impl PositionVelocityEkf {
             ));
         }
 
+        // Prior innovations, reported to the caller.
         let position_innovation = measurement.position - self.state.position;
         let velocity_innovation = measurement.velocity - self.state.velocity;
+        // Each scalar update must see the state left by the previous one; a
+        // residual computed once before the loop would be stale for axes 1+.
         for axis in 0..3 {
+            let position_residual =
+                component(measurement.position, axis)? - component(self.state.position, axis)?;
             self.scalar_update(
                 axis,
-                component(position_innovation, axis)?,
+                position_residual,
                 self.config.position_measurement_noise,
             )?;
+            let velocity_residual =
+                component(measurement.velocity, axis)? - component(self.state.velocity, axis)?;
             self.scalar_update(
                 axis + 3,
-                component(velocity_innovation, axis)?,
+                velocity_residual,
                 self.config.velocity_measurement_noise,
             )?;
         }
@@ -708,6 +742,69 @@ fn component(value: Vec3, index: usize) -> Result<f64, GncError> {
     }
 }
 
+/// Rejects a matrix that is not symmetric or not positive semi-definite.
+///
+/// Tolerance is relative to the largest magnitude entry. Positive semi-definite
+/// is tested by diagonally pivoted LDL^T: once every remaining pivot is ~0, the
+/// remaining block must be ~0 too, otherwise a negative direction was hidden.
+fn check_symmetric_psd<const N: usize>(
+    matrix: &[[f64; N]; N],
+    context: &str,
+) -> Result<(), GncError> {
+    let not_psd = |reason: &str| GncError::InvalidValue {
+        context: context.to_string(),
+        reason: reason.to_string(),
+    };
+    let scale = matrix
+        .iter()
+        .flatten()
+        .fold(1.0_f64, |acc, value| acc.max(value.abs()));
+    let tolerance = 1e-9 * scale;
+
+    for (row_index, row) in matrix.iter().enumerate() {
+        for (column_index, value) in row.iter().enumerate().skip(row_index + 1) {
+            if (value - matrix[column_index][row_index]).abs() > tolerance {
+                return Err(not_psd("covariance is not symmetric"));
+            }
+        }
+    }
+
+    let mut work = *matrix;
+    for pivot_index in 0..N {
+        let largest = (pivot_index..N)
+            .max_by(|&i, &j| work[i][i].total_cmp(&work[j][j]))
+            .unwrap_or(pivot_index);
+        work.swap(pivot_index, largest);
+        for row in work.iter_mut() {
+            row.swap(pivot_index, largest);
+        }
+        let pivot = work[pivot_index][pivot_index];
+        if pivot < -tolerance {
+            return Err(not_psd("covariance is not positive semi-definite"));
+        }
+        if pivot <= tolerance {
+            let remaining_is_zero = work[pivot_index..].iter().all(|row| {
+                row[pivot_index..]
+                    .iter()
+                    .all(|value| value.abs() <= tolerance)
+            });
+            if !remaining_is_zero {
+                return Err(not_psd("covariance is not positive semi-definite"));
+            }
+            break;
+        }
+        let pivot_row = work[pivot_index];
+        for row in work.iter_mut().skip(pivot_index + 1) {
+            let factor = row[pivot_index] / pivot;
+            for (value, pivot_value) in row[pivot_index..].iter_mut().zip(&pivot_row[pivot_index..])
+            {
+                *value -= factor * pivot_value;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn validate_covariance(covariance: Covariance6) -> Result<(), GncError> {
     for row in covariance {
         if !row.iter().all(|value| value.is_finite()) {
@@ -726,6 +823,7 @@ fn validate_covariance(covariance: Covariance6) -> Result<(), GncError> {
             reason: "diagonal variances cannot be negative".to_string(),
         });
     }
+    check_symmetric_psd(&covariance, "EKF covariance")?;
     Ok(())
 }
 
@@ -807,6 +905,7 @@ fn validate_covariance15(covariance: Covariance15) -> Result<(), GncError> {
             reason: "diagonal variances cannot be negative".to_string(),
         });
     }
+    check_symmetric_psd(&covariance, "error-state EKF covariance")?;
     Ok(())
 }
 
@@ -1113,6 +1212,8 @@ mod tests {
             nominal,
             diagonal_covariance15(4.0),
             Vec3::new(0.0, 0.0, -9.81),
+            FrameId::Inertial,
+            FrameId::Inertial,
         )
         .expect("valid covariance");
         let timestamp = Timestamp::from_seconds(1.0).expect("finite timestamp");
@@ -1151,9 +1252,15 @@ mod tests {
             Vec3::ZERO,
         )
         .expect("finite nominal state");
-        let mut filter =
-            ErrorStateEkf::new(config, nominal, diagonal_covariance15(1.0), Vec3::ZERO)
-                .expect("valid covariance");
+        let mut filter = ErrorStateEkf::new(
+            config,
+            nominal,
+            diagonal_covariance15(1.0),
+            Vec3::ZERO,
+            FrameId::Inertial,
+            FrameId::Inertial,
+        )
+        .expect("valid covariance");
         let imu = ImuMeasurement::new(
             Timestamp::from_seconds(1.0).expect("finite timestamp"),
             FrameId::Inertial,
@@ -1279,5 +1386,215 @@ mod policy_tests {
             .update_gnss(gnss_at(1.0, Quality::Degraded))
             .expect("degraded input is accepted");
         assert_eq!(estimate.events, vec![StepEvent::DegradedInput]);
+    }
+}
+
+#[cfg(test)]
+mod sequential_update_tests {
+    use super::*;
+    use xdl_gnc_core::FrameId;
+
+    // Joint (batch) posterior for a position/velocity pair with prior
+    // P = [[2, 1], [1, 3]], measurement noise R = I, innovation y = (1, 2).
+    // S = P + R, K = P S^-1, x+ = x + K y, P+ = P - P S^-1 P.
+    // Hand-computed: x+ = (9/11, 17/11), P+[0][0] = 7/11.
+    // A sequential update must reproduce these exactly; the stale-innovation
+    // version gives velocity 59/33 instead of 17/11.
+
+    fn prior_covariance6() -> Covariance6 {
+        let mut p = [[0.0; 6]; 6];
+        p[0][0] = 2.0;
+        p[3][3] = 3.0;
+        p[0][3] = 1.0;
+        p[3][0] = 1.0;
+        for axis in [1, 2, 4, 5] {
+            p[axis][axis] = 0.1;
+        }
+        p
+    }
+
+    #[test]
+    fn ekf_sequential_update_matches_joint_posterior() {
+        let config = EkfConfig::new(0.01, 1.0, 1.0).expect("noise");
+        let initial =
+            KinematicState::new(Timestamp::ZERO, FrameId::Inertial, Vec3::ZERO, Vec3::ZERO)
+                .expect("finite state");
+        let mut ekf =
+            PositionVelocityEkf::new(config, initial, prior_covariance6()).expect("covariance");
+        let measurement = GnssMeasurement::new(
+            Timestamp::ZERO,
+            FrameId::Inertial,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(2.0, 0.0, 0.0),
+        )
+        .expect("finite GNSS");
+        let estimate = ekf.update_gnss(measurement).expect("update");
+        let tol = 1e-12;
+        assert!((estimate.state.position.x - 9.0 / 11.0).abs() < tol);
+        assert!((estimate.state.velocity.x - 17.0 / 11.0).abs() < tol);
+        assert!((estimate.covariance[0][0] - 7.0 / 11.0).abs() < tol);
+        // Reported innovations are the prior ones.
+        assert!((estimate.position_innovation.x - 1.0).abs() < tol);
+        assert!((estimate.velocity_innovation.x - 2.0).abs() < tol);
+    }
+
+    #[test]
+    fn error_state_sequential_update_matches_joint_posterior() {
+        let config =
+            ErrorStateEkfConfig::new(0.01, 0.001, 0.0001, 0.0001, 1.0, 1.0).expect("noise");
+        let nominal = StrapdownState::new(
+            Timestamp::ZERO,
+            Vec3::ZERO,
+            Vec3::ZERO,
+            Quaternion::IDENTITY,
+            Vec3::ZERO,
+            Vec3::ZERO,
+        )
+        .expect("finite state");
+        let mut covariance = prior_covariance6_as_15();
+        covariance[9][9] = 0.1;
+        let mut ekf = ErrorStateEkf::new(
+            config,
+            nominal,
+            covariance,
+            Vec3::new(0.0, 0.0, -9.81),
+            FrameId::Inertial,
+            FrameId::Inertial,
+        )
+        .expect("EKF");
+        let measurement = GnssMeasurement::new(
+            Timestamp::ZERO,
+            FrameId::Inertial,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(2.0, 0.0, 0.0),
+        )
+        .expect("finite GNSS");
+        let estimate = ekf.update_gnss(measurement).expect("update");
+        let tol = 1e-12;
+        assert!((estimate.nominal.position.x - 9.0 / 11.0).abs() < tol);
+        assert!((estimate.nominal.velocity.x - 17.0 / 11.0).abs() < tol);
+        assert!((estimate.covariance[0][0] - 7.0 / 11.0).abs() < tol);
+    }
+
+    fn prior_covariance6_as_15() -> Covariance15 {
+        let mut p = [[0.0; 15]; 15];
+        p[0][0] = 2.0;
+        p[3][3] = 3.0;
+        p[0][3] = 1.0;
+        p[3][0] = 1.0;
+        for axis in [1, 2, 4, 5] {
+            p[axis][axis] = 0.1;
+        }
+        for (index, row) in p.iter_mut().enumerate().skip(6) {
+            row[index] = 0.1;
+        }
+        p
+    }
+}
+
+#[cfg(test)]
+mod validation_tests {
+    use super::*;
+
+    fn zeros6() -> Covariance6 {
+        [[0.0; 6]; 6]
+    }
+
+    #[test]
+    fn covariance_rejects_indefinite_matrix_with_positive_diagonal() {
+        // Eigenvalues 3 and -1: diagonal is positive, but not PSD.
+        let mut p = zeros6();
+        p[0][0] = 1.0;
+        p[1][1] = 1.0;
+        p[0][1] = 2.0;
+        p[1][0] = 2.0;
+        assert!(validate_covariance(p).is_err());
+    }
+
+    #[test]
+    fn covariance_accepts_singular_positive_semidefinite_matrix() {
+        // Rank one: eigenvalues 2 and 0.
+        let mut p = zeros6();
+        p[0][0] = 1.0;
+        p[1][1] = 1.0;
+        p[0][1] = 1.0;
+        p[1][0] = 1.0;
+        assert!(validate_covariance(p).is_ok());
+    }
+
+    #[test]
+    fn covariance_rejects_asymmetric_matrix() {
+        let mut p = zeros6();
+        p[0][0] = 1.0;
+        p[1][1] = 1.0;
+        p[0][1] = 0.5;
+        assert!(validate_covariance(p).is_err());
+    }
+
+    #[test]
+    fn error_state_ekf_rejects_gnss_in_wrong_frame() {
+        let config =
+            ErrorStateEkfConfig::new(0.01, 0.001, 0.0001, 0.0001, 1.0, 1.0).expect("noise");
+        let nominal = StrapdownState::new(
+            Timestamp::ZERO,
+            Vec3::ZERO,
+            Vec3::ZERO,
+            Quaternion::IDENTITY,
+            Vec3::ZERO,
+            Vec3::ZERO,
+        )
+        .expect("state");
+        let mut covariance = [[0.0; 15]; 15];
+        for (index, row) in covariance.iter_mut().enumerate() {
+            row[index] = 0.1;
+        }
+        let mut ekf = ErrorStateEkf::new(
+            config,
+            nominal,
+            covariance,
+            Vec3::new(0.0, 0.0, -9.81),
+            FrameId::Inertial,
+            FrameId::Body,
+        )
+        .expect("EKF");
+        let wrong = GnssMeasurement::new(Timestamp::ZERO, FrameId::Body, Vec3::ZERO, Vec3::ZERO)
+            .expect("GNSS");
+        assert!(ekf.update_gnss(wrong).is_err());
+    }
+
+    #[test]
+    fn error_state_ekf_rejects_imu_in_wrong_frame() {
+        let config =
+            ErrorStateEkfConfig::new(0.01, 0.001, 0.0001, 0.0001, 1.0, 1.0).expect("noise");
+        let nominal = StrapdownState::new(
+            Timestamp::ZERO,
+            Vec3::ZERO,
+            Vec3::ZERO,
+            Quaternion::IDENTITY,
+            Vec3::ZERO,
+            Vec3::ZERO,
+        )
+        .expect("state");
+        let mut covariance = [[0.0; 15]; 15];
+        for (index, row) in covariance.iter_mut().enumerate() {
+            row[index] = 0.1;
+        }
+        let mut ekf = ErrorStateEkf::new(
+            config,
+            nominal,
+            covariance,
+            Vec3::new(0.0, 0.0, -9.81),
+            FrameId::Inertial,
+            FrameId::Body,
+        )
+        .expect("EKF");
+        let imu = ImuMeasurement::new(
+            Timestamp::from_seconds(0.1).expect("finite timestamp"),
+            FrameId::Inertial,
+            Vec3::ZERO,
+            Vec3::ZERO,
+        )
+        .expect("IMU");
+        assert!(ekf.predict(imu).is_err());
     }
 }

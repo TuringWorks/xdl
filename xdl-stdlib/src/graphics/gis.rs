@@ -311,7 +311,7 @@ pub fn draw_map(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -376,7 +376,7 @@ pub fn draw_graticule(
     filename: &str,
 ) -> XdlResult<()> {
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -461,7 +461,7 @@ pub fn map_scatter(
     }
 
     let (width, height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };

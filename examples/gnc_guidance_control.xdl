@@ -1,0 +1,36 @@
+; XDL GNC vertical slice example
+; Demonstrates the native guidance, PID, and actuator libraries through XDL.
+;
+; Units:
+;   position / waypoint: m
+;   desired velocity:    m/s
+;   PID / actuator value: commanded acceleration
+;   timestamps:          integer nanoseconds
+
+PRINT, '=== XDL GNC GUIDANCE / CONTROL EXAMPLE ==='
+
+position = GNC_VEC3(0.0, 0.0, 0.0)
+waypoint = GNC_VEC3(10.0, 0.0, 0.0)
+
+guidance = GNC_WAYPOINT(position, waypoint, 100000000, 2.0, 0.5)
+PRINT, 'Distance to waypoint (m): ', guidance.DISTANCE
+PRINT, 'Desired velocity (m/s): ', guidance.DESIRED_VELOCITY
+PRINT, 'Target reached: ', guidance.REACHED
+
+; Explicit PID state: integral and previous error/timestamp are supplied by
+; the host, then returned fields can be fed into the next call.
+pid = GNC_PID_STEP(100000000, guidance.DESIRED_VELOCITY[0], 0.0, $
+                   1.0, 0.2, 0.05, -5.0, 5.0, -10.0, 10.0, $
+                   0.0, 0.0, 0)
+PRINT, 'PID command (m/s^2): ', pid.COMMAND
+PRINT, 'PID error: ', pid.ERROR
+PRINT, 'PID integral state: ', pid.INTEGRAL
+PRINT, 'PID saturated: ', pid.SATURATED
+
+actuator = GNC_ACTUATOR_STEP(100000000, pid.COMMAND, 0.2, -5.0, 5.0, $
+                             20.0, 0, 0.0)
+PRINT, 'Applied actuator command (m/s^2): ', actuator.OUTPUT
+PRINT, 'Actuator rate limited: ', actuator.RATE_LIMITED
+PRINT, 'Actuator saturated: ', actuator.SATURATED
+
+PRINT, '=== END GNC EXAMPLE ==='

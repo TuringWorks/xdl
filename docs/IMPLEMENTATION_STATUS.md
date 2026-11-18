@@ -1,27 +1,34 @@
 # XDL Standard Library Implementation Status
 
-**Last Updated:** 2025-12-31
+**Last Updated:** 2026-11-12
+
+> This is a historical implementation inventory, not a certification of
+> feature completeness or production readiness. “Implemented” means that code
+> exists in the repository; it does not imply complete semantics, backend
+> coverage, numerical validation, or toolbox parity. Use the root README and
+> [the scientific-computing gap analysis](VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS.md)
+> for the current product-level status.
 
 ## Overview
 This document tracks the implementation progress of the XDL (eXtensible Data Language) standard library, a Rust-based implementation of IDL/GDL functionality.
 
 ## Completion Summary
 
-### Fully Completed Phases ✅
-- **Phase 5: Array Manipulation** (100%)
-- **Phase 6: Mathematics** (100%) ✅ NEW
-- **Phase 7: Statistics** (100%) - GPU-accelerated ✅ NEW
-- **Phase 8: String Operations** (100%)
-- **Phase 9: File I/O** (100%) ✅ NEW
-- **Phase 10: Image I/O** (100%) ✅ NEW - PNG, JPEG, TIFF, BMP, GIF
-- **Phase 11: Signal Processing** (100%) ✅ NEW
-- **Phase 12: Linear Algebra** (100%) ✅ NEW
-- **Phase 13: Image Processing** (100%) ✅ NEW
-- **Phase 14: Time & Date** (100%) ✅ NEW
-- **Phase 15: Type Conversion** (100%) ✅ NEW - Pointer/Object management
-- **Phase 16: Data Structures** (100%) ✅ NEW - LIST, ORDEREDHASH, CREATE_STRUCT
-- **Phase 17: Complex Numbers** (100%) ✅ NEW
-- **Phase 18: System & Control** (100%) ✅ NEW
+### Implemented areas (depth varies)
+- **Phase 5: Array Manipulation** — broad implementation; edge cases remain
+- **Phase 6: Mathematics** — broad implementation; numerical conformance remains
+- **Phase 7: Statistics** — broad implementation; backend depth varies
+- **Phase 8: String Operations** — broad implementation; edge cases remain
+- **Phase 9: File I/O** — broad implementation; format coverage varies
+- **Phase 10: Image I/O** — common formats have implementations; display and round trips need validation
+- **Phase 11: Signal Processing** — broad implementation; streaming and reference coverage remain
+- **Phase 12: Linear Algebra** — nalgebra-backed implementation; sparse/distributed support remains
+- **Phase 13: Image Processing** — implemented subset; algorithm and dtype coverage varies
+- **Phase 14: Time & Date** — implemented subset
+- **Phase 15: Type Conversion** — implemented subset; pointer/object semantics require validation
+- **Phase 16: Data Structures** — implemented subset
+- **Phase 17: Complex Numbers** — implementation exists; edge cases remain
+- **Phase 18: System & Control** — implemented subset; failure semantics require validation
 
 ### Object-Oriented Syntax ✅ NEW
 - **Array Methods**: 17+ methods (`arr->Sum()`, `arr->Mean()`, `arr->Sort()`, etc.)
@@ -29,7 +36,7 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 - **DataFrame Methods**: 15+ methods (`df->Head()`, `df->Column()`, etc.)
 - **Struct Field Access**: `point.x`, `point.y`
 
-### MATLAB Compatibility ✅
+### MATLAB Compatibility (subset)
 - **MATLAB Transpiler**: 28/28 unit tests passing
 - **Basic MATLAB Execution**: Working (.m files execute directly)
 - **Function Mapping**: ~80 MATLAB functions mapped to XDL equivalents
@@ -38,7 +45,7 @@ This document tracks the implementation progress of the XDL (eXtensible Data Lan
 ### GPU Acceleration ✅ NEW
 - **xdl-amp Backend**: Multi-backend GPU support
 - **Accelerated Functions**: MIN, MAX, MEAN, TOTAL, MEDIAN, VARIANCE, STDDEV
-- **Performance**: 10-50x speedup for large arrays (>10K elements)
+- **Performance**: selected benchmarks show acceleration on particular hardware and workloads; no general speedup guarantee
 - **Smart Dispatch**: Automatic CPU/GPU selection based on array size
 
 ### xdl-amp GPU Backends
@@ -93,7 +100,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ## Detailed Phase Breakdown
 
-### Phase 5: Array Manipulation ✅ 100%
+### Phase 5: Array Manipulation — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -118,7 +125,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 6: Mathematics ✅ 100%
+### Phase 6: Mathematics — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -165,7 +172,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 7: Statistics ✅ 100%
+### Phase 7: Statistics — implemented subset
 **Status:** Complete with GPU Acceleration
 
 **Implemented Functions:**
@@ -191,7 +198,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 - `RANDOM_POISSON` - Poisson random numbers
 
 **GPU-Accelerated Functions (via xdl-amp):**
-- `MIN`, `MAX`, `MEAN`, `TOTAL` - 10-50x speedup for large arrays
+- `MIN`, `MAX`, `MEAN`, `TOTAL` - GPU acceleration paths exist; speedups depend on backend, device, and array size
 - `MEDIAN`, `VARIANCE`, `STDDEV` - SIMD-optimized with parallel execution
 
 **Probability Distributions:**
@@ -203,7 +210,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 8: String Operations ✅ 100%
+### Phase 8: String Operations — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -234,7 +241,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 9: File I/O ✅ 100%
+### Phase 9: File I/O — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -270,7 +277,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 12: Linear Algebra ✅ 100%
+### Phase 12: Linear Algebra — implemented subset
 **Status:** Complete with nalgebra
 
 **Implemented Functions:**
@@ -300,7 +307,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 11: Signal Processing ✅ 100%
+### Phase 11: Signal Processing — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -328,7 +335,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 13: Image Processing ✅ 100%
+### Phase 13: Image Processing — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -364,7 +371,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 14: Time & Date ✅ 100%
+### Phase 14: Time & Date — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -382,7 +389,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 15: Type Conversion ✅ 100%
+### Phase 15: Type Conversion — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -408,7 +415,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 16: Data Structures ✅ 100%
+### Phase 16: Data Structures — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -435,7 +442,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 17: Complex Numbers ✅ 100%
+### Phase 17: Complex Numbers — implementation exists; edge cases remain
 **Status:** Complete
 
 **Implemented Functions:**
@@ -456,7 +463,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ---
 
-### Phase 18: System & Control ✅ 100%
+### Phase 18: System & Control — implemented subset
 **Status:** Complete
 
 **Implemented Functions:**
@@ -485,7 +492,7 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 
 ## Deferred/Skipped Phases
 
-### Phase 10: Image I/O ✅ 100%
+### Phase 10: Image I/O — implemented subset
 **Status:** Complete (requires `image-io` feature)
 
 **Implemented Functions:**
@@ -510,13 +517,13 @@ Run benchmark: `cargo run --example mlx_benchmark --features mlx -p xdl-amp --re
 - **Core Functions:** ~300+ (including 110+ newly implemented)
 - **ML Functions:** 75+ (separate ML module with Linfa integration)
 - **Graphics Procedures:** 50+ (separate graphics module)
-- **GPU Backends:** 12 production-ready backends
+- **GPU Backends:** multiple experimental/feature-gated backends; availability and operation coverage vary
 - **Total:** 500+ functions/procedures
 
 ### Code Metrics
 - **Lines of Code:** ~15,000+ (stdlib only)
 - **Test Coverage:** Growing (unit tests in each module)
-- **Build Status:** ✅ Clean build with all features
+- **Build Status:** default and selected feature sets are the relevant checks; `--all-features` requires external system libraries
 
 ### Testing Infrastructure ✅
 - **Comprehensive Test Suite**: 5 major test files covering all language features
@@ -645,12 +652,12 @@ When adding new functions:
   - Activations: sigmoid, softmax, tanh, erf
 - Updated backend priority on macOS: MLX > MPS > Metal > CoreML
 - Requires full Xcode installation (not Command Line Tools)
-- **Performance benchmark**: MLX up to 1517x faster than CPU, 4.4x faster than Metal for large matrix multiplication
+- **Performance benchmarks**: recorded for selected hardware/workloads; not general platform guarantees
 
 - **v0.1.6** (2025-12) - OpenCL and DirectX 12 GPU backends
-- OpenCL backend fully implemented with complete kernel support
+- OpenCL backend added; kernel and platform coverage require capability-specific validation
 - DirectX 12 backend via DirectML delegation
-- All 12 GPU backends now production-ready
+- GPU backends require per-operation and per-device validation before production claims
 - Vulkan backend with compute shader support
 - Updated GPU documentation for all platforms
 

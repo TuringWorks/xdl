@@ -1,5 +1,6 @@
 //! System and utility functions
 
+use std::collections::HashMap;
 use std::env;
 use std::process::Command;
 use xdl_core::{XdlError, XdlResult, XdlValue};
@@ -983,15 +984,24 @@ pub fn routine_info(args: &[XdlValue]) -> XdlResult<XdlValue> {
 }
 
 /// MESSAGE - Print a message/error
-pub fn message(args: &[XdlValue]) -> XdlResult<XdlValue> {
+/// MESSAGE - report a message. Without /CONTINUE or /INFORMATIONAL, IDL treats
+/// the message as an error and halts the program, so this returns Err.
+/// Returning Ok here made a failing script exit 0.
+pub fn message(args: &[XdlValue], keywords: &HashMap<String, XdlValue>) -> XdlResult<XdlValue> {
     if args.is_empty() {
         return Ok(XdlValue::Undefined);
     }
 
     let msg = args[0].to_string_repr();
-    eprintln!("MESSAGE: {}", msg);
-
-    Ok(XdlValue::Undefined)
+    let non_halting = ["CONTINUE", "INFORMATIONAL"]
+        .iter()
+        .any(|k| keywords.contains_key(*k) || keywords.contains_key(&k.to_lowercase()));
+    if non_halting {
+        eprintln!("% {}", msg);
+        Ok(XdlValue::Undefined)
+    } else {
+        Err(XdlError::RuntimeError(msg))
+    }
 }
 
 /// ON_ERROR - Set error handling mode

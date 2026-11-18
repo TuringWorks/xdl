@@ -15,7 +15,15 @@ Converts MATLAB code to XDL-compatible syntax:
 - **Comments**: `%` → `;`
 - **Arrays**: 1-based → 0-based indexing
 - **Loops**: `for i = 1:10` → `for i = 0, 9`
+- **Numeric colon vectors**: finite literal ranges are bounded at transpile
+  time; runtime-valued `start:stop` and `start:step:stop` expressions route
+  through `MATLAB_COLON`, which validates finite real scalar inputs (including
+  one-element numeric arrays). Both forms preserve inclusive endpoint and
+  direction-mismatch behavior, with a 1,000,000 element cap. Colon syntax in
+  subscripts uses the separate MATLAB indexing translation path. These cases
+  do not establish full MATLAB/Octave conformance.
 - **Element-wise ops**: `.*` → `*`, `./` → `/`, `.^` → `^`
+- **Nonconjugating transpose**: `A.'` → `TRANSPOSE(A)` for a directly named array
 
 ### Function Mapping (~80 functions)
 
@@ -87,9 +95,16 @@ PRINT , mean_x
 ### Current Implementation
 
 - **Basic syntax only**: Functions, loops, conditionals
+- **Colon-vector scope**: whole-expression `start:stop` and
+  `start:step:stop` accept runtime expressions only when they evaluate to
+  finite real scalars (including 1-element numeric arrays). Complex, empty,
+  vector, and nonnumeric operands are rejected; ranges over one million values
+  are bounded errors. Colon syntax in array subscripts remains on a separate
+  compatibility path.
 - **Simple indexing**: Multi-dimensional arrays need work
 - **No cell arrays**: `{}` syntax not yet supported
 - **No classes/objects**: OOP features not implemented
+- **Transpose scope**: only `A.'` for a named array is translated. Conjugating `A'` and postfix transpose on compound expressions are not supported; apostrophe string literals remain handled by the lexer.
 
 ### Index Adjustment
 

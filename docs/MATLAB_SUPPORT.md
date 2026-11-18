@@ -1,86 +1,60 @@
 # MATLAB File Support in XDL
 
-## Overview
+## Current status
 
-XDL CLI and GUI now support loading and executing MATLAB `.m` files. The files are automatically detected by their `.m` extension and transpiled to XDL code before execution.
+The XDL CLI detects `.m` files, transpiles the supported subset to XDL, and
+executes the result. This path is covered by CLI integration tests. It does not
+provide complete MATLAB/Octave language, numerical, toolbox, or project-path
+compatibility.
 
-## Usage
+The GUI editor contains a MATLAB-transpilation heuristic for code containing
+patterns such as `disp(`, `fprintf(`, or MATLAB `%` comments. Its **File > Open**
+dialog currently filters for `.xdl`, and editor execution uses the generic name
+`Editor`; direct `.m` file loading through that dialog is therefore not an
+established GUI workflow. GUI MATLAB behavior was not verified in the current
+compatibility test run.
 
-### CLI
+## CLI usage
 
 ```bash
-# Run a MATLAB .m file directly
 xdl script.m
-
-# The CLI will automatically:
-# 1. Detect the .m extension
-# 2. Transpile the MATLAB code to XDL
-# 3. Execute the transpiled XDL code
 ```
 
-### GUI
+The CLI transpiles the file before running it. To call the transpiler without
+executing the result, use the Rust API:
 
-1. Open XDL GUI
-2. Go to **File > Open...**
-3. The file chooser now accepts both `.xdl` and `.m` files
-4. Select a `.m` file
-5. The MATLAB code will be automatically transpiled and loaded into the editor
-6. Click **Execute** to run the code
+```rust
+use xdl_matlab::transpile_matlab_to_xdl;
 
-## Features
-
-- **Automatic Detection**: Files with `.m` extension are automatically recognized as MATLAB files
-- **Seamless Transpilation**: MATLAB syntax is converted to XDL syntax behind the scenes
-- **Function Mapping**: Common MATLAB functions are mapped to their XDL equivalents
-- **Error Reporting**: Transpilation errors are clearly reported to the user
-
-## Current Limitations
-
-The MATLAB transpiler is a work in progress and has some limitations:
-
-1. **Array Literals**: Array literal syntax `[1, 2, 3]` is not fully supported yet
-   - Workaround: Use alternative syntax or XDL's array functions
-
-2. **Complex Expressions**: Some complex MATLAB expressions may not transpile correctly
-
-3. **Advanced Features**: Advanced MATLAB features like classes, packages, and some built-in functions may not be supported
-
-## Example
-
-### MATLAB Code (test_simple.m)
-
-```matlab
-% Simple calculation
-x = 5;
-y = x * 2;
-disp(y);
+let xdl_source = transpile_matlab_to_xdl(matlab_source)?;
 ```
 
-### Execution
+There is no `xdl --transpile` flag.
 
-```bash
-$ xdl test_simple.m
-10
-```
+## Verified subset and limits
 
-## Implementation Details
+The current CLI tests cover selected scalar and array expressions, control
+flow, user functions, one-based vector-index gathers, 2D scalar subscripts, scalar linear
+matrix reads, MATLAB `length`/`numel` behavior, single- and multiple-output
+`size`, `find` with positive limits and first/last direction, and rectangular
+2D matrix row/column range reads. Numeric literal `start:stop` and
+`start:step:stop` vectors execute with inclusive endpoints; generation is
+capped at one million values, and variable bounds and ranges nested inside
+array literals are not supported. The
+compatibility pages list exact tested cases and known mismatches. Remaining
+remaining gaps include MATLAB row/column gather-result orientation, logical
+indexing, nested-array index expressions, matrix-linear indexed assignment,
+higher-dimensional slices, and reference-output comparisons. Three-output `find` is implemented for the tested
+numeric shapes; broader type and MATLAB-oracle coverage remains open.
 
-### CLI Integration
+- [Current limitations](MATLAB_LIMITATIONS.md)
+- [Detailed MATLAB compatibility map](MATLAB_COMPATIBILITY.md)
+- [Selected real-world workflows](MATLAB_REAL_WORLD_SUPPORT.md)
+- [Scientific-computing gap analysis](VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS.md)
 
-- File: `xdl-cli/src/main.rs`
-- Function: `execute_file()`
-- The function checks the file extension and calls `xdl_matlab::transpile_matlab_to_xdl()` for `.m` files
+## Implementation locations
 
-### GUI Integration
-
-- File: `xdl-gui/src/gui.rs`
-- Location: File Open dialog callback
-- The GUI detects `.m` files and transpiles them before loading into the editor
-
-## Future Improvements
-
-1. Complete array literal support
-2. Better error messages with line number mapping
-3. Support for more MATLAB functions
-4. MATLAB-specific debugging features
-5. Option to view transpiled XDL code before execution
+- CLI file detection and execution: `xdl-cli/src/main.rs`
+- MATLAB lexer and transpiler: `xdl-matlab/src/`
+- MATLAB compatibility helpers: `xdl-stdlib/src/matlab_compat.rs`
+- GUI heuristic: `xdl-gui/src/gui.rs`

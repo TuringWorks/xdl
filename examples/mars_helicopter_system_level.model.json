@@ -1,0 +1,116 @@
+{
+  "name": "mars_helicopter_system_level",
+  "blocks": {
+    "0": {
+      "id": 0,
+      "name": "SolarInput",
+      "direct_feedthrough": true,
+      "parameters": {"charge_per_tick": 0.0005},
+      "ports": {
+        "0": {"id": 0, "name": "charge", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "1": {
+      "id": 1,
+      "name": "SixCellBatteryPack",
+      "direct_feedthrough": true,
+      "parameters": {"cell_count": 6, "cell_nominal_voltage": 3.7, "capacity_ah": 2.0},
+      "ports": {
+        "1": {"id": 1, "name": "charge_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "2": {"id": 2, "name": "battery_state", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "2": {
+      "id": 2,
+      "name": "ThermalReadiness",
+      "direct_feedthrough": true,
+      "parameters": {"ready_temperature_c": 10.0},
+      "ports": {
+        "3": {"id": 3, "name": "battery_state_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "4": {"id": 4, "name": "readiness", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "3": {
+      "id": 3,
+      "name": "FlightReadinessGate",
+      "direct_feedthrough": true,
+      "parameters": {"minimum_soc": 0.3},
+      "ports": {
+        "5": {"id": 5, "name": "readiness_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "6": {"id": 6, "name": "flight_enable", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "4": {
+      "id": 4,
+      "name": "WaypointGuidance",
+      "direct_feedthrough": true,
+      "parameters": {"target_altitude_m": 3.0},
+      "ports": {
+        "7": {"id": 7, "name": "flight_enable_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "8": {"id": 8, "name": "desired_velocity", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "5": {
+      "id": 5,
+      "name": "AltitudePid",
+      "direct_feedthrough": true,
+      "parameters": {"kp": 2.0, "ki": 0.25, "kd": 0.05},
+      "ports": {
+        "9": {"id": 9, "name": "desired_velocity_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "10": {"id": 10, "name": "command", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "6": {
+      "id": 6,
+      "name": "MotorActuator",
+      "direct_feedthrough": true,
+      "parameters": {"time_constant_s": 0.2, "command_min": -8.0, "command_max": 8.0},
+      "ports": {
+        "11": {"id": 11, "name": "command_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "12": {"id": 12, "name": "motor_command", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "7": {
+      "id": 7,
+      "name": "CoaxialRotorGearbox",
+      "direct_feedthrough": true,
+      "parameters": {"gear_ratio": 8.0, "rotor_lift_scale": 8.5},
+      "ports": {
+        "13": {"id": 13, "name": "motor_command_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "14": {"id": 14, "name": "rotor_lift", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "8": {
+      "id": 8,
+      "name": "MarsVerticalPlant",
+      "direct_feedthrough": true,
+      "parameters": {"gravity_m_per_s2": 3.71, "drag_coefficient": 0.15},
+      "ports": {
+        "15": {"id": 15, "name": "rotor_lift_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}},
+        "16": {"id": 16, "name": "altitude", "direction": "Output", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    },
+    "9": {
+      "id": 9,
+      "name": "Telemetry",
+      "direct_feedthrough": true,
+      "parameters": {"format": "json-lines"},
+      "ports": {
+        "17": {"id": 17, "name": "altitude_in", "direction": "Input", "signal": {"shape": "Scalar", "unit": null, "frame": null, "sample_period": null}}
+      }
+    }
+  },
+  "connections": [
+    {"output": 0, "input": 1},
+    {"output": 2, "input": 3},
+    {"output": 4, "input": 5},
+    {"output": 6, "input": 7},
+    {"output": 8, "input": 9},
+    {"output": 10, "input": 11},
+    {"output": 12, "input": 13},
+    {"output": 14, "input": 15},
+    {"output": 16, "input": 17}
+  ],
+  "next_block": 10,
+  "next_port": 18
+}

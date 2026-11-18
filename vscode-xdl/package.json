@@ -4,7 +4,7 @@
   "description": "Language support for XDL (Extended Data Language) - IDL/GDL compatible scientific programming",
   "version": "0.1.1",
   "publisher": "xdl-team",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/gnudatalanguage/gdl"
@@ -25,7 +25,8 @@
     "image processing"
   ],
   "activationEvents": [
-    "onLanguage:xdl"
+    "onLanguage:xdl",
+    "onCommand:xdl.runFile"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -43,6 +44,16 @@
           ".pro"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "scilab",
+        "aliases": [
+          "Scilab"
+        ],
+        "extensions": [
+          ".sci",
+          ".sce"
+        ]
       }
     ],
     "grammars": [
@@ -50,6 +61,11 @@
         "language": "xdl",
         "scopeName": "source.xdl",
         "path": "./syntaxes/xdl.tmLanguage.json"
+      },
+      {
+        "language": "scilab",
+        "scopeName": "source.scilab",
+        "path": "./syntaxes/scilab.tmLanguage.json"
       }
     ],
     "configuration": {

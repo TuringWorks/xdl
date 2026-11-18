@@ -14,20 +14,20 @@ lazy_static::lazy_static! {
 }
 
 fn next_df_id() -> String {
-    let mut counter = DF_COUNTER.lock().unwrap();
+    let mut counter = DF_COUNTER.lock().unwrap_or_else(|e| e.into_inner());
     *counter += 1;
     format!("df_{}", *counter)
 }
 
 fn store_dataframe(df: DataFrame) -> String {
     let id = next_df_id();
-    let mut storage = DATAFRAMES.lock().unwrap();
+    let mut storage = DATAFRAMES.lock().unwrap_or_else(|e| e.into_inner());
     storage.insert(id.clone(), df);
     id
 }
 
 fn get_dataframe(id: &str) -> XdlResult<DataFrame> {
-    let storage = DATAFRAMES.lock().unwrap();
+    let storage = DATAFRAMES.lock().unwrap_or_else(|e| e.into_inner());
     storage
         .get(id)
         .cloned()
@@ -814,7 +814,7 @@ pub fn df_drop(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => return Err(XdlError::RuntimeError("df_id must be a string".to_string())),
     };
 
-    let mut storage = DATAFRAMES.lock().unwrap();
+    let mut storage = DATAFRAMES.lock().unwrap_or_else(|e| e.into_inner());
     storage.remove(df_id);
     Ok(XdlValue::Undefined)
 }

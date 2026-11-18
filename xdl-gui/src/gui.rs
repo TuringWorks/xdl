@@ -26,6 +26,7 @@ use once_cell::sync::Lazy;
 
 use crate::image_window::ImageWindow;
 use crate::plot_window::PlotWindow;
+use crate::statechart_window::{starter_document, StateChartWindow};
 use xdl_interpreter::Interpreter;
 use xdl_matlab::transpile_matlab_to_xdl;
 use xdl_stdlib::{register_gui_image_callback, register_gui_plot_callback};
@@ -238,6 +239,7 @@ pub struct XdlGui {
     variable_table: Rc<RefCell<VariableTable>>,
     #[allow(dead_code)]
     executing: Rc<RefCell<bool>>, // Guard to prevent concurrent executions
+    _state_chart_windows: Rc<RefCell<Vec<StateChartWindow>>>,
 }
 
 // Structure to hold execution results from worker thread
@@ -260,6 +262,7 @@ impl XdlGui {
 
         // Initialize interpreter
         let interpreter = Rc::new(RefCell::new(Interpreter::new()));
+        let state_chart_windows = Rc::new(RefCell::new(Vec::new()));
 
         // Create command buffer early so it can be used in menu callbacks
         let mut command_buffer = TextBuffer::default();
@@ -584,6 +587,47 @@ impl XdlGui {
             |_| {
                 info!("Plot window info requested");
                 dialog::message_default("Plot windows open automatically when you use plot commands in your XDL scripts.\n\nExample: plot, x, y");
+            },
+        );
+
+        let state_chart_windows_new = Rc::clone(&state_chart_windows);
+        menu.add(
+            "&Tools/&New State Chart",
+            fltk::enums::Shortcut::None,
+            MenuFlag::Normal,
+            move |_| match starter_document().and_then(StateChartWindow::new) {
+                Ok(mut chart) => {
+                    chart.show();
+                    state_chart_windows_new.borrow_mut().push(chart);
+                }
+                Err(error) => dialog::alert_default(&error),
+            },
+        );
+
+        let state_chart_windows_open = Rc::clone(&state_chart_windows);
+        menu.add(
+            "&Tools/&Open State Chart...",
+            fltk::enums::Shortcut::None,
+            MenuFlag::Normal,
+            move |_| {
+                if let Some(path) = dialog::file_chooser("Open State Chart", "*.json", ".", false) {
+                    let result = std::fs::read_to_string(&path)
+                        .map_err(|error| error.to_string())
+                        .and_then(|json| {
+                            xdl_model::StateChartDocument::from_json(&json)
+                                .map_err(|error| error.to_string())
+                        })
+                        .and_then(StateChartWindow::new);
+                    match result {
+                        Ok(mut chart) => {
+                            chart.show();
+                            state_chart_windows_open.borrow_mut().push(chart);
+                        }
+                        Err(error) => {
+                            dialog::alert_default(&format!("Could not open state chart: {error}"))
+                        }
+                    }
+                }
             },
         );
 
@@ -1049,6 +1093,7 @@ impl XdlGui {
             variables,
             variable_table: variable_table_ref,
             executing,
+            _state_chart_windows: state_chart_windows,
         };
 
         Ok(gui)

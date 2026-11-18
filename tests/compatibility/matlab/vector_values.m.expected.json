@@ -1,0 +1,7 @@
+{
+  "abs_tolerance": 0.0,
+  "provenance": "hand-authored expected values; independent MATLAB/Octave oracle not installed",
+  "values": {
+    "x": [1.0, 2.0, 3.0]
+  }
+}

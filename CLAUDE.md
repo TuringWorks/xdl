@@ -133,7 +133,7 @@ Full guidance, idiom table, refactor triggers and shared-helper table:
 
 ### Panic debt — where it is
 
-**248 `.unwrap()`/`.expect()`/`panic!` sites in `xdl-stdlib`, 131 in `xdl-amp`**,
+**211 `.unwrap()`/`.expect()`/`panic!` sites in `xdl-stdlib`, 114 in `xdl-amp`**,
 plus 34 in `xdl-core`, 29 in `xdl-interpreter`, 20 in `xdl-parser`. A panic inside
 a stdlib function kills the user's session and loses their workspace. Do not add
 the next one; remove one on the way past. The highest-value class to fix first is
@@ -284,14 +284,11 @@ These are measured, not guessed. Each has a check that stops it getting worse.
 
 | Defect | Where | Ratcheted by |
 |---|---|---|
-| **License stated three ways** — needs a maintainer decision, not a script | `Cargo.toml` says `GPL-2.0`; `LICENSE` and the README badge say MIT | `scripts/check-version-sync.sh` (warns) |
-| **Panic debt** — a panic here kills the user's session | 248 `xdl-stdlib`, 131 `xdl-amp`, 34 `xdl-core`, 29 `xdl-interpreter`, 20 `xdl-parser`, 14 `xdl-dataframe` | `.github/workflows/security.yml` (counts may fall, never rise) |
+| **Panic debt** — a panic here kills the user's session | 211 `xdl-stdlib`, 114 `xdl-amp`, 34 `xdl-core`, 29 `xdl-interpreter`, 20 `xdl-parser`, 13 `xdl-dataframe` | `.github/workflows/security.yml` (counts may fall, never rise) |
 | **Three disagreeing colormap registries**, two with silent fallbacks — `LOADCT, 5` returns grayscale | `graphics/state.rs`, `viz3d-threejs/colormaps.rs`, `charts/echarts.rs` | [design-system/foundations/color.md](./design-system/foundations/color.md) |
 | **34 hard-coded hex colours** | `echarts.rs` 23, `chart-viewer/main.rs` 6, `viz3d-web/template.rs` 4, `viz3d-threejs/templates.rs` 1 | design-system rule 1 |
-| **3 built-ins advertised by the LSP but not dispatched** | `READ_ASCII`, `READ_BINARY`, `READ_CSV` | `scripts/check-builtin-parity.sh` + `scripts/known-drift.txt` |
 | **605 dispatched built-ins missing from the LSP** — no completion, no hover | `xdl-lsp/src/symbols.rs` covers 86 of 688 | same check (warns) |
 | **The `.xdl` suite**: 12 of 47 scripts pass, 2 never terminate | `tests/` | `tests/passing.txt` + `scripts/run-xdl-suite.sh` |
-| **Dead source files a search will hit** | `xdl-stdlib/src/charting_procs_broken.rs`, `charting_procs.rs.bak`, `xdl-gui/src/gui.rs.bak`, `xdl-parser/src/lexer_old.rs` | — |
 | **Generated data committed next to source** | `xdl-dataframe/*.csv`, `*.png` | — |
 
 If you fix one, fix it completely and say so — a half-removed `.bak` is worse

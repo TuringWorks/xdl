@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Ravindra Boddipalli
 
 //! Deterministic simulation primitives for the XDL GNC vertical slice.
@@ -458,6 +458,269 @@ impl GnssMeasurement {
     }
 }
 
+/// Deterministic, frame-aware constant sensor bias injection for simulation
+/// and replay tests. It does not model random noise or time-varying drift.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SensorBias {
+    pub frame: FrameId,
+    pub imu_specific_force: Vec3,
+    pub imu_angular_rate: Vec3,
+    pub gnss_position: Vec3,
+    pub gnss_velocity: Vec3,
+}
+
+/// Reproducible Gaussian sensor-noise configuration. Standard deviations are
+/// component-wise and use the same units as their corresponding measurements.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SensorNoiseConfig {
+    pub frame: FrameId,
+    pub imu_specific_force_stddev: Vec3,
+    pub imu_angular_rate_stddev: Vec3,
+    pub gnss_position_stddev: Vec3,
+    pub gnss_velocity_stddev: Vec3,
+}
+
+impl SensorNoiseConfig {
+    pub fn validate(self) -> Result<Self, GncError> {
+        let deviations = [
+            self.imu_specific_force_stddev,
+            self.imu_angular_rate_stddev,
+            self.gnss_position_stddev,
+            self.gnss_velocity_stddev,
+        ];
+        if deviations
+            .into_iter()
+            .any(|value| !value.is_finite() || value.x < 0.0 || value.y < 0.0 || value.z < 0.0)
+        {
+            return Err(GncError::InvalidValue {
+                context: "sensor noise standard deviation".to_string(),
+                reason: "standard deviations must be finite and non-negative".to_string(),
+            });
+        }
+        Ok(self)
+    }
+}
+
+/// Small deterministic PRNG and Box–Muller transform for repeatable tests and
+/// Monte Carlo runs. It is not intended as a cryptographic random source.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SensorNoise {
+    pub config: SensorNoiseConfig,
+    state: u64,
+}
+
+impl SensorNoise {
+    pub fn new(config: SensorNoiseConfig, seed: u64) -> Result<Self, GncError> {
+        config.validate()?;
+        if seed == 0 {
+            return Err(GncError::InvalidValue {
+                context: "sensor noise seed".to_string(),
+                reason: "seed must be non-zero".to_string(),
+            });
+        }
+        Ok(Self {
+            config,
+            state: seed,
+        })
+    }
+
+    fn next_uniform(&mut self) -> f64 {
+        let mut state = self.state;
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        self.state = state;
+        (state as f64) / (u64::MAX as f64)
+    }
+
+    fn next_gaussian(&mut self) -> f64 {
+        let u1 = (self.next_uniform() + f64::EPSILON).min(1.0 - f64::EPSILON);
+        let u2 = self.next_uniform();
+        (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
+    }
+
+    fn noise_vector(&mut self, standard_deviation: Vec3) -> Vec3 {
+        Vec3::new(
+            standard_deviation.x * self.next_gaussian(),
+            standard_deviation.y * self.next_gaussian(),
+            standard_deviation.z * self.next_gaussian(),
+        )
+    }
+
+    pub fn apply_imu(&mut self, measurement: &ImuMeasurement) -> Result<ImuMeasurement, GncError> {
+        if measurement.frame != self.config.frame {
+            return Err(GncError::InvalidValue {
+                context: "IMU sensor noise".to_string(),
+                reason: "measurement frame does not match noise frame".to_string(),
+            });
+        }
+        let mut noisy = ImuMeasurement::new(
+            measurement.status.timestamp,
+            measurement.frame,
+            measurement.specific_force + self.noise_vector(self.config.imu_specific_force_stddev),
+            measurement.angular_rate + self.noise_vector(self.config.imu_angular_rate_stddev),
+        )?;
+        noisy.status = measurement.status;
+        Ok(noisy)
+    }
+
+    pub fn apply_gnss(
+        &mut self,
+        measurement: &GnssMeasurement,
+    ) -> Result<GnssMeasurement, GncError> {
+        if measurement.frame != self.config.frame {
+            return Err(GncError::InvalidValue {
+                context: "GNSS sensor noise".to_string(),
+                reason: "measurement frame does not match noise frame".to_string(),
+            });
+        }
+        let mut noisy = GnssMeasurement::new(
+            measurement.status.timestamp,
+            measurement.frame,
+            measurement.position + self.noise_vector(self.config.gnss_position_stddev),
+            measurement.velocity + self.noise_vector(self.config.gnss_velocity_stddev),
+        )?;
+        noisy.status = measurement.status;
+        Ok(noisy)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MonteCarloConfig {
+    pub runs: usize,
+    pub seed: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MonteCarloResult {
+    pub seeds: Vec<u64>,
+    pub outcomes: Vec<f64>,
+    pub mean: f64,
+    pub minimum: f64,
+    pub maximum: f64,
+    pub standard_deviation: f64,
+}
+
+impl MonteCarloConfig {
+    pub fn validate(self) -> Result<Self, GncError> {
+        if self.runs == 0 {
+            return Err(GncError::InvalidValue {
+                context: "Monte Carlo runs".to_string(),
+                reason: "run count must be positive".to_string(),
+            });
+        }
+        Ok(self)
+    }
+
+    pub fn run<F>(self, mut scenario: F) -> Result<MonteCarloResult, GncError>
+    where
+        F: FnMut(u64) -> Result<f64, GncError>,
+    {
+        let config = self.validate()?;
+        let mut seeds = Vec::with_capacity(config.runs);
+        let mut outcomes = Vec::with_capacity(config.runs);
+        let mut state = config.seed;
+        for _ in 0..config.runs {
+            state = splitmix64(state);
+            let outcome = scenario(state)?;
+            if !outcome.is_finite() {
+                return Err(GncError::NonFinite {
+                    context: "Monte Carlo outcome".to_string(),
+                });
+            }
+            seeds.push(state);
+            outcomes.push(outcome);
+        }
+        let mean = outcomes.iter().sum::<f64>() / outcomes.len() as f64;
+        let variance = outcomes
+            .iter()
+            .map(|outcome| (outcome - mean).powi(2))
+            .sum::<f64>()
+            / outcomes.len() as f64;
+        let minimum = outcomes.iter().copied().fold(f64::INFINITY, f64::min);
+        let maximum = outcomes.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        Ok(MonteCarloResult {
+            seeds,
+            outcomes,
+            mean,
+            minimum,
+            maximum,
+            standard_deviation: variance.sqrt(),
+        })
+    }
+}
+
+fn splitmix64(mut state: u64) -> u64 {
+    state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut mixed = state;
+    mixed = (mixed ^ (mixed >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    mixed = (mixed ^ (mixed >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    mixed ^ (mixed >> 31)
+}
+
+impl SensorBias {
+    pub fn zero(frame: FrameId) -> Self {
+        Self {
+            frame,
+            imu_specific_force: Vec3::ZERO,
+            imu_angular_rate: Vec3::ZERO,
+            gnss_position: Vec3::ZERO,
+            gnss_velocity: Vec3::ZERO,
+        }
+    }
+
+    pub fn validate(self) -> Result<Self, GncError> {
+        if [
+            self.imu_specific_force,
+            self.imu_angular_rate,
+            self.gnss_position,
+            self.gnss_velocity,
+        ]
+        .into_iter()
+        .any(|value| !value.is_finite())
+        {
+            return Err(GncError::NonFinite {
+                context: "sensor bias".to_string(),
+            });
+        }
+        Ok(self)
+    }
+
+    pub fn apply_imu(&self, measurement: &ImuMeasurement) -> Result<ImuMeasurement, GncError> {
+        if measurement.frame != self.frame {
+            return Err(GncError::InvalidValue {
+                context: "IMU sensor bias".to_string(),
+                reason: "measurement frame does not match bias frame".to_string(),
+            });
+        }
+        let mut biased = ImuMeasurement::new(
+            measurement.status.timestamp,
+            measurement.frame,
+            measurement.specific_force + self.imu_specific_force,
+            measurement.angular_rate + self.imu_angular_rate,
+        )?;
+        biased.status = measurement.status;
+        Ok(biased)
+    }
+
+    pub fn apply_gnss(&self, measurement: &GnssMeasurement) -> Result<GnssMeasurement, GncError> {
+        if measurement.frame != self.frame {
+            return Err(GncError::InvalidValue {
+                context: "GNSS sensor bias".to_string(),
+                reason: "measurement frame does not match bias frame".to_string(),
+            });
+        }
+        let mut biased = GnssMeasurement::new(
+            measurement.status.timestamp,
+            measurement.frame,
+            measurement.position + self.gnss_position,
+            measurement.velocity + self.gnss_velocity,
+        )?;
+        biased.status = measurement.status;
+        Ok(biased)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -522,6 +785,70 @@ mod tests {
             .velocity_meta()
             .require(&body(), Unit::MeterPerSecond, "velocity")
             .is_ok());
+    }
+
+    #[test]
+    fn sensor_bias_is_deterministic_and_frame_aware() {
+        let timestamp = Timestamp::from_nanoseconds(10);
+        let imu = ImuMeasurement::new(
+            timestamp,
+            body(),
+            Vec3::new(1.0, 2.0, 3.0),
+            Vec3::new(0.1, 0.2, 0.3),
+        )
+        .expect("IMU");
+        let mut bias = SensorBias::zero(body());
+        bias.imu_specific_force = Vec3::new(0.5, 0.0, 0.0);
+        bias.imu_angular_rate = Vec3::new(0.0, 0.1, 0.0);
+        let biased = bias.apply_imu(&imu).expect("biased IMU");
+        assert_eq!(biased.specific_force, Vec3::new(1.5, 2.0, 3.0));
+        assert!((biased.angular_rate.y - 0.3).abs() < 1e-12);
+        let wrong_frame = SensorBias::zero(FrameId::Inertial);
+        assert!(wrong_frame.apply_imu(&imu).is_err());
+    }
+
+    #[test]
+    fn seeded_sensor_noise_is_reproducible_and_validated() {
+        let timestamp = Timestamp::from_nanoseconds(10);
+        let imu = ImuMeasurement::new(timestamp, body(), Vec3::ZERO, Vec3::ZERO).expect("IMU");
+        let config = SensorNoiseConfig {
+            frame: body(),
+            imu_specific_force_stddev: Vec3::new(0.1, 0.1, 0.1),
+            imu_angular_rate_stddev: Vec3::new(0.01, 0.01, 0.01),
+            gnss_position_stddev: Vec3::ZERO,
+            gnss_velocity_stddev: Vec3::ZERO,
+        };
+        let mut first = SensorNoise::new(config, 42).expect("noise");
+        let mut second = SensorNoise::new(config, 42).expect("noise");
+        assert_eq!(
+            first.apply_imu(&imu).expect("sample"),
+            second.apply_imu(&imu).expect("sample")
+        );
+        assert!(SensorNoise::new(config, 0).is_err());
+        assert!(SensorNoiseConfig {
+            imu_specific_force_stddev: Vec3::new(-1.0, 0.0, 0.0),
+            ..config
+        }
+        .validate()
+        .is_err());
+    }
+
+    #[test]
+    fn monte_carlo_runs_are_seeded_ordered_and_summarized() {
+        let config = MonteCarloConfig { runs: 4, seed: 7 };
+        let first = config
+            .run(|seed| Ok((seed % 10) as f64))
+            .expect("Monte Carlo");
+        let second = config
+            .run(|seed| Ok((seed % 10) as f64))
+            .expect("Monte Carlo");
+        assert_eq!(first, second);
+        assert_eq!(first.seeds.len(), 4);
+        assert!(first.minimum <= first.mean && first.mean <= first.maximum);
+        assert!(MonteCarloConfig { runs: 0, seed: 1 }
+            .run(|_| Ok(1.0))
+            .is_err());
+        assert!(config.run(|_| Ok(f64::NAN)).is_err());
     }
 
     #[test]

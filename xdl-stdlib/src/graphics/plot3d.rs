@@ -66,7 +66,7 @@ pub fn contour_plot(
 
     // Get window dimensions
     let (win_width, win_height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -188,7 +188,7 @@ pub fn surface_plot(
 
     // Get window dimensions
     let (win_width, win_height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };
@@ -294,7 +294,7 @@ pub fn plot_3d(
     let z_max = z_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
     let (win_width, win_height) = {
-        let state = GRAPHICS_STATE.lock().unwrap();
+        let state = GRAPHICS_STATE.lock().unwrap_or_else(|e| e.into_inner());
         let win = state.get_current_window().unwrap();
         (win.width, win.height)
     };

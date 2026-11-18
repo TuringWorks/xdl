@@ -61,7 +61,12 @@ impl SymbolTable {
             ),
             ("ASIN", "asin(x) - Compute arc sine", "DOUBLE", "ASIN(x)"),
             ("ACOS", "acos(x) - Compute arc cosine", "DOUBLE", "ACOS(x)"),
-            ("ATAN", "atan(x) - Compute arc tangent", "DOUBLE", "ATAN(x)"),
+            (
+                "ATAN",
+                "atan(x) or atan2(y, x) - Compute arc tangent",
+                "DOUBLE",
+                "ATAN(x[, x2])",
+            ),
             (
                 "SINH",
                 "sinh(x) - Compute hyperbolic sine",
@@ -126,6 +131,24 @@ impl SymbolTable {
 
         // Array functions
         let array_funcs = vec![
+            (
+                "MATLAB_COLON",
+                "matlab_colon(start, stop) or matlab_colon(start, step, stop) - Build a finite inclusive numeric range, capped at 1,000,000 elements",
+                "ARRAY",
+                "MATLAB_COLON(start[, step], stop)",
+            ),
+            (
+                "MATLAB_NAN",
+                "matlab_nan() - Return MATLAB NaN scalar",
+                "DOUBLE",
+                "MATLAB_NAN()",
+            ),
+            (
+                "MATLAB_INF",
+                "matlab_inf() - Return MATLAB positive infinity scalar",
+                "DOUBLE",
+                "MATLAB_INF()",
+            ),
             (
                 "FINDGEN",
                 "findgen(n) - Generate float array [0, 1, ..., n-1]",
@@ -205,6 +228,108 @@ impl SymbolTable {
                 "N_ELEMENTS(arr)",
             ),
             (
+                "MATLAB_LENGTH",
+                "matlab_length(arr) - Return the largest MATLAB-compatible array dimension",
+                "DOUBLE",
+                "MATLAB_LENGTH(arr)",
+            ),
+            (
+                "MATLAB_NUMEL",
+                "matlab_numel(arr) - Return the MATLAB-compatible scalar element count",
+                "DOUBLE",
+                "MATLAB_NUMEL(arr)",
+            ),
+            (
+                "MATLAB_SIZE",
+                "matlab_size(arr, [dim]) - Return MATLAB-compatible dimension lengths",
+                "ARRAY or DOUBLE",
+                "MATLAB_SIZE(arr, [dim])",
+            ),
+            (
+                "MATLAB_SIZE_TAIL",
+                "matlab_size_tail(arr, dim) - Multiply MATLAB dimensions from dim onward",
+                "DOUBLE",
+                "MATLAB_SIZE_TAIL(arr, dim)",
+            ),
+            (
+                "MATLAB_FIND",
+                "matlab_find(arr) - Return MATLAB-compatible one-based linear indices",
+                "ARRAY",
+                "MATLAB_FIND(arr)",
+            ),
+            (
+                "MATLAB_FIND_ROWS",
+                "matlab_find_rows(matrix) - Return one-based row outputs for MATLAB find",
+                "ARRAY",
+                "MATLAB_FIND_ROWS(matrix)",
+            ),
+            (
+                "MATLAB_FIND_COLUMNS",
+                "matlab_find_columns(matrix) - Return one-based column outputs for MATLAB find",
+                "ARRAY",
+                "MATLAB_FIND_COLUMNS(matrix)",
+            ),
+            (
+                "MATLAB_FIND_INDICES",
+                "matlab_find_indices(matrix) - Return one-based linear indices as an XDL helper",
+                "ARRAY",
+                "MATLAB_FIND_INDICES(matrix)",
+            ),
+            (
+                "MATLAB_FIND_VALUES",
+                "matlab_find_nonzero_values(matrix) - Return nonzero values from three-output MATLAB find",
+                "ARRAY",
+                "MATLAB_FIND_VALUES(matrix)",
+            ),
+            (
+                "MATLAB_RESHAPE",
+                "matlab_reshape(array, d1, d2, ...) - Reshape a numeric array with MATLAB column-major semantics",
+                "ARRAY",
+                "MATLAB_RESHAPE(array, d1, d2, ...)",
+            ),
+            (
+                "MATLAB_CTRANSPOSE",
+                "matlab_ctranspose(array) - MATLAB apostrophe transpose for supported real arrays",
+                "ARRAY",
+                "MATLAB_CTRANSPOSE(array)",
+            ),
+            (
+                "MATLAB_MLDIVIDE",
+                "matlab_mldivide(A, b) - Solve a supported square numeric linear system",
+                "ARRAY",
+                "MATLAB_MLDIVIDE(A, b)",
+            ),
+            (
+                "MATLAB_READMATRIX",
+                "matlab_readmatrix(filename, ['NumHeaderLines', n]) - Import rectangular numeric CSV with explicit header-line skipping",
+                "NESTED_ARRAY",
+                "MATLAB_READMATRIX(filename, ['NumHeaderLines', n])",
+            ),
+            (
+                "MATLAB_INDEX",
+                "matlab_index(arr, index) - Read a MATLAB one-based linear array element",
+                "DOUBLE",
+                "MATLAB_INDEX(arr, index)",
+            ),
+            (
+                "MATLAB_INDEX_VECTOR",
+                "matlab_index_vector(array, indices) - Read ordered one-based linear indices from numeric arrays in column-major order; result orientation is not represented",
+                "ARRAY",
+                "MATLAB_INDEX_VECTOR(vector, indices)",
+            ),
+            (
+                "SCILAB_INDEX",
+                "scilab_index(index) - Validate and convert a positive one-based Scilab scalar index to XDL's zero-based index",
+                "LONG",
+                "SCILAB_INDEX(index)",
+            ),
+            (
+                "SCILAB_INDEX_RANGE",
+                "scilab_index_range(vector, start, step, end) - Read a validated inclusive Scilab one-based range from a numeric vector",
+                "ARRAY",
+                "SCILAB_INDEX_RANGE(vector, start, step, end)",
+            ),
+            (
                 "SIZE",
                 "size(arr) - Return array dimensions info",
                 "ARRAY",
@@ -256,6 +381,24 @@ impl SymbolTable {
 
         // Statistics functions
         let stat_funcs = vec![
+            (
+                "ISNAN",
+                "isnan(x) - Test values for NaN",
+                "ARRAY",
+                "ISNAN(x)",
+            ),
+            (
+                "ISINF",
+                "isinf(x) - Test values for infinity",
+                "ARRAY",
+                "ISINF(x)",
+            ),
+            (
+                "FINITE",
+                "finite(x) - Test values for finite values",
+                "ARRAY",
+                "FINITE(x)",
+            ),
             (
                 "TOTAL",
                 "total(arr) - Sum all elements",
@@ -385,24 +528,6 @@ impl SymbolTable {
         // I/O functions
         let io_funcs = vec![
             (
-                "READ_ASCII",
-                "read_ascii(file) - Read ASCII data file",
-                "STRUCT",
-                "READ_ASCII(file)",
-            ),
-            (
-                "READ_CSV",
-                "read_csv(file) - Read CSV file",
-                "STRUCT",
-                "READ_CSV(file)",
-            ),
-            (
-                "READ_BINARY",
-                "read_binary(file) - Read binary file",
-                "ARRAY",
-                "READ_BINARY(file)",
-            ),
-            (
                 "READF",
                 "readf(unit, vars...) - Formatted read",
                 "VOID",
@@ -448,6 +573,79 @@ impl SymbolTable {
             .chain(string_funcs)
             .chain(io_funcs)
         {
+            self.builtin_functions.insert(
+                name.to_string(),
+                BuiltinInfo {
+                    name: name.to_string(),
+                    documentation: doc.to_string(),
+                    return_type: ret.to_string(),
+                    signature: sig.to_string(),
+                },
+            );
+        }
+
+        for (name, doc, ret, sig) in [
+            (
+                "GNC_VEC3",
+                "gnc_vec3(x, y, z) - Create a GNC three-vector",
+                "ARRAY",
+                "GNC_VEC3(x, y, z)",
+            ),
+            (
+                "GNC_FLIGHT_READINESS_STEP",
+                "gnc_flight_readiness_step(state, temperature_c, soc, launch_requested) - Advance the explicit flight-readiness state machine",
+                "STRUCT",
+                "GNC_FLIGHT_READINESS_STEP(state, temperature_c, soc, launch_requested)",
+            ),
+            (
+                "GNC_STATE_MACHINE_STEP",
+                "gnc_state_machine_step(machine_json, state, entered_ns, timestamp_ns, event, active_guards) - Advance a serialized state machine with explicit state and time",
+                "STRUCT",
+                "GNC_STATE_MACHINE_STEP(machine_json, state, entered_ns, timestamp_ns, event, active_guards)",
+            ),
+            (
+                "GNC_WAYPOINT",
+                "gnc_waypoint(position, waypoint, timestamp_ns, cruise_speed, radius) - Compute waypoint guidance",
+                "STRUCT",
+                "GNC_WAYPOINT(position, waypoint, timestamp_ns, cruise_speed, radius)",
+            ),
+            (
+                "GNC_PID_STEP",
+                "gnc_pid_step(...) - Perform an explicit-state PID update",
+                "STRUCT",
+                "GNC_PID_STEP(timestamp_ns, setpoint, measurement, kp, ki, kd, output_min, output_max, integral_min, integral_max, integral, previous_error, previous_timestamp_ns)",
+            ),
+            (
+                "GNC_STATE_SPACE_STEP",
+                "gnc_state_space_step(...) - Perform an explicit-state discrete state-space update",
+                "STRUCT",
+                "GNC_STATE_SPACE_STEP(A, B, C, D, state, input, states, inputs, outputs)",
+            ),
+            (
+                "GNC_SCHEDULED_FEEDBACK_STEP",
+                "gnc_scheduled_feedback_step(...) - Compute an interpolated state-feedback command",
+                "STRUCT",
+                "GNC_SCHEDULED_FEEDBACK_STEP(lower_gain, upper_gain, lower_parameter, upper_parameter, parameter, state_error, inputs, states)",
+            ),
+            (
+                "GNC_ACTUATOR_STEP",
+                "gnc_actuator_step(...) - Perform an explicit-state actuator update",
+                "STRUCT",
+                "GNC_ACTUATOR_STEP(timestamp_ns, command, time_constant, output_min, output_max, rate_limit, previous_timestamp_ns, previous_output)",
+            ),
+            (
+                "GNC_ALPHA_BETA_STEP",
+                "gnc_alpha_beta_step(...) - Perform an explicit-state navigation update",
+                "STRUCT",
+                "GNC_ALPHA_BETA_STEP(timestamp_ns, initial_timestamp_ns, position, velocity, acceleration, gnss_position, gnss_velocity, position_gain, velocity_gain)",
+            ),
+            (
+                "GNC_TELEMETRY_JSON",
+                "gnc_telemetry_json(...) - Export one validated telemetry record as JSON Lines",
+                "STRING",
+                "GNC_TELEMETRY_JSON(timestamp_ns, sequence, source, position, velocity, command)",
+            ),
+        ] {
             self.builtin_functions.insert(
                 name.to_string(),
                 BuiltinInfo {
@@ -671,6 +869,85 @@ pub fn get_document_symbols(doc: &DocumentState) -> Vec<DocumentSymbol> {
     }
 
     symbols
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SymbolTable;
+
+    #[test]
+    fn flight_readiness_builtin_is_available_case_insensitively() {
+        let table = SymbolTable::new();
+        let info = table
+            .get_function("gnc_flight_readiness_step")
+            .expect("readiness function in LSP symbol table");
+        assert_eq!(info.return_type, "STRUCT");
+        assert!(info.signature.contains("launch_requested"));
+    }
+
+    #[test]
+    fn atan_documents_both_scalar_and_two_argument_forms() {
+        let table = SymbolTable::new();
+        let info = table.get_function("atan").expect("ATAN builtin");
+        assert!(info.signature.contains("x2"));
+        assert!(info.documentation.contains("atan2(y, x)"));
+    }
+
+    #[test]
+    fn matlab_readmatrix_documents_its_numeric_csv_subset() {
+        let table = SymbolTable::new();
+        let info = table
+            .get_function("MATLAB_READMATRIX")
+            .expect("MATLAB_READMATRIX builtin");
+        assert_eq!(info.return_type, "NESTED_ARRAY");
+        assert!(info.documentation.contains("explicit header-line skipping"));
+    }
+
+    #[test]
+    fn matlab_compatibility_helpers_are_documented() {
+        let table = SymbolTable::new();
+        let colon = table
+            .get_function("MATLAB_COLON")
+            .expect("MATLAB_COLON builtin");
+        assert_eq!(colon.return_type, "ARRAY");
+        assert!(colon
+            .documentation
+            .contains("finite inclusive numeric range"));
+        assert!(table.get_function("MATLAB_FIND_ROWS").is_some());
+        assert!(table.get_function("MATLAB_FIND_COLUMNS").is_some());
+        assert!(table.get_function("MATLAB_FIND_INDICES").is_some());
+        assert!(table.get_function("MATLAB_FIND_VALUES").is_some());
+        assert!(table.get_function("MATLAB_RESHAPE").is_some());
+        assert!(table.get_function("MATLAB_CTRANSPOSE").is_some());
+        assert!(table.get_function("MATLAB_MLDIVIDE").is_some());
+        assert!(table.get_function("MATLAB_NAN").is_some());
+        assert!(table.get_function("MATLAB_INF").is_some());
+        let index_vector = table
+            .get_function("MATLAB_INDEX_VECTOR")
+            .expect("MATLAB_INDEX_VECTOR builtin");
+        assert_eq!(index_vector.return_type, "ARRAY");
+        assert!(index_vector.documentation.contains("ordered one-based"));
+        assert!(table.get_function("ISNAN").is_some());
+        assert!(table.get_function("ISINF").is_some());
+        assert!(table.get_function("FINITE").is_some());
+    }
+
+    #[test]
+    fn scilab_index_helper_is_documented() {
+        let table = SymbolTable::new();
+        let info = table
+            .get_function("SCILAB_INDEX")
+            .expect("SCILAB_INDEX builtin");
+        assert_eq!(info.return_type, "LONG");
+        assert!(info.documentation.contains("one-based Scilab scalar index"));
+        let range = table
+            .get_function("SCILAB_INDEX_RANGE")
+            .expect("SCILAB_INDEX_RANGE builtin");
+        assert_eq!(range.return_type, "ARRAY");
+        assert!(range
+            .documentation
+            .contains("inclusive Scilab one-based range"));
+    }
 }
 
 fn statement_to_symbol(stmt: &Statement) -> Option<DocumentSymbol> {

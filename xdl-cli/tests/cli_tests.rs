@@ -1,5 +1,7 @@
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Get the path to the xdl binary (built by cargo test)
 fn get_xdl_binary() -> PathBuf {
@@ -100,4 +102,1138 @@ fn test_cli_execute_expression() {
         "Expected '5' in output, got: {}",
         stdout
     );
+}
+
+#[test]
+fn test_cli_test_command_runs_nested_xdl_files_and_reports_summary() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("passing");
+    fs::create_dir_all(directory.join("nested")).expect("create test directory");
+    fs::write(directory.join("nested/pass.xdl"), "PRINT, 'ok'\n").expect("write passing test");
+
+    let output = Command::new(&binary)
+        .args(["test", directory.to_str().expect("utf-8 test path")])
+        .output()
+        .expect("run xdl test command");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(
+        output.status.success(),
+        "expected passing test command, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("1 passed, 0 failed"), "stdout: {stdout}");
+}
+
+#[test]
+fn test_cli_runs_gnc_closed_loop_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_closed_loop.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run GNC closed-loop example");
+
+    assert!(
+        output.status.success(),
+        "GNC closed-loop example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("tick= 10"));
+    assert!(stdout.contains("\"timestamp\":1000000000"));
+    assert!(stdout.contains("Final position (m):"));
+}
+
+#[test]
+fn test_cli_runs_gnc_state_space_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_state_space.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run GNC state-space example");
+
+    assert!(
+        output.status.success(),
+        "GNC state-space example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("=== XDL GNC STATE-SPACE EXAMPLE ==="));
+    assert!(stdout.contains("tick= 0  output= 0.000000000000000"));
+    assert!(stdout.contains("tick= 2  output= 4.000000000000000"));
+    assert!(stdout.contains("scheduled_feedback_command= 4.000000000000000"));
+    assert!(stdout.contains("=== END XDL GNC STATE-SPACE EXAMPLE ==="));
+}
+
+#[test]
+fn test_cli_runs_guarded_timed_gnc_state_machine_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_state_machine.xdl");
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&example)
+        .output()
+        .expect("run guarded timed state-machine example");
+
+    assert!(
+        output.status.success(),
+        "guarded state-machine example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("READY"), "{stdout}");
+    assert!(stdout.contains("1000000000"), "{stdout}");
+    assert!(stdout.contains("COMPLETE"), "{stdout}");
+    assert!(stdout.contains("6000000000"), "{stdout}");
+}
+
+#[test]
+fn test_cli_runs_mars_helicopter_system_level_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/mars_helicopter_system_level.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run Mars helicopter system-level example");
+
+    assert!(
+        output.status.success(),
+        "Mars helicopter example failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("=== XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==="));
+    assert!(stdout.contains("\"source\":\"mars_helicopter\""));
+    assert!(stdout.contains("state_transition tick="));
+    assert!(stdout.contains("name= READY"));
+    assert!(stdout.contains("name= FLYING"));
+    assert!(stdout.contains("Final state: flying= 1"));
+    assert!(stdout.contains("Final altitude (m):"));
+    assert!(stdout.contains("Final motor speed (rpm-equivalent):"));
+    assert!(stdout.contains("Final upper rotor speed (rpm-equivalent):"));
+    assert!(stdout.contains("Final lower rotor speed (rpm-equivalent):"));
+    assert!(stdout.contains("Final battery voltage (V, reduced-order):"));
+    assert!(stdout.contains("Final battery current (A, reduced-order):"));
+    assert!(stdout.contains("Final battery load power (W, reduced-order):"));
+    assert!(stdout.contains("=== END XDL MARS HELICOPTER SYSTEM-LEVEL MODEL ==="));
+}
+
+#[test]
+fn test_cli_runs_mars_helicopter_results_after_simulation() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let output_root = test_directory("mars-helicopter-live-results");
+    fs::create_dir_all(&output_root).expect("create live results directory");
+    let simulation = workspace_root.join("examples/mars_helicopter_system_level.xdl");
+    let simulation_output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&simulation)
+        .current_dir(&output_root)
+        .output()
+        .expect("run Mars simulation for live results");
+    assert!(
+        simulation_output.status.success(),
+        "Mars simulation failed: {}",
+        String::from_utf8_lossy(&simulation_output.stderr)
+    );
+
+    let plotter = workspace_root.join("examples/mars_helicopter_results.xdl");
+    let plots = Command::new(&binary)
+        .args(["--headless", "-q"])
+        .arg(&plotter)
+        .current_dir(&output_root)
+        .output()
+        .expect("plot Mars simulation results");
+    assert!(
+        plots.status.success(),
+        "Mars results plotting failed: {}",
+        String::from_utf8_lossy(&plots.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&plots.stdout);
+    assert_eq!(stdout.matches("Data points: 60 values").count(), 2);
+    assert!(stdout.contains("from 0.00 to 1.46"));
+    assert!(stdout.contains("from -37.50 to 11.98"));
+    for artifact in [
+        "mars_helicopter_altitude.png",
+        "mars_helicopter_temperature.png",
+    ] {
+        let artifact_path = output_root.join(artifact);
+        let metadata = fs::metadata(&artifact_path)
+            .unwrap_or_else(|error| panic!("missing plot artifact {artifact}: {error}"));
+        assert!(metadata.len() > 0, "empty plot artifact: {artifact}");
+        let png = fs::read(&artifact_path).expect("read generated plot");
+        assert!(
+            png.starts_with(b"\x89PNG\r\n\x1a\n"),
+            "invalid PNG: {artifact}"
+        );
+        assert_eq!(u32::from_be_bytes(png[16..20].try_into().unwrap()), 800);
+        assert_eq!(u32::from_be_bytes(png[20..24].try_into().unwrap()), 600);
+    }
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_function_with_indexed_array_parameter() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-indexed-function");
+    fs::create_dir_all(&output_root).expect("create MATLAB function directory");
+    let source = output_root.join("indexed_function.m");
+    fs::write(
+        &source,
+        "function selected = select_value(values)\nselected = values(3);\nend\nvalues = [10, 20, 30, 40];\nresult = select_value(values);\ndisp(result);\n",
+    )
+    .expect("write MATLAB function fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB function through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB function failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("30.000000000000000"),
+        "unexpected MATLAB function result: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_nonconjugating_transpose() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-nonconjugating-transpose");
+    fs::create_dir_all(&output_root).expect("create MATLAB transpose directory");
+    let source = output_root.join("transpose.m");
+    fs::write(
+        &source,
+        "matrix = [1, 2, 3; 4, 5, 6];\ntransposed = matrix.';\ndisp(transposed(3, 2));\n",
+    )
+    .expect("write MATLAB transpose fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB transpose through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB transpose failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout
+            .lines()
+            .any(|line| line.trim().parse::<f64>().is_ok_and(|value| value == 6.0)),
+        "{stdout}"
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_dispatches_interp1_with_nan_outside_sample_domain() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("interp1-domain");
+    fs::create_dir_all(&output_root).expect("create INTERP1 directory");
+    let source = output_root.join("interp1.xdl");
+    fs::write(
+        &source,
+        "x = [0.0, 1.0, 2.0]\ny = [0.0, 10.0, 20.0]\nxi = [-1.0, 0.5, 2.0]\nresult = INTERP1(x, y, xi)\nPRINT, result\n",
+    )
+    .expect("write INTERP1 fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute INTERP1 through XDL");
+    assert!(
+        output.status.success(),
+        "INTERP1 execution failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("[NaN, 5.000000, 20.000000]"),
+        "unexpected INTERP1 output: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_end_and_omitted_vector_subscripts() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-end-subscripts");
+    fs::create_dir_all(&output_root).expect("create MATLAB index directory");
+    let source = output_root.join("end_subscripts.m");
+    fs::write(
+        &source,
+        "values = [10, 20, 30, 40, 50];\na = values(end);\nb = values(3:end);\nc = values(1:2:end);\nd = values(:);\ne = values(2:);\ndisp(a);\ndisp(b);\ndisp(c);\ndisp(d);\ndisp(e);\n",
+    )
+    .expect("write MATLAB end-index fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB end-index fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB end-index fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("50.000000000000000"), "{stdout}");
+    assert!(
+        stdout.contains("[30.000000, 40.000000, 50.000000]"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("[10.000000, 30.000000, 50.000000]"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("[10.000000, 20.000000, 30.000000, 40.000000, 50.000000]"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("[20.000000, 30.000000, 40.000000, 50.000000]"),
+        "{stdout}"
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_scalar_and_range_indexed_assignment() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-indexed-assignment");
+    fs::create_dir_all(&output_root).expect("create MATLAB assignment directory");
+    let source = output_root.join("indexed_assignment.m");
+    let matlab = "values = [10, 20, 30, 40];\nvalues(2) = 99;\nvalues(3:4) = [77, 66];\nexpanded = [1, 2, 3, 4];\nexpanded(2:2:4) = 7;\nmatrix = [1, 2, 3; 4, 5, 6];\nmatrix(2, 3) = 60;\nmatrix(2, 2:3) = [55, 66];\nmatrix(1:2, 1) = [11, 22];\nmatrix(1:2, 3) = 5;\ndisp(values(2));\ndisp(values(3));\ndisp(values(4));\ndisp(expanded(2));\ndisp(expanded(4));\ndisp(matrix(2, 3));\ndisp(matrix(2, 2));\ndisp(matrix(1, 1));\ndisp(matrix(2, 1));\n";
+    fs::write(&source, matlab).expect("write MATLAB indexed-assignment fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB indexed assignment through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB indexed assignment failed; transpiled: {}; stdout: {}; stderr: {}",
+        xdl_matlab::transpile_matlab_to_xdl(matlab).expect("transpile assignment fixture"),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("99.000000000000000"), "{stdout}");
+    assert!(stdout.contains("77.000000000000000"), "{stdout}");
+    assert!(stdout.contains("66.000000000000000"), "{stdout}");
+    assert!(stdout.matches("7.000000000000000").count() >= 2, "{stdout}");
+    assert!(stdout.contains("66.000000000000000"), "{stdout}");
+    assert!(stdout.contains("55.000000000000000"), "{stdout}");
+    assert!(stdout.contains("11.000000000000000"), "{stdout}");
+    assert!(stdout.contains("22.000000000000000"), "{stdout}");
+    assert!(stdout.matches("5.000000000000000").count() >= 2, "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_two_axis_matrix_block_assignment() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-matrix-block-assignment");
+    fs::create_dir_all(&output_root).expect("create MATLAB matrix block directory");
+    let source = output_root.join("matrix_block_assignment.m");
+    let matlab = "matrix = [1, 2, 3; 4, 5, 6; 7, 8, 9];\nmatrix(1:2, 2:3) = [20, 30; 50, 60];\nmatrix(2:3, 1:2) = 8;\nmatrix(1, 1:2) = [11, 12];\ndisp(matrix(1, 1));\ndisp(matrix(1, 2));\ndisp(matrix(1, 3));\ndisp(matrix(2, 1));\ndisp(matrix(2, 2));\ndisp(matrix(2, 3));\ndisp(matrix(3, 1));\ndisp(matrix(3, 2));\ndisp(matrix(3, 3));\n";
+    fs::write(&source, matlab).expect("write MATLAB matrix block fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB matrix block assignment through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB matrix block assignment failed; transpiled: {}; stdout: {}; stderr: {}",
+        xdl_matlab::transpile_matlab_to_xdl(matlab).expect("transpile matrix block fixture"),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let values: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(
+        values,
+        [11.0, 12.0, 30.0, 8.0, 8.0, 60.0, 8.0, 8.0, 9.0],
+        "{stdout}"
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_two_dimensional_scalar_subscripts() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-matrix-subscripts");
+    fs::create_dir_all(&output_root).expect("create MATLAB matrix directory");
+    let source = output_root.join("matrix_subscripts.m");
+    fs::write(
+        &source,
+        "matrix = [1, 2, 3; 4, 5, 6];\nfirst = matrix(1, 2);\nlast = matrix(2, 3);\nlinear_first = matrix(1);\nlinear_second = matrix(2);\nlinear_fourth = matrix(4);\nlinear_last = matrix(end);\ndisp(first);\ndisp(last);\ndisp(linear_first);\ndisp(linear_second);\ndisp(linear_fourth);\ndisp(linear_last);\n",
+    )
+    .expect("write MATLAB matrix-index fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB matrix indexing through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB matrix indexing failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let scalar_results: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(scalar_results, [2.0, 6.0, 1.0, 4.0, 5.0, 6.0], "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_executes_matlab_two_dimensional_range_reads() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-matrix-range-reads");
+    fs::create_dir_all(&output_root).expect("create MATLAB matrix range directory");
+    let source = output_root.join("matrix_ranges.m");
+    let matlab = "matrix = [1, 2, 3; 4, 5, 6];\nrow = matrix(1, 2:3);\ncolumn = matrix(1:2, 2);\nlast_column = matrix(:, 3);\nlast_row = matrix(2, :);\ndisp(row(2));\ndisp(column(2));\ndisp(last_column(2));\ndisp(last_row(3));\n";
+    fs::write(&source, matlab).expect("write MATLAB matrix range fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB matrix range reads through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB matrix range reads failed; transpiled: {}; stdout: {}; stderr: {}",
+        xdl_matlab::transpile_matlab_to_xdl(matlab).expect("transpile matrix range fixture"),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let values: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(values, [3.0, 5.0, 6.0, 6.0], "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_length_differs_from_numel_for_matrices() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-length-numel");
+    fs::create_dir_all(&output_root).expect("create MATLAB length directory");
+    let source = output_root.join("length_numel.m");
+    fs::write(
+        &source,
+        "scalar = 8;\nrow = [1, 2, 3];\ncolumn = [1; 2; 3];\nmatrix = [1, 2, 3; 4, 5, 6];\ndisp(length(scalar));\ndisp(length(row));\ndisp(length(column));\ndisp(length(matrix));\ndisp(numel(matrix));\n",
+    )
+    .expect("write MATLAB length fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB length fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB length fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let results: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(results, [1.0, 3.0, 3.0, 3.0, 6.0], "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_size_returns_dimensions_and_selected_dimension() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-size-dimensions");
+    fs::create_dir_all(&output_root).expect("create MATLAB size directory");
+    let source = output_root.join("size_dimensions.m");
+    fs::write(
+        &source,
+        "row = [1, 2, 3];\ncolumn = [1; 2; 3];\nmatrix = [1, 2, 3; 4, 5, 6];\ndisp(size(row));\ndisp(size(column));\ndisp(size(matrix));\ndisp(size(matrix, 1));\ndisp(size(matrix, 2));\ndisp(size(matrix, 4));\n[rows, columns] = size(matrix);\n[r, c, pages] = size(matrix);\ndisp(rows);\ndisp(columns);\ndisp(r);\ndisp(c);\ndisp(pages);\n",
+    )
+    .expect("write MATLAB size fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB size fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB size fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("[1.000000, 3.000000]"), "{stdout}");
+    assert!(stdout.contains("[3.000000, 1.000000]"), "{stdout}");
+    assert!(stdout.contains("[2.000000, 3.000000]"), "{stdout}");
+    let scalar_results: Vec<_> = stdout
+        .lines()
+        .filter_map(|line| line.trim().parse::<f64>().ok())
+        .collect();
+    assert_eq!(
+        scalar_results,
+        [2.0, 3.0, 1.0, 2.0, 3.0, 2.0, 3.0, 1.0],
+        "{stdout}"
+    );
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_find_uses_one_based_indices_and_preserves_orientation() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-find-indices");
+    fs::create_dir_all(&output_root).expect("create MATLAB find directory");
+    let source = output_root.join("find_indices.m");
+    fs::write(
+        &source,
+        "row = [0, 7, 0, 9];\ncolumn = [0; 7; 0; 9];\nmatrix = [1, 1; 2, 0];\ndisp(find(row));\ndisp(find(column));\ndisp(find(matrix));\ndisp(find([0, 0]));\ndisp(find(7));\ndisp(find(0));\ndisp(find(row, 1));\ndisp(find(row, 1, 'last'));\ndisp(find(matrix, 2, 'first'));\ndisp(find(matrix, 2, 'last'));\n",
+    )
+    .expect("write MATLAB find fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB find fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB find fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Array[1x2]: [2.000, 4.000]"), "{stdout}");
+    assert!(stdout.contains("Array[2x1]: [2.000, 4.000]"), "{stdout}");
+    assert!(
+        stdout.contains("Array[3x1]: [1.000, 2.000, 3.000]"),
+        "{stdout}"
+    );
+    assert!(stdout.contains("Array[1x0]: []"), "{stdout}");
+    assert!(stdout.contains("Array[1x1]: [1.000]"), "{stdout}");
+    assert!(stdout.contains("Array[0x0]: []"), "{stdout}");
+    assert!(stdout.contains("Array[1x1]: [2.000]"), "{stdout}");
+    assert!(stdout.contains("Array[1x1]: [4.000]"), "{stdout}");
+    assert!(stdout.contains("Array[2x1]: [1.000, 2.000]"), "{stdout}");
+    assert!(stdout.contains("Array[2x1]: [2.000, 3.000]"), "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_matlab_atan2_is_elementwise_and_scalar_expanding() {
+    let binary = get_xdl_binary();
+    let output_root = test_directory("matlab-atan2-elementwise");
+    fs::create_dir_all(&output_root).expect("create MATLAB atan2 directory");
+    let source = output_root.join("atan2_elementwise.m");
+    fs::write(
+        &source,
+        "y = [0, 1, -1];\nx = [1, 0, 0];\ndisp(atan2(y, x));\ndisp(atan2(y, 0));\nys = [0, 1; -1, 0];\nxs = [1, 0; 0, -1];\ndisp(atan2(ys, xs));\ndisp(atan2([0.0, -0.0], [-0.0, -0.0]));\n",
+    )
+    .expect("write MATLAB atan2 fixture");
+
+    let output = Command::new(&binary)
+        .args(["-q"])
+        .arg(&source)
+        .current_dir(&output_root)
+        .output()
+        .expect("execute MATLAB atan2 fixture through XDL");
+    assert!(
+        output.status.success(),
+        "MATLAB atan2 fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("1.570796"), "{stdout}");
+    assert!(stdout.contains("-1.570796"), "{stdout}");
+    assert!(stdout.contains("3.141593"), "{stdout}");
+    assert!(stdout.contains("[0.000000, 0.000000]"), "{stdout}");
+    let _ = fs::remove_dir_all(output_root);
+}
+
+#[test]
+fn test_cli_runs_mars_helicopter_battery_sweep_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/mars_helicopter_battery_sweep.xdl");
+    let output = Command::new(&binary)
+        .args(["-q", example.to_str().expect("utf-8 example path")])
+        .output()
+        .expect("run Mars helicopter battery sweep example");
+
+    assert!(
+        output.status.success(),
+        "Mars battery sweep failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("=== XDL MARS HELICOPTER BATTERY-STRING SWEEP ==="));
+    let configurations: Vec<_> = stdout
+        .lines()
+        .filter(|line| line.contains("battery_strings="))
+        .collect();
+    assert_eq!(configurations.len(), 6, "{stdout}");
+    for configuration in &configurations[..3] {
+        assert!(configuration.contains("can_takeoff= 1"), "{configuration}");
+        assert!(
+            !configuration.contains("flight_duration_s= 0"),
+            "a takeoff-capable configuration should accrue flight time: {configuration}"
+        );
+    }
+    for configuration in &configurations[3..] {
+        assert!(configuration.contains("can_takeoff= 0"), "{configuration}");
+        assert!(
+            configuration.contains("flight_duration_s= 0"),
+            "an overloaded configuration should not accrue flight time: {configuration}"
+        );
+    }
+    assert!(
+        configurations[0].contains("battery_strings= 1")
+            && configurations[0].contains("vehicle_mass_kg= 1.800000")
+            && configurations[0].contains("can_takeoff= 1"),
+        "one-string baseline should lift: {}",
+        configurations[0]
+    );
+    assert!(
+        configurations[2].contains("battery_strings= 3")
+            && configurations[2].contains("can_takeoff= 1")
+            && !configurations[2].contains("flight_duration_s= 0"),
+        "three strings should remain below the illustrative lift threshold: {}",
+        configurations[2]
+    );
+    assert!(
+        configurations[3].contains("battery_strings= 4")
+            && configurations[3].contains("vehicle_mass_kg= 2.700000")
+            && configurations[3].contains("can_takeoff= 0")
+            && configurations[3].contains("flight_duration_s= 0"),
+        "four strings should exceed the illustrative lift threshold: {}",
+        configurations[3]
+    );
+    assert!(configurations[5].contains("battery_strings= 6"));
+    assert!(stdout.contains("=== END XDL MARS HELICOPTER BATTERY-STRING SWEEP ==="));
+}
+
+#[test]
+fn test_cli_test_command_accepts_single_gnc_script_and_replays_it() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/gnc_closed_loop.xdl");
+    let run_root = test_directory("gnc-manifest");
+    fs::create_dir_all(&run_root).expect("create manifest directory");
+    let manifest = run_root.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            example.to_str().expect("utf-8 example path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run single GNC script");
+    assert!(run.status.success(), "single script test failed");
+
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay single GNC script");
+    assert!(
+        replay.status.success(),
+        "single GNC replay failed: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    let _ = fs::remove_dir_all(&run_root);
+}
+
+#[test]
+fn test_cli_tests_and_replays_mars_helicopter_example() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let example = workspace_root.join("examples/mars_helicopter_system_level.xdl");
+    let run_root = test_directory("mars-helicopter-manifest");
+    fs::create_dir_all(&run_root).expect("create manifest directory");
+    let manifest = run_root.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            example.to_str().expect("utf-8 example path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run Mars helicopter test");
+    assert!(
+        run.status.success(),
+        "Mars helicopter test failed: {}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay Mars helicopter test");
+    assert!(
+        replay.status.success(),
+        "Mars helicopter replay failed: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    let _ = fs::remove_dir_all(&run_root);
+}
+
+#[test]
+fn test_cli_model_check_auto_layouts_mars_graph() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let model = workspace_root.join("examples/mars_helicopter_system_level.model.json");
+
+    let check = Command::new(&binary)
+        .args(["model-check", model.to_str().expect("utf-8 model path")])
+        .output()
+        .expect("check Mars model graph");
+    assert!(
+        check.status.success(),
+        "Mars model check failed: {}",
+        String::from_utf8_lossy(&check.stderr)
+    );
+    assert!(String::from_utf8_lossy(&check.stdout).contains("Model OK: 10 blocks, 9 connections"));
+
+    let svg = Command::new(&binary)
+        .args([
+            "model-check",
+            model.to_str().expect("utf-8 model path"),
+            "--svg",
+        ])
+        .output()
+        .expect("render Mars model graph");
+    assert!(
+        svg.status.success(),
+        "Mars model SVG failed: {}",
+        String::from_utf8_lossy(&svg.stderr)
+    );
+    let svg_stdout = String::from_utf8_lossy(&svg.stdout);
+    assert!(svg_stdout.starts_with("<svg "));
+    assert!(svg_stdout.contains("SixCellBatteryPack"));
+    assert_eq!(svg_stdout.matches("<rect ").count(), 10);
+
+    let migrated = Command::new(&binary)
+        .args([
+            "model-check",
+            model.to_str().expect("utf-8 model path"),
+            "--migrate",
+        ])
+        .output()
+        .expect("migrate Mars model graph");
+    assert!(
+        migrated.status.success(),
+        "Mars model migration failed: {}",
+        String::from_utf8_lossy(&migrated.stderr)
+    );
+    let migrated_stdout = String::from_utf8_lossy(&migrated.stdout);
+    assert!(migrated_stdout.contains("\"schema_version\": 1"));
+    assert!(migrated_stdout.contains("\"layout\""));
+    assert!(migrated_stdout.contains("\"model\""));
+}
+
+#[test]
+fn test_cli_replays_relative_script_with_external_manifest() {
+    let binary = get_xdl_binary();
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf();
+    let run_root = test_directory("relative-script-manifest");
+    fs::create_dir_all(&run_root).expect("create manifest directory");
+    let manifest = run_root.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            "examples/mars_helicopter_system_level.xdl",
+            "--manifest",
+        ])
+        .arg(&manifest)
+        .current_dir(&workspace_root)
+        .output()
+        .expect("run relative Mars helicopter script");
+    assert!(
+        run.status.success(),
+        "relative script test failed: {}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    let replay = Command::new(&binary)
+        .args(["replay"])
+        .arg(&manifest)
+        .current_dir(&workspace_root)
+        .output()
+        .expect("replay relative Mars helicopter script");
+    assert!(
+        replay.status.success(),
+        "relative script replay failed: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    let _ = fs::remove_dir_all(&run_root);
+}
+
+#[test]
+fn test_cli_test_command_writes_truthful_manifest() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("manifest");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("pass.xdl"), "PRINT, 'ok'\n").expect("write passing test");
+    let manifest = directory.join("run.json");
+
+    let output = Command::new(&binary)
+        .args([
+            "test",
+            directory.to_str().expect("utf-8 test path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run xdl test command");
+
+    assert!(
+        output.status.success(),
+        "expected passing test command, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
+    assert!(manifest_json.contains("\"status\": \"passed\""));
+    assert!(manifest_json.contains("\"discovered\": 1"));
+    assert!(manifest_json.contains("\"test_directory\": \".\""));
+    assert!(manifest_json.contains("\"path\": \"pass.xdl\""));
+    assert!(manifest_json.contains("\"completed_at\": \"unix:"));
+    assert!(manifest_json.contains("\"duration_ms\":"));
+    assert!(manifest_json.contains("\"kind\": \"xdl-test-source\""));
+    assert!(manifest_json.contains(
+        "\"sha256\": \"sha256:94ba589944019a00e78f1f53fe6e035e0d6850347c538b370145d4b4c6b80582\""
+    ));
+    assert!(manifest_json.contains("\"kind\": \"xdl-test-stdout\""));
+    assert!(manifest_json.contains("\"path\": \"artifacts/pass.stdout\""));
+    assert!(manifest_json.contains(
+        "\"sha256\": \"sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22\""
+    ));
+    let stdout_artifact = directory.join("artifacts/pass.stdout");
+    assert_eq!(
+        fs::read_to_string(stdout_artifact).expect("read stdout artifact"),
+        "ok\n"
+    );
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay xdl test manifest");
+    assert!(
+        replay.status.success(),
+        "expected replay to pass, stderr: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("1 passed, 0 failed"));
+    fs::write(directory.join("pass.xdl"), "PRINT, 'changed'\n").expect("change test source");
+    let changed_replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay changed xdl test manifest");
+    assert!(!changed_replay.status.success());
+    let changed_diagnostic = format!(
+        "{}{}",
+        String::from_utf8_lossy(&changed_replay.stdout),
+        String::from_utf8_lossy(&changed_replay.stderr)
+    );
+    assert!(changed_diagnostic.contains("source hash mismatch"));
+    let _ = fs::remove_dir_all(&directory);
+}
+
+#[test]
+fn test_cli_test_command_fails_for_invalid_xdl() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("failing");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("fail.xdl"), "not valid xdl syntax").expect("write failing test");
+
+    let output = Command::new(&binary)
+        .args(["test", directory.to_str().expect("utf-8 test path")])
+        .output()
+        .expect("run xdl test command");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(!output.status.success(), "invalid test must fail");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("0 passed, 1 failed"), "stdout: {stdout}");
+}
+
+#[test]
+fn test_cli_replay_matches_recorded_failed_status() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("replay-failed");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("fail.xdl"), "not valid xdl syntax").expect("write failing test");
+    let manifest = directory.join("run.json");
+
+    let run = Command::new(&binary)
+        .args([
+            "test",
+            directory.to_str().expect("utf-8 test path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run failing xdl test command");
+    assert!(!run.status.success());
+
+    let replay = Command::new(&binary)
+        .args(["replay", manifest.to_str().expect("utf-8 manifest path")])
+        .output()
+        .expect("replay failed xdl test manifest");
+    assert!(
+        replay.status.success(),
+        "matching failed replay should succeed, stderr: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replay.stdout).contains("matched the recorded failed status"));
+    let _ = fs::remove_dir_all(&directory);
+}
+
+#[test]
+fn test_cli_test_command_writes_failure_artifact() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("failing-manifest");
+    fs::create_dir_all(&directory).expect("create test directory");
+    fs::write(directory.join("fail.xdl"), "not valid xdl syntax").expect("write failing test");
+    let manifest = directory.join("run.json");
+
+    let output = Command::new(&binary)
+        .args([
+            "test",
+            directory.to_str().expect("utf-8 test path"),
+            "--manifest",
+            manifest.to_str().expect("utf-8 manifest path"),
+        ])
+        .output()
+        .expect("run xdl test command");
+
+    assert!(!output.status.success(), "invalid test must fail");
+    let manifest_json = fs::read_to_string(&manifest).expect("read run manifest");
+    assert!(manifest_json.contains("\"kind\": \"xdl-test-failure\""));
+    assert!(manifest_json.contains("\"path\": \"artifacts/fail.failure.txt\""));
+    let diagnostic = fs::read_to_string(directory.join("artifacts/fail.failure.txt"))
+        .expect("read failure artifact");
+    assert!(diagnostic.contains("Failed to execute program"));
+    let _ = fs::remove_dir_all(&directory);
+}
+
+#[test]
+fn test_cli_compatibility_report_json_is_explicit_about_scope() {
+    let binary = get_xdl_binary();
+    let output = Command::new(&binary)
+        .args(["compatibility-report", "--format", "json"])
+        .output()
+        .expect("run compatibility report");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("xdl-cli-baseline-2026-11-12"));
+    assert!(stdout.contains("array literals and basic matrix literals"));
+    assert!(stdout.contains("unsupported"));
+}
+
+#[test]
+fn test_cli_compatibility_report_rejects_unknown_format() {
+    let binary = get_xdl_binary();
+    let output = Command::new(&binary)
+        .args(["compatibility-report", "--format", "yaml"])
+        .output()
+        .expect("run compatibility report");
+
+    assert!(!output.status.success());
+    let diagnostic = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(diagnostic.contains("unsupported compatibility report format"));
+}
+
+#[test]
+fn test_cli_compatibility_report_scans_matlab_corpus() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("matlab-corpus");
+    fs::create_dir_all(directory.join("nested")).expect("create corpus directory");
+    fs::write(directory.join("nested/good.m"), "disp(1 + 2);\n")
+        .expect("write supported MATLAB file");
+    fs::write(directory.join("nested/good.m.expected"), "3\n")
+        .expect("write MATLAB output reference");
+    fs::write(directory.join("matrix.m"), "y = [1 2; 3 4];\n").expect("write matrix MATLAB file");
+    fs::write(
+        directory.join("matrix.m.expected.json"),
+        r#"{"abs_tolerance": 0.0, "provenance": "test fixture", "values": {"y": [1.0, 2.0, 3.0, 4.0]}}"#,
+    )
+    .expect("write MATLAB numeric reference");
+
+    let output = Command::new(&binary)
+        .args([
+            "compatibility-report",
+            "--corpus",
+            directory.to_str().expect("utf-8 corpus path"),
+            "--format",
+            "json",
+            "--execute",
+        ])
+        .output()
+        .expect("run MATLAB corpus report");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(
+        output.status.success(),
+        "corpus report failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("nested/good.m"));
+    assert!(stdout.contains("matrix.m"));
+    assert!(stdout.contains("stdout-reference"));
+    assert!(stdout.contains("numeric-reference"));
+    assert!(stdout.contains("numeric-reference-provenance"));
+    assert!(stdout.contains("verified"));
+}
+
+#[test]
+fn test_cli_compatibility_report_can_require_references() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("reference-gate");
+    fs::create_dir_all(&directory).expect("create corpus directory");
+    fs::write(directory.join("unreferenced.m"), "x = 1 + 2;\n")
+        .expect("write unreferenced MATLAB file");
+
+    let output = Command::new(&binary)
+        .args([
+            "compatibility-report",
+            "--corpus",
+            directory.to_str().expect("utf-8 corpus path"),
+            "--execute",
+            "--require-reference",
+        ])
+        .output()
+        .expect("run reference gate");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(!output.status.success());
+    let diagnostic = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(diagnostic.contains("lack passing declared references"));
+}
+
+#[test]
+fn test_cli_compatibility_report_rejects_empty_numeric_provenance() {
+    let binary = get_xdl_binary();
+    let directory = test_directory("empty-provenance");
+    fs::create_dir_all(&directory).expect("create corpus directory");
+    fs::write(directory.join("case.m"), "x = 3;\n").expect("write MATLAB case");
+    fs::write(
+        directory.join("case.m.expected.json"),
+        r#"{"provenance":" ","values":{"x":[3.0]}}"#,
+    )
+    .expect("write invalid provenance reference");
+
+    let output = Command::new(&binary)
+        .args([
+            "compatibility-report",
+            "--corpus",
+            directory.to_str().expect("utf-8 corpus path"),
+            "--execute",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run invalid provenance report");
+
+    let _ = fs::remove_dir_all(&directory);
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("failed"));
+    assert!(stdout.contains("provenance must not be empty"));
+}
+
+fn test_directory(label: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock before unix epoch")
+        .as_nanos();
+    std::env::temp_dir().join(format!("xdl-cli-{label}-{}-{nanos}", std::process::id()))
 }

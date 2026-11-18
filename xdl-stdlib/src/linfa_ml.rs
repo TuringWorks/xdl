@@ -25,7 +25,7 @@ enum ModelType {
 }
 
 fn next_model_id(prefix: &str) -> String {
-    let mut counter = MODEL_COUNTER.lock().unwrap();
+    let mut counter = MODEL_COUNTER.lock().unwrap_or_else(|e| e.into_inner());
     *counter += 1;
     format!("{}_{}", prefix, *counter)
 }
@@ -125,7 +125,7 @@ pub fn ml_kmeans_fit(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .map_err(|e| XdlError::RuntimeError(format!("K-Means failed: {}", e)))?;
 
     let model_id = next_model_id("kmeans");
-    let mut models = MODELS.lock().unwrap();
+    let mut models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     models.insert(model_id.clone(), ModelType::KMeans(model));
 
     Ok(XdlValue::String(model_id))
@@ -160,7 +160,7 @@ pub fn ml_kmeans_predict(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let x = xdl_to_array2(&args[1], n_features)?;
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -193,7 +193,7 @@ pub fn ml_kmeans_centroids(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -237,7 +237,7 @@ pub fn ml_linear_fit(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .map_err(|e| XdlError::RuntimeError(format!("Linear regression failed: {}", e)))?;
 
     let model_id = next_model_id("linear");
-    let mut models = MODELS.lock().unwrap();
+    let mut models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     models.insert(model_id.clone(), ModelType::LinearRegression(model));
 
     Ok(XdlValue::String(model_id))
@@ -272,7 +272,7 @@ pub fn ml_linear_predict(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let x = xdl_to_array2(&args[1], n_features)?;
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -305,7 +305,7 @@ pub fn ml_linear_coefficients(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -337,7 +337,7 @@ pub fn ml_linear_intercept(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -427,7 +427,7 @@ pub fn ml_pca_fit(args: &[XdlValue]) -> XdlResult<XdlValue> {
         .map_err(|e| XdlError::RuntimeError(format!("PCA failed: {}", e)))?;
 
     let model_id = next_model_id("pca");
-    let mut models = MODELS.lock().unwrap();
+    let mut models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     models.insert(model_id.clone(), ModelType::Pca(model));
 
     Ok(XdlValue::String(model_id))
@@ -462,7 +462,7 @@ pub fn ml_pca_transform(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     let x = xdl_to_array2(&args[1], n_features)?;
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -494,7 +494,7 @@ pub fn ml_pca_components(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -524,7 +524,7 @@ pub fn ml_pca_variance(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let models = MODELS.lock().unwrap();
+    let models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     let model = models
         .get(model_id)
         .ok_or_else(|| XdlError::RuntimeError(format!("Model not found: {}", model_id)))?;
@@ -696,7 +696,7 @@ pub fn ml_drop_model(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut models = MODELS.lock().unwrap();
+    let mut models = MODELS.lock().unwrap_or_else(|e| e.into_inner());
     models.remove(model_id);
     Ok(XdlValue::Undefined)
 }

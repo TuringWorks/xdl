@@ -3,7 +3,7 @@ name = "xdl-gnc-telemetry"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "MIT"
 description = "Deterministic telemetry records and JSON-lines export for XDL GNC"
 
 [dependencies]

@@ -276,6 +276,21 @@ impl Context {
         Err(XdlError::VariableNotFound(name.to_string()))
     }
 
+    /// Get a mutable reference to a variable, searching from innermost to outermost
+    /// scope. The same scope that `get_variable` would return is the one mutated.
+    pub fn get_variable_mut(&mut self, name: &str) -> XdlResult<&mut XdlValue> {
+        for scope in self.scopes.iter_mut().rev() {
+            if scope.contains(name) {
+                return scope
+                    .variables
+                    .get_mut(name)
+                    .ok_or_else(|| XdlError::VariableNotFound(name.to_string()));
+            }
+        }
+
+        Err(XdlError::VariableNotFound(name.to_string()))
+    }
+
     /// Get a system variable
     pub fn get_system_variable(&self, name: &str) -> XdlResult<&XdlValue> {
         self.system_variables

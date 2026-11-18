@@ -1,0 +1,15 @@
+[package]
+name = "xdl-sim"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Deterministic fixed-step and multi-rate scheduling for XDL models"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+xdl-gnc-core = { path = "../xdl-gnc-core" }
+xdl-gnc-control = { path = "../xdl-gnc-control" }
+xdl-model = { path = "../xdl-model" }

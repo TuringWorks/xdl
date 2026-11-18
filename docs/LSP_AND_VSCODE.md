@@ -35,9 +35,11 @@ The extension provides:
 
 - **Syntax Highlighting**: Full TextMate grammar for XDL syntax
 - **Language Configuration**: Brackets, comments, folding, indentation
-- **File Associations**: `.xdl` and `.pro` file extensions
+- **File Associations**: XDL language mode for `.xdl` and `.pro`; separate
+  Scilab syntax mode for `.sci` and `.sce`
 - **Commands**: Restart server, run file
-- **LSP Integration**: All language server features
+- **LSP Integration**: XDL language mode only; Scilab and MATLAB files run
+  through the CLI without XDL diagnostics
 
 ---
 
@@ -155,7 +157,7 @@ The LSP provides hover documentation and completion for:
 `SIN`, `COS`, `TAN`, `ASIN`, `ACOS`, `ATAN`, `SINH`, `COSH`, `TANH`, `SQRT`, `EXP`, `ALOG`, `ALOG10`, `ABS`, `CEIL`, `FLOOR`, `ROUND`, `FIX`, `FLOAT`, `DOUBLE`, `COMPLEX`, `IMAGINARY`, `CONJ`
 
 ### Array Functions
-`FINDGEN`, `INDGEN`, `DINDGEN`, `BINDGEN`, `LINDGEN`, `FLTARR`, `DBLARR`, `INTARR`, `BYTARR`, `LONARR`, `STRARR`, `COMPLEXARR`, `MAKE_ARRAY`, `REPLICATE`, `WHERE`, `N_ELEMENTS`, `SIZE`, `REFORM`, `TRANSPOSE`, `REVERSE`, `SHIFT`, `ROTATE`, `SORT`, `UNIQ`
+`FINDGEN`, `INDGEN`, `DINDGEN`, `BINDGEN`, `LINDGEN`, `FLTARR`, `DBLARR`, `INTARR`, `BYTARR`, `LONARR`, `STRARR`, `COMPLEXARR`, `MAKE_ARRAY`, `REPLICATE`, `WHERE`, `N_ELEMENTS`, `MATLAB_LENGTH`, `MATLAB_NUMEL`, `MATLAB_SIZE`, `MATLAB_SIZE_TAIL`, `MATLAB_FIND`, `MATLAB_FIND_ROWS`, `MATLAB_FIND_COLUMNS`, `MATLAB_FIND_INDICES`, `MATLAB_FIND_VALUES`, `MATLAB_RESHAPE`, `MATLAB_CTRANSPOSE`, `MATLAB_READMATRIX`, `MATLAB_MLDIVIDE`, `MATLAB_INDEX`, `SIZE`, `REFORM`, `TRANSPOSE`, `REVERSE`, `SHIFT`, `ROTATE`, `SORT`, `UNIQ`
 
 ### Statistics
 `TOTAL`, `MEAN`, `MEDIAN`, `VARIANCE`, `STDDEV`, `MIN`, `MAX`, `MOMENT`, `CORRELATE`, `HISTOGRAM`
@@ -203,7 +205,7 @@ The LSP recognizes XDL system variables (prefixed with `!`):
 | Command | Description |
 |---------|-------------|
 | `XDL: Restart Language Server` | Restart the LSP server |
-| `XDL: Run Current File` | Execute the current XDL file |
+| `XDL: Run Current File` | Execute `.xdl`, `.pro`, `.m`, `.sci`, or `.sce` through the XDL CLI |
 
 ---
 
@@ -217,8 +219,8 @@ The LSP recognizes XDL system variables (prefixed with `!`):
 
 ### Syntax Highlighting Not Working
 
-1. Ensure file has `.xdl` or `.pro` extension
-2. Check that language mode is set to "XDL" in status bar
+1. Ensure the file uses a supported extension: `.xdl`/`.pro`, `.m`, or `.sci`/`.sce`
+2. Check that the editor selected XDL, MATLAB, or Scilab language mode
 3. Try reloading the VS Code window
 
 ### Diagnostics Not Appearing

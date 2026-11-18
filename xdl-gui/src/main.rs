@@ -12,6 +12,7 @@ use tracing::info;
 mod gui;
 mod image_window;
 mod plot_window;
+mod statechart_window;
 
 use gui::XdlGui;
 

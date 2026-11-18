@@ -2,42 +2,88 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A modern Rust implementation of GNU Data Language (GDL), providing IDL-compatible data analysis and visualization capabilities.
+A Rust implementation of GNU Data Language (GDL), providing an IDL-inspired
+scientific-computing language, runtime, visualization stack, and an evolving
+MATLAB/Octave migration path and a separate, limited Scilab source-transpilation path.
 
 ## Overview
 
-This is a complete rewrite of XDL in Rust, designed to provide:
+XDL is an active-development beta, designed to provide:
 - **Memory Safety**: Leveraging Rust's ownership system for safe memory management
-- **Performance**: Native code performance with zero-cost abstractions
+- **Performance**: Native Rust kernels where available, with an interpreter at the language boundary
 - **Concurrency**: Safe parallelism using Rust's async/await and threading primitives
-- **Interoperability**: FFI interfaces to existing scientific libraries
+- **Interoperability**: FFI interfaces and integrations with existing scientific libraries
+
+XDL is not yet a drop-in replacement for MATLAB, GNU Octave, Scilab, or
+Simulink. Compatibility and production readiness vary substantially by feature.
+For the current capability map and the VibeCoder + XDL product roadmap, see
+[the scientific-computing gap analysis](docs/VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS.md).
 
 ## Architecture
 
 The project is structured as a Cargo workspace with the following crates:
 
-- **`xdl-core`**: Core data structures, types, and array operations (~1,353 lines)
-- **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom (~2,176 lines)
-- **`xdl-interpreter`**: AST interpreter and execution engine (~1,796 lines)
+- **`xdl-core`**: Core data structures, types, and array operations
+- **`xdl-parser`**: Lexer and parser for XDL/IDL syntax using nom
+- **`xdl-interpreter`**: AST interpreter and execution engine
 - **`xdl-runtime`**: Runtime system with memory management
-- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics, ML) (~13,199 lines)
+- **`xdl-stdlib`**: Standard library functions (math, I/O, graphics, ML)
 - **`xdl-ffi`**: Foreign function interfaces to external libraries
 - **`xdl-cli`**: Command-line interface and REPL
-- **`xdl-gui`**: Graphical user interface components (~1,963 lines)
-- **`xdl-charts`**: Charting and visualization library (~584 lines)
+- **`xdl-scilab`**: Independent Scilab lexer/transpiler for a narrow script subset
+- **`xdl-gui`**: Graphical user interface components
+- **`xdl-charts`**: Charting and visualization library
 - **`xdl-viz3d`**: 3D visualization engine
 - **`xdl-viz3d-web`**: Web-based 3D visualization
 - **`xdl-viz3d-threejs`**: Three.js 3D visualization web components
 - **`xdl-chart-viewer`**: Interactive chart viewer application
 - **`xdl-amp`**: Accelerated Math Processing
 - **`xdl-lsp`**: Language Server Protocol implementation for IDE support
-- **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**: Typed guidance, navigation, and control libraries (in development; no XDL built-ins yet). See [GNC Crates](docs/development/gnc-crates.md)
+- **`xdl-matlab`**: MATLAB/Octave transpiler for a tested `.m` subset (59 crate tests; includes bounded literal and runtime-valued colon vectors and vector-index reads; not full language or toolbox parity)
+- **`xdl-artifacts`**: Versioned run-manifest and compatibility-status contracts
+- **`xdl-gnc-core`**, **`xdl-gnc-simulation`**, **`xdl-gnc-navigation`**, **`xdl-gnc-guidance`**, **`xdl-gnc-control`**, **`xdl-gnc-actuators`**, **`xdl-gnc-integration`**, **`xdl-gnc-telemetry`**: Typed guidance, navigation, control, actuator, integration, and telemetry libraries with an XDL-facing `GNC_*` slice. The physical-model and full block-diagram gaps remain under development; see [GNC Crates](docs/development/gnc-crates.md)
 
 **Additional Modules (not in workspace):**
-- **`xdl-matlab`**: MATLAB transpilation support (~83,000 line transpiler)
 - **`xdl-desktop-viewer`**: Desktop visualization viewer
 
 ## Features
+
+### Runnable system-level example
+
+XDL includes an executable reduced-order Mars-helicopter system-level example
+covering thermal/SOC readiness, Mars gravity, guidance, PID control, actuator
+dynamics, ground contact, and JSON-lines telemetry:
+
+```bash
+cargo run -p xdl-cli -- -q examples/mars_helicopter_system_level.xdl
+```
+
+The companion battery-string parameter sweep is also executable:
+
+```bash
+cargo run -p xdl-cli -- -q examples/mars_helicopter_battery_sweep.xdl
+```
+
+The sweep couples parallel-string count to battery mass, Mars weight, an
+illustrative lift limit, and SOC-limited flight duration; its parameters are
+reduced-order examples, not validated Ingenuity data.
+
+This is an evidence-bearing starting point for the MATLAB/Aerospace
+Blockset/Simscape compatibility track, not a claim of drop-in Simulink parity.
+See [the GNC documentation](docs/development/gnc-crates.md) for the current
+scope and remaining physical-model gaps.
+
+### Runnable Scilab subset example
+
+Run the checked-in `.sce` example with the XDL CLI:
+
+```bash
+cargo run -p xdl-cli -- -q examples/scilab/mars_readiness_gate.sce
+```
+
+It demonstrates assignments, percent constants, `disp`, and conditionals in
+the supported Scilab syntax subset. This does not imply general Scilab or Xcos
+compatibility; see [Scilab support and limitations](docs/SCILAB_SUPPORT.md).
 
 ### Core Data Types
 - All XDL/IDL numeric types (BYTE, INT, LONG, FLOAT, DOUBLE, COMPLEX, etc.)
@@ -48,7 +94,7 @@ The project is structured as a Cargo workspace with the following crates:
 ### Language Features
 - Variables and expressions
 - Control flow: IF/THEN/ELSE, FOR, WHILE, REPEAT, FOREACH, BREAK, CONTINUE, RETURN
-- Built-in function calls (360+ functions)
+- Built-in function and procedure dispatch across math, arrays, I/O, graphics, ML, and scientific domains; the registry is evolving and counts are not a compatibility metric
 - **User-defined procedures (PRO/ENDPRO)** ✅
 - **User-defined functions (FUNCTION/ENDFUNCTION)** ✅
 - **GOTO statements with labels** ✅ NEW
@@ -56,7 +102,7 @@ The project is structured as a Cargo workspace with the following crates:
 - Array operations and indexing (multi-dimensional arrays)
 - Structure definitions
 
-### Built-in Functions (360+ functions implemented)
+### Current capability areas
 - **Mathematical functions**: SIN, COS, TAN, SINH, COSH, TANH, EXP, ALOG, SQRT, FFT, etc.
 - **Special math**: ERF, ERFC, GAMMA, LNGAMMA, FACTORIAL, BESELJ, BESELY, BESELI, BESELK
 - **Type conversion**: BYTE, INT, UINT, LONG, ULONG, LONG64, ULONG64, FLOAT, DOUBLE, FIX
@@ -76,26 +122,32 @@ The project is structured as a Cargo workspace with the following crates:
 - **Linear algebra**: INVERT, DETERM, SVDC, LA_EIGENVAL, LUDC, etc.
 - **Image processing**: CONVOL, DILATE, ERODE, SOBEL, GAUSSIAN_FILTER, etc.
 - **Signal processing**: A_CORRELATE, C_CORRELATE, DIGITAL_FILTER, HILBERT, etc.
-- **MATLAB transpilation**: Working transpiler for basic to moderate complexity .m files
-- **MATLAB compatibility**: LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
+- **MATLAB/Octave transpilation**: Working transpiler for a tested subset of basic to moderate-complexity `.m` files; advanced syntax is not drop-in compatible
+- **Scilab transpilation (partial)**: `.sci`/`.sce` route case-insensitively to a separate tested subset for assignments, `disp`, constants, comments, conditionals, bounded transpose, rectangular numeric 2D matrix literals, scalar `A(i,j)` reads on tracked matrices, scalar `v(k)` reads, and inclusive vector range reads `v(a:b)` / `v(a:s:b)` on tracked comma-separated numeric vector literals. Indices, range endpoints, and steps must be positive integer literals. Scilab's one-based inclusive ranges lower to XDL zero-based end-exclusive slices; e.g. `v(2:4)` becomes `v[1:4:1]` and `v(1:2:5)` becomes `v[0:5:2]`. Ordinary calls such as `sum(v)` are preserved. Variable/negative/zero indices or steps, other subscript counts, and indexed writes are rejected. It supports multiple single-output function definitions per file, each with zero to four distinct comma-separated inputs, straight-line assignment bodies, and same-file calls (including calls before the definition). Function libraries, cross-file calls, multiple outputs, and control flow inside functions are unsupported. It supports literal-bounded `for` loops and a narrow precondition `while` form (`while expression`, optionally followed on that line by `do` or `then`), each closed by Scilab `end`. While conditions are reevaluated each iteration; XDL's runtime does not impose an iteration cap, so programs must ensure termination. Inline loop bodies, `while ... else`, and `endwhile` are rejected. For-loop bounds and step must be signed 32-bit integer literals (decimal and exponent forms are rejected), step cannot be zero, and the range is capped at 1,000,000 iterations. Endpoints are inclusive, and a step pointing away from the endpoint yields zero iterations; loop values retain Scilab's one-based values. General loop expressions, matrix operations, other indexing forms, and Xcos are not supported
+- **MATLAB compatibility helpers (partial)**: MATLAB_LENGTH, MATLAB_NUMEL, MATLAB_SIZE, MATLAB_SIZE_TAIL, MATLAB_FIND, MATLAB_FIND_ROWS/COLUMNS/VALUES, MATLAB_RESHAPE, MATLAB_CTRANSPOSE, MATLAB_INDEX, MATLAB_READMATRIX, MATLAB_MLDIVIDE, LINSPACE, LOGSPACE, REPMAT, SQUEEZE, NDGRID, INTERP1, MESHGRID
 - **GPU acceleration**: XDL-AMP module with multi-backend support
 - **IDE support**: Language Server Protocol (LSP) and VS Code extension
 
 ## Known Limitations
 
-While XDL provides substantial functionality, the following features are not yet fully implemented:
+While XDL provides substantial functionality, the following areas are not yet
+complete or uniformly production-ready:
 
 ### Language Features
 - **Complex numbers**: Partial support with some type conversion issues
 - **Advanced array indexing**: Some edge cases in multi-dimensional array slicing
 
 ### Compatibility
-- **IDL/GDL compatibility**: Approximately 88% compatible with common IDL/GDL features
-- **MATLAB transpilation**: Works for basic to moderate complexity (28/28 tests passing)
-- **Key gaps**: Scientific data formats (FITS, HDF5, NetCDF)
+- **IDL/GDL compatibility**: Coverage is substantial but is not a formally measured or frozen percentage
+- **MATLAB/Octave compatibility**: A passing transpiler test suite covers the implemented subset; it does not imply language or toolbox parity
+- **Scilab compatibility**: A narrow source-transpilation subset is tested; it does not establish general Scilab, function-file, or Xcos compatibility
+- **MATLAB array and data semantics**: `readmatrix` imports strict rectangular numeric CSV, with an optional explicit `'NumHeaderLines', n` pair; automatic header detection and other import options remain unsupported. Tested `size`, one-/two-/three-output `find` on the documented shapes, scalar linear reads, rectangular 2D row/column range reads, scalar or shape-matched two-axis block writes, and selected scalar/range writes cover the documented cases. Vector-valued indices, nested-array range sources, single-subscript matrix writes, nonnumeric `find` inputs, and higher-dimensional slices remain incomplete.
+- **Scientific I/O**: Some FITS, HDF5, and NetCDF paths are placeholders or feature-gated and require end-to-end round-trip tests
+- **Model-based simulation**: `xdl-model` and `xdl-sim` are foundations, not a Simulink/Xcos-equivalent product
+- **Canonical numerics**: Sparse, chunked, units-aware, frame-aware, and distributed data types are incomplete
 
 ### Testing & Quality
-- **Test runner**: `xdl test` command is a stub (not yet implemented)
+- **Test runner**: `xdl test` discovers and executes `.xdl` scripts recursively; `--manifest` emits test counts, SHA-256 source artifacts, successful stdout artifacts, and failure diagnostics, while golden vectors, numerical tolerances, and timeouts are not yet implemented
 - **Edge cases**: Various edge cases in control flow, type conversions, and array operations
 - **Error messages**: Could be more helpful in some scenarios
 
@@ -103,7 +155,9 @@ While XDL provides substantial functionality, the following features are not yet
 - **Optimization**: Performance tuning is ongoing
 - **GPU acceleration**: Implementation depth varies by operation
 
-**Workaround**: For production use cases requiring missing features, consider using GDL or IDL, or contribute to implementing these features in XDL.
+For regulated, safety-critical, or production workflows, validate every
+required feature and numerical result independently. Do not treat a placeholder
+I/O or compatibility path as production support.
 
 ## Installation
 
@@ -114,7 +168,7 @@ While XDL provides substantial functionality, the following features are not yet
 
 ### Feature Flags
 ```bash
-# Full build with all features
+# Build with the commonly used optional features (some features require system libraries)
 cargo build --features "python,dataframes,ml"
 
 # Build without Python (if Python not available)
@@ -194,6 +248,33 @@ xdl parse script.pro
 
 # Check syntax
 xdl check script.pro
+
+# Run the recursive XDL test suite and emit a replayable manifest
+xdl test tests --manifest runs/test-summary.json
+xdl replay runs/test-summary.json
+
+# Test and replay one scientific example
+xdl test examples/gnc_closed_loop.xdl --manifest runs/gnc-closed-loop.json
+xdl replay runs/gnc-closed-loop.json
+
+# Inspect the current compatibility baseline
+xdl compatibility-report --format json
+
+# Measure MATLAB transpilation over a corpus (transpilation only)
+xdl compatibility-report --corpus examples/matlab --format json
+
+# Also execute the transpiled XDL (runtime/numerical equivalence still unverified)
+xdl compatibility-report --corpus examples/matlab --execute --format json
+
+# Require every corpus case to have a passing declared reference. This is a
+# reproducibility gate, not an independent MATLAB/Octave oracle.
+xdl compatibility-report --corpus tests/compatibility/matlab --execute --require-reference --format json
+
+# With an adjacent example.m.expected sidecar, verify normalized observed output
+
+# Validate an XDL block-model graph or document (raw graphs are auto-laid out)
+xdl model-check model.json
+xdl model-check model.json --svg > model.svg
 ```
 
 ### REPL Commands
@@ -395,17 +476,29 @@ the summary is in [CLAUDE.md](./CLAUDE.md).
 - [x] Web-based visualization
 - [x] Interactive chart viewers
 
-### Phase 5: Compatibility & Optimization 🚧 **(Current Focus)**
-- [x] IDL/GDL compatibility layer (85% compatible)
-- [x] Legacy code migration tools
-- [x] Documentation and examples (150+ examples)
+### Phase 5: Compatibility, reproducibility, and optimization 🚧 **(Current Focus)**
+- [ ] Publish generated IDL/GDL and MATLAB/Octave conformance reports
+- [ ] Replace placeholder scientific-I/O paths with tested readers/writers
+- [x] Basic recursive `.xdl` script test runner with pass/fail exit status
+- [partial] Scientific test evidence, replayable run manifests, and artifact
+  capture (source hashes, stdout/failure artifacts, timing, and local replay
+  exist; numerical, plot, timeout, and clean-machine evidence remain open)
+- [x] Legacy code migration foundation
+- [x] Documentation and examples
 - [x] User-defined procedures (PRO/ENDPRO) ✅
 - [x] User-defined functions (FUNCTION/ENDFUNCTION) ✅
 - [ ] Complete complex number support
-- [ ] GOTO and label support
+- [x] GOTO and label support
 - [ ] Performance optimization
 - [ ] Extended edge case handling
-- [ ] Comprehensive test coverage
+- [ ] Comprehensive numerical, workflow, and artifact coverage
+
+### Phase 6: Model-based scientific engineering 🚧
+- [ ] Stable typed block/signal graph schema
+- [ ] Deterministic fixed-step, multi-rate, continuous, and hybrid simulation
+- [ ] Scopes, replay, model diagnostics, and golden-vector testing
+- [ ] FMU import/export and native Rust/C execution profiles
+- [ ] VibeCoder scientific workspace and model editor integration
 
 ## License
 
@@ -420,23 +513,29 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Project Status
 
-🚧 **Active Development - Beta** 🚧
+🚧 **Active Development — Beta** 🚧
 
-XDL is a functional beta implementation with substantial language support and advanced features. The project totals **~200,000 lines of Rust code** across 150+ source files and includes:
+XDL is a functional beta implementation with substantial language support and
+several experimental or partially implemented scientific-computing surfaces.
+The following is a capability summary, not a claim of toolbox parity:
 
 - **Core language**: Variables, expressions, control flow (FOR, WHILE, FOREACH, IF/THEN/ELSE, CASE/SWITCH)
-- **360+ built-in functions**: Math, arrays, statistics, I/O, graphics, ML
-- **60+ ML functions**: Neural networks, K-means, SVM, cross-validation, optimizers
+- **Standard library**: Math, arrays, statistics, I/O, graphics, ML, dataframes, and domain functions; registry counts change as coverage is audited
+- **ML**: Neural networks, K-means, SVM, cross-validation, optimizers, and native Linfa-backed paths with uneven depth
 - **Native ML (Linfa)**: K-Means, Linear/Logistic Regression, PCA (pure Rust)
 - **DataFrames (Polars)**: High-performance data manipulation (10-100x faster than Pandas)
 - **50+ graphics procedures**: 2D/3D plotting, charting, interactive visualization
 - **Python integration**: PyO3 0.27 integration with PYTHON_IMPORT/PYTHON_CALL
 - **IDE support**: Language Server Protocol (LSP) + VS Code extension
-- **MATLAB transpiler**: 83,000-line transpiler supporting basic to moderate .m files (28/28 tests passing)
+- **MATLAB transpiler**: Basic-to-moderate `.m` support with a passing unit-test subset; array/object/toolbox/file-I/O parity remains incomplete
 - **GPU acceleration**: XDL-AMP module with multi-backend support (MLX, Metal, CUDA, etc.)
 - **Multiple interfaces**: CLI/REPL, GUI (egui), web-based viewers
 - **150+ examples**: Demonstrating features across basics, ML, visualization, and scientific computing
 
-**Compatibility**: Approximately **88% IDL/GDL compatible** with core features working well, including user-defined procedures (PRO/ENDPRO), functions (FUNCTION/ENDFUNCTION), GOTO statements with labels, and full CASE/SWITCH support. See Known Limitations for remaining gaps.
+**Compatibility**: Core IDL/GDL features are implemented, including
+user-defined procedures and functions, GOTO/labels, and CASE/SWITCH. The
+project does not currently publish a reproducible formal compatibility
+percentage; see Known Limitations and the [gap analysis](docs/VIBECODER_XDL_SCIENTIFIC_COMPUTING_GAP_ANALYSIS.md)
+for the remaining gaps.
 
 Active development continues on improving edge case handling and performance optimization. Contributions and feedback are welcome!

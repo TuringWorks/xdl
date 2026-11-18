@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://turingworks.github.io/xdl/schemas/compatibility-inventory.v1.json",
+  "title": "XDL Compatibility Inventory v1",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "entries"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_by": {"type": "string", "minLength": 1},
+    "entries": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/entry"}
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "surface", "capability", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "surface": {"type": "string", "minLength": 1},
+        "capability": {"type": "string", "minLength": 1},
+        "status": {
+          "enum": [
+            "verified",
+            "partial",
+            "experimental",
+            "delegated",
+            "unsupported",
+            "failed"
+          ]
+        },
+        "evidence": {"type": "array", "items": {"type": "string"}},
+        "notes": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

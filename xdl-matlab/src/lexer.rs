@@ -166,7 +166,10 @@ impl Lexer {
         }
 
         // Strings
-        if ch == '\'' && !self.is_after_identifier() {
+        if ch == '\''
+            && !self.is_after_identifier()
+            && !self.is_after_nonconjugating_transpose_dot()
+        {
             return self.read_string(start_line, start_column);
         }
 
@@ -491,6 +494,14 @@ impl Lexer {
             return ch.is_alphanumeric() || ch == ')' || ch == ']' || ch == '}';
         }
         false
+    }
+
+    fn is_after_nonconjugating_transpose_dot(&self) -> bool {
+        if self.position < 2 || self.input[self.position - 1] != '.' {
+            return false;
+        }
+        let operand = self.position - 2;
+        self.input[operand].is_alphanumeric() || matches!(self.input[operand], ')' | ']' | '}')
     }
 }
 

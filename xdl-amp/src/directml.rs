@@ -384,14 +384,14 @@ impl GpuDevice for DirectMLDevice {
     fn max_f32(&self, x: &[f32]) -> Result<f32> {
         x.iter()
             .copied()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.total_cmp(b))
             .ok_or(GpuError::ExecutionFailed("Empty array".to_string()))
     }
 
     fn min_f32(&self, x: &[f32]) -> Result<f32> {
         x.iter()
             .copied()
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.total_cmp(b))
             .ok_or(GpuError::ExecutionFailed("Empty array".to_string()))
     }
 
@@ -532,14 +532,14 @@ impl GpuDevice for DirectMLDevice {
     fn max_f32(&self, x: &[f32]) -> Result<f32> {
         x.iter()
             .copied()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.total_cmp(b))
             .ok_or(GpuError::ExecutionFailed("Empty array".to_string()))
     }
 
     fn min_f32(&self, x: &[f32]) -> Result<f32> {
         x.iter()
             .copied()
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.total_cmp(b))
             .ok_or(GpuError::ExecutionFailed("Empty array".to_string()))
     }
 

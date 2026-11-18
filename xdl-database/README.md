@@ -557,7 +557,7 @@ To add support for a new database:
 
 ## License
 
-GPL-2.0 (same as XDL)
+MIT (same as XDL)
 
 ## Support
 

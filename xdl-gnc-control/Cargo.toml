@@ -3,7 +3,7 @@ name = "xdl-gnc-control"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "MIT"
 description = "Bounded PID control primitives for XDL GNC"
 
 [dependencies]

@@ -28,7 +28,7 @@ lazy_static::lazy_static! {
 
 /// Initialize the RustPython interpreter
 fn get_interpreter() -> XdlResult<()> {
-    let mut interp = INTERPRETER.lock().unwrap();
+    let mut interp = INTERPRETER.lock().unwrap_or_else(|e| e.into_inner());
     if interp.is_none() {
         *interp = Some(
             rustpython::InterpreterConfig::new()
@@ -58,7 +58,7 @@ pub fn rustpy_exec(args: &[XdlValue]) -> XdlResult<XdlValue> {
 
     get_interpreter()?;
 
-    let interp = INTERPRETER.lock().unwrap();
+    let interp = INTERPRETER.lock().unwrap_or_else(|e| e.into_inner());
     let interp = interp
         .as_ref()
         .ok_or_else(|| XdlError::RuntimeError("Failed to get interpreter".to_string()))?;

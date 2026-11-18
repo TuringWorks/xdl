@@ -201,5 +201,4 @@ scripts/check-docs-links.sh                # relative links in docs/
 
 ## License
 
-MIT (`LICENSE`). Note: `Cargo.toml` currently declares `GPL-2.0` — that is a known
-inconsistency, not a second license.
+MIT (`LICENSE`). `Cargo.toml` and every crate header declare MIT too.

@@ -51,7 +51,7 @@ pub fn get_lun(args: &[XdlValue]) -> XdlResult<XdlValue> {
         ));
     }
 
-    let mut counter = LUN_COUNTER.lock().unwrap();
+    let mut counter = LUN_COUNTER.lock().unwrap_or_else(|e| e.into_inner());
     let lun = *counter;
     *counter += 1;
 
@@ -149,7 +149,7 @@ pub fn openr(args: &[XdlValue]) -> XdlResult<XdlValue> {
         mode: FileMode::Read,
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     handles.insert(lun, handle);
 
     Ok(XdlValue::Undefined)
@@ -196,7 +196,7 @@ pub fn openw(args: &[XdlValue]) -> XdlResult<XdlValue> {
         mode: FileMode::Write,
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     handles.insert(lun, handle);
 
     Ok(XdlValue::Undefined)
@@ -251,7 +251,7 @@ pub fn openu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         mode: FileMode::Update,
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     handles.insert(lun, handle);
 
     Ok(XdlValue::Undefined)
@@ -276,7 +276,7 @@ pub fn close_file(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     if handles.remove(&lun).is_some() {
         Ok(XdlValue::Undefined)
     } else {
@@ -310,7 +310,7 @@ pub fn readf(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let handle = handles
         .get_mut(&lun)
         .ok_or_else(|| XdlError::RuntimeError(format!("READF: LUN {} not open", lun)))?;
@@ -362,7 +362,7 @@ pub fn writef(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let handle = handles
         .get_mut(&lun)
         .ok_or_else(|| XdlError::RuntimeError(format!("WRITEF: LUN {} not open", lun)))?;
@@ -793,7 +793,7 @@ pub fn eof_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let handle = handles
         .get_mut(&lun)
         .ok_or_else(|| XdlError::RuntimeError(format!("EOF: LUN {} not open", lun)))?;
@@ -829,7 +829,7 @@ pub fn flush_func(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let handle = handles
         .get_mut(&lun)
         .ok_or_else(|| XdlError::RuntimeError(format!("FLUSH: LUN {} not open", lun)))?;
@@ -1292,7 +1292,7 @@ pub fn point_lun(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
 
     if let Some(handle) = handles.get_mut(&lun) {
         if args.len() > 1 {
@@ -1378,7 +1378,7 @@ pub fn readu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         _ => 8,                                // Default to 8 bytes
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
 
     if let Some(handle) = handles.get_mut(&lun) {
         if let Some(ref mut reader) = handle.reader {
@@ -1462,7 +1462,7 @@ pub fn writeu(args: &[XdlValue]) -> XdlResult<XdlValue> {
         }
     };
 
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let mut handles = FILE_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
 
     if let Some(handle) = handles.get_mut(&lun) {
         if let Some(ref mut writer) = handle.writer {

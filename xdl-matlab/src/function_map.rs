@@ -15,9 +15,9 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("randn", "RANDOMN"); // randn(n) -> RANDOMN(seed, n)
 
     // Array info
-    map.insert("size", "SIZE");
-    map.insert("length", "N_ELEMENTS");
-    map.insert("numel", "N_ELEMENTS");
+    map.insert("size", "MATLAB_SIZE");
+    map.insert("length", "MATLAB_LENGTH");
+    map.insert("numel", "MATLAB_NUMEL");
 
     // Math functions
     map.insert("sin", "SIN");
@@ -64,6 +64,7 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("close", "WDELETE");
 
     // MATLAB compatibility functions
+    map.insert("colon", "MATLAB_COLON");
     map.insert("linspace", "LINSPACE");
     map.insert("logspace", "LOGSPACE");
     map.insert("meshgrid", "MESHGRID");
@@ -73,9 +74,14 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("interp1", "INTERP1");
 
     // Array manipulation
-    map.insert("reshape", "REFORM");
+    map.insert("reshape", "MATLAB_RESHAPE");
+    map.insert("matlab_index_vector", "MATLAB_INDEX_VECTOR");
     map.insert("sort", "SORT");
-    map.insert("find", "WHERE");
+    map.insert("find", "MATLAB_FIND");
+    map.insert("readmatrix", "MATLAB_READMATRIX");
+    map.insert("isfinite", "FINITE");
+    map.insert("isnan", "ISNAN");
+    map.insert("isinf", "ISINF");
 
     // I/O
     map.insert("disp", "PRINT");
@@ -83,8 +89,8 @@ pub static MATLAB_FUNCTION_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy
     map.insert("sprintf", "STRING");
 
     // Logical
-    map.insert("all", "MIN"); // all -> MIN (non-zero check)
-    map.insert("any", "MAX"); // any -> MAX (non-zero check)
+    map.insert("all", "ALL");
+    map.insert("any", "ANY");
 
     // Type conversion
     map.insert("double", "DOUBLE");
@@ -113,7 +119,32 @@ mod tests {
     fn test_function_mapping() {
         assert_eq!(get_xdl_function("zeros"), Some("FLTARR"));
         assert_eq!(get_xdl_function("sin"), Some("SIN"));
+        assert_eq!(get_xdl_function("atan2"), Some("ATAN"));
+        assert_eq!(get_xdl_function("readmatrix"), Some("MATLAB_READMATRIX"));
+        assert_eq!(get_xdl_function("colon"), Some("MATLAB_COLON"));
+        assert_eq!(get_xdl_function("isfinite"), Some("FINITE"));
+        assert_eq!(get_xdl_function("isnan"), Some("ISNAN"));
+        assert_eq!(get_xdl_function("isinf"), Some("ISINF"));
+        assert_eq!(get_xdl_function("reshape"), Some("MATLAB_RESHAPE"));
+        assert_eq!(
+            get_xdl_function("matlab_index_vector"),
+            Some("MATLAB_INDEX_VECTOR")
+        );
         assert_eq!(get_xdl_function("plot"), Some("PLOT"));
         assert_eq!(get_xdl_function("nonexistent"), None);
+    }
+
+    #[test]
+    fn logical_reductions_map_to_xdl_reductions() {
+        assert_eq!(get_xdl_function("all"), Some("ALL"));
+        assert_eq!(get_xdl_function("any"), Some("ANY"));
+    }
+
+    #[test]
+    fn matlab_array_information_functions_map_to_compatibility_helpers() {
+        assert_eq!(get_xdl_function("length"), Some("MATLAB_LENGTH"));
+        assert_eq!(get_xdl_function("numel"), Some("MATLAB_NUMEL"));
+        assert_eq!(get_xdl_function("size"), Some("MATLAB_SIZE"));
+        assert_eq!(get_xdl_function("find"), Some("MATLAB_FIND"));
     }
 }

@@ -13,6 +13,20 @@ pub struct Evaluator {
     stdlib: StandardLibrary,
 }
 
+/// Position of a subscript, counting negative values from the end. `None` when
+/// out of range.
+fn offset_from_end(raw: i64, extent: usize) -> Option<usize> {
+    let position = if raw < 0 { extent as i64 + raw } else { raw };
+    usize::try_from(position).ok().filter(|&p| p < extent)
+}
+
+fn out_of_bounds(raw: i64, extent: usize) -> XdlError {
+    XdlError::RuntimeError(format!(
+        "Index {} out of bounds for array of length {}",
+        raw, extent
+    ))
+}
+
 impl Evaluator {
     pub fn new() -> Self {
         Self {
@@ -162,6 +176,9 @@ impl Evaluator {
             }
 
             Expression::ArrayRef { array, indices, .. } => {
+                if let Some(value) = self.try_read_element(array, indices, context)? {
+                    return Ok(value);
+                }
                 let array_val = self.evaluate(array, context)?;
                 self.evaluate_array_ref(&array_val, indices, context)
             }
@@ -1034,6 +1051,93 @@ impl Evaluator {
         }
     }
 
+    /// Read one element of a named array without copying the array. Reading
+    /// `x[i]` by value made every element read O(N) in the array length.
+    ///
+    /// Returns `Ok(None)` before evaluating anything when the access is not a
+    /// single-element read of a variable; the general path then handles it.
+    /// Once the shape of the access is known, index expressions are evaluated
+    /// exactly once.
+    fn try_read_element(
+        &self,
+        array: &Expression,
+        indices: &[ArrayIndex],
+        context: &mut Context,
+    ) -> XdlResult<Option<XdlValue>> {
+        let Expression::Variable { name, .. } = array else {
+            return Ok(None);
+        };
+        if !indices
+            .iter()
+            .all(|index| matches!(index, ArrayIndex::Single(_)))
+        {
+            return Ok(None);
+        }
+        let Ok(target) = context.get_variable(name) else {
+            return Ok(None);
+        };
+        let accepted = match target {
+            XdlValue::Array(_) | XdlValue::NestedArray(_) => indices.len() == 1,
+            XdlValue::MultiDimArray { shape, .. } => {
+                indices.len() == 1 || indices.len() == shape.len()
+            }
+            _ => false,
+        };
+        if !accepted {
+            return Ok(None);
+        }
+
+        let mut raw = Vec::with_capacity(indices.len());
+        for index in indices {
+            if let ArrayIndex::Single(expr) = index {
+                raw.push(i64::from(self.evaluate(expr, context)?.to_long()?));
+            }
+        }
+
+        let target = context.get_variable(name)?;
+        match target {
+            XdlValue::Array(arr) => {
+                let position = offset_from_end(raw[0], arr.len())
+                    .ok_or_else(|| out_of_bounds(raw[0], arr.len()))?;
+                Ok(Some(XdlValue::Double(arr[position])))
+            }
+            XdlValue::NestedArray(rows) => {
+                let position = offset_from_end(raw[0], rows.len())
+                    .ok_or_else(|| out_of_bounds(raw[0], rows.len()))?;
+                Ok(Some(rows[position].clone()))
+            }
+            XdlValue::MultiDimArray { data, .. } if raw.len() == 1 => {
+                // One subscript addresses the flat, column-major element.
+                let position = offset_from_end(raw[0], data.len())
+                    .ok_or_else(|| out_of_bounds(raw[0], data.len()))?;
+                Ok(Some(XdlValue::Double(data[position])))
+            }
+            XdlValue::MultiDimArray { data, shape } => {
+                let mut linear = 0usize;
+                let mut stride = 1usize;
+                for (dim, (&index, &extent)) in raw.iter().zip(shape.iter()).enumerate() {
+                    let position = offset_from_end(index, extent).ok_or_else(|| {
+                        XdlError::RuntimeError(format!(
+                            "Index {} out of bounds for dimension {} of size {}",
+                            index, dim, extent
+                        ))
+                    })?;
+                    linear += position * stride;
+                    stride *= extent;
+                }
+                let value = data.get(linear).copied().ok_or_else(|| {
+                    XdlError::RuntimeError(format!(
+                        "Computed index {} out of bounds for array of size {}",
+                        linear,
+                        data.len()
+                    ))
+                })?;
+                Ok(Some(XdlValue::Double(value)))
+            }
+            _ => Ok(None),
+        }
+    }
+
     /// Evaluate array indexing and slicing
     fn evaluate_array_ref(
         &self,
@@ -1046,6 +1150,20 @@ impl Evaluator {
             return self.evaluate_multidim_index(data, shape, indices, context);
         }
 
+        // MATLAB matrix literals are represented as nested row arrays. Route
+        // only 2D slice reads through the column-major extractor, after
+        // proving that the rows form a rectangular numeric matrix.
+        if let XdlValue::NestedArray(rows) = array_val {
+            if indices.len() == 2
+                && indices
+                    .iter()
+                    .any(|index| !matches!(index, ArrayIndex::Single(_)))
+            {
+                let (data, shape) = Self::rectangular_numeric_matrix(rows)?;
+                return self.evaluate_multidim_index(&data, &shape, indices, context);
+            }
+        }
+
         // Handle other array types by applying indices one at a time
         let mut current_val = array_val.clone();
 
@@ -1054,6 +1172,29 @@ impl Evaluator {
         }
 
         Ok(current_val)
+    }
+
+    fn rectangular_numeric_matrix(rows: &[XdlValue]) -> XdlResult<(Vec<f64>, Vec<usize>)> {
+        let row_values = rows
+            .iter()
+            .map(|row| match row {
+                XdlValue::Array(values) => Ok(values),
+                _ => Err(XdlError::InvalidArgument(
+                    "MATLAB matrix slice requires numeric rectangular rows".to_string(),
+                )),
+            })
+            .collect::<XdlResult<Vec<_>>>()?;
+        let columns = row_values.first().map_or(0, |row| row.len());
+        if row_values.iter().any(|row| row.len() != columns) {
+            return Err(XdlError::InvalidArgument(
+                "MATLAB matrix slice does not support ragged rows".to_string(),
+            ));
+        }
+
+        let data = (0..columns)
+            .flat_map(|column| row_values.iter().map(move |row| row[column]))
+            .collect();
+        Ok((data, vec![rows.len(), columns]))
     }
 
     /// Evaluate multi-dimensional array indexing
@@ -1092,6 +1233,23 @@ impl Evaluator {
                 }
                 ArrayIndex::All => unreachable!(),
             }
+        }
+
+        // A single subscript on a multi-dimensional array addresses the flat,
+        // column-major element (IDL). Treating it as a partial index into dimension 0
+        // returned a whole row for w[1] instead of the element.
+        if evaluated_indices.len() == 1 {
+            let raw = i64::from(evaluated_indices[0]);
+            let len = data.len() as i64;
+            let position = if raw < 0 { len + raw } else { raw };
+            if position < 0 || position >= len {
+                return Err(XdlError::RuntimeError(format!(
+                    "Index {} out of bounds for array of size {}",
+                    raw,
+                    data.len()
+                )));
+            }
+            return Ok(XdlValue::Double(data[position as usize]));
         }
 
         // If fewer indices than dimensions, return a sub-array
@@ -1220,6 +1378,11 @@ impl Evaluator {
                     }
                     ranges.push((actual_idx, actual_idx + 1, 1));
                     // Single index collapses dimension - don't add to result_shape
+                    if shape.len() == 2 && indices.len() == 2 {
+                        // MATLAB preserves row/column orientation for 2D
+                        // slices (1×N versus N×1).
+                        result_shape.push(1);
+                    }
                 }
                 ArrayIndex::Range { start, end, step } => {
                     let s = if let Some(e) = start {
@@ -1813,6 +1976,64 @@ impl Default for Evaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn evaluate_matrix_slice(source: &str, matrix: XdlValue) -> XdlResult<XdlValue> {
+        let evaluator = Evaluator::new();
+        let mut context = Context::new();
+        context.set_variable("a".to_string(), matrix);
+        let expression = xdl_parser::parse_expression(source)
+            .map_err(|error| XdlError::RuntimeError(error.to_string()))?;
+        evaluator.evaluate(&expression, &mut context)
+    }
+
+    fn nested_matrix() -> XdlValue {
+        XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0, 3.0]),
+            XdlValue::Array(vec![4.0, 5.0, 6.0]),
+        ])
+    }
+
+    #[test]
+    fn two_dimensional_slices_preserve_row_and_column_shape() {
+        assert_eq!(
+            evaluate_matrix_slice("a[0, 1:2]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0, 3.0],
+                shape: vec![1, 2],
+            }
+        );
+        assert_eq!(
+            evaluate_matrix_slice("a[0:1, 1]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![2.0, 5.0],
+                shape: vec![2, 1],
+            }
+        );
+        assert_eq!(
+            evaluate_matrix_slice("a[:, 2]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![3.0, 6.0],
+                shape: vec![2, 1],
+            }
+        );
+        assert_eq!(
+            evaluate_matrix_slice("a[1, :]", nested_matrix()).unwrap(),
+            XdlValue::MultiDimArray {
+                data: vec![4.0, 5.0, 6.0],
+                shape: vec![1, 3],
+            }
+        );
+    }
+
+    #[test]
+    fn two_dimensional_slices_reject_ragged_rows() {
+        let ragged = XdlValue::NestedArray(vec![
+            XdlValue::Array(vec![1.0, 2.0]),
+            XdlValue::Array(vec![3.0]),
+        ]);
+        let error = evaluate_matrix_slice("a[:, 0]", ragged).unwrap_err();
+        assert!(error.to_string().contains("ragged rows"), "{error}");
+    }
 
     #[test]
     fn test_literal_evaluation() {

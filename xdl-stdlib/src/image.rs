@@ -1209,7 +1209,7 @@ pub fn median_2d(args: &[XdlValue]) -> XdlResult<XdlValue> {
                 }
             }
 
-            window.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            window.sort_by(|a, b| a.total_cmp(b));
             result[r * cols + c] = window[window.len() / 2];
         }
     }

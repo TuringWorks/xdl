@@ -1,0 +1,30 @@
+# Error messages for XdlError. Format: key = template
+# {name} is replaced by the value of that field. Keep these byte-identical to
+# the text users see and grep for; a change here is a visible behaviour change.
+parse_error = Parse error: {message} at line {line}, column {column}
+type_mismatch = Type mismatch: expected {expected}, got {actual}
+dimension_error = Dimension error: {value}
+index_error = Index error: {value}
+runtime_error = Runtime error: {value}
+variable_not_found = Variable not found: {value}
+function_not_found = Function not found: {value}
+procedure_not_found = Procedure not found: {value}
+invalid_argument = Invalid argument: {value}
+io_error = IO error: {value}
+math_error = Math error: {value}
+memory_error = Memory error: {value}
+system_error = System error: {value}
+compile_error = Compile error: {value}
+syntax_error = Syntax error: {value}
+file_not_found = File not found: {value}
+division_by_zero = Division by zero
+overflow_error = Overflow error in {operation}
+underflow_error = Underflow error in {operation}
+not_implemented = Not implemented: {value}
+internal_error = Internal error: {value}
+break = Break
+continue = Continue
+return = Return
+goto = Goto: {value}
+invalid_assignment_target = Invalid assignment target
+invalid_value = Invalid value: {value}
